@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
 from fastapi import HTTPException
+from src.ai.prompt_enhancer.models import EnhancedPrompt, Entity, TemporalReference, LocationReference, RelatedTerm
 
 
 @pytest.mark.asyncio
@@ -18,64 +19,68 @@ async def test_enhance_prompt_endpoint(test_client, mock_env_vars):
         mock_enhancer_instance.enhance = AsyncMock()
         mock_enhancer_class.return_value = mock_enhancer_instance
         
-        # Set up the mock response
-        mock_response = {
-            "original_prompt": "Nelson Mandela speech after prison release in 1990",
-            "primary_query": "Nelson Mandela speech after prison release 1990",
-            "alternative_queries": [
+        # Create an actual EnhancedPrompt object instead of a MagicMock
+        enhanced_prompt = EnhancedPrompt(
+            original_prompt="Nelson Mandela speech after prison release in 1990",
+            primary_query="Nelson Mandela speech after prison release 1990",
+            alternative_queries=[
                 "Mandela freedom speech 1990",
                 "Nelson Mandela first speech after imprisonment"
             ],
-            "entities": [
-                {
-                    "text": "Nelson Mandela",
-                    "type": "person",
-                    "confidence": 0.95,
-                    "start_char": 0,
-                    "end_char": 13
-                }
+            entities=[
+                Entity(
+                    text="Nelson Mandela",
+                    type="person",
+                    confidence=0.95,
+                    start_char=0,
+                    end_char=13
+                )
             ],
-            "temporal_references": [
-                {
-                    "text": "1990",
-                    "type": "year",
-                    "normalized_value": "1990",
-                    "start_date": "1990-01-01",
-                    "end_date": "1990-12-31",
-                    "confidence": 0.9
-                }
+            temporal_references=[
+                TemporalReference(
+                    text="1990",
+                    type="year",
+                    normalized_value="1990",
+                    start_date="1990-01-01",
+                    end_date="1990-12-31",
+                    confidence=0.9
+                )
             ],
-            "location_references": [
-                {
-                    "text": "South Africa",
-                    "normalized_name": "South Africa",
-                    "country_code": "ZA",
-                    "confidence": 0.95
-                }
+            location_references=[
+                LocationReference(
+                    text="South Africa",
+                    normalized_name="South Africa",
+                    country_code="ZA",
+                    confidence=0.95
+                )
             ],
-            "related_terms": [
-                {
-                    "text": "ANC",
-                    "relation_type": "organization",
-                    "source_entity": "Nelson Mandela",
-                    "confidence": 0.9
-                }
+            related_terms=[
+                RelatedTerm(
+                    text="ANC",
+                    relation_type="organization",
+                    source_entity="Nelson Mandela",
+                    confidence=0.9
+                )
             ],
-            "search_params": {
+            search_params={
                 "publishedAfter": "1990-01-01T00:00:00Z",
                 "publishedBefore": "1990-12-31T23:59:59Z",
                 "regionCode": "ZA"
             }
-        }
+        )
         
-        # Configure the mock to return the response
-        mock_enhancer_instance.enhance.return_value = MagicMock(**mock_response)
+        # Configure the mock to return the EnhancedPrompt object
+        mock_enhancer_instance.enhance.return_value = enhanced_prompt
         
         # Make the request
         response = test_client.post(
             "/api/prompt-enhancer/enhance",
             json={"prompt": "Nelson Mandela speech after prison release in 1990"}
         )
+        
+        # Print response for debugging
+        print(f"Response status code: {response.status_code}")
+        print(f"Response content: {response.content}")
         
         # Verify the response
         assert response.status_code == 200

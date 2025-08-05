@@ -1,7 +1,7 @@
 """
 Data models for the prompt enhancer module.
 """
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
 
 
@@ -53,4 +53,4 @@ class EnhancedPrompt(BaseModel):
     alternative_queries: List[str] = Field(default_factory=list)  # Alternative formulations
     
     # Search parameters
-    search_params: Dict[str, any] = Field(default_factory=dict)  # Parameters for YouTube API 
+    search_params: Dict[str, Any] = Field(default_factory=dict)  # Parameters for YouTube API 

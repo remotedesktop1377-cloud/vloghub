@@ -66,10 +66,10 @@ async def enhance_prompt(
             "original_prompt": enhanced_prompt.original_prompt,
             "primary_query": enhanced_prompt.primary_query,
             "alternative_queries": enhanced_prompt.alternative_queries,
-            "entities": [entity.dict() for entity in enhanced_prompt.entities],
-            "temporal_references": [ref.dict() for ref in enhanced_prompt.temporal_references],
-            "location_references": [ref.dict() for ref in enhanced_prompt.location_references],
-            "related_terms": [term.dict() for term in enhanced_prompt.related_terms],
+            "entities": [entity.model_dump() for entity in enhanced_prompt.entities],
+            "temporal_references": [ref.model_dump() for ref in enhanced_prompt.temporal_references],
+            "location_references": [ref.model_dump() for ref in enhanced_prompt.location_references],
+            "related_terms": [term.model_dump() for term in enhanced_prompt.related_terms],
             "search_params": enhanced_prompt.search_params
         }
     except Exception as e:
