@@ -8,6 +8,10 @@ import SearchPage from './pages/Search/SearchPage';
 import ClipEditor from './pages/ClipEditor/ClipEditor';
 import ProjectsPage from './pages/Projects/ProjectsPage';
 import SettingsPage from './pages/Settings/SettingsPage';
+import FeedbackButton from './components/Feedback/FeedbackButton';
+
+// Import feedback styles
+import './components/Feedback/Feedback.css';
 
 function App() {
   return (
@@ -21,6 +25,13 @@ function App() {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Layout>
+      
+      {/* Floating feedback button */}
+      <FeedbackButton 
+        variant="floating" 
+        position="bottom-right" 
+        label="Feedback" 
+      />
     </Box>
   );
 }

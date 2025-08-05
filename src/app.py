@@ -2,12 +2,17 @@
 YouTube Research Video Clip Finder - Main Application
 """
 import os
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from src.api.routes import api_router
-from src.api.routes import youtube_search, transcription, prompt_enhancer, clip_detection
+from src.api.routes import youtube_search, transcription, prompt_enhancer, clip_detection, feedback
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -33,6 +38,7 @@ app.include_router(youtube_search.router)
 app.include_router(transcription.router)
 app.include_router(prompt_enhancer.router)
 app.include_router(clip_detection.router)
+app.include_router(feedback.router)
 
 # Import and include download router
 try:
