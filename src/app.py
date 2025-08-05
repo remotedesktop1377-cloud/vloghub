@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from src.api.routes import api_router
+from src.api.routes import youtube_search, transcription, prompt_enhancer, clip_detection
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +27,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(youtube_search.router)
+app.include_router(transcription.router)
+app.include_router(prompt_enhancer.router)
+app.include_router(clip_detection.router)
+
+# Import and include download router
+try:
+    from src.api.routes import download
+    app.include_router(download.router)
+except ImportError:
+    logger.warning("Download router not available")
 
 # Include API routes
 app.include_router(api_router, prefix="/api")

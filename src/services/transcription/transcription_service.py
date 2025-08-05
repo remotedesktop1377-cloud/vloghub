@@ -11,6 +11,7 @@ from .models import (
 from .youtube import YouTubeCaptionService
 from .whisper import WhisperTranscriptionService
 from .storage import TranscriptFileStorage
+from .text_processing import TextProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,8 @@ class TranscriptionService:
         self,
         youtube_service: Optional[YouTubeCaptionService] = None,
         whisper_service: Optional[WhisperTranscriptionService] = None,
-        storage: Optional[TranscriptFileStorage] = None
+        storage: Optional[TranscriptFileStorage] = None,
+        text_processor: Optional[TextProcessor] = None
     ):
         """
         Initialize the transcription service.
@@ -33,10 +35,12 @@ class TranscriptionService:
             youtube_service: YouTube caption service.
             whisper_service: Whisper transcription service.
             storage: Transcript storage.
+            text_processor: Text processing utilities.
         """
         self.youtube_service = youtube_service
         self.whisper_service = whisper_service
         self.storage = storage or TranscriptFileStorage()
+        self.text_processor = text_processor or TextProcessor()
         
         # Dictionary to track jobs by ID
         self._jobs: Dict[str, Dict[str, Any]] = {}
