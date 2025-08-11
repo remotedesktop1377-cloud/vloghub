@@ -1,6 +1,12 @@
 import React from 'react';
-import Dashboard from '../src/pages/Dashboard/Dashboard';
+import TrendingTopics from '../src/components/TrendingTopics/TrendingTopics';
 
-export default function HomePage() {
-  return <Dashboard />;
-}
+const Dashboard: React.FC = () => {
+  return (
+    <div>
+      <TrendingTopics />
+    </div>
+  );
+};
+
+export default Dashboard;
