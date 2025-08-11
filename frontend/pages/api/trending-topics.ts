@@ -90,7 +90,8 @@ const fetchTwitterTrendingTopics = async (region: string): Promise<TrendingTopic
     
     // Example Twitter API v2 call (requires proper authentication):
    
-    const response = await fetch(`https://api.twitter.com/1.1/trends/place.json?id=23424922`, {
+    // const response = await fetch(`https://api.twitter.com/1.1/trends/place.json?id=23424922`, {
+    const response = await fetch(`https://api.x.com/2/trends/by/woeid/23424922?max_trends=20`, {
       headers: {
         'Authorization': `Bearer ${process.env.X_BEARER_TOKEN}`,
         'Content-Type': 'application/json',

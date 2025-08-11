@@ -25,6 +25,7 @@ import {
   Twitter as TwitterIcon,
   PlayArrow as PlayIcon,
 } from '@mui/icons-material';
+import { useRouter } from 'next/router';
 
 interface TrendingTopic {
   id: string;
@@ -47,6 +48,7 @@ const TrendingTopics: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState('pakistan');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const router = useRouter();
 
   const regions = [
     { value: 'pakistan', label: 'Pakistan', flag: '🇵🇰' },
@@ -271,11 +273,12 @@ const TrendingTopics: React.FC = () => {
                     size="small" 
                     variant="outlined"
                     startIcon={<PlayIcon />}
-                    disabled
+                    onClick={() => router.push(`/topic/${topic.id}?region=${selectedRegion}`)}
+                    sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
                   >
-                    Explore Videos
+                    Explore Topic
                   </Button>
-                  <Button 
+                  {/* <Button 
                     size="small" 
                     variant="text"
                     href={topic.url}
@@ -284,7 +287,7 @@ const TrendingTopics: React.FC = () => {
                     sx={{ color: '#1DA1F2' }}
                   >
                     View on Twitter
-                  </Button>
+                  </Button> */}
                 </CardActions>
               </Card>
             </Grid>
