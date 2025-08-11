@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useRouter } from 'next/router';
 import {
   Box,
   Grid,
@@ -77,7 +77,8 @@ interface TranscriptSegment {
 }
 
 const ClipEditor: React.FC = () => {
-  const { videoId } = useParams<{ videoId: string }>();
+  const router = useRouter();
+  const { videoId } = router.query;
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null);
   const [clips, setClips] = useState<ClipData[]>([]);
   const [transcript, setTranscript] = useState<TranscriptSegment[]>([]);
@@ -94,7 +95,7 @@ const ClipEditor: React.FC = () => {
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
 
   useEffect(() => {
-    if (videoId) {
+    if (videoId && typeof videoId === 'string') {
       loadVideoData(videoId);
     }
   }, [videoId]);
@@ -143,14 +144,14 @@ const ClipEditor: React.FC = () => {
   };
 
   const getMockVideoMetadata = (): VideoMetadata => ({
-    id: videoId || '',
+    id: (videoId as string) || '',
     title: 'Nelson Mandela: The Long Walk to Freedom',
     description: 'A comprehensive documentary about Nelson Mandela\'s journey.',
     duration: 2730, // 45:30 in seconds
-    thumbnailUrl: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+    thumbnailUrl: `https://img.youtube.com/vi/${videoId as string}/maxresdefault.jpg`,
     channelTitle: 'History Channel',
     publishedAt: '2023-12-01',
-    url: `https://www.youtube.com/watch?v=${videoId}`,
+    url: `https://www.youtube.com/watch?v=${videoId as string}`,
   });
 
   const getMockClips = (): ClipData[] => [
@@ -258,7 +259,7 @@ const ClipEditor: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          video_id: videoId,
+          video_id: videoId as string,
           clips: selectedClips,
           format: 'mp4',
           quality: '720p',
@@ -270,7 +271,7 @@ const ClipEditor: React.FC = () => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `clips_${videoId}.zip`;
+        a.download = `clips_${videoId as string}.zip`;
         a.click();
       }
     } catch (error) {
@@ -326,7 +327,7 @@ const ClipEditor: React.FC = () => {
         <Grid item xs={12} lg={8}>
           <Paper sx={{ p: 2, mb: 2 }}>
             <VideoPlayer
-              videoId={videoId || ''}
+              videoId={videoId as string}
               currentTime={currentTime}
               playing={playing}
               volume={volume}

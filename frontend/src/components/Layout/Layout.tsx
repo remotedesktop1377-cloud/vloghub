@@ -23,7 +23,7 @@ import {
   Settings as SettingsIcon,
   MovieFilter as ClipIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useRouter } from 'next/router';
 
 const drawerWidth = 280;
 
@@ -49,15 +49,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = router.pathname;
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
   const handleNavigation = (path: string) => {
-    navigate(path);
+    router.push(path);
     if (isMobile) {
       setMobileOpen(false);
     }
@@ -76,8 +76,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {navigationItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
-              selected={location.pathname === item.path || 
-                       (item.path === '/editor' && location.pathname.startsWith('/editor'))}
+              selected={Boolean(pathname === item.path || 
+                       (item.path === '/editor' && pathname && pathname.startsWith('/editor')))}
               onClick={() => handleNavigation(item.path)}
               sx={{
                 '&.Mui-selected': {

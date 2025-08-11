@@ -27,7 +27,7 @@ import {
   Analytics as AnalyticsIcon,
   Folder as ProjectIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 
 interface Project {
   id: string;
@@ -47,7 +47,7 @@ interface DashboardStats {
 }
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
     totalProjects: 0,
     totalVideos: 0,
@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/search')}
+          onClick={() => router.push('/search')}
         >
           New Project
         </Button>
@@ -220,7 +220,7 @@ const Dashboard: React.FC = () => {
             </Typography>
             <Button
               variant="outlined"
-              onClick={() => navigate('/projects')}
+              onClick={() => router.push('/projects')}
             >
               View All
             </Button>
@@ -265,7 +265,7 @@ const Dashboard: React.FC = () => {
                     <TableCell align="center">
                       <IconButton
                         size="small"
-                        onClick={() => navigate(`/projects/${project.id}`)}
+                        onClick={() => router.push(`/projects/${project.id}`)}
                       >
                         <PlayIcon />
                       </IconButton>

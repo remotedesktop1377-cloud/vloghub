@@ -30,7 +30,7 @@ import {
   Analytics as AnalyticsIcon,
   Tune as TuneIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 
 interface SearchFilters {
   publishedAfter: string;
@@ -60,7 +60,7 @@ interface VideoResult {
 }
 
 const SearchPage: React.FC = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<VideoResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,16 +82,29 @@ const SearchPage: React.FC = () => {
     setLoading(true);
     try {
       // API call to backend search endpoint
+      const requestBody = {
+        prompt: query,
+        max_results: 25,
+        use_alternative_queries: false,
+        filters: {
+          publishedAfter: filters.publishedAfter,
+          publishedBefore: filters.publishedBefore,
+          duration: filters.duration,
+          videoLicense: filters.videoLicense,
+          regionCode: filters.regionCode,
+          relevanceLanguage: filters.relevanceLanguage,
+          channelId: filters.channelId,
+        },
+        sort_by: filters.order,
+        sort_reverse: false,
+      };
+
       const response = await fetch('/api/youtube/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          query,
-          ...filters,
-          maxResults: 25,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -145,7 +158,7 @@ const SearchPage: React.FC = () => {
   ];
 
   const handleAnalyzeVideo = (videoId: string) => {
-    navigate(`/editor/${videoId}`);
+    router.push(`/editor/${videoId}`);
   };
 
   const formatViewCount = (count: number): string => {
@@ -228,9 +241,9 @@ const SearchPage: React.FC = () => {
                     onChange={(e) => setFilters({...filters, duration: e.target.value})}
                   >
                     <MenuItem value="any">Any Duration</MenuItem>
-                    <MenuItem value="short">Short (< 4 minutes)</MenuItem>
+                    <MenuItem value="short">Short (&lt; 4 minutes)</MenuItem>
                     <MenuItem value="medium">Medium (4-20 minutes)</MenuItem>
-                    <MenuItem value="long">Long (> 20 minutes)</MenuItem>
+                    <MenuItem value="long">Long (&gt; 20 minutes)</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>

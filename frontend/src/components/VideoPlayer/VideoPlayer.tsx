@@ -98,10 +98,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               background: `linear-gradient(
                 to right,
                 rgba(0,0,0,0.6) 0%,
-                rgba(0,0,0,0.6) ${(selectionStart / (playerRef.current?.getDuration() || 1)) * 100}%,
-                transparent ${(selectionStart / (playerRef.current?.getDuration() || 1)) * 100}%,
-                transparent ${(selectionEnd / (playerRef.current?.getDuration() || 1)) * 100}%,
-                rgba(0,0,0,0.6) ${(selectionEnd / (playerRef.current?.getDuration() || 1)) * 100}%,
+                rgba(0,0,0,0.6) ${(selectionStart! / (playerRef.current?.getDuration() || 1)) * 100}%,
+                transparent ${(selectionStart! / (playerRef.current?.getDuration() || 1)) * 100}%,
+                transparent ${(selectionEnd! / (playerRef.current?.getDuration() || 1)) * 100}%,
+                rgba(0,0,0,0.6) ${(selectionEnd! / (playerRef.current?.getDuration() || 1)) * 100}%,
                 rgba(0,0,0,0.6) 100%
               )`,
             }}
