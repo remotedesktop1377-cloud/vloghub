@@ -5,7 +5,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions,
   Button,
   Chip,
   Avatar,
@@ -20,10 +19,8 @@ import {
 } from '@mui/material';
 import {
   TrendingUp as TrendingIcon,
-  LocationOn as LocationIcon,
   Refresh as RefreshIcon,
   Twitter as TwitterIcon,
-  PlayArrow as PlayIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 
@@ -52,21 +49,15 @@ const TrendingTopics: React.FC = () => {
 
   const regions = [
     { value: 'pakistan', label: 'Pakistan', flag: '🇵🇰' },
-    { value: 'global', label: 'Global', flag: '🌍' },
-    { value: 'india', label: 'India', flag: '🇮🇳' },
-    { value: 'usa', label: 'United States', flag: '🇺🇸' },
-    { value: 'uk', label: 'United Kingdom', flag: '🇬🇧' },
-    { value: 'canada', label: 'Canada', flag: '🇨🇦' },
-    { value: 'australia', label: 'Australia', flag: '🇦🇺' },
   ];
 
   const fetchTrendingTopics = async (region: string) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`/api/trending-topics?region=${region}`);
-      
+
       if (response.ok) {
         const data: TrendingTopicsResponse = await response.json();
         setTrendingTopics(data.trends || []);
@@ -148,43 +139,42 @@ const TrendingTopics: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <TrendingIcon sx={{ fontSize: 32, color: '#1DA1F2', mr: 2 }} />
-        <Typography variant="h5" gutterBottom>
-          Trending Topics
-        </Typography>
-      </Box>
-
-      {/* Region Selection and Controls */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <LocationIcon sx={{ color: 'text.secondary' }} />
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel>Region</InputLabel>
-            <Select
-              value={selectedRegion}
-              label="Region"
-              onChange={handleRegionChange}
-            >
-              {regions.map((region) => (
-                <MenuItem key={region.value} value={region.value}>
-                  <span style={{ marginRight: '8px' }}>{region.flag}</span>
-                  {region.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-          disabled={loading}
-        >
-          Refresh
-        </Button>
-      </Box>
+             {/* Header with Region Selection and Refresh */}
+       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+         <Box sx={{ display: 'flex', alignItems: 'center' }}>
+           <TrendingIcon sx={{ fontSize: 32, color: '#1DA1F2', mr: 2 }} />
+           <Typography variant="h5" gutterBottom>
+             Trending Topics
+           </Typography>
+         </Box>
+         
+         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+           <FormControl size="small" sx={{ minWidth: 200 }}>
+             <InputLabel>Region</InputLabel>
+             <Select
+               value={selectedRegion}
+               label="Region"
+               onChange={handleRegionChange}
+             >
+               {regions.map((region) => (
+                 <MenuItem key={region.value} value={region.value}>
+                   <span style={{ marginRight: '8px' }}>{region.flag}</span>
+                   {region.label}
+                 </MenuItem>
+               ))}
+             </Select>
+           </FormControl>
+           
+           <Button
+             variant="outlined"
+             startIcon={<RefreshIcon />}
+             onClick={handleRefresh}
+             disabled={loading}
+           >
+             Refresh
+           </Button>
+         </Box>
+       </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -192,37 +182,35 @@ const TrendingTopics: React.FC = () => {
         </Alert>
       )}
 
-      {lastUpdated && (
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-          Last updated: {lastUpdated.toLocaleString()}
-        </Typography>
-      )}
       
+
       <Grid container spacing={3}>
         {trendingTopics.map((topic, index) => {
           const category = getCategoryFromTopic(topic.name);
           const categoryColor = getCategoryColor(category);
-          
+
           return (
             <Grid item xs={12} md={6} lg={4} key={topic.id}>
-              <Card 
-                sx={{ 
+              <Card
+                sx={{
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
+                  cursor: 'pointer',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     transition: 'transform 0.2s ease-in-out',
                     boxShadow: 4,
                   }
                 }}
+                onClick={() => router.push(`/topic/${topic.id}?region=${selectedRegion}`)}
               >
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                    <Avatar 
-                      sx={{ 
-                        bgcolor: getTrendingColor(index), 
-                        mr: 2, 
+                    <Avatar
+                      sx={{
+                        bgcolor: getTrendingColor(index),
+                        mr: 2,
                         fontWeight: 'bold',
                         fontSize: '1.2rem'
                       }}
@@ -233,62 +221,56 @@ const TrendingTopics: React.FC = () => {
                       <Typography variant="h6" gutterBottom sx={{ wordBreak: 'break-word' }}>
                         {topic.name}
                       </Typography>
-                      <Chip 
-                        label={category} 
-                        size="small" 
-                        sx={{ 
-                          bgcolor: categoryColor,
-                          color: 'white',
-                          fontWeight: 'bold'
-                        }}
-                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Chip
+                          label={category}
+                          size="small"
+                          sx={{
+                            bgcolor: categoryColor,
+                            color: 'white',
+                            fontWeight: 'bold'
+                          }}
+                        />
+                        <Chip
+                          icon={<TwitterIcon />}
+                          label={formatTweetVolume(topic.tweet_volume)}
+                          size="small"
+                          variant="outlined"
+                          sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
+                        />
+                      </Box>
                     </Box>
                   </Box>
-                  
-                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                    <Chip 
-                      icon={<TwitterIcon />}
-                      label={`${formatTweetVolume(topic.tweet_volume)} tweets`}
-                      size="small" 
-                      variant="outlined"
-                      sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
-                    />
-                    {topic.promoted_content && (
-                      <Chip 
-                        label="Promoted" 
-                        size="small" 
+
+                  {topic.promoted_content && (
+                    <Box sx={{ mb: 2 }}>
+                      <Chip
+                        label="Promoted"
+                        size="small"
                         color="secondary"
                         variant="outlined"
                       />
-                    )}
-                  </Stack>
-                  
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Query: {topic.query}
-                  </Typography>
+                    </Box>
+                  )}
                 </CardContent>
-                
-                <CardActions sx={{ justifyContent: 'space-between' }}>
-                  <Button 
-                    size="small" 
-                    variant="outlined"
-                    startIcon={<PlayIcon />}
-                    onClick={() => router.push(`/topic/${topic.id}?region=${selectedRegion}`)}
-                    sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
-                  >
-                    Explore Topic
-                  </Button>
-                  {/* <Button 
-                    size="small" 
+
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, borderTop: '1px solid #e0e0e0' }}>
+                  <Button
+                    size="small"
                     variant="text"
-                    href={topic.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{ color: '#1DA1F2' }}
+                    onClick={() => router.push(`/topic/${topic.id}?region=${selectedRegion}`)}
+                    sx={{
+                      borderColor: '#1DA1F2',
+                      color: '#1DA1F2',
+                      '&:hover': {
+                        borderColor: '#0d8bd9',
+                        backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                      }
+                    }}
                   >
-                    View on Twitter
-                  </Button> */}
-                </CardActions>
+                    Explore the Topic
+                  </Button>
+                </Box>
               </Card>
             </Grid>
           );

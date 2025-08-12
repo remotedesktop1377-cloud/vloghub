@@ -20,7 +20,7 @@ const getMockTrendingTopics = (region: string): TrendingTopic[] => {
   const mockData: { [key: string]: TrendingTopic[] } = {
     pakistan: [
       { id: '1', name: '#PakistanCricket', tweet_volume: 125000, url: '#', query: 'PakistanCricket' },
-      { id: '2', name: '#KarachiWeather', tweet_volume: 89000, url: '#', query: 'KarachiWeather' },
+      { id: '2', name: '#NelsonMandela', tweet_volume: 89000, url: '#', query: 'NelsonMandela' },
       { id: '3', name: '#LahoreFood', tweet_volume: 67000, url: '#', query: 'LahoreFood' },
       { id: '4', name: '#PakistaniStartups', tweet_volume: 45000, url: '#', query: 'PakistaniStartups' },
       { id: '5', name: '#IslamabadTraffic', tweet_volume: 32000, url: '#', query: 'IslamabadTraffic' },
@@ -29,53 +29,6 @@ const getMockTrendingTopics = (region: string): TrendingTopic[] => {
       { id: '8', name: '#PakistaniTech', tweet_volume: 18000, url: '#', query: 'PakistaniTech' },
       { id: '9', name: '#PakistaniEducation', tweet_volume: 15000, url: '#', query: 'PakistaniEducation' },
       { id: '10', name: '#PakistaniSports', tweet_volume: 12000, url: '#', query: 'PakistaniSports' },
-    ],
-    global: [
-      { id: '1', name: '#ClimateChange', tweet_volume: 1250000, url: '#', query: 'ClimateChange' },
-      { id: '2', name: '#AI', tweet_volume: 890000, url: '#', query: 'AI' },
-      { id: '3', name: '#SpaceX', tweet_volume: 670000, url: '#', query: 'SpaceX' },
-      { id: '4', name: '#Bitcoin', tweet_volume: 450000, url: '#', query: 'Bitcoin' },
-      { id: '5', name: '#WorldCup', tweet_volume: 320000, url: '#', query: 'WorldCup' },
-      { id: '6', name: '#TechNews', tweet_volume: 280000, url: '#', query: 'TechNews' },
-      { id: '7', name: '#Hollywood', tweet_volume: 220000, url: '#', query: 'Hollywood' },
-      { id: '8', name: '#Science', tweet_volume: 180000, url: '#', query: 'Science' },
-      { id: '9', name: '#Politics', tweet_volume: 150000, url: '#', query: 'Politics' },
-      { id: '10', name: '#Sports', tweet_volume: 120000, url: '#', query: 'Sports' },
-    ],
-    india: [
-      { id: '1', name: '#Bollywood', tweet_volume: 225000, url: '#', query: 'Bollywood' },
-      { id: '2', name: '#IndianCricket', tweet_volume: 189000, url: '#', query: 'IndianCricket' },
-      { id: '3', name: '#DelhiWeather', tweet_volume: 167000, url: '#', query: 'DelhiWeather' },
-      { id: '4', name: '#MumbaiNews', tweet_volume: 145000, url: '#', query: 'MumbaiNews' },
-      { id: '5', name: '#IndianStartups', tweet_volume: 123000, url: '#', query: 'IndianStartups' },
-    ],
-    usa: [
-      { id: '1', name: '#USPolitics', tweet_volume: 325000, url: '#', query: 'USPolitics' },
-      { id: '2', name: '#Hollywood', tweet_volume: 289000, url: '#', query: 'Hollywood' },
-      { id: '3', name: '#TechNews', tweet_volume: 267000, url: '#', query: 'TechNews' },
-      { id: '4', name: '#NYC', tweet_volume: 198000, url: '#', query: 'NYC' },
-      { id: '5', name: '#California', tweet_volume: 156000, url: '#', query: 'California' },
-    ],
-    uk: [
-      { id: '1', name: '#Brexit', tweet_volume: 425000, url: '#', query: 'Brexit' },
-      { id: '2', name: '#London', tweet_volume: 389000, url: '#', query: 'London' },
-      { id: '3', name: '#UKPolitics', tweet_volume: 367000, url: '#', query: 'UKPolitics' },
-      { id: '4', name: '#PremierLeague', tweet_volume: 298000, url: '#', query: 'PremierLeague' },
-      { id: '5', name: '#BritishWeather', tweet_volume: 256000, url: '#', query: 'BritishWeather' },
-    ],
-    canada: [
-      { id: '1', name: '#CanadianPolitics', tweet_volume: 125000, url: '#', query: 'CanadianPolitics' },
-      { id: '2', name: '#Toronto', tweet_volume: 89000, url: '#', query: 'Toronto' },
-      { id: '3', name: '#Vancouver', tweet_volume: 67000, url: '#', query: 'Vancouver' },
-      { id: '4', name: '#CanadianHockey', tweet_volume: 45000, url: '#', query: 'CanadianHockey' },
-      { id: '5', name: '#CanadianWeather', tweet_volume: 32000, url: '#', query: 'CanadianWeather' },
-    ],
-    australia: [
-      { id: '1', name: '#AustralianPolitics', tweet_volume: 125000, url: '#', query: 'AustralianPolitics' },
-      { id: '2', name: '#Sydney', tweet_volume: 89000, url: '#', query: 'Sydney' },
-      { id: '3', name: '#Melbourne', tweet_volume: 67000, url: '#', query: 'Melbourne' },
-      { id: '4', name: '#AustralianCricket', tweet_volume: 45000, url: '#', query: 'AustralianCricket' },
-      { id: '5', name: '#AustralianWeather', tweet_volume: 32000, url: '#', query: 'AustralianWeather' },
     ],
   };
 

@@ -29,6 +29,10 @@ import {
   ContentCut as CutIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
+  Create as CreateIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 
 interface TopicData {
@@ -47,14 +51,19 @@ const TopicDetailPage: React.FC = () => {
   
   const [topic, setTopic] = useState<TopicData | null>(null);
   const [hypothesis, setHypothesis] = useState('');
-  const [duration, setDuration] = useState('10');
+  const [duration, setDuration] = useState('1');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatingChapters, setGeneratingChapters] = useState(false);
   const [chapters, setChapters] = useState<any[]>([]);
   const [chaptersGenerated, setChaptersGenerated] = useState(false);
+  const [editingChapter, setEditingChapter] = useState<number | null>(null);
+  const [editHeading, setEditHeading] = useState('');
+  const [editNarration, setEditNarration] = useState('');
 
   const durationOptions = [
+    { value: '1', label: '1 minutes' },
+    { value: '3', label: '3 minutes' },
     { value: '5', label: '5 minutes' },
     { value: '10', label: '10 minutes' },
     { value: '15', label: '15 minutes' },
@@ -63,6 +72,91 @@ const TopicDetailPage: React.FC = () => {
     { value: '45', label: '45 minutes' },
     { value: '60', label: '1 hour' },
   ];
+
+  const getHypothesisSuggestions = (topicName: string): string[] => {
+    const name = topicName.toLowerCase();
+    
+    if (name.includes('cricket') || name.includes('sports') || name.includes('football')) {
+      return [
+        "How does this sport impact local economy and tourism?",
+        "What are the social and cultural implications for the community?",
+        "How can we improve youth engagement and development through sports?",
+        "What role does this sport play in national identity and pride?"
+      ];
+    }
+    
+    if (name.includes('weather') || name.includes('climate')) {
+      return [
+        "How does climate change affect local agriculture and food security?",
+        "What adaptation strategies can communities implement?",
+        "How does extreme weather impact urban infrastructure and planning?",
+        "What are the economic consequences of changing weather patterns?"
+      ];
+    }
+    
+    if (name.includes('food') || name.includes('restaurant')) {
+      return [
+        "How does this food trend reflect changing cultural preferences?",
+        "What impact does this have on local farmers and suppliers?",
+        "How can we make this food more accessible to different communities?",
+        "What are the health and nutrition implications?"
+      ];
+    }
+    
+    if (name.includes('startup') || name.includes('tech') || name.includes('ai')) {
+      return [
+        "How can this technology solve local problems and challenges?",
+        "What are the job market implications and skill requirements?",
+        "How does this innovation impact traditional industries?",
+        "What are the ethical considerations and potential risks?"
+      ];
+    }
+    
+    if (name.includes('music') || name.includes('fashion')) {
+      return [
+        "How does this trend reflect generational changes and values?",
+        "What impact does this have on local artists and creators?",
+        "How can we preserve cultural heritage while embracing new trends?",
+        "What are the economic opportunities for local businesses?"
+      ];
+    }
+    
+    if (name.includes('education') || name.includes('school')) {
+      return [
+        "How can we improve access to quality education for all students?",
+        "What role does technology play in modern learning?",
+        "How do educational policies impact student outcomes?",
+        "What are the challenges and opportunities in remote learning?"
+      ];
+    }
+    
+    if (name.includes('politics') || name.includes('news')) {
+      return [
+        "How does this political development affect local communities?",
+        "What are the long-term implications for democracy and governance?",
+        "How can citizens become more engaged in the political process?",
+        "What are the economic and social consequences of this policy?"
+      ];
+    }
+    
+    if (name.includes('traffic') || name.includes('transport')) {
+      return [
+        "How can we improve public transportation infrastructure?",
+        "What are the environmental impacts of current transport systems?",
+        "How does traffic congestion affect local businesses and quality of life?",
+        "What innovative solutions can reduce transportation costs?"
+      ];
+    }
+    
+    // Default suggestions for general topics
+    return [
+      "How does this topic impact local communities and daily life?",
+      "What are the underlying causes and contributing factors?",
+      "How can we address the challenges and leverage opportunities?",
+      "What lessons can other regions learn from this situation?",
+      "How does this reflect broader social, economic, or cultural trends?"
+    ];
+  };
 
   useEffect(() => {
     if (topicId && region) {
@@ -157,6 +251,64 @@ const TopicDetailPage: React.FC = () => {
     return volume.toString();
   };
 
+  const handleAddChapter = () => {
+    const newChapter = {
+      id: (chapters.length + 1).toString(),
+      heading: `New Chapter ${chapters.length + 1}`,
+      narration: 'New chapter narration content will be generated here.',
+      visuals: 'Visual direction for the new chapter.',
+      brollIdeas: ['B-roll idea 1', 'B-roll idea 2', 'B-roll idea 3'],
+      duration: '1 min'
+    };
+    
+    setChapters([...chapters, newChapter]);
+  };
+
+  const handleAddChapterAfter = (index: number) => {
+    const newChapter = {
+      id: (chapters.length + 1).toString(),
+      heading: `New Chapter ${chapters.length + 1}`,
+      narration: 'New chapter narration content will be generated here.',
+      visuals: 'Visual direction for the new chapter.',
+      brollIdeas: ['B-roll idea 1', 'B-roll idea 2', 'B-roll idea 3'],
+      duration: '1 min'
+    };
+    
+    const updatedChapters = [...chapters];
+    updatedChapters.splice(index + 1, 0, newChapter);
+    setChapters(updatedChapters);
+  };
+
+  const handleDeleteChapter = (index: number) => {
+    const updatedChapters = chapters.filter((_, i) => i !== index);
+    setChapters(updatedChapters);
+  };
+
+  const handleEditChapter = (index: number) => {
+    setEditingChapter(index);
+    setEditHeading(chapters[index].heading || '');
+    setEditNarration(chapters[index].narration || '');
+  };
+
+  const handleSaveEdit = (index: number) => {
+    const updatedChapters = [...chapters];
+    updatedChapters[index] = {
+      ...updatedChapters[index],
+      heading: editHeading,
+      narration: editNarration
+    };
+    setChapters(updatedChapters);
+    setEditingChapter(null);
+    setEditHeading('');
+    setEditNarration('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingChapter(null);
+    setEditHeading('');
+    setEditNarration('');
+  };
+
   if (loading) {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
@@ -241,9 +393,6 @@ const TopicDetailPage: React.FC = () => {
                 variant="outlined"
               />
             </Stack>
-            <Typography variant="body1" color="text.secondary">
-              Query: {topic.query}
-            </Typography>
           </Box>
         </Box>
       </Paper>
@@ -256,6 +405,32 @@ const TopicDetailPage: React.FC = () => {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Describe your hypothesis, angle, or unique perspective on this topic. This will help generate relevant video content.
         </Typography>
+        
+        {/* Hypothesis Suggestions */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+            💡 Suggested hypotheses for "{topic.name}":
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+            {getHypothesisSuggestions(topic.name).map((suggestion: string, index: number) => (
+              <Chip
+                key={index}
+                label={suggestion}
+                size="small"
+                variant="outlined"
+                onClick={() => setHypothesis(suggestion)}
+                sx={{
+                  cursor: 'pointer',
+                  '&:hover': {
+                    backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                    borderColor: '#1DA1F2',
+                  }
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+        
         <TextField
           fullWidth
           multiline
@@ -266,63 +441,54 @@ const TopicDetailPage: React.FC = () => {
           onChange={(e) => setHypothesis(e.target.value)}
           sx={{ mb: 2 }}
         />
-        <Typography variant="caption" color="text.secondary">
-          Example: "How does this topic impact local communities and what solutions can be implemented?"
-        </Typography>
+      
       </Paper>
 
-      {/* Video Duration Selection */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Video Duration
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Select the desired length for your generated video content.
-        </Typography>
-        <FormControl fullWidth sx={{ maxWidth: 300 }}>
-          <InputLabel>Duration</InputLabel>
-          <Select
-            value={duration}
-            label="Duration"
-            onChange={(e) => setDuration(e.target.value)}
-          >
-            {durationOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Paper>
-
-      {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<CutIcon />}
-          onClick={handleGenerateChapters}
-          disabled={!hypothesis.trim() || generatingChapters}
-          sx={{ 
-            bgcolor: '#1DA1F2',
-            '&:hover': { bgcolor: '#0d8bd9' },
-            px: 4,
-            py: 1.5
-          }}
-        >
-          {generatingChapters ? 'Generating Chapters...' : 'Generate Chapters'}
-        </Button>
-      </Box>
+             {/* Video Duration Selection with Generate Button */}
+       <Paper sx={{ p: 3, mb: 3 }}>
+         <Typography variant="h6" gutterBottom>
+           Video Duration
+         </Typography>
+         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+           Select the desired length for your generated video content.
+         </Typography>
+                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Duration</InputLabel>
+              <Select
+                value={duration}
+                label="Duration"
+                onChange={(e) => setDuration(e.target.value)}
+              >
+                {durationOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<CutIcon />}
+              onClick={handleGenerateChapters}
+              disabled={!hypothesis.trim() || generatingChapters}
+              sx={{ 
+                bgcolor: '#1DA1F2',
+                '&:hover': { bgcolor: '#0d8bd9' },
+                px: 4,
+                py: 1.5
+              }}
+            >
+              {generatingChapters ? 'Generating Chapters...' : 'Generate Chapters'}
+            </Button>
+          </Box>
+       </Paper>
 
       {/* Generated Chapters Display */}
       {chaptersGenerated && chapters.length > 0 && (
         <Paper sx={{ p: 3, mt: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ color: '#1DA1F2' }}>
-            Generated Video Chapters
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Here are the chapters for your {durationOptions.find(d => d.value === duration)?.label} video:
-          </Typography>
           
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {chapters.map((chapter, index) => (
@@ -341,91 +507,219 @@ const TopicDetailPage: React.FC = () => {
                   }
                 }}
               >
-                <CardContent sx={{ p: 0, height: 120 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>
-                    {/* Image Thumbnail on Left */}
-                    <Box sx={{ position: 'relative', width: 120, height: 120 }}>
-                      <CardMedia
-                        component="img"
-                        image={`https://picsum.photos/120/120?random=${index + 1}`}
-                        alt={chapter.title}
-                        sx={{ 
-                          height: 120, 
-                          width: 120,
-                          objectFit: 'cover',
-                          borderRadius: '8px 0 0 8px'
-                        }}
-                      />
-                      {/* Replace Icon on Image */}
-                      <IconButton
-                        size="small"
-                        sx={{
-                          position: 'absolute',
-                          top: 4,
-                          right: 4,
-                          bgcolor: 'rgba(255,255,255,0.9)',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
-                          width: 28,
-                          height: 28,
-                        }}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                    
-                    {/* Content on Right */}
-                    <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', height: '100%', px: 2 }}>
+                <CardContent sx={{ p: 3, height: 'auto' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
+                    {/* Content - removed left image */}
+                    <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-start', height: '100%' }}>
                       <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold' }}>
-                          {chapter.title || `Chapter ${index + 1}`}
-                        </Typography>
-                        {chapter.description && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {chapter.description}
-                          </Typography>
+                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                           {editingChapter === index ? (
+                             <TextField
+                               value={editHeading}
+                               onChange={(e) => setEditHeading(e.target.value)}
+                               variant="outlined"
+                               size="small"
+                               sx={{ 
+                                 flexGrow: 1,
+                                 '& .MuiOutlinedInput-root': {
+                                   fontWeight: 'bold',
+                                   color: '#1DA1F2'
+                                 }
+                               }}
+                             />
+                           ) : (
+                             <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1DA1F2' }}>
+                               {chapter.heading || `Chapter ${index + 1}`}
+                             </Typography>
+                           )}
+                           <Chip 
+                             label={chapter.duration} 
+                             size="small" 
+                             variant="outlined"
+                             sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontWeight: 'bold' }}
+                           />
+                         </Box>
+                        
+                                                 {/* Narration Content */}
+                         {editingChapter === index ? (
+                           <TextField
+                             value={editNarration}
+                             onChange={(e) => setEditNarration(e.target.value)}
+                             variant="outlined"
+                             multiline
+                             rows={4}
+                             fullWidth
+                             sx={{ mb: 2 }}
+                           />
+                         ) : (
+                           <Box sx={{ 
+                             p: 2, 
+                             bgcolor: '#f8f9fa', 
+                             borderRadius: 1, 
+                             border: '1px solid #e9ecef',
+                             maxHeight: '200px',
+                             overflow: 'auto',
+                             mb: 2
+                           }}>
+                             <Typography variant="body1" sx={{ lineHeight: 1.6, color: '#495057' }}>
+                               {chapter.narration || 'Narration content will be generated here.'}
+                             </Typography>
+                           </Box>
+                         )}
+                        
+                        {/* Visuals */}
+                        {chapter.visuals && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#666', mb: 1 }}>
+                              🎬 Visual Direction:
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                              {chapter.visuals}
+                            </Typography>
+                          </Box>
                         )}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {chapter.duration && (
-                            <Chip 
-                              label={chapter.duration} 
-                              size="small" 
-                              variant="outlined"
-                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
-                            />
-                          )}
-                          {chapter.keyPoints && Array.isArray(chapter.keyPoints) && chapter.keyPoints.length > 0 && (
-                            <Chip 
-                              label={`${chapter.keyPoints.length} key points`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderColor: '#666', color: '#666' }}
-                            />
-                          )}
-                        </Box>
+                        
+                        {/* B-roll Ideas */}
+                        {chapter.brollIdeas && chapter.brollIdeas.length > 0 && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#666', mb: 1 }}>
+                              📹 B-roll Ideas:
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                              {chapter.brollIdeas.map((idea: string, ideaIndex: number) => (
+                                <Chip
+                                  key={ideaIndex}
+                                  label={idea}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ 
+                                    borderColor: '#666', 
+                                    color: '#666',
+                                    fontSize: '0.75rem'
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                          </Box>
+                        )}
                       </Box>
                       
-                      {/* Delete Icon on Right */}
-                      <IconButton
-                        className="chapter-actions"
-                        size="small"
-                        sx={{
-                          opacity: 0,
-                          transition: 'opacity 0.2s ease',
-                          color: '#ff4444',
-                          '&:hover': { 
-                            bgcolor: 'rgba(255,68,68,0.1)',
-                            color: '#cc0000'
-                          },
-                          width: 36,
-                          height: 36,
-                        }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
+                                             {/* Chapter Actions */}
+                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
+                         {editingChapter === index ? (
+                           <>
+                             {/* Save Button */}
+                             <IconButton
+                               size="small"
+                               onClick={() => handleSaveEdit(index)}
+                               sx={{
+                                 color: '#4caf50',
+                                 '&:hover': { 
+                                   bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                   color: '#388e3c'
+                                 },
+                                 width: 36,
+                                 height: 36,
+                               }}
+                               title="Save changes"
+                             >
+                               <CheckIcon fontSize="small" />
+                             </IconButton>
+                             
+                             {/* Cancel Button */}
+                             <IconButton
+                               size="small"
+                               onClick={handleCancelEdit}
+                               sx={{
+                                 color: '#ff9800',
+                                 '&:hover': { 
+                                   bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                   color: '#f57c00'
+                                 },
+                                 width: 36,
+                                 height: 36,
+                               }}
+                               title="Cancel editing"
+                             >
+                               <CloseIcon fontSize="small" />
+                             </IconButton>
+                           </>
+                         ) : (
+                           <>
+                             {/* Edit Chapter Button */}
+                             <IconButton
+                               className="chapter-actions"
+                               size="small"
+                               onClick={() => handleEditChapter(index)}
+                               sx={{
+                                 opacity: 0,
+                                 transition: 'opacity 0.2s ease',
+                                 color: '#ff9800',
+                                 '&:hover': { 
+                                   bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                   color: '#f57c00'
+                                 },
+                                 width: 36,
+                                 height: 36,
+                               }}
+                               title="Edit chapter"
+                             >
+                               <CreateIcon fontSize="small" />
+                             </IconButton>
+                             
+                             {/* Delete Icon */}
+                             <IconButton
+                               className="chapter-actions"
+                               size="small"
+                               onClick={() => handleDeleteChapter(index)}
+                               sx={{
+                                 opacity: 0,
+                                 transition: 'opacity 0.2s ease',
+                                 color: '#ff4444',
+                                 '&:hover': { 
+                                   bgcolor: 'rgba(255,68,68,0.1)',
+                                   color: '#cc0000'
+                                 },
+                                 width: 36,
+                                 height: 36,
+                               }}
+                               title="Delete chapter"
+                             >
+                               <DeleteIcon fontSize="small" />
+                             </IconButton>
+                           </>
+                                                  )}
+                       </Box>
+                     </Box>
+                   </Box>
+                 </CardContent>
+                 
+                 {/* Add Chapter After This One Button - Bottom of Card */}
+                 <Box sx={{ 
+                   display: 'flex', 
+                   justifyContent: 'center', 
+                   p: 1, 
+                   borderTop: '1px solid #e0e0e0',
+                   bgcolor: '#fafafa'
+                 }}>
+                   <IconButton
+                     size="small"
+                     onClick={() => handleAddChapterAfter(index)}
+                     sx={{
+                       color: '#1DA1F2',
+                       '&:hover': { 
+                         bgcolor: 'rgba(29, 161, 242, 0.1)',
+                         color: '#0d8bd9'
+                       },
+                       width: 32,
+                       height: 32,
+                     }}
+                     title="Add chapter after this one"
+                   >
+                     <AddIcon fontSize="small" />
+                   </IconButton>
+                 </Box>
+               </Card>
             ))}
           </Box>
         </Paper>
@@ -438,34 +732,6 @@ const TopicDetailPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Summary Card */}
-      <Card sx={{ mt: 4, bgcolor: '#f8f9fa' }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Summary
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Stack spacing={1}>
-            <Typography variant="body2">
-              <strong>Topic:</strong> {topic.name}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Region:</strong> {topic.region.toUpperCase()}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Tweet Volume:</strong> {formatTweetVolume(topic.tweet_volume)}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Duration:</strong> {durationOptions.find(d => d.value === duration)?.label}
-            </Typography>
-            {hypothesis && (
-              <Typography variant="body2">
-                <strong>Hypothesis:</strong> {hypothesis}
-              </Typography>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
     </Container>
   );
 };

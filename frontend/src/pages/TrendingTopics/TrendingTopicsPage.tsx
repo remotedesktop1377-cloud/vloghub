@@ -5,7 +5,7 @@ import styles from './TrendingTopicsPage.module.css';
 const TrendingTopicsPage: React.FC = () => {
   return (
     <div className={styles.trendingTopicsPageContainer}>
-      <TrendingTopics region="pakistan" />
+      <TrendingTopics />
     </div>
   );
 };

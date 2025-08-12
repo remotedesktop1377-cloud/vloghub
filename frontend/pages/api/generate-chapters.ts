@@ -1,6 +1,40 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import OpenAI from "openai";
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { GoogleGenAI } from "@google/genai";
+
+const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || '' });
+
+const ScriptSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    durationSeconds: { type: "number" },
+    targetPlatform: { type: "string" },
+    tone: { type: "string" },
+    chapters: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          heading: { type: "string" },
+          narration: { type: "string" },
+          visuals: { type: "string" },
+          brollIdeas: { type: "array", items: { type: "string" } }
+        },
+        required: ["id", "heading", "narration", "visuals"]
+      }
+    },
+    cta: { type: "string" },
+    metadata: {
+      type: "object",
+      properties: {
+        keywords: { type: "array", items: { type: "string" } },
+        thumbnailIdeas: { type: "array", items: { type: "string" } }
+      }
+    }
+  },
+  required: ["title", "durationSeconds", "chapters"]
+} as const;
 
 interface GenerateChaptersRequest {
   topic: string;
@@ -10,10 +44,11 @@ interface GenerateChaptersRequest {
 
 interface Chapter {
   id: string;
-  title: string;
-  description?: string;
+  heading: string;
+  narration: string;
+  visuals: string;
+  brollIdeas: string[];
   duration: string;
-  keyPoints?: string[];
 }
 
 interface GenerateChaptersResponse {
@@ -21,6 +56,10 @@ interface GenerateChaptersResponse {
   totalDuration: string;
   topic: string;
   hypothesis: string;
+  title: string;
+  cta: string;
+  keywords: string[];
+  thumbnailIdeas: string[];
 }
 
 export default async function handler(
@@ -47,20 +86,53 @@ export default async function handler(
       });
     }
 
-    // Calculate chapters based on duration
-    const numChapters = Math.max(3, Math.ceil(duration / 10));
-    // Remove the incorrect chapterDuration calculation since we're not using it
+    // Convert minutes to seconds
+    const durationSeconds = duration * 60;
     
-    // Generate chapters using OpenAI API
-    const chapters = await generateChaptersWithOpenAI(topic, hypothesis, duration, numChapters);
+    // Generate video script using the new schema
+    const script = await generateVideoScript({
+      topic: `${topic} - ${hypothesis}`,
+      durationSeconds,
+      platform: "YouTube",
+      tone: "Engaging, clear, research-focused",
+      audience: "General audience interested in research and analysis"
+    });
+
+    // Transform script chapters to match our Chapter interface
+    const chapters: Chapter[] = script.chapters.map((chapter: any, index: number) => {
+      // Calculate proportional duration for this chapter
+      const totalChapters = script.chapters.length;
+      const baseSecondsPerChapter = durationSeconds / totalChapters;
+      let chapterSeconds = baseSecondsPerChapter;
+      
+      // First and last chapters get slightly more time
+      if (index === 0 || index === totalChapters - 1) {
+        chapterSeconds = baseSecondsPerChapter * 1.2;
+      }
+      
+      const chapterMinutes = Math.round((chapterSeconds / 60) * 10) / 10;
+      
+      return {
+        id: chapter.id || (index + 1).toString(),
+        heading: chapter.heading,
+        narration: chapter.narration,
+        visuals: chapter.visuals,
+        brollIdeas: chapter.brollIdeas || [],
+        duration: `${chapterMinutes} min`,
+      };
+    });
 
     const response: GenerateChaptersResponse = {
       chapters,
       totalDuration: `${duration} minutes`,
       topic,
       hypothesis,
+      title: script.title,
+      cta: script.cta || "Thanks for watching! Don't forget to like and subscribe.",
+      keywords: script.metadata?.keywords || [],
+      thumbnailIdeas: script.metadata?.thumbnailIdeas || [],
     };
-
+    console.log(response);
     res.status(200).json(response);
   } catch (error) {
     console.error('Error generating chapters:', error);
@@ -68,142 +140,101 @@ export default async function handler(
   }
 }
 
-async function generateChaptersWithOpenAI(
-  topic: string,
-  hypothesis: string,
-  duration: number,
-  numChapters: number
-): Promise<Chapter[]> {
-  try {
-    const openaiApiKey = process.env.OPENAI_API_KEY;
-    if (!openaiApiKey) {
-      // Fallback to mock data if no API key
-      return generateMockChapters(topic, hypothesis, duration, numChapters);
-    }
+async function generateVideoScript({
+  topic,
+  durationSeconds = 150,
+  platform = "YouTube",
+  tone = "Engaging, clear, non‑technical",
+  audience = "General audience",
+}: {
+  topic: string;
+  durationSeconds?: number;
+  platform?: "YouTube" | "TikTok" | "Reels" | "Shorts" | "Documentary";
+  tone?: string;
+  audience?: string;
+}) {
+  const model = genAI.models.generateContent({
+    model: "gemini-1.5-flash",
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `
+You are a professional video scriptwriter.
+Write a tightly structured script in JSON that I can render into a storyboard and TTS.
+Hard rules:
+- Keep narration within ${durationSeconds} total seconds at 150 wpm.
+- Make chapter headings short and scannable.
+- Add practical "visuals" directions the editor can follow.
+- Include 3–5 "brollIdeas" per chapter.
+- Keep tone: ${tone}. Platform: ${platform}. Audience: ${audience}.
+- Create a compelling narrative that flows logically from chapter to chapter.
+- Include introduction and conclusion chapters.
+- Make content engaging, research-focused, and educational.
 
-    const prompt = `Generate ${numChapters} video chapters for a ${duration}-minute video about "${topic}".
+Topic: "${topic}"
 
-User's hypothesis/angle: "${hypothesis}"
-
-Requirements:
-- Each chapter should have a clear title, description, and 3-5 key points
-- Chapters should flow logically and build upon each other
-- Total duration should be approximately ${duration} minutes
-- Make content engaging and research-focused
-- Include introduction and conclusion chapters
-
-Format each chapter as JSON with: title, description, duration (in minutes), and keyPoints array.
-
-Return only valid JSON array.`;
-
-    // Use the official OpenAI SDK
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini', // Latest and most cost-effective model
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a professional video content planner and researcher. Generate well-structured video chapters based on the user\'s requirements.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.7,
-    });
-
-    const content = response.choices[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content received from OpenAI API');
-    }
-
-    // Try to parse the JSON response
-    try {
-      const parsedChapters = JSON.parse(content);
-      if (Array.isArray(parsedChapters)) {
-        // Use the same duration calculation logic as mock chapters
-        const baseDurationPerScene = Math.floor((duration / numChapters) * 10) / 10;
-        const remainingTime = Math.round((duration - (baseDurationPerScene * numChapters)) * 10) / 10;
-        
-        return parsedChapters.map((chapter, index) => {
-          let sceneDuration = baseDurationPerScene;
-          
-          // Distribute remaining time to the first few scenes
-          if (index < remainingTime * 100) {
-            sceneDuration += 0.01;
+Return ONLY valid JSON that matches the provided schema.
+Do not include markdown code fences or extra commentary.`
           }
-          
-          // Round to 2 decimal places max
-          sceneDuration = Math.round(sceneDuration * 100) / 100;
-          
-          return {
-            id: (index + 1).toString(),
-            title: chapter.title || `Chapter ${index + 1}`,
-            description: chapter.description || 'Chapter description',
-            duration: chapter.duration ? `${chapter.duration} min` : `${sceneDuration} min`,
-            keyPoints: Array.isArray(chapter.keyPoints) ? chapter.keyPoints : ['Key point 1', 'Key point 2', 'Key point 3'],
-          };
-        });
+        ]
       }
-    } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', parseError);
-      console.log('Raw response content:', content);
-    }
+    ],
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: ScriptSchema as any,
+      temperature: 0.7,
+    },
+  });
 
-    // Fallback to mock data if parsing fails
-    return generateMockChapters(topic, hypothesis, duration, numChapters);
-
+  try {
+    const res = await model;
+    const text = res.text || '';
+    const json = JSON.parse(text);
+    return json;
   } catch (error) {
-    console.error('OpenAI API error:', error instanceof Error ? error.message : String(error));
+    console.error('Error generating video script:', error);
     // Fallback to mock data
-    return generateMockChapters(topic, hypothesis, duration, numChapters);
+    return generateMockScript(topic, durationSeconds);
   }
 }
 
-function generateMockChapters(
-  topic: string,
-  hypothesis: string,
-  duration: number,
-  numChapters: number
-): Chapter[] {
-  // Calculate base duration per scene using Math.floor to ensure we don't exceed total time
-  const baseDurationPerScene = Math.floor((duration / numChapters) * 100) / 100;
-  const remainingTime = Math.round((duration - (baseDurationPerScene * numChapters)) * 100) / 100;
+function generateMockScript(topic: string, durationSeconds: number) {
+  const numChapters = Math.max(3, Math.ceil(durationSeconds / 30));
+  const baseSecondsPerChapter = durationSeconds / numChapters;
   
-  const allScripts = [
-    'February 11th, 1990. A day etched in history.',
-    'Nelson Mandela, finally free. But what would he say?',
-    'Then, his voice. Calm, resolute. It was incredible.',
-    'After 27 years, he spoke not of bitterness, but of peace.',
-    'He called for unity, for a democratic South Africa.',
-    'His message resonated. The world listened, captivated.',
-    'That speech wasn\'t just words; it was a turning point.',
-    'A beacon of hope for millions. Truly unforgettable.',
-    'His legacy lives on, inspiring us all.',
-  ];
-  
-  const mockChapters: Chapter[] = [];
-  
-  // Create chapters with proper duration distribution
+  const chapters = [];
   for (let i = 0; i < numChapters; i++) {
-    let sceneDuration = baseDurationPerScene;
-    
-    // Distribute remaining time to the first few scenes
-    if (i < remainingTime * 100) {
-      sceneDuration += 0.01;
-    }
-    
-    // Round to 2 decimal places max
-    sceneDuration = Math.round(sceneDuration * 100) / 100;
-    
-    mockChapters.push({
+    const chapterSeconds = Math.round(baseSecondsPerChapter * 10) / 10;
+    chapters.push({
       id: (i + 1).toString(),
-      title: allScripts[i] || `Chapter ${i + 1}: Additional Insights`,
-      duration: `${sceneDuration} min`,
+      heading: `Chapter ${i + 1}: ${topic} Insights`,
+      narration: `This is the narration content for Chapter ${i + 1}. It explores the topic of "${topic}" and provides detailed insights and analysis.`,
+      visuals: `Show relevant graphics, charts, or footage related to ${topic}. Include text overlays and visual elements that support the narration.`,
+      brollIdeas: [
+        `B-roll footage related to ${topic}`,
+        `Supporting graphics and charts`,
+        `Relevant images and illustrations`,
+        `Text overlays and key points`
+      ]
     });
   }
 
-  return mockChapters;
+  return {
+    title: `Complete Guide to ${topic}`,
+    durationSeconds,
+    targetPlatform: "YouTube",
+    tone: "Engaging, clear, research-focused",
+    chapters,
+    cta: "Thanks for watching! Don't forget to like and subscribe.",
+    metadata: {
+      keywords: [topic, "research", "analysis", "insights"],
+      thumbnailIdeas: [
+        `Eye-catching thumbnail with ${topic} text`,
+        `Professional design with key insights`,
+        `Engaging visual that represents the content`
+      ]
+    }
+  };
 }
