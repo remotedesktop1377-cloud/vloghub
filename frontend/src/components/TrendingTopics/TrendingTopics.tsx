@@ -66,9 +66,10 @@ const TrendingTopics: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState('pakistan');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  
+
   // Topic Details State
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
+  const [selectedTopicDetails, setSelectedTopicDetails] = useState<string>('');
   const [hypothesis, setHypothesis] = useState('');
   const [duration, setDuration] = useState('1');
   const [generatingChapters, setGeneratingChapters] = useState(false);
@@ -77,7 +78,7 @@ const TrendingTopics: React.FC = () => {
   const [editingChapter, setEditingChapter] = useState<number | null>(null);
   const [editHeading, setEditHeading] = useState('');
   const [editNarration, setEditNarration] = useState('');
-  
+
   const router = useRouter();
 
   const regions = [
@@ -259,12 +260,100 @@ const TrendingTopics: React.FC = () => {
     ];
   };
 
-  const handleTopicSelect = (topic: TrendingTopic) => {
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
+  const [enhancingDetails, setEnhancingDetails] = useState(false);
+
+  const getTopicSuggestions = async (topicName: string) => {
+    if (!topicName.trim()) return;
+
+    try {
+      setLoadingTopicSuggestions(true);
+      setError(null);
+
+      const response = await fetch('/api/get-topic-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hashtag: topicName,
+          region: selectedRegion
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const suggestions = Array.isArray(data)
+          ? data
+          : (Array.isArray(data?.suggestions) ? data.suggestions : []);
+        setTopicSuggestions(suggestions || []);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to fetch topic suggestions:', errorData.detail || response.status);
+        // Fallback to default suggestions
+        setTopicSuggestions([
+          `The hidden story behind ${topicName} that nobody talks about`,
+          `How ${topicName} is changing the landscape in ${selectedRegion}`,
+          `The controversy surrounding ${topicName} - what you need to know`,
+          `5 surprising facts about ${topicName} that will shock you`,
+          `Why ${topicName} matters more than you think`
+        ]);
+      }
+    } catch (err) {
+      console.error('Error fetching topic suggestions:', err);
+      // Fallback to default suggestions
+      setTopicSuggestions([
+        `The hidden story behind ${topicName} that nobody talks about`,
+        `How ${topicName} is changing the landscape in ${selectedRegion}`,
+        `5 surprising facts about ${topicName} that will shock you`,
+        `Why ${topicName} matters more than you think`,
+        `The future of ${topicName} - predictions and possibilities`
+      ]);
+    } finally {
+      setLoadingTopicSuggestions(false);
+    }
+  };
+
+  const handleEnhanceTopicDetails = async () => {
+    if (!selectedTopic || !selectedTopicDetails.trim()) return;
+    try {
+      setEnhancingDetails(true);
+      const response = await fetch('/api/enhance-topic-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: selectedTopic.name,
+          details: selectedTopicDetails,
+          region: selectedRegion,
+          targetWords: 160,
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.enhancedText) {
+          setSelectedTopicDetails(data.enhancedText);
+        }
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        console.error('Failed to enhance details', errData);
+      }
+    } catch (e) {
+      console.error('Error enhancing details', e);
+    } finally {
+      setEnhancingDetails(false);
+    }
+  };
+
+  const handleTopicSelect = async (topic: TrendingTopic) => {
     setSelectedTopic(topic);
     setHypothesis('');
     setChapters([]);
     setChaptersGenerated(false);
     setEditingChapter(null);
+    setTopicSuggestions([]); // Reset suggestions
+    // Fetch new topic suggestions
+    await getTopicSuggestions(topic.name);
   };
 
   const handleGenerateChapters = async () => {
@@ -358,15 +447,15 @@ const TrendingTopics: React.FC = () => {
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    
+
     const { source, destination } = result;
-    
+
     if (source.index === destination.index) return;
-    
+
     const updatedChapters = Array.from(chapters);
     const [reorderedChapter] = updatedChapters.splice(source.index, 1);
     updatedChapters.splice(destination.index, 0, reorderedChapter);
-    
+
     setChapters(updatedChapters);
   };
 
@@ -422,8 +511,6 @@ const TrendingTopics: React.FC = () => {
           {error}
         </Alert>
       )}
-
-
 
       <Grid container spacing={3}>
         {trendingTopics.map((topic, index) => {
@@ -575,32 +662,49 @@ const TrendingTopics: React.FC = () => {
             </Box>
           </Paper>
 
-          {/* Two Column Layout */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            {/* Left Column - Hypothesis and Video Generation */}
-            <Box sx={{ flex: 1 }}>
-              {/* Hypothesis Input */}
-              <Paper sx={{ p: 2, mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Your Hypothesis
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Describe your hypothesis, angle, or unique perspective on this topic. This will help generate relevant video content.
-                </Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
 
-                {/* Hypothesis Suggestions */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    💡 Suggested hypotheses for "{selectedTopic.name}":
+            {/* Topic Details */}
+            <Paper sx={{ p: 2, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Your Topic
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Describe your topic, This will help generate relevant video content.
+              </Typography>
+
+              {/* Topic Suggestions */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    💡 Suggested topics for "{selectedTopic.name}":
                   </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                    {getHypothesisSuggestions(selectedTopic.name).map((suggestion: string, index: number) => (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => getTopicSuggestions(selectedTopic.name)}
+                    disabled={loadingTopicSuggestions}
+                    sx={{ minWidth: 'auto', px: 1 }}
+                  >
+                    🔄
+                  </Button>
+                </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {loadingTopicSuggestions ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2" color="text.secondary">
+                        Generating topic suggestions...
+                      </Typography>
+                    </Box>
+                  ) : topicSuggestions.length > 0 ? (
+                    topicSuggestions.map((suggestion: string, index: number) => (
                       <Chip
                         key={index}
                         label={suggestion}
                         size="small"
                         variant="outlined"
-                        onClick={() => setHypothesis(suggestion)}
+                        onClick={() => setSelectedTopicDetails(suggestion)}
                         sx={{
                           cursor: 'pointer',
                           '&:hover': {
@@ -609,299 +713,368 @@ const TrendingTopics: React.FC = () => {
                           }
                         }}
                       />
-                    ))}
-                  </Box>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No topic suggestions available. Click on a trending topic to generate suggestions.
+                    </Typography>
+                  )}
                 </Box>
+              </Box>
 
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={4}
-                  variant="outlined"
-                  placeholder="Enter your hypothesis, research question, or unique angle on this topic..."
-                  value={hypothesis}
-                  onChange={(e) => setHypothesis(e.target.value)}
-                  sx={{ mb: 2 }}
-                />
-              </Paper>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                variant="outlined"
+                placeholder="Enter your topic details..."
+                value={selectedTopicDetails}
+                onChange={(e) => setSelectedTopicDetails(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="contained"
+                  onClick={handleEnhanceTopicDetails}
+                  disabled={enhancingDetails || !selectedTopicDetails.trim()}
+                  sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}
+                >
+                  {enhancingDetails ? 'Enhancing...' : '✨ Enhance'}
+                </Button>
+              </Box>
+            </Paper>
 
-              {/* Video Duration */}
-              <Paper sx={{ p: 2, mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Video Duration
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Select the desired length for your generated video content.
-                </Typography>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <FormControl sx={{ minWidth: 200 }}>
-                    <InputLabel>Duration</InputLabel>
-                    <Select
-                      value={duration}
-                      label="Duration"
-                      onChange={(e) => setDuration(e.target.value)}
-                    >
-                      {durationOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+            {/* Hypothesis Input */}
+            <Paper sx={{ p: 2, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Your Hypothesis
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Describe your hypothesis, angle, or unique perspective on this topic. This will help generate relevant video content.
+              </Typography>
 
+              {/* Hypothesis Suggestions */}
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    💡 Suggested hypotheses for "{selectedTopic.name}":
+                  </Typography>
                   <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<CutIcon />}
-                    onClick={handleGenerateChapters}
-                    disabled={!hypothesis.trim() || generatingChapters}
-                    sx={{
-                      bgcolor: '#1DA1F2',
-                      '&:hover': { bgcolor: '#0d8bd9' },
-                      px: 4,
-                      py: 1.5
-                    }}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => getHypothesisSuggestions(selectedTopic.name)}
+                    sx={{ minWidth: 'auto', px: 1 }}
                   >
-                    {generatingChapters ? 'Generating Chapters...' : 'Generate Chapters'}
+                    🔄
                   </Button>
                 </Box>
-              </Paper>
-            </Box>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {getHypothesisSuggestions(selectedTopic.name).map((suggestion: string, index: number) => (
+                    <Chip
+                      key={index}
+                      label={suggestion}
+                      size="small"
+                      variant="outlined"
+                      onClick={() => setHypothesis(suggestion)}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                          borderColor: '#1DA1F2',
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
+              </Box>
 
-            {/* Right Column - Chapters List */}
-            <Box sx={{ flex: 1 }}>
-              <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
-                {chaptersGenerated && chapters.length > 0 ? (
-                  <DragDropContext onDragEnd={handleDragEnd}>
-                    <Droppable droppableId="chapters">
-                      {(provided) => (
-                        <Box 
-                          {...provided.droppableProps}
-                          ref={provided.innerRef}
-                          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-                        >
-                          {chapters.map((chapter, index) => (
-                            <Draggable key={chapter.id || index.toString()} draggableId={chapter.id || index.toString()} index={index}>
-                              {(provided, snapshot) => (
-                                <Card
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  variant="outlined"
-                                  sx={{
-                                    borderColor: '#e0e0e0',
-                                    borderRadius: 2,
-                                    transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
-                                    boxShadow: snapshot.isDragging ? 8 : 1,
-                                    '&:hover': {
-                                      boxShadow: 2,
-                                      borderColor: '#1DA1F2',
-                                      '& .chapter-actions': {
-                                        opacity: 1,
-                                      }
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                variant="outlined"
+                placeholder="Enter your hypothesis, research question, or unique angle on this topic..."
+                value={hypothesis}
+                onChange={(e) => setHypothesis(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+            </Paper>
+
+            {/* Video Duration */}
+            <Paper sx={{ p: 2, mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Video Duration
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select the desired length for your generated video content.
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>Duration</InputLabel>
+                  <Select
+                    value={duration}
+                    label="Duration"
+                    onChange={(e) => setDuration(e.target.value)}
+                  >
+                    {durationOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<CutIcon />}
+                  onClick={handleGenerateChapters}
+                  disabled={!hypothesis.trim() || generatingChapters}
+                  sx={{
+                    bgcolor: '#1DA1F2',
+                    '&:hover': { bgcolor: '#0d8bd9' },
+                    px: 4,
+                    py: 1.5
+                  }}
+                >
+                  {generatingChapters ? 'Generating Chapters...' : 'Generate Chapters'}
+                </Button>
+              </Box>
+            </Paper>
+
+            {/* Video Chapters Section */}
+            <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
+              {chaptersGenerated && chapters.length > 0 ? (
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="chapters">
+                    {(provided) => (
+                      <Box
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                      >
+                        {chapters.map((chapter, index) => (
+                          <Draggable key={chapter.id || index.toString()} draggableId={chapter.id || index.toString()} index={index}>
+                            {(provided, snapshot) => (
+                              <Card
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                variant="outlined"
+                                sx={{
+                                  borderColor: '#e0e0e0',
+                                  borderRadius: 2,
+                                  transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
+                                  boxShadow: snapshot.isDragging ? 8 : 1,
+                                  '&:hover': {
+                                    boxShadow: 2,
+                                    borderColor: '#1DA1F2',
+                                    '& .chapter-actions': {
+                                      opacity: 1,
                                     }
-                                  }}
-                                >
-                                  <CardContent sx={{ p: 2, height: 'auto' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
-                                      {/* Drag Handle */}
-                                      <Box 
-                                        {...provided.dragHandleProps}
-                                        sx={{ 
-                                          mr: 2, 
-                                          cursor: 'grab',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          color: '#9c27b0',
-                                          '&:active': { cursor: 'grabbing' },
-                                          minHeight: '100%',
-                                          alignSelf: 'stretch'
-                                        }}
-                                      >
-                                        <DragIcon fontSize="small" />
+                                  }
+                                }}
+                              >
+                                <CardContent sx={{ p: 2, height: 'auto' }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
+                                    {/* Drag Handle */}
+                                    <Box
+                                      {...provided.dragHandleProps}
+                                      sx={{
+                                        mr: 2,
+                                        cursor: 'grab',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#9c27b0',
+                                        '&:active': { cursor: 'grabbing' },
+                                        minHeight: '100%',
+                                        alignSelf: 'stretch'
+                                      }}
+                                    >
+                                      <DragIcon fontSize="small" />
+                                    </Box>
+
+                                    {/* Content */}
+                                    <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-start', height: '100%' }}>
+                                      <Box sx={{ flexGrow: 1 }}>
+                                        {/* Narration Content */}
+                                        {editingChapter === index ? (
+                                          <TextField
+                                            value={editNarration}
+                                            onChange={(e) => setEditNarration(e.target.value)}
+                                            variant="outlined"
+                                            multiline
+                                            rows={4}
+                                            fullWidth
+                                            sx={{ mb: 2 }}
+                                          />
+                                        ) : (
+                                          <Box sx={{
+                                            p: 2,
+                                            bgcolor: '#f8f9fa',
+                                            borderRadius: 1,
+                                            border: '1px solid #e9ecef',
+                                            maxHeight: '200px',
+                                            overflow: 'auto',
+                                            mb: 2
+                                          }}>
+                                            <Typography variant="body1" sx={{ lineHeight: 1.6, color: '#495057' }}>
+                                              {chapter.narration || 'Narration content will be generated here.'}
+                                            </Typography>
+                                          </Box>
+                                        )}
                                       </Box>
-                                      
-                                      {/* Content */}
-                                      <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-start', height: '100%' }}>
-                                        <Box sx={{ flexGrow: 1 }}>
-                                          {/* Narration Content */}
-                                          {editingChapter === index ? (
-                                            <TextField
-                                              value={editNarration}
-                                              onChange={(e) => setEditNarration(e.target.value)}
-                                              variant="outlined"
-                                              multiline
-                                              rows={4}
-                                              fullWidth
-                                              sx={{ mb: 2 }}
-                                            />
-                                          ) : (
-                                            <Box sx={{
-                                              p: 2,
-                                              bgcolor: '#f8f9fa',
-                                              borderRadius: 1,
-                                              border: '1px solid #e9ecef',
-                                              maxHeight: '200px',
-                                              overflow: 'auto',
-                                              mb: 2
-                                            }}>
-                                              <Typography variant="body1" sx={{ lineHeight: 1.6, color: '#495057' }}>
-                                                {chapter.narration || 'Narration content will be generated here.'}
-                                              </Typography>
-                                            </Box>
-                                          )}
-                                        </Box>
 
-                                        {/* Chapter Actions */}
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
-                                          {editingChapter === index ? (
-                                            <>
-                                              {/* Save Button */}
-                                              <IconButton
-                                                size="small"
-                                                onClick={() => handleSaveEdit(index)}
-                                                sx={{
-                                                  color: '#4caf50',
-                                                  '&:hover': {
-                                                    bgcolor: 'rgba(76, 175, 80, 0.1)',
-                                                    color: '#388e3c'
-                                                  },
-                                                  width: 36,
-                                                  height: 36,
-                                                }}
-                                                title="Save changes"
-                                              >
-                                                <CheckIcon fontSize="small" />
-                                              </IconButton>
+                                      {/* Chapter Actions */}
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
+                                        {editingChapter === index ? (
+                                          <>
+                                            {/* Save Button */}
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => handleSaveEdit(index)}
+                                              sx={{
+                                                color: '#4caf50',
+                                                '&:hover': {
+                                                  bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                                  color: '#388e3c'
+                                                },
+                                                width: 36,
+                                                height: 36,
+                                              }}
+                                              title="Save changes"
+                                            >
+                                              <CheckIcon fontSize="small" />
+                                            </IconButton>
 
-                                              {/* Cancel Button */}
-                                              <IconButton
-                                                size="small"
-                                                onClick={handleCancelEdit}
-                                                sx={{
-                                                  color: '#ff9800',
-                                                  '&:hover': {
-                                                    bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                    color: '#f57c00'
-                                                  },
-                                                  width: 36,
-                                                  height: 36,
-                                                }}
-                                                title="Cancel editing"
-                                              >
-                                                <CloseIcon fontSize="small" />
-                                              </IconButton>
-                                            </>
-                                          ) : (
-                                            <>
-                                              {/* Edit Chapter Button */}
-                                              <IconButton
-                                                className="chapter-actions"
-                                                size="small"
-                                                onClick={() => handleEditChapter(index)}
-                                                sx={{
-                                                  opacity: 0,
-                                                  transition: 'opacity 0.2s ease',
-                                                  color: '#ff9800',
-                                                  '&:hover': {
-                                                    bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                    color: '#f57c00'
-                                                  },
-                                                  width: 36,
-                                                  height: 36,
-                                                }}
-                                                title="Edit chapter"
-                                              >
-                                                <CreateIcon fontSize="small" />
-                                              </IconButton>
+                                            {/* Cancel Button */}
+                                            <IconButton
+                                              size="small"
+                                              onClick={handleCancelEdit}
+                                              sx={{
+                                                color: '#ff9800',
+                                                '&:hover': {
+                                                  bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                                  color: '#f57c00'
+                                                },
+                                                width: 36,
+                                                height: 36,
+                                              }}
+                                              title="Cancel editing"
+                                            >
+                                              <CloseIcon fontSize="small" />
+                                            </IconButton>
+                                          </>
+                                        ) : (
+                                          <>
+                                            {/* Edit Chapter Button */}
+                                            <IconButton
+                                              className="chapter-actions"
+                                              size="small"
+                                              onClick={() => handleEditChapter(index)}
+                                              sx={{
+                                                opacity: 0,
+                                                transition: 'opacity 0.2s ease',
+                                                color: '#ff9800',
+                                                '&:hover': {
+                                                  bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                                  color: '#f57c00'
+                                                },
+                                                width: 36,
+                                                height: 36,
+                                              }}
+                                              title="Edit chapter"
+                                            >
+                                              <CreateIcon fontSize="small" />
+                                            </IconButton>
 
-                                              {/* Delete Icon */}
-                                              <IconButton
-                                                className="chapter-actions"
-                                                size="small"
-                                                onClick={() => handleDeleteChapter(index)}
-                                                sx={{
-                                                  opacity: 0,
-                                                  transition: 'opacity 0.2s ease',
-                                                  color: '#ff4444',
-                                                  '&:hover': {
-                                                    bgcolor: 'rgba(255,68,68,0.1)',
-                                                    color: '#cc0000'
-                                                  },
-                                                  width: 36,
-                                                  height: 36,
-                                                }}
-                                                title="Delete chapter"
-                                              >
-                                                <DeleteIcon fontSize="small" />
-                                              </IconButton>
-                                              
-                                              {/* Add Chapter After This One Button */}
-                                              <IconButton
-                                                className="chapter-actions"
-                                                size="small"
-                                                onClick={() => handleAddChapterAfter(index)}
-                                                sx={{
-                                                  opacity: 0,
-                                                  transition: 'opacity 0.2s ease',
-                                                  color: '#1DA1F2',
-                                                  '&:hover': {
-                                                    bgcolor: 'rgba(29, 161, 242, 0.1)',
-                                                    color: '#0d8bd9'
-                                                  },
-                                                  width: 36,
-                                                  height: 36,
-                                                }}
-                                                title="Add chapter after this one"
-                                              >
-                                                <AddIcon fontSize="small" />
-                                              </IconButton>
-                                            </>
-                                          )}
-                                        </Box>
+                                            {/* Delete Icon */}
+                                            <IconButton
+                                              className="chapter-actions"
+                                              size="small"
+                                              onClick={() => handleDeleteChapter(index)}
+                                              sx={{
+                                                opacity: 0,
+                                                transition: 'opacity 0.2s ease',
+                                                color: '#ff4444',
+                                                '&:hover': {
+                                                  bgcolor: 'rgba(255,68,68,0.1)',
+                                                  color: '#cc0000'
+                                                },
+                                                width: 36,
+                                                height: 36,
+                                              }}
+                                              title="Delete chapter"
+                                            >
+                                              <DeleteIcon fontSize="small" />
+                                            </IconButton>
+
+                                            {/* Add Chapter After This One Button */}
+                                            <IconButton
+                                              className="chapter-actions"
+                                              size="small"
+                                              onClick={() => handleAddChapterAfter(index)}
+                                              sx={{
+                                                opacity: 0,
+                                                transition: 'opacity 0.2s ease',
+                                                color: '#1DA1F2',
+                                                '&:hover': {
+                                                  bgcolor: 'rgba(29, 161, 242, 0.1)',
+                                                  color: '#0d8bd9'
+                                                },
+                                                width: 36,
+                                                height: 36,
+                                              }}
+                                              title="Add chapter after this one"
+                                            >
+                                              <AddIcon fontSize="small" />
+                                            </IconButton>
+                                          </>
+                                        )}
                                       </Box>
                                     </Box>
-                                  </CardContent>
-                                </Card>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </Box>
-                      )}
-                    </Droppable>
-                  </DragDropContext>
-                ) : (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    height: '100%',
-                    textAlign: 'center',
-                    py: 8
+                                  </Box>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </Box>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              ) : (
+                <Box sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  textAlign: 'center',
+                  py: 8
+                }}>
+                  <Typography variant="h6" sx={{ color: '#666', mb: 2 }}>
+                    📚 Generated Chapters
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#999', mb: 3, maxWidth: '300px' }}>
+                    Your video chapters will appear here once you generate them using the form on the left.
+                  </Typography>
+                  <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    color: '#ccc',
+                    fontSize: '0.875rem'
                   }}>
-                    <Typography variant="h6" sx={{ color: '#666', mb: 2 }}>
-                      📚 Generated Chapters
+                    <Typography variant="body2" sx={{ color: '#ccc' }}>
+                      Enter your hypothesis and click "Generate Chapters" to get started
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#999', mb: 3, maxWidth: '300px' }}>
-                      Your video chapters will appear here once you generate them using the form on the left.
-                    </Typography>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 1, 
-                      color: '#ccc',
-                      fontSize: '0.875rem'
-                    }}>
-                      <Typography variant="body2" sx={{ color: '#ccc' }}>
-                        Enter your hypothesis and click "Generate Chapters" to get started
-                      </Typography>
-                    </Box>
                   </Box>
-                )}
-              </Paper>
-            </Box>
+                </Box>
+              )}
+            </Paper>
+
           </Box>
 
           {/* Error Display */}
