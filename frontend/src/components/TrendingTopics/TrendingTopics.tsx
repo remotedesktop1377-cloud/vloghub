@@ -20,6 +20,10 @@ import {
   TextField,
   Container,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   TrendingUp as TrendingIcon,
@@ -78,6 +82,19 @@ const TrendingTopics: React.FC = () => {
   const [editingChapter, setEditingChapter] = useState<number | null>(null);
   const [editHeading, setEditHeading] = useState('');
   const [editNarration, setEditNarration] = useState('');
+
+  // Suggestions/Enhance states
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
+  const [enhancingDetails, setEnhancingDetails] = useState(false);
+  const [hypothesisSuggestions, setHypothesisSuggestions] = useState<string[]>([]);
+  const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
+  const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
+
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingEnhancedText, setPendingEnhancedText] = useState('');
+  const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
 
   const router = useRouter();
 
@@ -260,14 +277,12 @@ const TrendingTopics: React.FC = () => {
     ];
   };
 
-  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
-  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
-  const [enhancingDetails, setEnhancingDetails] = useState(false);
-
-  const getTopicSuggestions = async (topicName: string) => {
+  const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false) => {
     if (!topicName.trim()) return;
 
     try {
+      // While topic suggestions load, clear hypothesis suggestions and avoid showing loaders there
+      setHypothesisSuggestions([]);
       setLoadingTopicSuggestions(true);
       setError(null);
 
@@ -288,32 +303,95 @@ const TrendingTopics: React.FC = () => {
           ? data
           : (Array.isArray(data?.suggestions) ? data.suggestions : []);
         setTopicSuggestions(suggestions || []);
+        if (applyToDetails && suggestions && suggestions.length > 0) {
+          setSelectedTopicDetails(suggestions[0]);
+        }
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error('Failed to fetch topic suggestions:', errorData.detail || response.status);
         // Fallback to default suggestions
-        setTopicSuggestions([
+        const fallback = [
           `The hidden story behind ${topicName} that nobody talks about`,
           `How ${topicName} is changing the landscape in ${selectedRegion}`,
           `The controversy surrounding ${topicName} - what you need to know`,
           `5 surprising facts about ${topicName} that will shock you`,
           `Why ${topicName} matters more than you think`
-        ]);
+        ];
+        setTopicSuggestions(fallback);
+        if (applyToDetails) setSelectedTopicDetails(fallback[0]);
       }
     } catch (err) {
       console.error('Error fetching topic suggestions:', err);
       // Fallback to default suggestions
-      setTopicSuggestions([
+      const fallback = [
         `The hidden story behind ${topicName} that nobody talks about`,
         `How ${topicName} is changing the landscape in ${selectedRegion}`,
         `5 surprising facts about ${topicName} that will shock you`,
         `Why ${topicName} matters more than you think`,
         `The future of ${topicName} - predictions and possibilities`
-      ]);
+      ];
+      setTopicSuggestions(fallback);
+      if (applyToDetails) setSelectedTopicDetails(fallback[0]);
     } finally {
       setLoadingTopicSuggestions(false);
     }
   };
+
+  const fetchHypothesisSuggestions = async () => {
+    if (!selectedTopic) return;
+    if (!selectedTopicDetails || !selectedTopicDetails.trim()) return;
+    if (loadingTopicSuggestions) return;
+    try {
+      setLoadingHypothesisSuggestions(true);
+      const response = await fetch('/api/get-hypothesis-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: selectedTopic.name,
+          details: selectedTopicDetails,
+          region: selectedRegion,
+          num: 5
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setHypothesisSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : [
+          `Exploring the real-world impact of ${selectedTopic.name} in ${selectedRegion}.`,
+          `Does public perception of ${selectedTopic.name} match data in ${selectedRegion}?`,
+          `How ${selectedTopic.name} narratives differ across communities in ${selectedRegion}.`,
+          `Is policy or culture driving ${selectedTopic.name} outcomes in ${selectedRegion}?`,
+          `Is ${selectedTopic.name} momentum sustainable or a short-term spike?`
+        ]);
+      } else {
+        setHypothesisSuggestions([
+          `Exploring the real-world impact of ${selectedTopic.name} in ${selectedRegion}.`,
+          `Does public perception of ${selectedTopic.name} match data in ${selectedRegion}?`,
+          `How ${selectedTopic.name} narratives differ across communities in ${selectedRegion}.`,
+          `Is policy or culture driving ${selectedTopic.name} outcomes in ${selectedRegion}?`,
+          `Is ${selectedTopic.name} momentum sustainable or a short-term spike?`
+        ]);
+      }
+    } catch (e) {
+      console.error('Failed to fetch hypothesis suggestions', e);
+      setHypothesisSuggestions([
+        `Exploring the real-world impact of ${selectedTopic.name} in ${selectedRegion}.`,
+        `Does public perception of ${selectedTopic.name} match data in ${selectedRegion}?`,
+        `How ${selectedTopic.name} narratives differ across communities in ${selectedRegion}.`,
+        `Is policy or culture driving ${selectedTopic.name} outcomes in ${selectedRegion}?`,
+        `Is ${selectedTopic.name} momentum sustainable or a short-term spike?`
+      ]);
+    } finally {
+      setLoadingHypothesisSuggestions(false);
+    }
+  };
+
+  useEffect(() => {
+    // Only fetch when topic is selected and details are present, and not while topic suggestions are loading
+    if (selectedTopic && selectedTopicDetails.trim().length > 0 && !loadingTopicSuggestions) {
+      fetchHypothesisSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTopicDetails, selectedTopic, selectedRegion]);
 
   const handleEnhanceTopicDetails = async () => {
     if (!selectedTopic || !selectedTopicDetails.trim()) return;
@@ -332,7 +410,9 @@ const TrendingTopics: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         if (data?.enhancedText) {
-          setSelectedTopicDetails(data.enhancedText);
+          setPendingField('topicDetails');
+          setPendingEnhancedText(data.enhancedText);
+          setConfirmOpen(true);
         }
       } else {
         const errData = await response.json().catch(() => ({}));
@@ -345,6 +425,54 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
+  const handleEnhanceHypothesis = async () => {
+    if (!selectedTopic || !hypothesis.trim()) return;
+    try {
+      setEnhancingHypothesis(true);
+      const response = await fetch('/api/enhance-hypothesis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: selectedTopic.name,
+          hypothesis,
+          details: selectedTopicDetails,
+          region: selectedRegion
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.enhancedText) {
+          setPendingField('hypothesis');
+          setPendingEnhancedText(data.enhancedText);
+          setConfirmOpen(true);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to enhance hypothesis', e);
+    } finally {
+      setEnhancingHypothesis(false);
+    }
+  };
+
+  const handleConfirmAccept = () => {
+    if (pendingField === 'topicDetails') {
+      setSelectedTopicDetails(pendingEnhancedText);
+    } else if (pendingField === 'hypothesis') {
+      setHypothesis(pendingEnhancedText);
+    }
+    setConfirmOpen(false);
+    setPendingEnhancedText('');
+    setPendingField(null);
+  };
+
+  const handleConfirmReject = () => {
+    setConfirmOpen(false);
+    setPendingEnhancedText('');
+    setPendingField(null);
+  };
+
+  const handleRegionLabel = (value: string) => regions.find(r => r.value === value)?.label || value;
+
   const handleTopicSelect = async (topic: TrendingTopic) => {
     setSelectedTopic(topic);
     setHypothesis('');
@@ -352,7 +480,8 @@ const TrendingTopics: React.FC = () => {
     setChaptersGenerated(false);
     setEditingChapter(null);
     setTopicSuggestions([]); // Reset suggestions
-    // Fetch new topic suggestions
+    setSelectedTopicDetails(''); // Clear topic details to refresh
+    // Fetch new topic suggestions without auto-filling topic details
     await getTopicSuggestions(topic.name);
   };
 
@@ -745,10 +874,12 @@ const TrendingTopics: React.FC = () => {
             </Paper>
 
             {/* Hypothesis Input */}
-            <Paper sx={{ p: 2, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Your Hypothesis
-              </Typography>
+            <Paper sx={{ p: 2, mb: 3, opacity: selectedTopic ? 1 : 0.6 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h6" gutterBottom>
+                  Your Hypothesis
+                </Typography>
+              </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Describe your hypothesis, angle, or unique perspective on this topic. This will help generate relevant video content.
               </Typography>
@@ -757,35 +888,41 @@ const TrendingTopics: React.FC = () => {
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    💡 Suggested hypotheses for "{selectedTopic.name}":
+                    💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.name}":
                   </Typography>
                   <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => getHypothesisSuggestions(selectedTopic.name)}
+                    onClick={fetchHypothesisSuggestions}
+                    disabled={!selectedTopic || loadingHypothesisSuggestions}
                     sx={{ minWidth: 'auto', px: 1 }}
                   >
                     🔄
                   </Button>
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {getHypothesisSuggestions(selectedTopic.name).map((suggestion: string, index: number) => (
-                    <Chip
-                      key={index}
-                      label={suggestion}
-                      size="small"
-                      variant="outlined"
-                      onClick={() => setHypothesis(suggestion)}
-                      sx={{
-                        cursor: 'pointer',
-                        '&:hover': {
-                          backgroundColor: 'rgba(29, 161, 242, 0.1)',
-                          borderColor: '#1DA1F2',
-                        }
-                      }}
-                    />
-                  ))}
-                </Box>
+                  {(!selectedTopic || !selectedTopicDetails.trim() || loadingTopicSuggestions) ? (
+                    null
+                  ) : loadingHypothesisSuggestions ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} />
+                      <Typography variant="body2" color="text.secondary">
+                        Generating hypothesis suggestions...
+                      </Typography>
+                    </Box>
+                  ) : (
+                    (hypothesisSuggestions || []).map((suggestion: string, idx: number) => (
+                        <Chip
+                          key={idx}
+                          label={suggestion}
+                          size="small"
+                          variant="outlined"
+                          onClick={() => setHypothesis(suggestion)}
+                          sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(29, 161, 242, 0.1)', borderColor: '#1DA1F2' } }}
+                        />
+                      ))
+                    )}
+                  </Box>
               </Box>
 
               <TextField
@@ -795,9 +932,21 @@ const TrendingTopics: React.FC = () => {
                 variant="outlined"
                 placeholder="Enter your hypothesis, research question, or unique angle on this topic..."
                 value={hypothesis}
+                disabled={!selectedTopic}
                 onChange={(e) => setHypothesis(e.target.value)}
                 sx={{ mb: 2 }}
               />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleEnhanceHypothesis}
+                  disabled={!selectedTopic || !hypothesis.trim() || enhancingHypothesis}
+                  sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}
+                >
+                  {enhancingHypothesis ? 'Enhancing...' : '✨ Enhance'}
+                </Button>
+              </Box>
             </Paper>
 
             {/* Video Duration */}
@@ -1085,6 +1234,35 @@ const TrendingTopics: React.FC = () => {
           )}
         </Box>
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmOpen}
+        onClose={handleConfirmReject}
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
+      >
+        <DialogTitle id="confirm-dialog-title">Confirm Enhance</DialogTitle>
+        <DialogContent>
+          <Typography id="confirm-dialog-description">
+            The enhanced text is ready. Would you like to accept the changes?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Original: "{pendingField === 'topicDetails' ? selectedTopicDetails : hypothesis}"
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Enhanced: "{pendingEnhancedText}"
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleConfirmReject} color="primary">
+            Reject
+          </Button>
+          <Button onClick={handleConfirmAccept} color="primary" variant="contained">
+            Accept
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
