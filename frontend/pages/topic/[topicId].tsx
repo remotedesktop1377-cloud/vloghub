@@ -253,19 +253,6 @@ const TopicDetailPage: React.FC = () => {
     return volume.toString();
   };
 
-  const handleAddChapter = () => {
-    const newChapter = {
-      id: (chapters.length + 1).toString(),
-      heading: `New Chapter ${chapters.length + 1}`,
-      narration: 'New chapter narration content will be generated here.',
-      visuals: 'Visual direction for the new chapter.',
-      brollIdeas: ['B-roll idea 1', 'B-roll idea 2', 'B-roll idea 3'],
-      duration: '1 min'
-    };
-
-    setChapters([...chapters, newChapter]);
-  };
-
   const handleAddChapterAfter = (index: number) => {
     const newChapter = {
       id: (chapters.length + 1).toString(),
@@ -353,25 +340,21 @@ const TopicDetailPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth={false} sx={{ maxWidth: '100%', px: 3 }}>
       {/* Header with Back Button */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button
+    
+
+      {/* Selected Topic Display */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+      <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
           onClick={handleBackToTopics}
-          sx={{ mr: 2 }}
+          sx={{ mb: 3  }}
         >
           Back
         </Button>
-        <Typography variant="h4" sx={{ flexGrow: 1 }}>
-          Topic Details
-        </Typography>
-      </Box>
-
-      {/* Selected Topic Display */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', }}>
           <Avatar
             sx={{
               bgcolor: '#1DA1F2',
@@ -414,12 +397,12 @@ const TopicDetailPage: React.FC = () => {
       </Paper>
 
       {/* Two Column Layout */}
-      <Box sx={{ display: 'flex', gap: 3, }}>
+      <Box sx={{ display: 'flex', gap: 2, }}>
         {/* Left Column - Topic Details, Hypothesis, Video Generation */}
         <Box sx={{ flex: 1 }}>
 
           {/* Hypothesis Input */}
-          <Paper sx={{ p: 3, mb: 3 }}>
+          <Paper sx={{ p: 2, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Your Hypothesis
             </Typography>
@@ -464,7 +447,7 @@ const TopicDetailPage: React.FC = () => {
             />
 
           </Paper>
-          <Paper sx={{ p: 3, mb: 3 }}>
+          <Paper sx={{ p: 2, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Video Duration
             </Typography>
@@ -508,7 +491,7 @@ const TopicDetailPage: React.FC = () => {
 
         {/* Right Column - Chapters List */}
         <Box sx={{ flex: 1 }}>
-          <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
+          <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
                          {chaptersGenerated && chapters.length > 0 ? (
                <DragDropContext onDragEnd={handleDragEnd}>
                  <Droppable droppableId="chapters">
@@ -539,7 +522,7 @@ const TopicDetailPage: React.FC = () => {
                                  }
                                }}
                              >
-                                                   <CardContent sx={{ p: 3, height: 'auto' }}>
+                                                   <CardContent sx={{ p: 2, height: 'auto' }}>
                                  <Box sx={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
                                                                        {/* Drag Handle */}
                                     <Box 

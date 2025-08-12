@@ -139,42 +139,42 @@ const TrendingTopics: React.FC = () => {
 
   return (
     <Box>
-             {/* Header with Region Selection and Refresh */}
-       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-           <TrendingIcon sx={{ fontSize: 32, color: '#1DA1F2', mr: 2 }} />
-           <Typography variant="h5" gutterBottom>
-             Trending Topics
-           </Typography>
-         </Box>
-         
-         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-           <FormControl size="small" sx={{ minWidth: 200 }}>
-             <InputLabel>Region</InputLabel>
-             <Select
-               value={selectedRegion}
-               label="Region"
-               onChange={handleRegionChange}
-             >
-               {regions.map((region) => (
-                 <MenuItem key={region.value} value={region.value}>
-                   <span style={{ marginRight: '8px' }}>{region.flag}</span>
-                   {region.label}
-                 </MenuItem>
-               ))}
-             </Select>
-           </FormControl>
-           
-           <Button
-             variant="outlined"
-             startIcon={<RefreshIcon />}
-             onClick={handleRefresh}
-             disabled={loading}
-           >
-             Refresh
-           </Button>
-         </Box>
-       </Box>
+      {/* Header with Region Selection and Refresh */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <TrendingIcon sx={{ fontSize: 32, color: '#1DA1F2', mr: 2 }} />
+          <Typography variant="h5" gutterBottom>
+            Trending Topics
+          </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Region</InputLabel>
+            <Select
+              value={selectedRegion}
+              label="Region"
+              onChange={handleRegionChange}
+            >
+              {regions.map((region) => (
+                <MenuItem key={region.value} value={region.value}>
+                  <span style={{ marginRight: '8px' }}>{region.flag}</span>
+                  {region.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+        </Box>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -182,7 +182,7 @@ const TrendingTopics: React.FC = () => {
         </Alert>
       )}
 
-      
+
 
       <Grid container spacing={3}>
         {trendingTopics.map((topic, index) => {
