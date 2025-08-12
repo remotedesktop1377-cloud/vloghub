@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import {
   Box,
   Typography,
@@ -33,6 +34,7 @@ import {
   Close as CloseIcon,
   Create as CreateIcon,
   Add as AddIcon,
+  DragIndicator as DragIcon,
 } from '@mui/icons-material';
 
 interface TopicData {
@@ -309,6 +311,20 @@ const TopicDetailPage: React.FC = () => {
     setEditNarration('');
   };
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    
+    const { source, destination } = result;
+    
+    if (source.index === destination.index) return;
+    
+    const updatedChapters = Array.from(chapters);
+    const [reorderedChapter] = updatedChapters.splice(source.index, 1);
+    updatedChapters.splice(destination.index, 0, reorderedChapter);
+    
+    setChapters(updatedChapters);
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -493,29 +509,58 @@ const TopicDetailPage: React.FC = () => {
         {/* Right Column - Chapters List */}
         <Box sx={{ flex: 1 }}>
           <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
-            {chaptersGenerated && chapters.length > 0 ? (
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {chapters.map((chapter, index) => (
-                  <Card
-                    key={index}
-                    variant="outlined"
-                    sx={{
-                      borderColor: '#e0e0e0',
-                      borderRadius: 2,
-                      '&:hover': {
-                        boxShadow: 2,
-                        borderColor: '#1DA1F2',
-                        '& .chapter-actions': {
-                          opacity: 1,
-                        }
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 3, height: 'auto' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
-                        {/* Content - removed left image */}
-                        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-start', height: '100%' }}>
+                         {chaptersGenerated && chapters.length > 0 ? (
+               <DragDropContext onDragEnd={handleDragEnd}>
+                 <Droppable droppableId="chapters">
+                   {(provided) => (
+                     <Box 
+                       {...provided.droppableProps}
+                       ref={provided.innerRef}
+                       sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                     >
+                                       {chapters.map((chapter, index) => (
+                         <Draggable key={chapter.id || index.toString()} draggableId={chapter.id || index.toString()} index={index}>
+                           {(provided, snapshot) => (
+                             <Card
+                               ref={provided.innerRef}
+                               {...provided.draggableProps}
+                               variant="outlined"
+                               sx={{
+                                 borderColor: '#e0e0e0',
+                                 borderRadius: 2,
+                                 transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
+                                 boxShadow: snapshot.isDragging ? 8 : 1,
+                                 '&:hover': {
+                                   boxShadow: 2,
+                                   borderColor: '#1DA1F2',
+                                   '& .chapter-actions': {
+                                     opacity: 1,
+                                   }
+                                 }
+                               }}
+                             >
+                                                   <CardContent sx={{ p: 3, height: 'auto' }}>
+                                 <Box sx={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
+                                                                       {/* Drag Handle */}
+                                    <Box 
+                                      {...provided.dragHandleProps}
+                                      sx={{ 
+                                        mr: 2, 
+                                        cursor: 'grab',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#9c27b0',
+                                        '&:active': { cursor: 'grabbing' },
+                                        minHeight: '100%',
+                                        alignSelf: 'stretch'
+                                      }}
+                                    >
+                                      <DragIcon fontSize="small" />
+                                    </Box>
+                                   
+                                   {/* Content */}
+                                   <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-start', height: '100%' }}>
                           <Box sx={{ flexGrow: 1 }}>
                             {/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                               {editingChapter === index ? (
@@ -649,28 +694,30 @@ const TopicDetailPage: React.FC = () => {
                                   <CloseIcon fontSize="small" />
                                 </IconButton>
                               </>
-                            ) : (
-                              <>
-                                {/* Edit Chapter Button */}
-                                <IconButton
-                                  className="chapter-actions"
-                                  size="small"
-                                  onClick={() => handleEditChapter(index)}
-                                  sx={{
-                                    opacity: 0,
-                                    transition: 'opacity 0.2s ease',
-                                    color: '#ff9800',
-                                    '&:hover': {
-                                      bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                      color: '#f57c00'
-                                    },
-                                    width: 36,
-                                    height: 36,
-                                  }}
-                                  title="Edit chapter"
-                                >
-                                  <CreateIcon fontSize="small" />
-                                </IconButton>
+                                                         ) : (
+                               <>
+
+
+                                 {/* Edit Chapter Button */}
+                                 <IconButton
+                                   className="chapter-actions"
+                                   size="small"
+                                   onClick={() => handleEditChapter(index)}
+                                   sx={{
+                                     opacity: 0,
+                                     transition: 'opacity 0.2s ease',
+                                     color: '#ff9800',
+                                     '&:hover': {
+                                       bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                       color: '#f57c00'
+                                     },
+                                     width: 36,
+                                     height: 36,
+                                   }}
+                                   title="Edit chapter"
+                                 >
+                                   <CreateIcon fontSize="small" />
+                                 </IconButton>
 
                                 {/* Delete Icon */}
                                 <IconButton
@@ -718,10 +765,16 @@ const TopicDetailPage: React.FC = () => {
                           </Box>
                         </Box>
                       </Box>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
+                                                   </CardContent>
+                             </Card>
+                           )}
+                         </Draggable>
+                       ))}
+                       {provided.placeholder}
+                     </Box>
+                   )}
+                 </Droppable>
+               </DragDropContext>
             ) : (
               <Box sx={{ 
                 display: 'flex', 
