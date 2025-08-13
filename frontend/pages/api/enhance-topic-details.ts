@@ -49,7 +49,7 @@ function extractJsonFromText(text: string): any | null {
   return null;
 }
 
-async function enhanceWithGemini({ topic, details, region = 'pakistan', targetWords = 160 }: EnhanceRequest): Promise<EnhanceResponse> {
+async function enhanceWithGemini({ topic, details, region, targetWords }: EnhanceRequest): Promise<EnhanceResponse> {
   const prompt = `You are an expert video script editor. Improve and enhance the following topic details to be clear, engaging, and ready for narration.\n\n` +
     `Constraints:\n` +
     `- Keep factual meaning; do not invent facts.\n` +

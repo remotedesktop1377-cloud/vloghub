@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { topic, hypothesis, details = '', region = 'pakistan' } = req.body as EnhanceHypothesisRequest;
+    const { topic, hypothesis, details, region } = req.body as EnhanceHypothesisRequest;
     if (!topic || !hypothesis) return res.status(400).json({ error: 'Topic and hypothesis are required' });
 
     const prompt = `You are an expert script editor. Improve the following hypothesis to be clear, testable, and compelling in one sentence.\n` +
