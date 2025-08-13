@@ -24,6 +24,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tabs,
+  Tab,
+  Switch,
 } from '@mui/material';
 import {
   TrendingUp as TrendingIcon,
@@ -37,8 +40,14 @@ import {
   Add as AddIcon,
   DragIndicator as DragIcon,
 } from '@mui/icons-material';
+import { AutoFixHigh as MagicIcon } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useRouter } from 'next/router';
+
+// Hardcoded topic/hypothesis toggle and values
+const USE_HARDCODED = true;
+const HARDCODED_TOPIC = "Nelson Mandela's legacy in Pakistan: Examining his impact on anti-apartheid movements and social justice.";
+const HARDCODED_HYPOTHESIS = "Mandela's anti-apartheid struggle resonated deeply within Pakistan's own fight against oppression, inspiring local activism.";
 
 interface TrendingTopic {
   id: string;
@@ -96,6 +105,60 @@ const TrendingTopics: React.FC = () => {
   const [pendingEnhancedText, setPendingEnhancedText] = useState('');
   const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
 
+  // Right panel state (tabs and generated images)
+  const [rightTabIndex, setRightTabIndex] = useState(0);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const fallbackImages = [
+    '/dummy_1.jpg',
+    '/dummy_2.jpg',
+    '/dummy_3.jpg',
+    '/dummy_4.jpg',
+    '/dummy_5.jpg',
+    '/dummy_6.jpg',
+    '/dummy_7.jpg',
+  ];
+  const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
+  const [chapterImagesMap, setChapterImagesMap] = useState<Record<number, string[]>>({});
+  const [aiImagesEnabled, setAiImagesEnabled] = useState<boolean>(false);
+  const [pickerOpen, setPickerOpen] = useState<boolean>(false);
+  const [pickerChapterIndex, setPickerChapterIndex] = useState<number | null>(null);
+  const [pickerImages, setPickerImages] = useState<string[]>([]); // legacy image use if needed
+  const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
+  const [pickerLoading, setPickerLoading] = useState<boolean>(false);
+  const [aiPrompt, setAiPrompt] = useState<string>("Today, I'm giving you a quick tutorial on Nelson Mandela's incredible life.");
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isDraggingUpload, setIsDraggingUpload] = useState<boolean>(false);
+
+  const handleUploadFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const imgs: string[] = [];
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith('image/')) return;
+      const url = URL.createObjectURL(file);
+      imgs.push(url);
+    });
+    if (imgs.length === 0) return;
+    setUploadedImages((prev) => [...imgs, ...prev]);
+    // Mirror AI Generation flow: send to Stock Media single view with the first image
+    const first = imgs[0];
+    setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+    setGeneratedImages([first]);
+    setAiImagesEnabled(true);
+    setRightTabIndex(0);
+  };
+
+  const selectChapter = (idx: number) => {
+    setSelectedChapterIndex(idx);
+    if (aiImagesEnabled) {
+      const imgs = chapterImagesMap[idx] || [];
+      const fallback = [fallbackImages[idx % fallbackImages.length]];
+      setGeneratedImages(imgs.length > 0 ? [imgs[0]] : fallback);
+    } else {
+      setGeneratedImages(fallbackImages);
+    }
+  };
+
   const router = useRouter();
 
   const regions = [
@@ -115,6 +178,10 @@ const TrendingTopics: React.FC = () => {
   ];
 
   const fetchTrendingTopics = async (region: string) => {
+    if (USE_HARDCODED) {
+      setLoading(false);
+      return; // skip API in hardcoded mode
+    }
     try {
       setLoading(true);
       setError(null);
@@ -139,6 +206,72 @@ const TrendingTopics: React.FC = () => {
   useEffect(() => {
     fetchTrendingTopics(selectedRegion);
   }, [selectedRegion]);
+
+  // Initialize hardcoded topic/hypothesis if flag enabled
+  useEffect(() => {
+    if (USE_HARDCODED) {
+      setSelectedTopic({ id: 'hardcoded', name: HARDCODED_TOPIC, tweet_volume: 0, url: '', query: HARDCODED_TOPIC });
+      setSelectedTopicDetails(HARDCODED_TOPIC);
+      setHypothesis(HARDCODED_HYPOTHESIS);
+      // Provide mock chapters so we don't call the backend
+      const mockChapters: Chapter[] = [
+        {
+          id: '1',
+          heading: 'Opening: Why Mandela Matters Here',
+          narration: "Introduce Nelson Mandela's global legacy and set up why his struggle resonates in Pakistan's context of social justice and anti-oppression.",
+          visuals: 'Archival footage vibes, Pakistan cityscapes, crowd shots',
+          brollIdeas: ['Historic protests', 'Flag transitions', 'Crowd silhouettes'],
+          duration: '0:30'
+        },
+        {
+          id: '2',
+          heading: 'Parallels in Oppression',
+          narration: 'Draw parallels between apartheid-era South Africa and episodes of discrimination and oppression experienced in parts of Pakistan.',
+          visuals: 'Split-screen comparisons, newspapers, documentary textures',
+          brollIdeas: ['Old newspapers', 'Streets and fences', 'Close-ups of faces'],
+          duration: '0:45'
+        },
+        {
+          id: '3',
+          heading: 'Student and Civil Activism',
+          narration: 'Explore how Mandela inspired student groups, lawyers, and civil society to organize around rights-based movements in Pakistan.',
+          visuals: 'Campus shots, legal libraries, peaceful rallies',
+          brollIdeas: ['Debate circles', 'Placards', 'Books and notes'],
+          duration: '0:50'
+        },
+        {
+          id: '4',
+          heading: 'Media and Cultural Echoes',
+          narration: 'Highlight media references, school essays, and cultural tributes that kept Mandela’s message alive across generations.',
+          visuals: 'TV screens, classrooms, cultural events',
+          brollIdeas: ['TV flicker overlay', 'Blackboard writing', 'Clapping audience'],
+          duration: '0:40'
+        },
+        {
+          id: '5',
+          heading: 'Policy Lessons and Reforms',
+          narration: 'Discuss how Mandela’s reconciliation-driven approach informs Pakistan’s own reform and inclusion debates.',
+          visuals: 'Parliament textures, bridges, hopeful faces',
+          brollIdeas: ['Handshake close-ups', 'Bridges at sunrise', 'Notebooks'],
+          duration: '0:45'
+        },
+        {
+          id: '6',
+          heading: 'Closing: A Shared Moral Imagination',
+          narration: 'Conclude by showing how Mandela’s legacy continues to inspire activism, empathy, and democratic imagination in Pakistan.',
+          visuals: 'Montage of faces, flags, and rising light',
+          brollIdeas: ['Smiles', 'Children waving flags', 'Dawn light'],
+          duration: '0:30'
+        }
+      ];
+      setChapters(mockChapters);
+      setChaptersGenerated(true);
+      // Default view: chapter 1 selected, multiple images (dummy grid)
+      setSelectedChapterIndex(0);
+      setGeneratedImages(fallbackImages);
+      setLoading(false);
+    }
+  }, []);
 
   const handleRegionChange = (event: SelectChangeEvent) => {
     setSelectedRegion(event.target.value);
@@ -338,6 +471,7 @@ const TrendingTopics: React.FC = () => {
   };
 
   const fetchHypothesisSuggestions = async () => {
+    if (USE_HARDCODED) return;
     if (!selectedTopic) return;
     if (!selectedTopicDetails || !selectedTopicDetails.trim()) return;
     if (loadingTopicSuggestions) return;
@@ -387,13 +521,14 @@ const TrendingTopics: React.FC = () => {
 
   useEffect(() => {
     // Only fetch when topic is selected and details are present, and not while topic suggestions are loading
-    if (selectedTopic && selectedTopicDetails.trim().length > 0 && !loadingTopicSuggestions) {
+    if (!USE_HARDCODED && selectedTopic && selectedTopicDetails.trim().length > 0 && !loadingTopicSuggestions) {
       fetchHypothesisSuggestions();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopicDetails, selectedTopic, selectedRegion]);
 
   const handleEnhanceTopicDetails = async () => {
+    if (USE_HARDCODED) return;
     if (!selectedTopic || !selectedTopicDetails.trim()) return;
     try {
       setEnhancingDetails(true);
@@ -803,7 +938,7 @@ const TrendingTopics: React.FC = () => {
               </Typography>
 
               {/* Topic Suggestions */}
-              <Box sx={{ mb: 3 }}>
+              <Box sx={{ mb: 3, opacity: USE_HARDCODED ? 0.6 : 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" color="text.secondary">
                     💡 Suggested topics for "{selectedTopic.name}":
@@ -812,14 +947,18 @@ const TrendingTopics: React.FC = () => {
                     size="small"
                     variant="outlined"
                     onClick={() => getTopicSuggestions(selectedTopic.name)}
-                    disabled={loadingTopicSuggestions}
+                    disabled={USE_HARDCODED || loadingTopicSuggestions}
                     sx={{ minWidth: 'auto', px: 1 }}
                   >
                     🔄
                   </Button>
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {loadingTopicSuggestions ? (
+                  {USE_HARDCODED ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Suggestions disabled in hardcoded mode.
+                    </Typography>
+                  ) : loadingTopicSuggestions ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CircularProgress size={16} />
                       <Typography variant="body2" color="text.secondary">
@@ -865,7 +1004,7 @@ const TrendingTopics: React.FC = () => {
                 <Button
                   variant="contained"
                   onClick={handleEnhanceTopicDetails}
-                  disabled={enhancingDetails || !selectedTopicDetails.trim()}
+                  disabled={USE_HARDCODED || enhancingDetails || !selectedTopicDetails.trim()}
                   sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}
                 >
                   {enhancingDetails ? 'Enhancing...' : '✨ Enhance'}
@@ -885,7 +1024,7 @@ const TrendingTopics: React.FC = () => {
               </Typography>
 
               {/* Hypothesis Suggestions */}
-              <Box sx={{ mb: 3 }}>
+              <Box sx={{ mb: 3, opacity: USE_HARDCODED ? 0.6 : 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" color="text.secondary">
                     💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.name}":
@@ -894,14 +1033,16 @@ const TrendingTopics: React.FC = () => {
                     size="small"
                     variant="outlined"
                     onClick={fetchHypothesisSuggestions}
-                    disabled={!selectedTopic || loadingHypothesisSuggestions}
+                    disabled={USE_HARDCODED || !selectedTopic || loadingHypothesisSuggestions}
                     sx={{ minWidth: 'auto', px: 1 }}
                   >
                     🔄
                   </Button>
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {(!selectedTopic || !selectedTopicDetails.trim() || loadingTopicSuggestions) ? (
+                  {USE_HARDCODED ? (
+                    null
+                  ) : (!selectedTopic || !selectedTopicDetails.trim() || loadingTopicSuggestions) ? (
                     null
                   ) : loadingHypothesisSuggestions ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -912,17 +1053,17 @@ const TrendingTopics: React.FC = () => {
                     </Box>
                   ) : (
                     (hypothesisSuggestions || []).map((suggestion: string, idx: number) => (
-                        <Chip
-                          key={idx}
-                          label={suggestion}
-                          size="small"
-                          variant="outlined"
-                          onClick={() => setHypothesis(suggestion)}
-                          sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(29, 161, 242, 0.1)', borderColor: '#1DA1F2' } }}
-                        />
-                      ))
-                    )}
-                  </Box>
+                      <Chip
+                        key={idx}
+                        label={suggestion}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setHypothesis(suggestion)}
+                        sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(29, 161, 242, 0.1)', borderColor: '#1DA1F2' } }}
+                      />
+                    ))
+                  )}
+                </Box>
               </Box>
 
               <TextField
@@ -941,7 +1082,7 @@ const TrendingTopics: React.FC = () => {
                   variant="contained"
                   size="small"
                   onClick={handleEnhanceHypothesis}
-                  disabled={!selectedTopic || !hypothesis.trim() || enhancingHypothesis}
+                  disabled={USE_HARDCODED || !selectedTopic || !hypothesis.trim() || enhancingHypothesis}
                   sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}
                 >
                   {enhancingHypothesis ? 'Enhancing...' : '✨ Enhance'}
@@ -994,205 +1135,482 @@ const TrendingTopics: React.FC = () => {
             {/* Video Chapters Section */}
             <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
               {chaptersGenerated && chapters.length > 0 ? (
-                <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="chapters">
-                    {(provided) => (
-                      <Box
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-                      >
-                        {chapters.map((chapter, index) => (
-                          <Draggable key={chapter.id || index.toString()} draggableId={chapter.id || index.toString()} index={index}>
-                            {(provided, snapshot) => (
-                              <Card
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                variant="outlined"
-                                sx={{
-                                  borderColor: '#e0e0e0',
-                                  borderRadius: 2,
-                                  transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
-                                  boxShadow: snapshot.isDragging ? 8 : 1,
-                                  '&:hover': {
-                                    boxShadow: 2,
-                                    borderColor: '#1DA1F2',
-                                    '& .chapter-actions': {
-                                      opacity: 1,
-                                    }
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: '1 1 50%', minWidth: 0 }}>
+                    <Box sx={{ width: '100%' }}>
+                      <DragDropContext onDragEnd={handleDragEnd}>
+                        <Droppable droppableId="chapters">
+                          {(provided) => (
+                            <Box
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              sx={{ display: 'flex', flexDirection: 'column', gap: 0.6, alignItems: 'flex-start' }}
+                            >
+                              {chapters.map((chapter, index) => (
+                                <Box key={chapter.id || index.toString()} sx={{ width: 'fit-content' }}>
+                                  <Draggable key={(chapter.id || index.toString()) + '-draggable'} draggableId={chapter.id || index.toString()} index={index}>
+                                    {(provided, snapshot) => (
+                                      <Card
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        variant="elevation"
+                                        sx={{
+                                          borderRadius: 2,
+                                          transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
+                                          boxShadow: snapshot.isDragging ? 8 : 0,
+                                          '&:hover': { boxShadow: 0 }
+                                        }}
+                                      >
+                                        <CardContent sx={{ p: 0, height: 'auto', '&:last-child': { paddingBottom: 0 } }}>
+                                          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-start', bgcolor: selectedChapterIndex === index ? 'rgba(29,161,242,0.06)' : 'transparent' }} onClick={() => selectChapter(index)}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                              {/* Drag Handle */}
+                                              <Box
+                                                {...provided.dragHandleProps}
+                                                sx={{
+                                                  mr: 2,
+                                                  cursor: 'grab',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  color: '#9c27b0',
+                                                  '&:active': { cursor: 'grabbing' }
+                                                }}
+                                              >
+                                                <DragIcon fontSize="small" />
+                                              </Box>
+
+                                              {/* Narration Content - centered with integrated left strip number */}
+                                              <Box sx={{ width: '100%', maxWidth: 760, mx: 0 }}>
+                                                <Box sx={{
+                                                  display: 'flex',
+                                                  alignItems: 'stretch',
+                                                  borderWidth: 1,
+                                                  borderStyle: 'solid',
+                                                  borderColor: selectedChapterIndex === index ? '#1DA1F2' : '#e9ecef',
+                                                  borderRadius: 1,
+                                                  overflow: 'hidden',
+                                                  bgcolor: '#fff',
+                                                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
+                                                  '&:hover': {
+                                                    borderColor: '#1DA1F2',
+                                                    boxShadow: '0 0 0 3px rgba(29, 161, 242, 0.08)',
+                                                    backgroundColor: 'rgba(29, 161, 242, 0.02)'
+                                                  }
+                                                }}>
+                                                  <Box sx={{
+                                                    width: 48,
+                                                    bgcolor: 'rgba(29,161,242,0.08)',
+                                                    color: '#1DA1F2',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontWeight: 'bold',
+                                                    flexShrink: 0
+                                                  }}>
+                                                    {index + 1}
+                                                  </Box>
+                                                  <Box sx={{ flexGrow: 1 }}>
+                                                    {editingChapter === index ? (
+                                                      <TextField
+                                                        value={editNarration}
+                                                        onChange={(e) => setEditNarration(e.target.value)}
+                                                        variant="standard"
+                                                        InputProps={{ disableUnderline: true }}
+                                                        multiline
+                                                        minRows={4}
+                                                        fullWidth
+                                                        sx={{ px: 1.5, py: 1.5 }}
+                                                      />
+                                                    ) : (
+                                                      <Box sx={{
+                                                        p: 1.5,
+                                                        maxHeight: '200px',
+                                                        overflow: 'auto',
+                                                        bgcolor: '#fff'
+                                                      }}>
+                                                        <Typography variant="body1" sx={{ lineHeight: 1.6, color: '#495057' }}>
+                                                          {chapter.narration || 'Narration content will be generated here.'}
+                                                        </Typography>
+                                                      </Box>
+                                                    )}
+                                                  </Box>
+                                                </Box>
+                                              </Box>
+
+                                              {/* Chapter Actions */}
+                                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
+                                                {editingChapter === index ? (
+                                                  <>
+                                                    {/* Save Button */}
+                                                    <IconButton
+                                                      size="small"
+                                                      onClick={() => handleSaveEdit(index)}
+                                                      sx={{
+                                                        color: '#4caf50',
+                                                        '&:hover': {
+                                                          bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                                          color: '#388e3c'
+                                                        },
+                                                        width: 36,
+                                                        height: 36,
+                                                      }}
+                                                      title="Save changes"
+                                                    >
+                                                      <CheckIcon fontSize="small" />
+                                                    </IconButton>
+
+                                                    {/* Cancel Button */}
+                                                    <IconButton
+                                                      size="small"
+                                                      onClick={handleCancelEdit}
+                                                      sx={{
+                                                        color: '#ff9800',
+                                                        '&:hover': {
+                                                          bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                                          color: '#f57c00'
+                                                        },
+                                                        width: 36,
+                                                        height: 36,
+                                                      }}
+                                                      title="Cancel editing"
+                                                    >
+                                                      <CloseIcon fontSize="small" />
+                                                    </IconButton>
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    {/* Magic variations for this chapter */}
+                                                    <IconButton
+                                                      className="chapter-actions"
+                                                      size="small"
+                                                      onClick={async () => {
+                                                        try {
+                                                          setPickerOpen(true);
+                                                          setPickerChapterIndex(index);
+                                                          setPickerLoading(true);
+                                                          const chapter = chapters[index];
+                                                          const res = await fetch('/api/get-narration-variations', {
+                                                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({
+                                                              narration: chapter.narration,
+                                                              noOfNarrations: 5
+                                                            })
+                                                          });
+                                                          const data = await res.json();
+                                                          const vars: string[] = Array.isArray(data?.variations) ? data.variations : [];
+                                                          setPickerNarrations(vars);
+                                                        } catch (e) {
+                                                          console.error('picker fetch failed', e);
+                                                          setPickerNarrations([chapters[index].narration]);
+                                                        } finally {
+                                                          setPickerLoading(false);
+                                                        }
+                                                      }}
+                                                      sx={{
+                                                        opacity: selectedChapterIndex === index ? 1 : 0,
+                                                        transition: 'opacity 0.2s ease',
+                                                        color: '#1DA1F2',
+                                                        '&:hover': { bgcolor: 'rgba(29,161,242,0.1)', color: '#0d8bd9' },
+                                                        width: 36, height: 36,
+                                                      }}
+                                                      title="Magic variations"
+                                                    >
+                                                      <MagicIcon fontSize="small" />
+                                                    </IconButton>
+                                                    {/* Edit Chapter Button */}
+                                                    <IconButton
+                                                      className="chapter-actions"
+                                                      size="small"
+                                                      onClick={() => handleEditChapter(index)}
+                                                      sx={{
+                                                        opacity: selectedChapterIndex === index ? 1 : 0,
+                                                        transition: 'opacity 0.2s ease',
+                                                        color: '#ff9800',
+                                                        '&:hover': {
+                                                          bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                                          color: '#f57c00'
+                                                        },
+                                                        width: 36,
+                                                        height: 36,
+                                                      }}
+                                                      title="Edit chapter"
+                                                    >
+                                                      <CreateIcon fontSize="small" />
+                                                    </IconButton>
+
+                                                    {/* Delete Icon */}
+                                                    <IconButton
+                                                      className="chapter-actions"
+                                                      size="small"
+                                                      onClick={() => handleDeleteChapter(index)}
+                                                      sx={{
+                                                        opacity: selectedChapterIndex === index ? 1 : 0,
+                                                        transition: 'opacity 0.2s ease',
+                                                        color: '#ff4444',
+                                                        '&:hover': {
+                                                          bgcolor: 'rgba(255,68,68,0.1)',
+                                                          color: '#cc0000'
+                                                        },
+                                                        width: 36,
+                                                        height: 36,
+                                                      }}
+                                                      title="Delete chapter"
+                                                    >
+                                                      <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+
+                                                    {/* Add Chapter After This One Button */}
+                                                    <IconButton
+                                                      className="chapter-actions"
+                                                      size="small"
+                                                      onClick={() => handleAddChapterAfter(index)}
+                                                      sx={{
+                                                        opacity: selectedChapterIndex === index ? 1 : 0,
+                                                        transition: 'opacity 0.2s ease',
+                                                        color: '#1DA1F2',
+                                                        '&:hover': {
+                                                          bgcolor: 'rgba(29, 161, 242, 0.1)',
+                                                          color: '#0d8bd9'
+                                                        },
+                                                        width: 36,
+                                                        height: 36,
+                                                      }}
+                                                      title="Add chapter after this one"
+                                                    >
+                                                      <AddIcon fontSize="small" />
+                                                    </IconButton>
+                                                  </>
+                                                )}
+                                              </Box>
+                                            </Box>
+                                          </Box>
+                                        </CardContent>
+                                      </Card>
+                                    )}
+                                  </Draggable>
+                                  {/* divider removed as requested */}
+                                </Box>
+                              ))}
+                              {provided.placeholder}
+                            </Box>
+                          )}
+                        </Droppable>
+                      </DragDropContext>
+                    </Box>
+                  </Box>
+                  <Box sx={{ flex: '1 1 50%', minWidth: 0 }}>
+                    <Paper sx={{ p: 0, overflow: 'hidden' }}>
+                      <Tabs value={rightTabIndex} onChange={(_, v) => setRightTabIndex(v)} variant="fullWidth" sx={{ borderBottom: '1px solid #e0e0e0' }}>
+                        <Tab label="Stock Media" />
+                        <Tab label="AI Generation" />
+                        <Tab label="Upload Media" />
+                      </Tabs>
+                      {rightTabIndex === 0 && (
+                        <>
+                          <Box sx={{ p: 1.5, borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="caption">AI (Single Image)</Typography>
+                              <Switch size="small" checked={aiImagesEnabled} onChange={(e) => {
+                                const enabled = e.target.checked;
+                                setAiImagesEnabled(enabled);
+                                // Update current panel instantly
+                                if (!enabled) {
+                                  setGeneratedImages([fallbackImages[selectedChapterIndex % fallbackImages.length]]);
+                                } else {
+                                  const imgs = chapterImagesMap[selectedChapterIndex] || [];
+                                  setGeneratedImages(imgs.length ? [imgs[0]] : [fallbackImages[selectedChapterIndex % fallbackImages.length]]);
+                                }
+                              }} />
+                            </Box>
+                            {!aiImagesEnabled ? null : (
+                              <Button
+                                startIcon={<MagicIcon />}
+                                variant="contained"
+                                size="small"
+                                disabled={imagesLoading || chapters.length === 0}
+                                onClick={async () => {
+                                  try {
+                                    setImagesLoading(true);
+                                    const currentIdx = selectedChapterIndex;
+                                    const visuals = `${currentIdx + 1}. ${chapters[currentIdx]?.visuals || ''}`;
+                                    const res = await fetch('/api/generate-images', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ visuals })
+                                    });
+                                    const data = await res.json();
+                                    const newImgsAll: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : fallbackImages;
+                                    const newImgs = [newImgsAll[0]];
+                                    setChapterImagesMap(prev => {
+                                      const existing = prev[currentIdx] || [];
+                                      const merged = [...newImgs, ...existing];
+                                      return { ...prev, [currentIdx]: merged };
+                                    });
+                                    setGeneratedImages(prev => {
+                                      const merged = [...newImgs, ...prev];
+                                      return merged;
+                                    });
+                                  } catch (e) {
+                                    console.error('Failed to fetch images', e);
+                                    const newImgs = [fallbackImages[selectedChapterIndex % fallbackImages.length]];
+                                    setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [...newImgs, ...(prev[selectedChapterIndex] || [])] }));
+                                    setGeneratedImages(prev => [...newImgs, ...prev]);
+                                  } finally {
+                                    setImagesLoading(false);
                                   }
                                 }}
                               >
-                                <CardContent sx={{ p: 2, height: 'auto' }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'flex-start', height: '100%' }}>
-                                    {/* Drag Handle */}
-                                    <Box
-                                      {...provided.dragHandleProps}
-                                      sx={{
-                                        mr: 2,
-                                        cursor: 'grab',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#9c27b0',
-                                        '&:active': { cursor: 'grabbing' },
-                                        minHeight: '100%',
-                                        alignSelf: 'stretch'
-                                      }}
+                                {imagesLoading ? 'Fetching...' : 'Magic'}
+                              </Button>)}
+                          </Box>
+                          <Box sx={{ p: 1.5 }}>
+                            {aiImagesEnabled ? (
+                              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                                {(generatedImages.length ? generatedImages.slice(0, 1) : ((chapterImagesMap[selectedChapterIndex] || []).slice(0, 1).length ? (chapterImagesMap[selectedChapterIndex] || []).slice(0, 1) : [fallbackImages[selectedChapterIndex % fallbackImages.length]])).map((src, idx) => (
+                                  <Box key={idx} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: '100%', maxWidth: 320, aspectRatio: '1 / 1' }}>
+                                    <Box component="img" src={src} alt={`generated-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                    <IconButton
+                                      sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,1)' }, opacity: 0, transition: 'opacity 0.2s ease', '.MuiBox-root:hover &': { opacity: 1 } }}
+                                      onClick={() => { const a = document.createElement('a'); a.href = src; a.download = `image-${idx + 1}.png`; a.click(); }}
+                                      title="Download"
                                     >
-                                      <DragIcon fontSize="small" />
-                                    </Box>
-
-                                    {/* Content */}
-                                    <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'flex-start', height: '100%' }}>
-                                      <Box sx={{ flexGrow: 1 }}>
-                                        {/* Narration Content */}
-                                        {editingChapter === index ? (
-                                          <TextField
-                                            value={editNarration}
-                                            onChange={(e) => setEditNarration(e.target.value)}
-                                            variant="outlined"
-                                            multiline
-                                            rows={4}
-                                            fullWidth
-                                            sx={{ mb: 2 }}
-                                          />
-                                        ) : (
-                                          <Box sx={{
-                                            p: 2,
-                                            bgcolor: '#f8f9fa',
-                                            borderRadius: 1,
-                                            border: '1px solid #e9ecef',
-                                            maxHeight: '200px',
-                                            overflow: 'auto',
-                                            mb: 2
-                                          }}>
-                                            <Typography variant="body1" sx={{ lineHeight: 1.6, color: '#495057' }}>
-                                              {chapter.narration || 'Narration content will be generated here.'}
-                                            </Typography>
-                                          </Box>
-                                        )}
-                                      </Box>
-
-                                      {/* Chapter Actions */}
-                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
-                                        {editingChapter === index ? (
-                                          <>
-                                            {/* Save Button */}
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => handleSaveEdit(index)}
-                                              sx={{
-                                                color: '#4caf50',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(76, 175, 80, 0.1)',
-                                                  color: '#388e3c'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Save changes"
-                                            >
-                                              <CheckIcon fontSize="small" />
-                                            </IconButton>
-
-                                            {/* Cancel Button */}
-                                            <IconButton
-                                              size="small"
-                                              onClick={handleCancelEdit}
-                                              sx={{
-                                                color: '#ff9800',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                  color: '#f57c00'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Cancel editing"
-                                            >
-                                              <CloseIcon fontSize="small" />
-                                            </IconButton>
-                                          </>
-                                        ) : (
-                                          <>
-                                            {/* Edit Chapter Button */}
-                                            <IconButton
-                                              className="chapter-actions"
-                                              size="small"
-                                              onClick={() => handleEditChapter(index)}
-                                              sx={{
-                                                opacity: 0,
-                                                transition: 'opacity 0.2s ease',
-                                                color: '#ff9800',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                  color: '#f57c00'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Edit chapter"
-                                            >
-                                              <CreateIcon fontSize="small" />
-                                            </IconButton>
-
-                                            {/* Delete Icon */}
-                                            <IconButton
-                                              className="chapter-actions"
-                                              size="small"
-                                              onClick={() => handleDeleteChapter(index)}
-                                              sx={{
-                                                opacity: 0,
-                                                transition: 'opacity 0.2s ease',
-                                                color: '#ff4444',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(255,68,68,0.1)',
-                                                  color: '#cc0000'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Delete chapter"
-                                            >
-                                              <DeleteIcon fontSize="small" />
-                                            </IconButton>
-
-                                            {/* Add Chapter After This One Button */}
-                                            <IconButton
-                                              className="chapter-actions"
-                                              size="small"
-                                              onClick={() => handleAddChapterAfter(index)}
-                                              sx={{
-                                                opacity: 0,
-                                                transition: 'opacity 0.2s ease',
-                                                color: '#1DA1F2',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(29, 161, 242, 0.1)',
-                                                  color: '#0d8bd9'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Add chapter after this one"
-                                            >
-                                              <AddIcon fontSize="small" />
-                                            </IconButton>
-                                          </>
-                                        )}
-                                      </Box>
-                                    </Box>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 3v10m0 0l-4-4m4 4l4-4" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M20 21H4a2 2 0 01-2-2v0a2 2 0 012-2h16a2 2 0 012 2v0a2 2 0 01-2 2z" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    </IconButton>
                                   </Box>
-                                </CardContent>
-                              </Card>
+                                ))}
+                                {!imagesLoading && generatedImages.length === 0 && (!chapterImagesMap[selectedChapterIndex] || chapterImagesMap[selectedChapterIndex].length === 0) && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    Generate images from the script to see results here.
+                                  </Typography>
+                                )}
+                              </Box>
+                            ) : (
+                              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 160px)', justifyContent: 'center', gap: 1.5 }}>
+                                {[...uploadedImages, ...fallbackImages].map((src, idx) => (
+                                  <Box key={idx} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: 160, aspectRatio: '1 / 1' }}>
+                                    <Box component="img" src={src} alt={`dummy-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                  </Box>
+                                ))}
+                              </Box>
                             )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </Box>
-                    )}
-                  </Droppable>
-                </DragDropContext>
+                          </Box>
+                        </>
+                      )}
+                      {rightTabIndex === 1 && (
+                        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+
+                          <Box sx={{ textAlign: 'center', py: 6 }}>
+                            <Box sx={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: 2,
+                              mx: 'auto',
+                              mb: 2,
+                              background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              <svg width="42" height="42" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M8 5h8a3 3 0 013 3v8a3 3 0 01-3 3H8a3 3 0 01-3-3V8a3 3 0 013-3zm3 3v8l6-4-6-4z" /></svg>
+                            </Box>
+                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>What do you want to create?</Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Type in what you'd like to generate and add it to your scene.
+                            </Typography>
+                          </Box>
+
+                          <TextField
+                            value={aiPrompt}
+                            onChange={(e) => setAiPrompt(e.target.value)}
+                            multiline
+                            minRows={3}
+                            placeholder="Describe what you want to generate..."
+                            sx={{
+                              '& .MuiOutlinedInput-root': { borderRadius: 2 },
+                            }}
+                          />
+
+                          <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Button variant="text" fullWidth sx={{ flex: 1 }} onClick={() => setAiPrompt('')}>Cancel</Button>
+                            <Button
+                              fullWidth
+                              sx={{ flex: 1 }}
+                              variant="contained"
+                              onClick={async () => {
+                                try {
+                                  setImagesLoading(true);
+                                  const visuals = aiPrompt;
+                                  const res = await fetch('/api/generate-images', {
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visuals })
+                                  });
+                                  const data = await res.json();
+                                  const imgs: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : [fallbackImages[selectedChapterIndex % fallbackImages.length]];
+                                  const first = imgs[0];
+                                  setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+                                  setGeneratedImages([first]);
+                                  setAiImagesEnabled(true);
+                                  setRightTabIndex(0);
+                                } catch (e) {
+                                  console.error('AI generate failed', e);
+                                  const first = fallbackImages[selectedChapterIndex % fallbackImages.length];
+                                  setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+                                  setGeneratedImages([first]);
+                                  setRightTabIndex(0);
+                                } finally { setImagesLoading(false); }
+                              }}
+                              disabled={imagesLoading || !aiPrompt.trim()}
+                            >
+                              {imagesLoading ? 'Generating...' : 'Generate'}
+                            </Button>
+                          </Box>
+                        </Box>
+                      )}
+                      {rightTabIndex === 2 && (
+                        <Box sx={{ p: 2 }}>
+                          <Box
+                            onDragOver={(e) => { e.preventDefault(); setIsDraggingUpload(true); }}
+                            onDragLeave={() => setIsDraggingUpload(false)}
+                            onDrop={(e) => { e.preventDefault(); setIsDraggingUpload(false); handleUploadFiles(e.dataTransfer.files); }}
+                            onClick={() => { const el = document.getElementById('upload-input'); el?.click(); }}
+                            sx={{
+                              border: '2px dashed #cbd5e1',
+                              borderColor: isDraggingUpload ? '#5b76ff' : '#cbd5e1',
+                              borderRadius: 2,
+                              height: 360,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              textAlign: 'center',
+                              cursor: 'pointer',
+                              backgroundColor: isDraggingUpload ? 'rgba(91,118,255,0.04)' : 'transparent'
+                            }}
+                          >
+                            <Box>
+                              <Box sx={{
+                                width: 88,
+                                height: 88,
+                                borderRadius: '50%',
+                                mx: 'auto',
+                                mb: 2,
+                                background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}>
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 16V8m0 0l-3 3m3-3l3 3M7 20h10a4 4 0 004-4 4 4 0 00-4-4h-.26A8 8 0 104 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              </Box>
+                              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Upload Asset</Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                Click to browse or drag & drop your file here
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <input id="upload-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => handleUploadFiles(e.target.files)} />
+                        </Box>
+                      )}
+                    </Paper>
+                  </Box>
+                </Box>
               ) : (
                 <Box sx={{
                   display: 'flex',
@@ -1261,6 +1679,38 @@ const TrendingTopics: React.FC = () => {
           <Button onClick={handleConfirmAccept} color="primary" variant="contained">
             Accept
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Narration Variations Picker */}
+      <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Select a narration</DialogTitle>
+        <DialogContent>
+          {pickerLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.narration]).map((text, idx) => (
+                <Box key={idx} sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: '#1DA1F2', backgroundColor: 'rgba(29,161,242,0.02)' } }}
+                  onClick={() => {
+                    if (pickerChapterIndex === null) return;
+                    const updated = [...chapters];
+                    updated[pickerChapterIndex] = { ...updated[pickerChapterIndex], narration: text } as any;
+                    setChapters(updated);
+                    if (editingChapter === pickerChapterIndex) {
+                      setEditNarration(text);
+                    }
+                    setPickerOpen(false);
+                  }}
+                >
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPickerOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>
