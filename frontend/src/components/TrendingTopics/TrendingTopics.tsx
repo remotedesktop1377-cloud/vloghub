@@ -685,7 +685,7 @@ const TrendingTopics: React.FC = () => {
 
       {/* Topic Details Section */}
       {selectedTopic && (
-        <Box sx={{ mt: 6 }}>
+        <Box sx={{ mt: 2 }}>
           <SelectedTopicHeader selectedTopic={selectedTopic} />
 
           <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>

@@ -21,23 +21,24 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   hypothesis,
 }) => {
   return (
-    <Paper sx={{ p: 2, mb: 3 }}>
-      <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
+    <Paper sx={{ p: 1.5 }}>
+      <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.7rem', fontWeight: 600, mb: 1 }}>
         Video Duration
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.65rem', display: 'block' }}>
         Select the desired length for your generated video content.
       </Typography>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <FormControl size="small" sx={{ minWidth: 100 }}>
-          <InputLabel>Duration</InputLabel>
+          <InputLabel sx={{ fontSize: '0.7rem' }}>Duration</InputLabel>
           <Select
             value={duration}
             label="Duration"
             onChange={(e) => onDurationChange(e.target.value)}
+            sx={{ '& .MuiSelect-select': { fontSize: '0.7rem' } }}
           >
             {durationOptions.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
+              <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.7rem' }}>
                 {option.label}
               </MenuItem>
             ))}
@@ -46,15 +47,17 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
 
         <Button
           variant="contained"
-          size="large"
+          size="small"
           startIcon={<CutIcon />}
           onClick={onGenerateChapters}
           disabled={!hypothesis.trim() || generatingChapters}
           sx={{
             bgcolor: '#1DA1F2',
             '&:hover': { bgcolor: '#0d8bd9' },
-            px: 4,
-            py: 1.5
+            px: 3,
+            py: 0.75,
+            fontSize: '0.7rem',
+            height: 32
           }}
         >
           {generatingChapters ? 'Generating Chapters...' : 'Generate Chapters'}
