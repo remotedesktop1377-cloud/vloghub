@@ -54,10 +54,18 @@ import { AutoFixHigh as MagicIcon } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { WordCloudChart } from '../WordCloudChart/WordCloudChart';
 import LoadingOverlay from '../LoadingOverlay';
+import TrendingTopicsList from './TrendingTopicsList';
+import TopicDetailsSection from './TopicDetailsSection';
+import HypothesisSection from './HypothesisSection';
+import VideoDurationSection from './VideoDurationSection';
+import ChaptersSection from './ChaptersSection';
+import HeaderSection from './HeaderSection';
+import SelectedTopicHeader from './SelectedTopicHeader';
+
 
 const TrendingTopics: React.FC = () => {
   // Utility function for smooth scrolling to sections
-  const scrollToSection = (sectionName: string, delay: number = 300) => {
+  const scrollToSection = (sectionName: string) => {
 
     // Try multiple selectors to find the section
     const selectors = [
@@ -189,6 +197,46 @@ const TrendingTopics: React.FC = () => {
     setRightTabIndex(0);
   };
 
+  // Handler functions for the ChaptersSection component
+  const handleGenerateImages = async () => {
+    try {
+      setImagesLoading(true);
+      const visuals = aiPrompt;
+      const res = await fetch('/api/generate-images', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visuals })
+      });
+      const data = await res.json();
+      const imgs: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : [fallbackImages[selectedChapterIndex % fallbackImages.length]];
+      const first = imgs[0];
+      setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+      setGeneratedImages([first]);
+      setAiImagesEnabled(true);
+      setRightTabIndex(0);
+    } catch (e) {
+      console.error('AI generate failed', e);
+      const first = fallbackImages[selectedChapterIndex % fallbackImages.length];
+      setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+      setGeneratedImages([first]);
+      setRightTabIndex(0);
+    } finally { setImagesLoading(false); }
+  };
+
+  const handleImageSelect = (imageUrl: string) => {
+    setGeneratedImages([imageUrl]);
+  };
+
+  const handleImageDeselect = (imageUrl: string) => {
+    setGeneratedImages(generatedImages.filter(img => img !== imageUrl));
+  };
+
+  const handleDownloadImage = (src: string, idx: number) => {
+    HelperFunctions.downloadImage(src, idx);
+  };
+
+  const handleTriggerFileUpload = () => {
+    HelperFunctions.triggerFileUpload();
+  };
+
   const selectChapter = (idx: number) => {
     setSelectedChapterIndex(idx);
     if (aiImagesEnabled) {
@@ -199,12 +247,6 @@ const TrendingTopics: React.FC = () => {
       setGeneratedImages(fallbackImages);
     }
   };
-
-
-
-  // Mock trending topics imported from separate data file
-
-
 
   const fetchTrendingTopics = async (region: string) => {
     if (USE_HARDCODED) {
@@ -255,17 +297,13 @@ const TrendingTopics: React.FC = () => {
     }
   }, []);
 
-  const handleRegionChange = (event: SelectChangeEvent) => {
-    setSelectedRegion(event.target.value);
+  const handleRegionChange = (region: string) => {
+    setSelectedRegion(region);
   };
 
   const handleRefresh = () => {
     fetchTrendingTopics(selectedRegion);
   };
-
-
-
-
 
   const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false) => {
     if (!topicName.trim()) return;
@@ -298,7 +336,7 @@ const TrendingTopics: React.FC = () => {
         const fallback = HelperFunctions.generateFallbackTopicSuggestions(topicName, selectedRegion);
         setTopicSuggestions(fallback);
         if (applyToDetails) setSelectedTopicDetails(fallback[0]);
-       
+
       }
     } catch (err) {
       console.error('Error fetching topic suggestions:', err);
@@ -481,6 +519,12 @@ const TrendingTopics: React.FC = () => {
     setEditNarration(chapters[index].narration || '');
   };
 
+  const handleStartEdit = (index: number, heading: string, narration: string) => {
+    setEditingChapter(index);
+    setEditHeading(heading);
+    setEditNarration(narration);
+  };
+
   const handleSaveEdit = (index: number) => {
     HelperFunctions.saveEdit(index, chapters, setChapters, editHeading, editNarration, setEditingChapter);
     setEditHeading('');
@@ -519,46 +563,15 @@ const TrendingTopics: React.FC = () => {
       />
 
       {/* Header with Region Selection and Refresh */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <TrendingIcon sx={{ fontSize: 16, color: '#1DA1F2', mr: 1 }} />
-          <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
-            Trending Topics
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <FormControl size="small" sx={{ minWidth: 100 }}>
-            <InputLabel>Region</InputLabel>
-            <Select
-              value={selectedRegion}
-              label="Region"
-              onChange={handleRegionChange}
-            >
-              {regions.map((region) => (
-                <MenuItem key={region.value} value={region.value}>
-                  <span style={{ marginRight: '8px' }}>{region.flag}</span>
-                  {region.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-
-          <ToggleButtonGroup size="small" value={trendView} exclusive onChange={(_, v) => v && setTrendView(v)}>
-            <ToggleButton value="cloud">Word Cloud</ToggleButton>
-            <ToggleButton value="list">List</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-      </Box>
+      <HeaderSection
+        selectedRegion={selectedRegion}
+        regions={regions}
+        onRegionChange={handleRegionChange}
+        onRefresh={handleRefresh}
+        trendView={trendView}
+        onTrendViewChange={setTrendView}
+        loading={loading}
+      />
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -567,107 +580,18 @@ const TrendingTopics: React.FC = () => {
       )}
 
       {trendView === 'list' ? (
-        <Grid container spacing={1.5}>
-          {trendingTopics.map((topic, index) => {
-
-            return (
-              <Grid item xs={6} md={4} lg={2} key={topic.id}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      transition: 'transform 0.2s ease-in-out',
-                      boxShadow: 4,
-                    }
-                  }}
-                  onClick={() => handleTopicSelect(topic)}
-                >
-                  <CardContent sx={{ flexGrow: 1, p: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
-                      <Avatar
-                        sx={{
-                          bgcolor: HelperFunctions.getTrendingColor(index),
-                          mr: 1,
-                          // fontWeight: 'bold',
-                          fontSize: '0.7rem',
-                          width: 25,
-                          height: 25
-                        }}
-                      >
-                        #{index + 1}
-                      </Avatar>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body1" gutterBottom sx={{ wordBreak: 'break-word', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                          {topic.topic}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Chip
-                            label={topic.category}
-                            size="small"
-                            sx={{
-                              bgcolor: '#AEAEAE',
-                              color: 'white',
-                              // fontWeight: 'bold',
-                              fontSize: '0.5rem',
-                              height: 16
-                            }}
-                          />
-                          {topic.postCount ? (
-                            <Chip
-                              // icon={<TwitterIcon sx={{ fontSize: '0.6rem' }} />}
-                              label={topic.postCount}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
-                            />
-                          ) : (
-                            <Chip
-                              // icon={<TwitterIcon sx={{ fontSize: '0.6rem' }} />}
-                              label={topic.postCountValue ? HelperFunctions.formatTweetVolume(topic.postCountValue) : '0'}
-                              size="small"
-                              variant="outlined"
-                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
-                            />
-                          )}
-                        </Box>
-                      </Box>
-                    </Box>
-
-
-                  </CardContent>
-
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 1, borderTop: '1px solid #e0e0e0' }}>
-                    <Button
-                      size="small"
-                      variant="text"
-                      onClick={() => {
-                        // Scroll to topic details section immediately
-                        scrollToSection('topic-details');
-                        // Then handle topic selection
-                        handleTopicSelect(topic);
-                      }}
-                      sx={{
-                        borderColor: '#1DA1F2',
-                        color: '#1DA1F2',
-                        fontSize: '0.5rem',
-                        '&:hover': {
-                          borderColor: '#0d8bd9',
-                          backgroundColor: 'rgba(29, 161, 242, 0.1)',
-                        }
-                      }}
-                    >
-                      Explore the Topic
-                    </Button>
-                  </Box>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
+        <TrendingTopicsList
+          trendingTopics={trendingTopics}
+          selectedRegion={selectedRegion}
+          regions={regions}
+          onTopicSelect={handleTopicSelect}
+          onExploreTopic={(topic) => {
+            // Scroll to topic details section immediately
+            scrollToSection('topic-details');
+            // Then handle topic selection
+            handleTopicSelect(topic);
+          }}
+        />
       ) : (
         <Paper sx={{ p: 2, mb: 2 }}>
           {trendingTopics.length === 0 ? (
@@ -762,869 +686,100 @@ const TrendingTopics: React.FC = () => {
       {/* Topic Details Section */}
       {selectedTopic && (
         <Box sx={{ mt: 6 }}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-              <Avatar
-                sx={{
-                  bgcolor: '#1DA1F2',
-                  mr: 2,
-                  width: 56,
-                  height: 56,
-                  fontSize: '1.5rem'
-                }}
-              >
-                <TrendingIcon />
-              </Avatar>
-              <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="h5" gutterBottom sx={{ wordBreak: 'break-word', fontSize: '1.2rem' }}>
-                  {selectedTopic.topic}
-                </Typography>
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                  <Chip
-                    icon={<TwitterIcon />}
-                    label={`${selectedTopic.postCountValue ? HelperFunctions.formatTweetVolume(selectedTopic.postCountValue) : '0'} posts`}
-                    size="medium"
-                    variant="outlined"
-                    sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
-                  />
-
-                  <Chip
-                    label={selectedRegion.toUpperCase()}
-                    size="medium"
-                    variant="outlined"
-                  />
-                </Stack>
-              </Box>
-            </Box>
-          </Paper>
+          <SelectedTopicHeader selectedTopic={selectedTopic} />
 
           <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
 
-            {/* Topic Details */}
-            <Paper sx={{ p: 2, mb: 3 }} data-section="topic-details">
-              <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
-                Your Topic
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Describe your topic, This will help generate relevant video content.
-              </Typography>
+            <TopicDetailsSection
+              selectedTopic={selectedTopic}
+              selectedTopicDetails={selectedTopicDetails}
+              topicSuggestions={topicSuggestions}
+              loadingTopicSuggestions={loadingTopicSuggestions}
+              enhancingDetails={enhancingDetails}
+              onGetTopicSuggestions={getTopicSuggestions}
+              onTopicDetailsChange={setSelectedTopicDetails}
+              onEnhanceTopicDetails={handleEnhanceTopicDetails}
+            />
 
-              {/* Topic Suggestions */}
-              <Box sx={{ mb: 3, opacity: USE_HARDCODED ? 0.6 : 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    💡 Suggested topics for "{selectedTopic.topic}":
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => getTopicSuggestions(selectedTopic.topic)}
-                    disabled={USE_HARDCODED || loadingTopicSuggestions}
-                    sx={{ minWidth: 'auto', px: 1 }}
-                  >
-                    🔄
-                  </Button>
+            <HypothesisSection
+              selectedTopic={selectedTopic}
+              selectedTopicDetails={selectedTopicDetails}
+              hypothesis={hypothesis}
+              hypothesisSuggestions={hypothesisSuggestions}
+              loadingHypothesisSuggestions={loadingHypothesisSuggestions}
+              enhancingHypothesis={enhancingHypothesis}
+              onFetchHypothesisSuggestions={fetchHypothesisSuggestions}
+              onHypothesisChange={setHypothesis}
+              onEnhanceHypothesis={handleEnhanceHypothesis}
+            />
 
-                </Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {USE_HARDCODED ? (
-                    // Show hardcoded suggestions in hardcoded mode
-                    HelperFunctions.generateFallbackTopicSuggestions(selectedTopic.topic, selectedRegion).map((suggestion: string, index: number) => (
-                      <Chip
-                        key={index}
-                        label={suggestion}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          setSelectedTopicDetails(suggestion);
-                          // Don't automatically scroll to hypothesis - let user stay in topic section
-                        }}
-                        sx={{
-                          cursor: 'pointer',
-                          '&:hover': {
-                            backgroundColor: 'rgba(29, 161, 242, 0.1)',
-                            borderColor: '#1DA1F2',
-                          }
-                        }}
-                      />
-                    ))
-                  ) : loadingTopicSuggestions ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="body2" color="text.secondary">
-                        Generating topic suggestions...
-                      </Typography>
-                    </Box>
-                  ) : topicSuggestions.length > 0 ? (
-                    topicSuggestions.map((suggestion: string, index: number) => (
-                      <Chip
-                        key={index}
-                        label={suggestion}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          setSelectedTopicDetails(suggestion);
-                          // Don't automatically scroll to hypothesis - let user stay in topic section
-                        }}
-                        sx={{
-                          cursor: 'pointer',
-                          '&:hover': {
-                            backgroundColor: 'rgba(29, 161, 242, 0.1)',
-                            borderColor: '#1DA1F2',
-                          }
-                        }}
-                      />
-                    ))
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No topic suggestions available. Click on a trending topic to generate suggestions.
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                variant="outlined"
-                placeholder="Enter your topic details..."
-                value={selectedTopicDetails}
-                onChange={(e) => setSelectedTopicDetails(e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  variant="contained"
-                  onClick={handleEnhanceTopicDetails}
-                  disabled={USE_HARDCODED || enhancingDetails || !selectedTopicDetails.trim()}
-                  sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}
-                >
-                  {enhancingDetails ? 'Enhancing...' : '✨ Enhance'}
-                </Button>
-              </Box>
-            </Paper>
-
-            {/* Hypothesis Input */}
-            <Paper sx={{ p: 2, mb: 3, opacity: selectedTopic ? 1 : 0.6 }} data-section="hypothesis">
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
-                  Your Hypothesis
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Describe your hypothesis, angle, or unique perspective on this topic. This will help generate relevant video content.
-              </Typography>
-
-              {/* Hypothesis Suggestions */}
-              <Box sx={{ mb: 3, opacity: USE_HARDCODED ? 0.6 : 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.topic}":
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={fetchHypothesisSuggestions}
-                    disabled={USE_HARDCODED || !selectedTopic || loadingHypothesisSuggestions}
-                    sx={{ minWidth: 'auto', px: 1 }}
-                  >
-                    🔄
-                  </Button>
-
-                </Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {USE_HARDCODED ? (
-                    // Show hardcoded hypothesis suggestions in hardcoded mode
-                    HelperFunctions.generateFallbackHypothesisSuggestions(selectedTopic?.topic || '', selectedRegion).map((suggestion: string, idx: number) => (
-                      <Chip
-                        key={idx}
-                        label={suggestion}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          setHypothesis(suggestion);
-                          // Don't automatically scroll anywhere - let user stay where they are
-                        }}
-                        sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(29, 161, 242, 0.1)', borderColor: '#1DA1F2' } }}
-                      />
-                    ))
-                  ) : (!selectedTopic || !selectedTopicDetails.trim() || loadingTopicSuggestions) ? (
-                    null
-                  ) : loadingHypothesisSuggestions ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} />
-                      <Typography variant="body2" color="text.secondary">
-                        Generating hypothesis suggestions...
-                      </Typography>
-                    </Box>
-                  ) : (
-                    (hypothesisSuggestions || []).map((suggestion: string, idx: number) => (
-                      <Chip
-                        key={idx}
-                        label={suggestion}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          setHypothesis(suggestion);
-                          // Don't automatically scroll anywhere - let user stay where they are
-                        }}
-                        sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(29, 161, 242, 0.1)', borderColor: '#1DA1F2' } }}
-                      />
-                    ))
-                  )}
-                </Box>
-              </Box>
-
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                variant="outlined"
-                placeholder="Enter your hypothesis, research question, or unique angle on this topic..."
-                value={hypothesis}
-                disabled={!selectedTopic}
-                onChange={(e) => setHypothesis(e.target.value)}
-                sx={{ mb: 2 }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleEnhanceHypothesis}
-                  disabled={USE_HARDCODED || !selectedTopic || !hypothesis.trim() || enhancingHypothesis}
-                  sx={{ bgcolor: '#9c27b0', '&:hover': { bgcolor: '#7b1fa2' } }}
-                >
-                  {enhancingHypothesis ? 'Enhancing...' : '✨ Enhance'}
-                </Button>
-              </Box>
-            </Paper>
-
-            {/* Video Duration */}
-            <Paper sx={{ p: 2, mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
-                Video Duration
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Select the desired length for your generated video content.
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <InputLabel>Duration</InputLabel>
-                  <Select
-                    value={duration}
-                    label="Duration"
-                    onChange={(e) => setDuration(e.target.value)}
-                  >
-                    {durationOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={<CutIcon />}
-                  onClick={handleGenerateChapters}
-                  disabled={!hypothesis.trim() || generatingChapters}
-                  sx={{
-                    bgcolor: '#1DA1F2',
-                    '&:hover': { bgcolor: '#0d8bd9' },
-                    px: 4,
-                    py: 1.5
-                  }}
-                >
-                  {generatingChapters ? 'Generating Chapters...' : 'Generate Chapters'}
-                </Button>
-              </Box>
-            </Paper>
+            <VideoDurationSection
+              duration={duration}
+              onDurationChange={setDuration}
+              durationOptions={durationOptions}
+              generatingChapters={generatingChapters}
+              onGenerateChapters={handleGenerateChapters}
+              hypothesis={hypothesis}
+            />
 
             {/* Video Chapters Section */}
-            <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
-              {chaptersGenerated && chapters.length > 0 ? (
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                  <Box sx={{ flex: '1 1 50%', minWidth: 0 }}>
-                    <Box sx={{ width: '100%' }}>
-                      <DragDropContext onDragEnd={handleDragEnd}>
-                        <Droppable droppableId="chapters">
-                          {(provided) => (
-                            <Box
-                              {...provided.droppableProps}
-                              ref={provided.innerRef}
-                              sx={{ display: 'flex', flexDirection: 'column', gap: 0.6, alignItems: 'flex-start' }}
-                            >
-                              {chapters.map((chapter, index) => (
-                                <Box key={chapter.id || index.toString()} sx={{ width: 'fit-content' }}>
-                                  <Draggable key={(chapter.id || index.toString()) + '-draggable'} draggableId={chapter.id || index.toString()} index={index}>
-                                    {(provided, snapshot) => (
-                                      <Card
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        variant="elevation"
-                                        sx={{
-                                          borderRadius: 2,
-                                          transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
-                                          boxShadow: snapshot.isDragging ? 8 : 0,
-                                          '&:hover': { boxShadow: 0 }
-                                        }}
-                                      >
-                                        <CardContent sx={{ p: 0, height: 'auto', '&:last-child': { paddingBottom: 0 } }}>
-                                          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-start', bgcolor: selectedChapterIndex === index ? 'rgba(29,161,242,0.06)' : 'transparent' }} onClick={() => selectChapter(index)}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                              {/* Drag Handle */}
-                                              <Box
-                                                {...provided.dragHandleProps}
-                                                sx={{
-                                                  mr: 2,
-                                                  cursor: 'grab',
-                                                  display: 'flex',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
-                                                  color: '#9c27b0',
-                                                  '&:active': { cursor: 'grabbing' }
-                                                }}
-                                              >
-                                                <DragIcon fontSize="small" />
-                                              </Box>
-
-                                              {/* Narration Content - centered with integrated left strip number */}
-                                              <Box sx={{ width: '100%', maxWidth: 760, mx: 0 }}>
-                                                <Box sx={{
-                                                  display: 'flex',
-                                                  alignItems: 'stretch',
-                                                  borderWidth: 1,
-                                                  borderStyle: 'solid',
-                                                  borderColor: selectedChapterIndex === index ? '#1DA1F2' : '#e9ecef',
-                                                  borderRadius: 1,
-                                                  overflow: 'hidden',
-                                                  bgcolor: '#fff',
-                                                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
-                                                  '&:hover': {
-                                                    borderColor: '#1DA1F2',
-                                                    boxShadow: '0 0 0 3px rgba(29, 161, 242, 0.08)',
-                                                    backgroundColor: 'rgba(29, 161, 242, 0.02)'
-                                                  }
-                                                }}>
-                                                  <Box sx={{
-                                                    width: 48,
-                                                    bgcolor: 'rgba(29,161,242,0.08)',
-                                                    color: '#1DA1F2',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontWeight: 'bold',
-                                                    flexShrink: 0
-                                                  }}>
-                                                    {index + 1}
-                                                  </Box>
-                                                  <Box sx={{ flexGrow: 1 }}>
-                                                    {editingChapter === index ? (
-                                                      <TextField
-                                                        value={editNarration}
-                                                        onChange={(e) => setEditNarration(e.target.value)}
-                                                        variant="standard"
-                                                        InputProps={{ disableUnderline: true }}
-                                                        multiline
-                                                        minRows={4}
-                                                        fullWidth
-                                                        sx={{ px: 1.5, py: 1.5 }}
-                                                      />
-                                                    ) : (
-                                                      <Box sx={{
-                                                        p: 1.5,
-                                                        maxHeight: '200px',
-                                                        overflow: 'auto',
-                                                        bgcolor: '#fff'
-                                                      }}>
-                                                        <Typography variant="body1" sx={{ lineHeight: 1.6, color: '#495057' }}>
-                                                          {chapter.narration || 'Narration content will be generated here.'}
-                                                        </Typography>
-                                                      </Box>
-                                                    )}
-                                                  </Box>
-                                                </Box>
-                                              </Box>
-
-                                              {/* Chapter Actions */}
-                                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
-                                                {editingChapter === index ? (
-                                                  <>
-                                                    {/* Save Button */}
-                                                    <IconButton
-                                                      size="small"
-                                                      onClick={() => handleSaveEdit(index)}
-                                                      sx={{
-                                                        color: '#4caf50',
-                                                        '&:hover': {
-                                                          bgcolor: 'rgba(76, 175, 80, 0.1)',
-                                                          color: '#388e3c'
-                                                        },
-                                                        width: 36,
-                                                        height: 36,
-                                                      }}
-                                                      title="Save changes"
-                                                    >
-                                                      <CheckIcon fontSize="small" />
-                                                    </IconButton>
-
-                                                    {/* Cancel Button */}
-                                                    <IconButton
-                                                      size="small"
-                                                      onClick={handleCancelEdit}
-                                                      sx={{
-                                                        color: '#ff9800',
-                                                        '&:hover': {
-                                                          bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                          color: '#f57c00'
-                                                        },
-                                                        width: 36,
-                                                        height: 36,
-                                                      }}
-                                                      title="Cancel editing"
-                                                    >
-                                                      <CloseIcon fontSize="small" />
-                                                    </IconButton>
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    {/* Magic variations for this chapter */}
-                                                    <IconButton
-                                                      className="chapter-actions"
-                                                      size="small"
-                                                      onClick={async () => {
-                                                        try {
-                                                          setPickerOpen(true);
-                                                          setPickerChapterIndex(index);
-                                                          setPickerLoading(true);
-                                                          const chapter = chapters[index];
-                                                          const res = await fetch('/api/get-narration-variations', {
-                                                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({
-                                                              narration: chapter.narration,
-                                                              noOfNarrations: 5
-                                                            })
-                                                          });
-                                                          const data = await res.json();
-                                                          const vars: string[] = Array.isArray(data?.variations) ? data.variations : [];
-                                                          setPickerNarrations(vars);
-                                                        } catch (e) {
-                                                          console.error('picker fetch failed', e);
-                                                          setPickerNarrations([chapters[index].narration]);
-                                                        } finally {
-                                                          setPickerLoading(false);
-                                                        }
-                                                      }}
-                                                      sx={{
-                                                        opacity: selectedChapterIndex === index ? 1 : 0,
-                                                        transition: 'opacity 0.2s ease',
-                                                        color: '#1DA1F2',
-                                                        '&:hover': { bgcolor: 'rgba(29,161,242,0.1)', color: '#0d8bd9' },
-                                                        width: 36, height: 36,
-                                                      }}
-                                                      title="Magic variations"
-                                                    >
-                                                      <MagicIcon fontSize="small" />
-                                                    </IconButton>
-                                                    {/* Edit Chapter Button */}
-                                                    <IconButton
-                                                      className="chapter-actions"
-                                                      size="small"
-                                                      onClick={() => handleEditChapter(index)}
-                                                      sx={{
-                                                        opacity: selectedChapterIndex === index ? 1 : 0,
-                                                        transition: 'opacity 0.2s ease',
-                                                        color: '#ff9800',
-                                                        '&:hover': {
-                                                          bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                          color: '#f57c00'
-                                                        },
-                                                        width: 36,
-                                                        height: 36,
-                                                      }}
-                                                      title="Edit chapter"
-                                                    >
-                                                      <CreateIcon fontSize="small" />
-                                                    </IconButton>
-
-                                                    {/* Delete Icon */}
-                                                    <IconButton
-                                                      className="chapter-actions"
-                                                      size="small"
-                                                      onClick={() => handleDeleteChapter(index)}
-                                                      sx={{
-                                                        opacity: selectedChapterIndex === index ? 1 : 0,
-                                                        transition: 'opacity 0.2s ease',
-                                                        color: '#ff4444',
-                                                        '&:hover': {
-                                                          bgcolor: 'rgba(255,68,68,0.1)',
-                                                          color: '#cc0000'
-                                                        },
-                                                        width: 36,
-                                                        height: 36,
-                                                      }}
-                                                      title="Delete chapter"
-                                                    >
-                                                      <DeleteIcon fontSize="small" />
-                                                    </IconButton>
-
-                                                    {/* Add Chapter After This One Button */}
-                                                    <IconButton
-                                                      className="chapter-actions"
-                                                      size="small"
-                                                      onClick={() => handleAddChapterAfter(index)}
-                                                      sx={{
-                                                        opacity: selectedChapterIndex === index ? 1 : 0,
-                                                        transition: 'opacity 0.2s ease',
-                                                        color: '#1DA1F2',
-                                                        '&:hover': {
-                                                          bgcolor: 'rgba(29, 161, 242, 0.1)',
-                                                          color: '#0d8bd9'
-                                                        },
-                                                        width: 36,
-                                                        height: 36,
-                                                      }}
-                                                      title="Add chapter after this one"
-                                                    >
-                                                      <AddIcon fontSize="small" />
-                                                    </IconButton>
-                                                  </>
-                                                )}
-                                              </Box>
-                                            </Box>
-                                          </Box>
-                                        </CardContent>
-                                      </Card>
-                                    )}
-                                  </Draggable>
-                                  {/* divider removed as requested */}
-                                </Box>
-                              ))}
-                              {provided.placeholder}
-                            </Box>
-                          )}
-                        </Droppable>
-                      </DragDropContext>
-                    </Box>
-                  </Box>
-                  <Box sx={{ flex: '1 1 50%', minWidth: 0 }}>
-                    <Paper sx={{ p: 0, overflow: 'hidden' }}>
-                      <Tabs value={rightTabIndex} onChange={(_, v) => setRightTabIndex(v)} variant="fullWidth" sx={{ borderBottom: '1px solid #e0e0e0' }}>
-                        <Tab label="Stock Media" />
-                        <Tab label="AI Generation" />
-                        <Tab label="Upload Media" />
-                      </Tabs>
-                      {rightTabIndex === 0 && (
-                        <>
-                          <Box sx={{ p: 1.5, borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="caption">AI (Single Image)</Typography>
-                              <Switch size="small" checked={aiImagesEnabled} onChange={(e) => {
-                                const enabled = e.target.checked;
-                                setAiImagesEnabled(enabled);
-                                // Update current panel instantly
-                                if (!enabled) {
-                                  setGeneratedImages([fallbackImages[selectedChapterIndex % fallbackImages.length]]);
-                                } else {
-                                  const imgs = chapterImagesMap[selectedChapterIndex] || [];
-                                  setGeneratedImages(imgs.length ? [imgs[0]] : [fallbackImages[selectedChapterIndex % fallbackImages.length]]);
-                                }
-                              }} />
-                            </Box>
-                            {!aiImagesEnabled ? null : (
-                              <Button
-                                startIcon={<MagicIcon />}
-                                variant="contained"
-                                size="small"
-                                disabled={imagesLoading || chapters.length === 0}
-                                onClick={async () => {
-                                  try {
-                                    setImagesLoading(true);
-                                    const currentIdx = selectedChapterIndex;
-                                    const visuals = `${currentIdx + 1}. ${chapters[currentIdx]?.visuals || ''}`;
-                                    const res = await fetch('/api/generate-images', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ visuals })
-                                    });
-                                    const data = await res.json();
-                                    const newImgsAll: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : fallbackImages;
-                                    const newImgs = [newImgsAll[0]];
-                                    setChapterImagesMap(prev => {
-                                      const existing = prev[currentIdx] || [];
-                                      const merged = [...newImgs, ...existing];
-                                      return { ...prev, [currentIdx]: merged };
-                                    });
-                                    setGeneratedImages(prev => {
-                                      const merged = [...newImgs, ...prev];
-                                      return merged;
-                                    });
-                                  } catch (e) {
-                                    console.error('Failed to fetch images', e);
-                                    const newImgs = [fallbackImages[selectedChapterIndex % fallbackImages.length]];
-                                    setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [...newImgs, ...(prev[selectedChapterIndex] || [])] }));
-                                    setGeneratedImages(prev => [...newImgs, ...prev]);
-                                  } finally {
-                                    setImagesLoading(false);
-                                  }
-                                }}
-                              >
-                                {imagesLoading ? 'Fetching...' : 'Magic'}
-                              </Button>)}
-                          </Box>
-                          <Box sx={{ p: 1.5 }}>
-                            {aiImagesEnabled ? (
-                              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                                {(generatedImages.length ? generatedImages.slice(0, 1) : ((chapterImagesMap[selectedChapterIndex] || []).slice(0, 1).length ? (chapterImagesMap[selectedChapterIndex] || []).slice(0, 1) : [fallbackImages[selectedChapterIndex % fallbackImages.length]])).map((src, idx) => (
-                                  <Box key={idx} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: '100%', maxWidth: 320, aspectRatio: '1 / 1' }}>
-                                    <Box component="img" src={src} alt={`generated-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                    <IconButton
-                                      sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,1)' }, opacity: 0, transition: 'opacity 0.2s ease', '.MuiBox-root:hover &': { opacity: 1 } }}
-                                      onClick={() => HelperFunctions.downloadImage(src, idx)}
-                                      title="Download"
-                                    >
-                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 3v10m0 0l-4-4m4 4l4-4" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        <path d="M20 21H4a2 2 0 01-2-2v0a2 2 0 012-2h16a2 2 0 012 2v0a2 2 0 01-2 2z" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                      </svg>
-                                    </IconButton>
-                                  </Box>
-                                ))}
-                                {!imagesLoading && generatedImages.length === 0 && (!chapterImagesMap[selectedChapterIndex] || chapterImagesMap[selectedChapterIndex].length === 0) && (
-                                  <Typography variant="body2" color="text.secondary">
-                                    Generate images from the script to see results here.
-                                  </Typography>
-                                )}
-                              </Box>
-                            ) : (
-                              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 160px)', justifyContent: 'center', gap: 1.5 }}>
-                                {[...uploadedImages, ...fallbackImages].map((src, idx) => (
-                                  <Box key={idx} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: 160, aspectRatio: '1 / 1' }}>
-                                    <Box component="img" src={src} alt={`dummy-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                  </Box>
-                                ))}
-                              </Box>
-                            )}
-                          </Box>
-                        </>
-                      )}
-                      {rightTabIndex === 1 && (
-                        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-                          <Box sx={{ textAlign: 'center', py: 6 }}>
-                            <Box sx={{
-                              width: 80,
-                              height: 80,
-                              borderRadius: 2,
-                              mx: 'auto',
-                              mb: 2,
-                              background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                              <svg width="42" height="42" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M8 5h8a3 3 0 013 3v8a3 3 0 01-3 3H8a3 3 0 01-3-3V8a3 3 0 013-3zm3 3v8l6-4-6-4z" /></svg>
-                            </Box>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: '0.8rem' }}>What do you want to create?</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Type in what you'd like to generate and add it to your scene.
-                            </Typography>
-                          </Box>
-
-                          <TextField
-                            value={aiPrompt}
-                            onChange={(e) => setAiPrompt(e.target.value)}
-                            multiline
-                            minRows={3}
-                            placeholder="Describe what you want to generate..."
-                            sx={{
-                              '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                            }}
-                          />
-
-                          <Box sx={{ display: 'flex', gap: 2 }}>
-                            <Button variant="text" fullWidth sx={{ flex: 1 }} onClick={() => setAiPrompt('')}>Cancel</Button>
-                            <Button
-                              fullWidth
-                              sx={{ flex: 1 }}
-                              variant="contained"
-                              onClick={async () => {
-                                try {
-                                  setImagesLoading(true);
-                                  const visuals = aiPrompt;
-                                  const res = await fetch('/api/generate-images', {
-                                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visuals })
-                                  });
-                                  const data = await res.json();
-                                  const imgs: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : [fallbackImages[selectedChapterIndex % fallbackImages.length]];
-                                  const first = imgs[0];
-                                  setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
-                                  setGeneratedImages([first]);
-                                  setAiImagesEnabled(true);
-                                  setRightTabIndex(0);
-                                } catch (e) {
-                                  console.error('AI generate failed', e);
-                                  const first = fallbackImages[selectedChapterIndex % fallbackImages.length];
-                                  setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
-                                  setGeneratedImages([first]);
-                                  setRightTabIndex(0);
-                                } finally { setImagesLoading(false); }
-                              }}
-                              disabled={imagesLoading || !aiPrompt.trim()}
-                            >
-                              {imagesLoading ? 'Generating...' : 'Generate'}
-                            </Button>
-                          </Box>
-                        </Box>
-                      )}
-                      {rightTabIndex === 2 && (
-                        <Box sx={{ p: 2 }}>
-                          <Box
-                            onDragOver={(e) => { e.preventDefault(); setIsDraggingUpload(true); }}
-                            onDragLeave={() => setIsDraggingUpload(false)}
-                            onDrop={(e) => { e.preventDefault(); setIsDraggingUpload(false); handleUploadFiles(e.dataTransfer.files); }}
-                            onClick={() => HelperFunctions.triggerFileUpload()}
-                            sx={{
-                              border: '2px dashed #cbd5e1',
-                              borderColor: isDraggingUpload ? '#5b76ff' : '#cbd5e1',
-                              borderRadius: 2,
-                              height: 360,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              textAlign: 'center',
-                              cursor: 'pointer',
-                              backgroundColor: isDraggingUpload ? 'rgba(91,118,255,0.04)' : 'transparent'
-                            }}
-                          >
-                            <Box>
-                              <Box sx={{
-                                width: 88,
-                                height: 88,
-                                borderRadius: '50%',
-                                mx: 'auto',
-                                mb: 2,
-                                background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center'
-                              }}>
-                                <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 16V8m0 0l-3 3m3-3l3 3M7 20h10a4 4 0 004-4 4 4 0 00-4-4h-.26A8 8 0 104 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                              </Box>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.8rem' }}>Upload Asset</Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                Click to browse or drag & drop your file here
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <input id="upload-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => handleUploadFiles(e.target.files)} />
-                        </Box>
-                      )}
-                    </Paper>
-                  </Box>
-                </Box>
-              ) : (
-                <Box sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  textAlign: 'center',
-                  py: 8
-                }}>
-                  <Typography variant="subtitle1" sx={{ color: '#666', mb: 2, fontSize: '0.8rem' }}>
-                    📚 Generated Chapters
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: '#999', mb: 3, maxWidth: '300px' }}>
-                    Your video chapters will appear here once you generate them using the form on the left.
-                  </Typography>
-                  <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    color: '#ccc',
-                    fontSize: '0.875rem'
-                  }}>
-                    <Typography variant="body2" sx={{ color: '#ccc' }}>
-                      Enter your hypothesis and click "Generate Chapters" to get started
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </Paper>
+            <ChaptersSection
+              chapters={chapters}
+              chaptersGenerated={chaptersGenerated}
+              generatingChapters={generatingChapters}
+              editingChapter={editingChapter}
+              editHeading={editHeading}
+              editNarration={editNarration}
+              selectedChapterIndex={selectedChapterIndex}
+              rightTabIndex={rightTabIndex}
+              aiImagesEnabled={aiImagesEnabled}
+              imagesLoading={imagesLoading}
+              generatedImages={generatedImages}
+              aiPrompt={aiPrompt}
+              pickerOpen={pickerOpen}
+              pickerChapterIndex={pickerChapterIndex}
+              pickerNarrations={pickerNarrations}
+              pickerLoading={pickerLoading}
+              uploadedImages={uploadedImages}
+              isDraggingUpload={isDraggingUpload}
+              chapterImagesMap={chapterImagesMap}
+              onGenerateChapters={handleGenerateChapters}
+              onAddChapterAfter={handleAddChapterAfter}
+              onDeleteChapter={handleDeleteChapter}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={handleCancelEdit}
+              onEditHeadingChange={setEditHeading}
+              onEditNarrationChange={setEditNarration}
+              onStartEdit={handleStartEdit}
+              onDragEnd={handleDragEnd}
+              onSelectChapter={selectChapter}
+              onRightTabChange={setRightTabIndex}
+              onAIPromptChange={setAiPrompt}
+              onUseAIChange={setAiImagesEnabled}
+              onGenerateImages={handleGenerateImages}
+              onImageSelect={handleImageSelect}
+              onImageDeselect={handleImageDeselect}
+              onDownloadImage={handleDownloadImage}
+              onTriggerFileUpload={handleTriggerFileUpload}
+              onUploadFiles={handleUploadFiles}
+              onPickerOpen={setPickerOpen}
+              onPickerChapterIndex={setPickerChapterIndex}
+              onPickerLoading={setPickerLoading}
+              onPickerNarrations={setPickerNarrations}
+              onChapterImagesMapChange={setChapterImagesMap}
+              onGeneratedImagesChange={setGeneratedImages}
+              onRightTabIndexChange={setRightTabIndex}
+            />
 
           </Box>
-
-          {/* Error Display */}
-          {error && (
-            <Alert severity="error" sx={{ mt: 3 }}>
-              {error}
-            </Alert>
-          )}
         </Box>
       )}
 
-      {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmOpen}
-        onClose={handleConfirmReject}
-        aria-labelledby="confirm-dialog-title"
-        aria-describedby="confirm-dialog-description"
-      >
-        <DialogTitle id="confirm-dialog-title">Confirm Enhance</DialogTitle>
-        <DialogContent>
-          <Typography id="confirm-dialog-description">
-            The enhanced text is ready. Would you like to accept the changes?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Original: "{pendingField === 'topicDetails' ? selectedTopicDetails : hypothesis}"
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Enhanced: "{pendingEnhancedText}"
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleConfirmReject} color="primary">
-            Reject
-          </Button>
-          <Button onClick={handleConfirmAccept} color="primary" variant="contained">
-            Accept
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Narration Variations Picker */}
-      <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Select a narration</DialogTitle>
-        <DialogContent>
-          {pickerLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.narration]).map((text, idx) => (
-                <Box key={idx} sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: '#1DA1F2', backgroundColor: 'rgba(29,161,242,0.02)' } }}
-                  onClick={() => {
-                    if (pickerChapterIndex === null) return;
-                    const updated = [...chapters];
-                    updated[pickerChapterIndex] = { ...updated[pickerChapterIndex], narration: text } as any;
-                    setChapters(updated);
-                    if (editingChapter === pickerChapterIndex) {
-                      setEditNarration(text);
-                    }
-                    setPickerOpen(false);
-                  }}
-                >
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPickerOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
+
+
+
 
 export default TrendingTopics;
