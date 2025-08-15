@@ -1,10 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AI_CONFIG } from '@/config/aiConfig';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
-  generationConfig: { temperature: 0.6 }
+  model: AI_CONFIG.GEMINI.MODEL,
+  generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }
 });
 
 interface EnhanceHypothesisRequest {

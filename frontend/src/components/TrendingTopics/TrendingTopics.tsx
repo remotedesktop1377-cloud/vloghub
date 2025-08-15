@@ -1,4 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { mockTrendingTopics, TrendingTopic } from '../../data/mockTrendingTopics';
+import { mockChapters, Chapter } from '../../data/mockChapters';
+import { fallbackImages } from '../../data/mockImages';
+import { regions, Region } from '../../data/mockRegions';
+import { durationOptions, DurationOption } from '../../data/mockDurationOptions';
+import { USE_HARDCODED, HARDCODED_TOPIC, HARDCODED_HYPOTHESIS, DEFAULT_AI_PROMPT } from '../../data/constants';
+import { apiService } from '../../utils/apiService';
+import { HelperFunctions } from '../../utils/helperFunctions';
 import {
   Box,
   Typography,
@@ -44,43 +52,78 @@ import {
 } from '@mui/icons-material';
 import { AutoFixHigh as MagicIcon } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { useRouter } from 'next/router';
-import { getMockTrendingTopics } from 'pages/api/trending-topics';
 import { WordCloudChart } from '../WordCloudChart/WordCloudChart';
-
-// Hardcoded topic/hypothesis toggle and values
-const USE_HARDCODED = false;
-const HARDCODED_TOPIC = "Nelson Mandela's legacy in Pakistan: Examining his impact on anti-apartheid movements and social justice.";
-const HARDCODED_HYPOTHESIS = "Mandela's anti-apartheid struggle resonated deeply within Pakistan's own fight against oppression, inspiring local activism.";
-
-interface TrendingTopic {
-  id: string;
-  name: string;
-  tweet_volume: number;
-  url: string;
-  promoted_content?: string;
-  query: string;
-  // Optional fields from mock feed
-  category?: string;
-  postCountText?: string;
-}
-
-interface TrendingTopicsResponse {
-  trends: TrendingTopic[];
-  region: string;
-  timestamp: string;
-}
-
-interface Chapter {
-  id: string;
-  heading: string;
-  narration: string;
-  visuals: string;
-  brollIdeas: string[];
-  duration: string;
-}
+import LoadingOverlay from '../LoadingOverlay';
 
 const TrendingTopics: React.FC = () => {
+  // Utility function for smooth scrolling to sections
+  const scrollToSection = (sectionName: string, delay: number = 300) => {
+
+    // Try multiple selectors to find the section
+    const selectors = [
+      `[data-section="${sectionName}"]`,
+      `.MuiPaper-root[data-section="${sectionName}"]`,
+    ];
+
+    let targetElement = null;
+
+    // First try the data-section selectors
+    for (const selector of selectors) {
+      try {
+        targetElement = document.querySelector(selector);
+        if (targetElement) {
+          console.log(`Found ${sectionName} section with selector: ${selector}`);
+          break;
+        }
+      } catch (e) {
+        console.log(`Selector ${selector} failed:`, e);
+      }
+    }
+
+    // If not found, try finding by text content
+    if (!targetElement) {
+      const elements = document.querySelectorAll('h6, .MuiTypography-subtitle1');
+      Array.from(elements).forEach(element => {
+        const text = element.textContent || '';
+        if (sectionName === 'topic-details' && text.includes('Your Topic')) {
+          targetElement = element.closest('.MuiPaper-root');
+        } else if (sectionName === 'hypothesis' && text.includes('Your Hypothesis')) {
+          targetElement = element.closest('.MuiPaper-root');
+        }
+      });
+    }
+
+    if (targetElement) {
+      // Ensure the element is visible and scrollable
+      if (targetElement.scrollIntoView) {
+        targetElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      } else {
+        // Fallback for older browsers
+        const rect = targetElement.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        window.scrollTo({
+          top: scrollTop + rect.top - 100,
+          behavior: 'smooth'
+        });
+      }
+    } else {
+      // Fallback: scroll to the general area where these sections should be
+      const mainContent = document.querySelector('main') ||
+        document.querySelector('.MuiBox-root') ||
+        document.querySelector('body');
+      if (mainContent && mainContent.scrollIntoView) {
+        mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        // Last resort: scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
+
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,27 +158,18 @@ const TrendingTopics: React.FC = () => {
   const [rightTabIndex, setRightTabIndex] = useState(0);
   const [imagesLoading, setImagesLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-  const fallbackImages = [
-    '/dummy_1.jpg',
-    '/dummy_2.jpg',
-    '/dummy_3.jpg',
-    '/dummy_4.jpg',
-    '/dummy_5.jpg',
-    '/dummy_6.jpg',
-    '/dummy_7.jpg',
-  ];
+
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
   const [chapterImagesMap, setChapterImagesMap] = useState<Record<number, string[]>>({});
   const [aiImagesEnabled, setAiImagesEnabled] = useState<boolean>(false);
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
   const [pickerChapterIndex, setPickerChapterIndex] = useState<number | null>(null);
-  const [pickerImages, setPickerImages] = useState<string[]>([]); // legacy image use if needed
   const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
   const [pickerLoading, setPickerLoading] = useState<boolean>(false);
-  const [aiPrompt, setAiPrompt] = useState<string>("Today, I'm giving you a quick tutorial on Nelson Mandela's incredible life.");
+  const [aiPrompt, setAiPrompt] = useState<string>(DEFAULT_AI_PROMPT);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isDraggingUpload, setIsDraggingUpload] = useState<boolean>(false);
-  const [trendView, setTrendView] = useState<'list' | 'cloud'>('list');
+  const [trendView, setTrendView] = useState<'cloud' | 'list'>('cloud');
 
   const handleUploadFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -166,56 +200,11 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-  const regions = [
-    { value: 'pakistan', label: 'Pakistan', flag: '🇵🇰' },
-  ];
 
-  // Mock trending topics for hardcoded mode
-  // Build mock topics from provided JSON structure
-  const mockTrendingTopics: TrendingTopic[] = [
-    { id: '1', name: '#PakistanHameshaZindabad', tweet_volume: 8773, url: '#', query: '#PakistanHameshaZindabad', category: 'Only on X · Trending', postCountText: '8,773 posts' },
-    { id: '2', name: '#14AugustBalochistanKeSang', tweet_volume: 0, url: '#', query: '#14AugustBalochistanKeSang', category: '#14AugustBalochistanKeSang', postCountText: '' },
-    { id: '3', name: '#آزادی_بھی_قید_میں_ہے', tweet_volume: 10100, url: '#', query: '#آزادی_بھی_قید_میں_ہے', category: '#آزادی_بھی_قید_میں_ہے', postCountText: '10.1K posts' },
-    { id: '4', name: 'Sir Abdullah Haroon', tweet_volume: 0, url: '#', query: 'Sir Abdullah Haroon', category: 'Pakistan', postCountText: '' },
-    { id: '5', name: '#حقیقی_آزادی_کی_تحریک', tweet_volume: 157000, url: '#', query: '#حقیقی_آزادی_کی_تحریک', category: '#حقیقی_آزادی_کی_تحریک', postCountText: '157K posts' },
-    { id: '6', name: '#BajaurUnderStateAttack', tweet_volume: 6072, url: '#', query: '#BajaurUnderStateAttack', category: '#BajaurUnderStateAttack', postCountText: '6,072 posts' },
-    { id: '7', name: 'Shai Hope', tweet_volume: 3784, url: '#', query: 'Shai Hope', category: 'Pakistan', postCountText: '3,784 posts' },
-    { id: '8', name: 'Quaid-e-Azam', tweet_volume: 0, url: '#', query: 'Quaid-e-Azam', category: 'Pakistan', postCountText: '' },
-    { id: '9', name: 'bla and majeed brigade', tweet_volume: 2439, url: '#', query: 'bla and majeed brigade', category: 'Pakistan', postCountText: '2,439 posts' },
-    { id: '10', name: 'Jayden Seales', tweet_volume: 1877, url: '#', query: 'Jayden Seales', category: 'Pakistan', postCountText: '1,877 posts' },
-    { id: '11', name: 'governor house sindh', tweet_volume: 0, url: '#', query: 'governor house sindh', category: 'Pakistan', postCountText: '' },
-    { id: '12', name: 'Rizwan', tweet_volume: 6217, url: '#', query: 'Rizwan', category: 'Pakistan', postCountText: '6,217 posts' },
-    { id: '13', name: 'governor kamran tessori', tweet_volume: 0, url: '#', query: 'governor kamran tessori', category: 'Pakistan', postCountText: '' },
-    { id: '14', name: 'kaifi khalil', tweet_volume: 0, url: '#', query: 'kaifi khalil', category: 'Pakistan', postCountText: '' },
-    { id: '15', name: 'hasan raheem', tweet_volume: 0, url: '#', query: 'hasan raheem', category: 'Pakistan', postCountText: '' },
-    { id: '16', name: 'Caa2', tweet_volume: 0, url: '#', query: 'Caa2', category: 'Pakistan', postCountText: '' },
-    { id: '17', name: 'West Indies', tweet_volume: 10800, url: '#', query: 'West Indies', category: '', postCountText: '10.8K posts' },
-    { id: '18', name: 'Mumbai Indians · Trending', tweet_volume: 9456, url: '#', query: 'Mumbai Indians · Trending', category: '', postCountText: '9,456 posts' },
-    { id: '19', name: '3rd odi', tweet_volume: 0, url: '#', query: '3rd odi', category: 'Pakistan', postCountText: '' },
-    { id: '20', name: 'Taylor', tweet_volume: 483000, url: '#', query: 'Taylor', category: 'Pakistan', postCountText: '483K posts' },
-    { id: '21', name: '$SPECT', tweet_volume: 1478, url: '#', query: '$SPECT', category: 'Pakistan', postCountText: '1,478 posts' },
-    { id: '22', name: 'Indus Waters Treaty', tweet_volume: 8903, url: '#', query: 'Indus Waters Treaty', category: 'Pakistan', postCountText: '8,903 posts' },
-    { id: '23', name: 'Naseem Shah', tweet_volume: 0, url: '#', query: 'Naseem Shah', category: 'Pakistan', postCountText: '' },
-    { id: '24', name: 'Bilawal Bhutto Zardari', tweet_volume: 0, url: '#', query: 'Bilawal Bhutto Zardari', category: 'Pakistan', postCountText: '' },
-    { id: '25', name: 'Adiala Jail', tweet_volume: 10700, url: '#', query: 'Adiala Jail', category: 'Pakistan', postCountText: '10.7K posts' },
-    { id: '26', name: 'SKYNANI SMYLE NEONA AT SF', tweet_volume: 284000, url: '#', query: 'SKYNANI SMYLE NEONA AT SF', category: 'Pakistan', postCountText: '284K posts' },
-    { id: '27', name: '$SOL', tweet_volume: 124000, url: '#', query: '$SOL', category: 'Pakistan', postCountText: '124K posts' },
-    { id: '28', name: 'Gandapur', tweet_volume: 1563, url: '#', query: 'Gandapur', category: 'Pakistan', postCountText: '1,563 posts' },
-    { id: '29', name: 'Politics · Trending', tweet_volume: 8720, url: '#', query: 'Politics · Trending', category: 'Azerbaijan', postCountText: '8,720 posts' },
-    { id: '30', name: 'Mohsin Naqvi', tweet_volume: 0, url: '#', query: 'Mohsin Naqvi', category: 'Pakistan', postCountText: '' },
-  ];
 
-  const durationOptions = [
-    { value: '1', label: '1 minutes' },
-    { value: '3', label: '3 minutes' },
-    { value: '5', label: '5 minutes' },
-    { value: '10', label: '10 minutes' },
-    { value: '15', label: '15 minutes' },
-    { value: '20', label: '20 minutes' },
-    { value: '30', label: '30 minutes' },
-    { value: '45', label: '45 minutes' },
-    { value: '60', label: '1 hour' },
-  ];
+  // Mock trending topics imported from separate data file
+
+
 
   const fetchTrendingTopics = async (region: string) => {
     if (USE_HARDCODED) {
@@ -227,19 +216,18 @@ const TrendingTopics: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/trending-topics?region=${region}`);
+      const result = await apiService.getTrendingTopics(region);
 
-      if (response.ok) {
-        const data: TrendingTopicsResponse = await response.json();
-        setTrendingTopics(data.trends || []);
+      if (result.success && result.data) {
+        setTrendingTopics(result.data.data || []);
       } else {
-        console.warn('Trending API not ok, using mock data. Status:', response.status);
-        setTrendingTopics(getMockTrendingTopics('pakistan'));
+        console.warn('Trending API not ok, using mock data. Error:', result.error);
+        setTrendingTopics(mockTrendingTopics);
         setError(null);
       }
     } catch (err) {
       console.error('Error fetching trending topics, using mock data:', err);
-      setTrendingTopics(getMockTrendingTopics('pakistan'));
+      setTrendingTopics(mockTrendingTopics);
       setError(null);
     } finally {
       setLoading(false);
@@ -253,61 +241,11 @@ const TrendingTopics: React.FC = () => {
   // Initialize hardcoded topic/hypothesis if flag enabled
   useEffect(() => {
     if (USE_HARDCODED) {
-      setSelectedTopic({ id: 'hardcoded', name: HARDCODED_TOPIC, tweet_volume: 0, url: '', query: HARDCODED_TOPIC });
+      setSelectedTopic({ id: 'hardcoded', ranking: 0, category: 'Hardcoded', topic: HARDCODED_TOPIC, postCount: '', postCountValue: null, timestamp: new Date().toISOString() });
       setSelectedTopicDetails(HARDCODED_TOPIC);
       setHypothesis(HARDCODED_HYPOTHESIS);
       setTrendingTopics(mockTrendingTopics);
       // Provide mock chapters so we don't call the backend
-      const mockChapters: Chapter[] = [
-        {
-          id: '1',
-          heading: 'Opening: Why Mandela Matters Here',
-          narration: "Introduce Nelson Mandela's global legacy and set up why his struggle resonates in Pakistan's context of social justice and anti-oppression.",
-          visuals: 'Archival footage vibes, Pakistan cityscapes, crowd shots',
-          brollIdeas: ['Historic protests', 'Flag transitions', 'Crowd silhouettes'],
-          duration: '0:30'
-        },
-        {
-          id: '2',
-          heading: 'Parallels in Oppression',
-          narration: 'Draw parallels between apartheid-era South Africa and episodes of discrimination and oppression experienced in parts of Pakistan.',
-          visuals: 'Split-screen comparisons, newspapers, documentary textures',
-          brollIdeas: ['Old newspapers', 'Streets and fences', 'Close-ups of faces'],
-          duration: '0:45'
-        },
-        {
-          id: '3',
-          heading: 'Student and Civil Activism',
-          narration: 'Explore how Mandela inspired student groups, lawyers, and civil society to organize around rights-based movements in Pakistan.',
-          visuals: 'Campus shots, legal libraries, peaceful rallies',
-          brollIdeas: ['Debate circles', 'Placards', 'Books and notes'],
-          duration: '0:50'
-        },
-        {
-          id: '4',
-          heading: 'Media and Cultural Echoes',
-          narration: 'Highlight media references, school essays, and cultural tributes that kept Mandela’s message alive across generations.',
-          visuals: 'TV screens, classrooms, cultural events',
-          brollIdeas: ['TV flicker overlay', 'Blackboard writing', 'Clapping audience'],
-          duration: '0:40'
-        },
-        {
-          id: '5',
-          heading: 'Policy Lessons and Reforms',
-          narration: 'Discuss how Mandela’s reconciliation-driven approach informs Pakistan’s own reform and inclusion debates.',
-          visuals: 'Parliament textures, bridges, hopeful faces',
-          brollIdeas: ['Handshake close-ups', 'Bridges at sunrise', 'Notebooks'],
-          duration: '0:45'
-        },
-        {
-          id: '6',
-          heading: 'Closing: A Shared Moral Imagination',
-          narration: 'Conclude by showing how Mandela’s legacy continues to inspire activism, empathy, and democratic imagination in Pakistan.',
-          visuals: 'Montage of faces, flags, and rising light',
-          brollIdeas: ['Smiles', 'Children waving flags', 'Dawn light'],
-          duration: '0:30'
-        }
-      ];
       setChapters(mockChapters);
       setChaptersGenerated(true);
       // Default view: chapter 1 selected, multiple images (dummy grid)
@@ -325,35 +263,9 @@ const TrendingTopics: React.FC = () => {
     fetchTrendingTopics(selectedRegion);
   };
 
-  const formatTweetVolume = (volume: number): string => {
-    if (volume >= 1000000) {
-      return `${(volume / 1000000).toFixed(1)}M`;
-    }
-    if (volume >= 1000) {
-      return `${(volume / 1000).toFixed(1)}K`;
-    }
-    return volume.toString();
-  };
 
-  const getTrendingColor = (index: number): string => {
-    if (index === 0) return '#FFD700'; // Gold for #1
-    if (index === 1) return '#C0C0C0'; // Silver for #2
-    if (index === 2) return '#CD7F32'; // Bronze for #3
-    return '#4A90E2'; // Blue for others
-  };
 
-  const getCategoryFromTopic = (topicName: string): string => {
-    const name = topicName.toLowerCase();
-    if (name.includes('cricket') || name.includes('sports') || name.includes('football')) return 'Sports';
-    if (name.includes('weather') || name.includes('climate')) return 'Weather';
-    if (name.includes('food') || name.includes('restaurant')) return 'Food & Dining';
-    if (name.includes('startup') || name.includes('tech') || name.includes('ai')) return 'Technology';
-    if (name.includes('music') || name.includes('fashion')) return 'Entertainment';
-    if (name.includes('education') || name.includes('school')) return 'Education';
-    if (name.includes('politics') || name.includes('news')) return 'Politics & News';
-    if (name.includes('traffic') || name.includes('transport')) return 'Transportation';
-    return 'General';
-  };
+
 
   const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false) => {
     if (!topicName.trim()) return;
@@ -363,53 +275,38 @@ const TrendingTopics: React.FC = () => {
       setHypothesisSuggestions([]);
       setLoadingTopicSuggestions(true);
       setError(null);
+      // Auto-scroll to topic details section after fallback suggestions
+      scrollToSection('topic-details');
 
-      const response = await fetch('/api/get-topic-suggestions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          hashtag: topicName,
-          region: selectedRegion
-        }),
+      const result = await apiService.getTopicSuggestions({
+        topic: topicName,
+        region: selectedRegion
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const suggestions = Array.isArray(data)
-          ? data
-          : (Array.isArray(data?.suggestions) ? data.suggestions : []);
+      if (result.success && result.data) {
+        const suggestions = Array.isArray(result.data)
+          ? result.data
+          : (Array.isArray(result.data?.suggestions) ? result.data.suggestions : []);
         setTopicSuggestions(suggestions || []);
         if (applyToDetails && suggestions && suggestions.length > 0) {
           setSelectedTopicDetails(suggestions[0]);
         }
+
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to fetch topic suggestions:', errorData.detail || response.status);
+        console.error('Failed to fetch topic suggestions:', result.error);
         // Fallback to default suggestions
-        const fallback = [
-          `The hidden story behind ${topicName} that nobody talks about`,
-          `How ${topicName} is changing the landscape in ${selectedRegion}`,
-          `The controversy surrounding ${topicName} - what you need to know`,
-          `5 surprising facts about ${topicName} that will shock you`,
-          `Why ${topicName} matters more than you think`
-        ];
+        const fallback = HelperFunctions.generateFallbackTopicSuggestions(topicName, selectedRegion);
         setTopicSuggestions(fallback);
         if (applyToDetails) setSelectedTopicDetails(fallback[0]);
+       
       }
     } catch (err) {
       console.error('Error fetching topic suggestions:', err);
       // Fallback to default suggestions
-      const fallback = [
-        `The hidden story behind ${topicName} that nobody talks about`,
-        `How ${topicName} is changing the landscape in ${selectedRegion}`,
-        `5 surprising facts about ${topicName} that will shock you`,
-        `Why ${topicName} matters more than you think`,
-        `The future of ${topicName} - predictions and possibilities`
-      ];
+      const fallback = HelperFunctions.generateFallbackTopicSuggestions(topicName, selectedRegion);
       setTopicSuggestions(fallback);
       if (applyToDetails) setSelectedTopicDetails(fallback[0]);
+
     } finally {
       setLoadingTopicSuggestions(false);
     }
@@ -421,44 +318,30 @@ const TrendingTopics: React.FC = () => {
     if (!selectedTopicDetails || !selectedTopicDetails.trim()) return;
     if (loadingTopicSuggestions) return;
     try {
+      // Auto-scroll to hypothesis section after suggestions are loaded
+      scrollToSection('hypothesis');
       setLoadingHypothesisSuggestions(true);
-      const response = await fetch('/api/get-hypothesis-suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: selectedTopic.name,
-          details: selectedTopicDetails,
-          region: selectedRegion,
-          num: 5
-        })
+      const result = await apiService.getHypothesisSuggestions({
+        topic: selectedTopic.topic,
+        details: selectedTopicDetails,
+        region: selectedRegion,
+        num: 5
       });
-      if (response.ok) {
-        const data = await response.json();
-        setHypothesisSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : [
-          `Exploring the real-world impact of ${selectedTopic.name} in ${selectedRegion}.`,
-          `Does public perception of ${selectedTopic.name} match data in ${selectedRegion}?`,
-          `How ${selectedTopic.name} narratives differ across communities in ${selectedRegion}.`,
-          `Is policy or culture driving ${selectedTopic.name} outcomes in ${selectedRegion}?`,
-          `Is ${selectedTopic.name} momentum sustainable or a short-term spike?`
-        ]);
+
+      if (result.success && result.data) {
+        setHypothesisSuggestions(Array.isArray(result.data?.suggestions) ? result.data.suggestions :
+          HelperFunctions.generateFallbackHypothesisSuggestions(selectedTopic.topic, selectedRegion)
+        );
       } else {
-        setHypothesisSuggestions([
-          `Exploring the real-world impact of ${selectedTopic.name} in ${selectedRegion}.`,
-          `Does public perception of ${selectedTopic.name} match data in ${selectedRegion}?`,
-          `How ${selectedTopic.name} narratives differ across communities in ${selectedRegion}.`,
-          `Is policy or culture driving ${selectedTopic.name} outcomes in ${selectedRegion}?`,
-          `Is ${selectedTopic.name} momentum sustainable or a short-term spike?`
-        ]);
+        setHypothesisSuggestions(
+          HelperFunctions.generateFallbackHypothesisSuggestions(selectedTopic.topic, selectedRegion)
+        );
       }
     } catch (e) {
       console.error('Failed to fetch hypothesis suggestions', e);
-      setHypothesisSuggestions([
-        `Exploring the real-world impact of ${selectedTopic.name} in ${selectedRegion}.`,
-        `Does public perception of ${selectedTopic.name} match data in ${selectedRegion}?`,
-        `How ${selectedTopic.name} narratives differ across communities in ${selectedRegion}.`,
-        `Is policy or culture driving ${selectedTopic.name} outcomes in ${selectedRegion}?`,
-        `Is ${selectedTopic.name} momentum sustainable or a short-term spike?`
-      ]);
+      setHypothesisSuggestions(
+        HelperFunctions.generateFallbackHypothesisSuggestions(selectedTopic.topic, selectedRegion)
+      );
     } finally {
       setLoadingHypothesisSuggestions(false);
     }
@@ -477,26 +360,19 @@ const TrendingTopics: React.FC = () => {
     if (!selectedTopic || !selectedTopicDetails.trim()) return;
     try {
       setEnhancingDetails(true);
-      const response = await fetch('/api/enhance-topic-details', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: selectedTopic.name,
-          details: selectedTopicDetails,
-          region: selectedRegion,
-          targetWords: 160,
-        })
+      const result = await apiService.enhanceTopicDetails({
+        topic: selectedTopic.topic,
+        details: selectedTopicDetails,
+        region: selectedRegion,
+        targetWords: 160,
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.enhancedText) {
-          setPendingField('topicDetails');
-          setPendingEnhancedText(data.enhancedText);
-          setConfirmOpen(true);
-        }
+
+      if (result.success && result.data?.enhancedText) {
+        setPendingField('topicDetails');
+        setPendingEnhancedText(result.data.enhancedText);
+        setConfirmOpen(true);
       } else {
-        const errData = await response.json().catch(() => ({}));
-        console.error('Failed to enhance details', errData);
+        console.error('Failed to enhance details', result.error);
       }
     } catch (e) {
       console.error('Error enhancing details', e);
@@ -509,23 +385,17 @@ const TrendingTopics: React.FC = () => {
     if (!selectedTopic || !hypothesis.trim()) return;
     try {
       setEnhancingHypothesis(true);
-      const response = await fetch('/api/enhance-hypothesis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: selectedTopic.name,
-          hypothesis,
-          details: selectedTopicDetails,
-          region: selectedRegion
-        })
+      const result = await apiService.enhanceHypothesis({
+        topic: selectedTopic.topic,
+        hypothesis,
+        details: selectedTopicDetails,
+        region: selectedRegion
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.enhancedText) {
-          setPendingField('hypothesis');
-          setPendingEnhancedText(data.enhancedText);
-          setConfirmOpen(true);
-        }
+
+      if (result.success && result.data?.enhancedText) {
+        setPendingField('hypothesis');
+        setPendingEnhancedText(result.data.enhancedText);
+        setConfirmOpen(true);
       }
     } catch (e) {
       console.error('Failed to enhance hypothesis', e);
@@ -560,7 +430,7 @@ const TrendingTopics: React.FC = () => {
     setTopicSuggestions([]); // Reset suggestions
     setSelectedTopicDetails(''); // Clear topic details to refresh
     // Fetch new topic suggestions without auto-filling topic details
-    await getTopicSuggestions(topic.name);
+    await getTopicSuggestions(topic.topic);
   };
 
   const handleGenerateChapters = async () => {
@@ -574,30 +444,20 @@ const TrendingTopics: React.FC = () => {
       setChapters([]);
       setChaptersGenerated(false);
 
-      const response = await fetch('/api/generate-chapters', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic: selectedTopic.name,
-          hypothesis,
-          duration: parseInt(duration)
-        }),
+      const result = await apiService.generateChapters({
+        topic: selectedTopic.topic,
+        hypothesis,
+        details: selectedTopicDetails,
+        region: selectedRegion,
+        duration: duration
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.chapters && Array.isArray(data.chapters)) {
-          setChapters(data.chapters);
-          setChaptersGenerated(true);
-          setError(null);
-        } else {
-          setError('Invalid response format from API');
-        }
+      if (result.success && result.data?.chapters && Array.isArray(result.data.chapters)) {
+        setChapters(result.data.chapters);
+        setChaptersGenerated(true);
+        setError(null);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.detail || `Failed to generate chapters (${response.status})`);
+        setError(result.error || 'Invalid response format from API');
       }
     } catch (err) {
       console.error('Error generating chapters:', err);
@@ -608,23 +468,11 @@ const TrendingTopics: React.FC = () => {
   };
 
   const handleAddChapterAfter = (index: number) => {
-    const newChapter = {
-      id: (chapters.length + 1).toString(),
-      heading: `New Chapter ${chapters.length + 1}`,
-      narration: 'New chapter narration content will be generated here.',
-      visuals: 'Visual direction for the new chapter.',
-      brollIdeas: ['B-roll idea 1', 'B-roll idea 2', 'B-roll idea 3'],
-      duration: '1 min'
-    };
-
-    const updatedChapters = [...chapters];
-    updatedChapters.splice(index + 1, 0, newChapter);
-    setChapters(updatedChapters);
+    HelperFunctions.addChapterAfter(index, chapters, setChapters);
   };
 
   const handleDeleteChapter = (index: number) => {
-    const updatedChapters = chapters.filter((_, i) => i !== index);
-    setChapters(updatedChapters);
+    HelperFunctions.deleteChapter(index, chapters, setChapters);
   };
 
   const handleEditChapter = (index: number) => {
@@ -634,42 +482,21 @@ const TrendingTopics: React.FC = () => {
   };
 
   const handleSaveEdit = (index: number) => {
-    const updatedChapters = [...chapters];
-    updatedChapters[index] = {
-      ...updatedChapters[index],
-      heading: editHeading,
-      narration: editNarration
-    };
-    setChapters(updatedChapters);
-    setEditingChapter(null);
+    HelperFunctions.saveEdit(index, chapters, setChapters, editHeading, editNarration, setEditingChapter);
     setEditHeading('');
     setEditNarration('');
   };
 
   const handleCancelEdit = () => {
-    setEditingChapter(null);
-    setEditHeading('');
-    setEditNarration('');
+    HelperFunctions.cancelEdit(setEditingChapter, setEditHeading, setEditNarration);
   };
 
   const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-
-    const { source, destination } = result;
-
-    if (source.index === destination.index) return;
-
-    const updatedChapters = Array.from(chapters);
-    const [reorderedChapter] = updatedChapters.splice(source.index, 1);
-    updatedChapters.splice(destination.index, 0, reorderedChapter);
-
-    setChapters(updatedChapters);
+    HelperFunctions.handleDragEnd(result, chapters, setChapters);
   };
 
   const wordClickHandler = useCallback((w: any) => {
-    const word = (w && w.text) || '';
-    const hit = trendingTopics.find(t => (t as any).category === word || t.name === word);
-    if (hit) handleTopicSelect(hit);
+    HelperFunctions.handleWordClick(w, trendingTopics, handleTopicSelect);
   }, [trendingTopics]);
 
   if (loading) {
@@ -682,6 +509,15 @@ const TrendingTopics: React.FC = () => {
 
   return (
     <Box>
+      {/* Loading Overlay for AI Operations */}
+      <LoadingOverlay
+        generatingChapters={generatingChapters}
+        enhancingDetails={enhancingDetails}
+        enhancingHypothesis={enhancingHypothesis}
+        imagesLoading={imagesLoading}
+        pickerLoading={pickerLoading}
+      />
+
       {/* Header with Region Selection and Refresh */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -718,8 +554,8 @@ const TrendingTopics: React.FC = () => {
           </Button>
 
           <ToggleButtonGroup size="small" value={trendView} exclusive onChange={(_, v) => v && setTrendView(v)}>
-            <ToggleButton value="list">List</ToggleButton>
             <ToggleButton value="cloud">Word Cloud</ToggleButton>
+            <ToggleButton value="list">List</ToggleButton>
           </ToggleButtonGroup>
         </Box>
       </Box>
@@ -729,8 +565,6 @@ const TrendingTopics: React.FC = () => {
           {error}
         </Alert>
       )}
-
-
 
       {trendView === 'list' ? (
         <Grid container spacing={1.5}>
@@ -756,7 +590,7 @@ const TrendingTopics: React.FC = () => {
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <Avatar
                         sx={{
-                          bgcolor: getTrendingColor(index),
+                          bgcolor: HelperFunctions.getTrendingColor(index),
                           mr: 1,
                           // fontWeight: 'bold',
                           fontSize: '0.7rem',
@@ -768,11 +602,11 @@ const TrendingTopics: React.FC = () => {
                       </Avatar>
                       <Box sx={{ flexGrow: 1 }}>
                         <Typography variant="body1" gutterBottom sx={{ wordBreak: 'break-word', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                          {topic.category}
+                          {topic.topic}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <Chip
-                            label={topic.name}
+                            label={topic.category}
                             size="small"
                             sx={{
                               bgcolor: '#AEAEAE',
@@ -782,10 +616,10 @@ const TrendingTopics: React.FC = () => {
                               height: 16
                             }}
                           />
-                          {topic.postCountText ? (
+                          {topic.postCount ? (
                             <Chip
                               // icon={<TwitterIcon sx={{ fontSize: '0.6rem' }} />}
-                              label={topic.postCountText}
+                              label={topic.postCount}
                               size="small"
                               variant="outlined"
                               sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
@@ -793,7 +627,7 @@ const TrendingTopics: React.FC = () => {
                           ) : (
                             <Chip
                               // icon={<TwitterIcon sx={{ fontSize: '0.6rem' }} />}
-                              label={formatTweetVolume(topic.tweet_volume)}
+                              label={topic.postCountValue ? HelperFunctions.formatTweetVolume(topic.postCountValue) : '0'}
                               size="small"
                               variant="outlined"
                               sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
@@ -803,24 +637,19 @@ const TrendingTopics: React.FC = () => {
                       </Box>
                     </Box>
 
-                    {topic.promoted_content && (
-                      <Box sx={{ mb: 1 }}>
-                        <Chip
-                          label="Promoted"
-                          size="small"
-                          color="secondary"
-                          variant="outlined"
-                          sx={{ fontSize: '0.5rem', height: 16 }}
-                        />
-                      </Box>
-                    )}
+
                   </CardContent>
 
                   <Box sx={{ display: 'flex', justifyContent: 'center', p: 1, borderTop: '1px solid #e0e0e0' }}>
                     <Button
                       size="small"
                       variant="text"
-                      onClick={() => handleTopicSelect(topic)}
+                      onClick={() => {
+                        // Scroll to topic details section immediately
+                        scrollToSection('topic-details');
+                        // Then handle topic selection
+                        handleTopicSelect(topic);
+                      }}
                       sx={{
                         borderColor: '#1DA1F2',
                         color: '#1DA1F2',
@@ -854,10 +683,10 @@ const TrendingTopics: React.FC = () => {
                   </Typography>
                 </Box>
                 {/* Left Word Cloud */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                   flex: 1,
                   border: '2px dashed #ccc',
                   borderRadius: 1,
@@ -867,42 +696,33 @@ const TrendingTopics: React.FC = () => {
                   <WordCloudChart
                     width={330}
                     height={230}
-                    data={[
-                      { text: "C# corner", value: 10 },
-                      { text: "Articles", value: 4 },
-                      { text: "Profile", value: 3 },
-                      { text: "Docs", value: 1 },
-                      { text: "Mahesh Chand", value: 7 },
-                      { text: "Answers", value: 2 },
-                      { text: "Tech", value: 6 },
-                      { text: "Tutorials", value: 3 },
-                      { text: "AWS", value: 2 },
-                      { text: "Azure", value: 2 },
-                      { text: "Santosh", value: 5 },
-                      { text: "Books", value: 4 },
-                      { text: "Events", value: 9 },
-                      { text: "MVP", value: 8 },
-                    ]}
+                    data={trendingTopics
+                      .filter(topic => topic.postCountValue && topic.postCountValue > 0)
+                      // .slice(0, 30)
+                      .map(topic => ({
+                        text: topic.topic,
+                        value: topic.postCountValue || 1
+                      }))}
                     handleWordClick={wordClickHandler}
                   />
                 </Box>
               </Box>
-              
 
-              
+
+
               {/* Right Column - 50% width */}
               <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column' }}>
                 {/* Right Label */}
                 <Box sx={{ textAlign: 'center', mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontSize: '1rem',  }}>
+                  <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
                     Twitter Topics
                   </Typography>
                 </Box>
                 {/* Right Word Cloud */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                   flex: 1,
                   border: '2px dashed #ccc',
                   borderRadius: 1,
@@ -912,22 +732,13 @@ const TrendingTopics: React.FC = () => {
                   <WordCloudChart
                     width={330}
                     height={230}
-                    data={[
-                      { text: "Unit Test", value: 5 },
-                      { text: "Introduction", value: 1 },
-                      { text: "Featured", value: 1 },
-                      { text: "Success", value: 5 },
-                      { text: "Microsoft", value: 5 },
-                      { text: "Live", value: 8 },
-                      { text: "REST", value: 1 },
-                      { text: "Profile", value: 4 },
-                      { text: "Reputation", value: 4 },
-                      { text: "Gold Member", value: 4 },
-                      { text: "Web", value: 5 },
-                      { text: "Block Chain", value: 5 },
-                      { text: "AI", value: 9 },
-                      { text: "Machine Learning", value: 7 },
-                    ]}
+                    data={trendingTopics
+                      .filter(topic => topic.postCountValue && topic.postCountValue > 0)
+                      // .slice(0, 30)
+                      .map(topic => ({
+                        text: topic.topic,
+                        value: topic.postCountValue || 1
+                      }))}
                     handleWordClick={wordClickHandler}
                   />
                 </Box>
@@ -966,24 +777,17 @@ const TrendingTopics: React.FC = () => {
               </Avatar>
               <Box sx={{ flexGrow: 1 }}>
                 <Typography variant="h5" gutterBottom sx={{ wordBreak: 'break-word', fontSize: '1.2rem' }}>
-                  {selectedTopic.name}
+                  {selectedTopic.topic}
                 </Typography>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                   <Chip
                     icon={<TwitterIcon />}
-                    label={`${formatTweetVolume(selectedTopic.tweet_volume)} tweets`}
+                    label={`${selectedTopic.postCountValue ? HelperFunctions.formatTweetVolume(selectedTopic.postCountValue) : '0'} posts`}
                     size="medium"
                     variant="outlined"
                     sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
                   />
-                  {selectedTopic.promoted_content && (
-                    <Chip
-                      label="Promoted"
-                      size="medium"
-                      color="secondary"
-                      variant="outlined"
-                    />
-                  )}
+
                   <Chip
                     label={selectedRegion.toUpperCase()}
                     size="medium"
@@ -997,7 +801,7 @@ const TrendingTopics: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
 
             {/* Topic Details */}
-            <Paper sx={{ p: 2, mb: 3 }}>
+            <Paper sx={{ p: 2, mb: 3 }} data-section="topic-details">
               <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
                 Your Topic
               </Typography>
@@ -1009,23 +813,41 @@ const TrendingTopics: React.FC = () => {
               <Box sx={{ mb: 3, opacity: USE_HARDCODED ? 0.6 : 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    💡 Suggested topics for "{selectedTopic.name}":
+                    💡 Suggested topics for "{selectedTopic.topic}":
                   </Typography>
                   <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => getTopicSuggestions(selectedTopic.name)}
+                    onClick={() => getTopicSuggestions(selectedTopic.topic)}
                     disabled={USE_HARDCODED || loadingTopicSuggestions}
                     sx={{ minWidth: 'auto', px: 1 }}
                   >
                     🔄
                   </Button>
+
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                   {USE_HARDCODED ? (
-                    <Typography variant="body2" color="text.secondary">
-                      Suggestions disabled in hardcoded mode.
-                    </Typography>
+                    // Show hardcoded suggestions in hardcoded mode
+                    HelperFunctions.generateFallbackTopicSuggestions(selectedTopic.topic, selectedRegion).map((suggestion: string, index: number) => (
+                      <Chip
+                        key={index}
+                        label={suggestion}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          setSelectedTopicDetails(suggestion);
+                          // Don't automatically scroll to hypothesis - let user stay in topic section
+                        }}
+                        sx={{
+                          cursor: 'pointer',
+                          '&:hover': {
+                            backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                            borderColor: '#1DA1F2',
+                          }
+                        }}
+                      />
+                    ))
                   ) : loadingTopicSuggestions ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CircularProgress size={16} />
@@ -1040,7 +862,10 @@ const TrendingTopics: React.FC = () => {
                         label={suggestion}
                         size="small"
                         variant="outlined"
-                        onClick={() => setSelectedTopicDetails(suggestion)}
+                        onClick={() => {
+                          setSelectedTopicDetails(suggestion);
+                          // Don't automatically scroll to hypothesis - let user stay in topic section
+                        }}
                         sx={{
                           cursor: 'pointer',
                           '&:hover': {
@@ -1081,7 +906,7 @@ const TrendingTopics: React.FC = () => {
             </Paper>
 
             {/* Hypothesis Input */}
-            <Paper sx={{ p: 2, mb: 3, opacity: selectedTopic ? 1 : 0.6 }}>
+            <Paper sx={{ p: 2, mb: 3, opacity: selectedTopic ? 1 : 0.6 }} data-section="hypothesis">
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
                   Your Hypothesis
@@ -1095,7 +920,7 @@ const TrendingTopics: React.FC = () => {
               <Box sx={{ mb: 3, opacity: USE_HARDCODED ? 0.6 : 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" color="text.secondary">
-                    💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.name}":
+                    💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.topic}":
                   </Typography>
                   <Button
                     size="small"
@@ -1106,10 +931,24 @@ const TrendingTopics: React.FC = () => {
                   >
                     🔄
                   </Button>
+
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                   {USE_HARDCODED ? (
-                    null
+                    // Show hardcoded hypothesis suggestions in hardcoded mode
+                    HelperFunctions.generateFallbackHypothesisSuggestions(selectedTopic?.topic || '', selectedRegion).map((suggestion: string, idx: number) => (
+                      <Chip
+                        key={idx}
+                        label={suggestion}
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          setHypothesis(suggestion);
+                          // Don't automatically scroll anywhere - let user stay where they are
+                        }}
+                        sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(29, 161, 242, 0.1)', borderColor: '#1DA1F2' } }}
+                      />
+                    ))
                   ) : (!selectedTopic || !selectedTopicDetails.trim() || loadingTopicSuggestions) ? (
                     null
                   ) : loadingHypothesisSuggestions ? (
@@ -1126,7 +965,10 @@ const TrendingTopics: React.FC = () => {
                         label={suggestion}
                         size="small"
                         variant="outlined"
-                        onClick={() => setHypothesis(suggestion)}
+                        onClick={() => {
+                          setHypothesis(suggestion);
+                          // Don't automatically scroll anywhere - let user stay where they are
+                        }}
                         sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(29, 161, 242, 0.1)', borderColor: '#1DA1F2' } }}
                       />
                     ))
@@ -1540,7 +1382,7 @@ const TrendingTopics: React.FC = () => {
                                     <Box component="img" src={src} alt={`generated-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                                     <IconButton
                                       sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,1)' }, opacity: 0, transition: 'opacity 0.2s ease', '.MuiBox-root:hover &': { opacity: 1 } }}
-                                      onClick={() => { const a = document.createElement('a'); a.href = src; a.download = `image-${idx + 1}.png`; a.click(); }}
+                                      onClick={() => HelperFunctions.downloadImage(src, idx)}
                                       title="Download"
                                     >
                                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1641,7 +1483,7 @@ const TrendingTopics: React.FC = () => {
                             onDragOver={(e) => { e.preventDefault(); setIsDraggingUpload(true); }}
                             onDragLeave={() => setIsDraggingUpload(false)}
                             onDrop={(e) => { e.preventDefault(); setIsDraggingUpload(false); handleUploadFiles(e.dataTransfer.files); }}
-                            onClick={() => { const el = document.getElementById('upload-input'); el?.click(); }}
+                            onClick={() => HelperFunctions.triggerFileUpload()}
                             sx={{
                               border: '2px dashed #cbd5e1',
                               borderColor: isDraggingUpload ? '#5b76ff' : '#cbd5e1',

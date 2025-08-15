@@ -1,10 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AI_CONFIG } from '@/config/aiConfig';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 const model = genAI.getGenerativeModel({
-  model: 'gemini-1.5-flash',
-  generationConfig: { temperature: 0.7 }
+  model: AI_CONFIG.GEMINI.MODEL,
+  generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }
 });
 
 interface HypothesisSuggestionsRequest {
@@ -97,6 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
     const data = await getHypothesisSuggestions({ topic, details, region, num, tone });
+    console.log(data.suggestions)
     return res.status(200).json({ suggestions: data.suggestions });
   } catch (e) {
     console.error('Error in get-hypothesis-suggestions:', e);

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenAI } from "@google/genai";
+import { AI_CONFIG } from '@/config/aiConfig';
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || '' });
 
@@ -154,7 +155,7 @@ async function generateVideoScript({
   audience?: string;
 }) {
   const model = genAI.models.generateContent({
-    model: "gemini-1.5-flash",
+    model: AI_CONFIG.GEMINI.MODEL,
     contents: [
       {
         role: "user",

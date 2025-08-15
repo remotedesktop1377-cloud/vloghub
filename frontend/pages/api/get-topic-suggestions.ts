@@ -1,34 +1,35 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AI_CONFIG } from '../../src/config/aiConfig';
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash",
-  generationConfig: { temperature: 0.8 }
+  model: AI_CONFIG.GEMINI.MODEL,
+  generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }
 });
 
 interface TopicSuggestionsRequest {
-  hashtag: string;
+  topic: string;
   region?: string;
 }
 
 interface TopicSuggestionsResponse {
   suggestions: string[];
-  hashtag: string;
+  topic: string;
   region: string;
 }
 
-async function withRetry<T>(fn: () => Promise<T>, tries = 6) {
-  let delay = 400; // ms
+async function withRetry<T>(fn: () => Promise<T>, tries = AI_CONFIG.GEMINI.MAX_RETRIES) {
+  let delay: number = AI_CONFIG.GEMINI.INITIAL_DELAY;
   for (let i = 0; i < tries; i++) {
     try { return await fn(); }
     catch (err: any) {
       const status = err?.status || err?.response?.status;
-      if (!(status === 429 || status === 503 || status === 504)) throw err;
+      if (!AI_CONFIG.RETRY.STATUS_CODES.includes(status)) throw err;
       if (i === tries - 1) throw err;
-      const jitter = delay * (0.3 * Math.random());
+      const jitter = delay * AI_CONFIG.GEMINI.JITTER_FACTOR * Math.random();
       await new Promise(r => setTimeout(r, delay + jitter));
-      delay *= 2;
+      delay = Math.min(delay * AI_CONFIG.GEMINI.BACKOFF_MULTIPLIER, AI_CONFIG.RETRY.MAX_DELAY);
     }
   }
   throw new Error("unreachable");
@@ -68,26 +69,27 @@ function extractJsonFromText(text: string): any | null {
   return null;
 }
 
-async function getTopicSuggestionsFromGemini({ hashtag, region = 'pakistan' }: TopicSuggestionsRequest) {
+async function getTopicSuggestionsFromGemini({ topic, region = AI_CONFIG.CONTENT.DEFAULT_REGION }: TopicSuggestionsRequest) {
   const prompt = `You are a creative content strategist specializing in video content creation.\n\n` +
-    `Analyze the hashtag and generate engaging topic suggestions that would make compelling video content.\n\n` +
+    `Analyze the topic and generate engaging topic suggestions that would make compelling video content.\n\n` +
     `Guidelines:\n` +
-    `- Generate 5 unique topic suggestions\n` +
+    `- Generate ${AI_CONFIG.CONTENT.MAX_TOPIC_SUGGESTIONS} unique topic suggestions\n` +
     `- Each suggestion should be specific and actionable\n` +
     `- Consider local context and cultural relevance for ${region}\n` +
     `- Focus on trending angles, controversies, or unique perspectives\n` +
     `- Make suggestions that would generate viewer interest and engagement\n` +
     `- Keep each suggestion concise but descriptive (15–25 words)\n` +
     `- Avoid generic or overly broad topics\n\n` +
-    `Hashtag: "${hashtag}"\n\n` +
+    `Topic: "${topic}"\n\n` +
     `Return ONLY valid JSON in this exact shape (no markdown, no commentary):\n` +
     `{ "suggestions": string[] }`;
 
   return withRetry(async () => {
     const res = await model.generateContent(prompt);
+   
     const text = res.response.text();
-
     const parsed = extractJsonFromText(text);
+    
     if (parsed) {
       if (Array.isArray(parsed)) {
         return { suggestions: parsed as string[] };
@@ -100,11 +102,11 @@ async function getTopicSuggestionsFromGemini({ hashtag, region = 'pakistan' }: T
     // Fallback
     return {
       suggestions: [
-        `The hidden story behind ${hashtag} that nobody talks about`,
-        `How ${hashtag} is changing the landscape in ${region}`,
-        `The controversy surrounding ${hashtag} - what you need to know`,
-        `5 surprising facts about ${hashtag} that will shock you`,
-        `Why ${hashtag} matters more than you think`
+        `The hidden story behind ${topic} that nobody talks about`,
+        `How ${topic} is changing the landscape in ${region}`,
+        `The controversy surrounding ${topic} - what you need to know`,
+        `${AI_CONFIG.CONTENT.MAX_TOPIC_SUGGESTIONS} surprising facts about ${topic} that will shock you`,
+        `Why ${topic} matters more than you think`
       ]
     };
   });
@@ -119,18 +121,18 @@ export default async function handler(
   }
 
   try {
-    const { hashtag, region } = req.body as TopicSuggestionsRequest;
+    const { topic, region } = req.body as TopicSuggestionsRequest;
 
-    if (!hashtag) {
-      return res.status(400).json({ error: 'Hashtag is required' });
+    if (!topic) {
+      return res.status(400).json({ error: 'Topic is required' });
     }
 
-    const suggestions = await getTopicSuggestionsFromGemini({ hashtag, region });
+    const suggestions = await getTopicSuggestionsFromGemini({ topic, region });
 
     return res.status(200).json({
       suggestions: suggestions.suggestions,
-      hashtag,
-      region: region || 'pakistan'
+      topic,
+      region: region || AI_CONFIG.CONTENT.DEFAULT_REGION
     });
 
   } catch (error) {

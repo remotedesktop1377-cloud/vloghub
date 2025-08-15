@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AI_CONFIG } from '../../src/config/aiConfig';
 
 type Data = { variations: string[] } | { error: string };
 
@@ -16,14 +17,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             return;
         }
 
-        const { narration, visuals, topic, noOfNarrations = 5 } = req.body as { narration?: string; visuals?: string; topic?: string; noOfNarrations?: number };
+        const { narration, visuals, topic, noOfNarrations = AI_CONFIG.CONTENT.MAX_TOPIC_SUGGESTIONS } = req.body as { narration?: string; visuals?: string; topic?: string; noOfNarrations?: number };
         if (!narration || !narration.trim()) {
             res.status(400).json({ error: 'narration is required' });
             return;
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ 
+          model: AI_CONFIG.GEMINI.MODEL,
+          generationConfig: { 
+            temperature: 1.05, 
+            topP: 0.95, 
+            topK: 64, 
+            candidateCount: noOfNarrations, 
+            responseMimeType: 'text/plain' 
+          }
+        });
 
         const prompt = `ROLE
 You are a senior video scriptwriter rewriting short narration lines.
