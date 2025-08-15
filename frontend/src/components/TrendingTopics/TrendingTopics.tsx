@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,8 @@ import {
   Tabs,
   Tab,
   Switch,
+  ToggleButtonGroup,
+  ToggleButton,
 } from '@mui/material';
 import {
   TrendingUp as TrendingIcon,
@@ -43,9 +45,11 @@ import {
 import { AutoFixHigh as MagicIcon } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useRouter } from 'next/router';
+import { getMockTrendingTopics } from 'pages/api/trending-topics';
+import { WordCloudChart } from '../WordCloudChart/WordCloudChart';
 
 // Hardcoded topic/hypothesis toggle and values
-const USE_HARDCODED = true;
+const USE_HARDCODED = false;
 const HARDCODED_TOPIC = "Nelson Mandela's legacy in Pakistan: Examining his impact on anti-apartheid movements and social justice.";
 const HARDCODED_HYPOTHESIS = "Mandela's anti-apartheid struggle resonated deeply within Pakistan's own fight against oppression, inspiring local activism.";
 
@@ -56,6 +60,9 @@ interface TrendingTopic {
   url: string;
   promoted_content?: string;
   query: string;
+  // Optional fields from mock feed
+  category?: string;
+  postCountText?: string;
 }
 
 interface TrendingTopicsResponse {
@@ -78,7 +85,6 @@ const TrendingTopics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState('pakistan');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Topic Details State
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
@@ -129,6 +135,7 @@ const TrendingTopics: React.FC = () => {
   const [aiPrompt, setAiPrompt] = useState<string>("Today, I'm giving you a quick tutorial on Nelson Mandela's incredible life.");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isDraggingUpload, setIsDraggingUpload] = useState<boolean>(false);
+  const [trendView, setTrendView] = useState<'list' | 'cloud'>('list');
 
   const handleUploadFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -159,10 +166,43 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-  const router = useRouter();
-
   const regions = [
     { value: 'pakistan', label: 'Pakistan', flag: '🇵🇰' },
+  ];
+
+  // Mock trending topics for hardcoded mode
+  // Build mock topics from provided JSON structure
+  const mockTrendingTopics: TrendingTopic[] = [
+    { id: '1', name: '#PakistanHameshaZindabad', tweet_volume: 8773, url: '#', query: '#PakistanHameshaZindabad', category: 'Only on X · Trending', postCountText: '8,773 posts' },
+    { id: '2', name: '#14AugustBalochistanKeSang', tweet_volume: 0, url: '#', query: '#14AugustBalochistanKeSang', category: '#14AugustBalochistanKeSang', postCountText: '' },
+    { id: '3', name: '#آزادی_بھی_قید_میں_ہے', tweet_volume: 10100, url: '#', query: '#آزادی_بھی_قید_میں_ہے', category: '#آزادی_بھی_قید_میں_ہے', postCountText: '10.1K posts' },
+    { id: '4', name: 'Sir Abdullah Haroon', tweet_volume: 0, url: '#', query: 'Sir Abdullah Haroon', category: 'Pakistan', postCountText: '' },
+    { id: '5', name: '#حقیقی_آزادی_کی_تحریک', tweet_volume: 157000, url: '#', query: '#حقیقی_آزادی_کی_تحریک', category: '#حقیقی_آزادی_کی_تحریک', postCountText: '157K posts' },
+    { id: '6', name: '#BajaurUnderStateAttack', tweet_volume: 6072, url: '#', query: '#BajaurUnderStateAttack', category: '#BajaurUnderStateAttack', postCountText: '6,072 posts' },
+    { id: '7', name: 'Shai Hope', tweet_volume: 3784, url: '#', query: 'Shai Hope', category: 'Pakistan', postCountText: '3,784 posts' },
+    { id: '8', name: 'Quaid-e-Azam', tweet_volume: 0, url: '#', query: 'Quaid-e-Azam', category: 'Pakistan', postCountText: '' },
+    { id: '9', name: 'bla and majeed brigade', tweet_volume: 2439, url: '#', query: 'bla and majeed brigade', category: 'Pakistan', postCountText: '2,439 posts' },
+    { id: '10', name: 'Jayden Seales', tweet_volume: 1877, url: '#', query: 'Jayden Seales', category: 'Pakistan', postCountText: '1,877 posts' },
+    { id: '11', name: 'governor house sindh', tweet_volume: 0, url: '#', query: 'governor house sindh', category: 'Pakistan', postCountText: '' },
+    { id: '12', name: 'Rizwan', tweet_volume: 6217, url: '#', query: 'Rizwan', category: 'Pakistan', postCountText: '6,217 posts' },
+    { id: '13', name: 'governor kamran tessori', tweet_volume: 0, url: '#', query: 'governor kamran tessori', category: 'Pakistan', postCountText: '' },
+    { id: '14', name: 'kaifi khalil', tweet_volume: 0, url: '#', query: 'kaifi khalil', category: 'Pakistan', postCountText: '' },
+    { id: '15', name: 'hasan raheem', tweet_volume: 0, url: '#', query: 'hasan raheem', category: 'Pakistan', postCountText: '' },
+    { id: '16', name: 'Caa2', tweet_volume: 0, url: '#', query: 'Caa2', category: 'Pakistan', postCountText: '' },
+    { id: '17', name: 'West Indies', tweet_volume: 10800, url: '#', query: 'West Indies', category: '', postCountText: '10.8K posts' },
+    { id: '18', name: 'Mumbai Indians · Trending', tweet_volume: 9456, url: '#', query: 'Mumbai Indians · Trending', category: '', postCountText: '9,456 posts' },
+    { id: '19', name: '3rd odi', tweet_volume: 0, url: '#', query: '3rd odi', category: 'Pakistan', postCountText: '' },
+    { id: '20', name: 'Taylor', tweet_volume: 483000, url: '#', query: 'Taylor', category: 'Pakistan', postCountText: '483K posts' },
+    { id: '21', name: '$SPECT', tweet_volume: 1478, url: '#', query: '$SPECT', category: 'Pakistan', postCountText: '1,478 posts' },
+    { id: '22', name: 'Indus Waters Treaty', tweet_volume: 8903, url: '#', query: 'Indus Waters Treaty', category: 'Pakistan', postCountText: '8,903 posts' },
+    { id: '23', name: 'Naseem Shah', tweet_volume: 0, url: '#', query: 'Naseem Shah', category: 'Pakistan', postCountText: '' },
+    { id: '24', name: 'Bilawal Bhutto Zardari', tweet_volume: 0, url: '#', query: 'Bilawal Bhutto Zardari', category: 'Pakistan', postCountText: '' },
+    { id: '25', name: 'Adiala Jail', tweet_volume: 10700, url: '#', query: 'Adiala Jail', category: 'Pakistan', postCountText: '10.7K posts' },
+    { id: '26', name: 'SKYNANI SMYLE NEONA AT SF', tweet_volume: 284000, url: '#', query: 'SKYNANI SMYLE NEONA AT SF', category: 'Pakistan', postCountText: '284K posts' },
+    { id: '27', name: '$SOL', tweet_volume: 124000, url: '#', query: '$SOL', category: 'Pakistan', postCountText: '124K posts' },
+    { id: '28', name: 'Gandapur', tweet_volume: 1563, url: '#', query: 'Gandapur', category: 'Pakistan', postCountText: '1,563 posts' },
+    { id: '29', name: 'Politics · Trending', tweet_volume: 8720, url: '#', query: 'Politics · Trending', category: 'Azerbaijan', postCountText: '8,720 posts' },
+    { id: '30', name: 'Mohsin Naqvi', tweet_volume: 0, url: '#', query: 'Mohsin Naqvi', category: 'Pakistan', postCountText: '' },
   ];
 
   const durationOptions = [
@@ -179,6 +219,7 @@ const TrendingTopics: React.FC = () => {
 
   const fetchTrendingTopics = async (region: string) => {
     if (USE_HARDCODED) {
+      setTrendingTopics(mockTrendingTopics);
       setLoading(false);
       return; // skip API in hardcoded mode
     }
@@ -191,13 +232,15 @@ const TrendingTopics: React.FC = () => {
       if (response.ok) {
         const data: TrendingTopicsResponse = await response.json();
         setTrendingTopics(data.trends || []);
-        setLastUpdated(new Date(data.timestamp));
       } else {
-        throw new Error(`API request failed with status ${response.status}`);
+        console.warn('Trending API not ok, using mock data. Status:', response.status);
+        setTrendingTopics(getMockTrendingTopics('pakistan'));
+        setError(null);
       }
     } catch (err) {
-      console.error('Error fetching trending topics:', err);
-      setError('Failed to fetch trending topics. Please try again.');
+      console.error('Error fetching trending topics, using mock data:', err);
+      setTrendingTopics(getMockTrendingTopics('pakistan'));
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -213,6 +256,7 @@ const TrendingTopics: React.FC = () => {
       setSelectedTopic({ id: 'hardcoded', name: HARDCODED_TOPIC, tweet_volume: 0, url: '', query: HARDCODED_TOPIC });
       setSelectedTopicDetails(HARDCODED_TOPIC);
       setHypothesis(HARDCODED_HYPOTHESIS);
+      setTrendingTopics(mockTrendingTopics);
       // Provide mock chapters so we don't call the backend
       const mockChapters: Chapter[] = [
         {
@@ -323,91 +367,6 @@ const TrendingTopics: React.FC = () => {
       case 'Transportation': return '#795548';
       default: return '#757575';
     }
-  };
-
-  const getHypothesisSuggestions = (topicName: string): string[] => {
-    const name = topicName.toLowerCase();
-
-    if (name.includes('cricket') || name.includes('sports') || name.includes('football')) {
-      return [
-        "How does this sport impact local economy and tourism?",
-        "What are the social and cultural implications for the community?",
-        "How can we improve youth engagement and development through sports?",
-        "What role does this sport play in national identity and pride?"
-      ];
-    }
-
-    if (name.includes('weather') || name.includes('climate')) {
-      return [
-        "How does climate change affect local agriculture and food security?",
-        "What adaptation strategies can communities implement?",
-        "How does extreme weather impact urban infrastructure and planning?",
-        "What are the economic consequences of changing weather patterns?"
-      ];
-    }
-
-    if (name.includes('food') || name.includes('restaurant')) {
-      return [
-        "How does this food trend reflect changing cultural preferences?",
-        "What impact does this have on local farmers and suppliers?",
-        "How can we make this food more accessible to different communities?",
-        "What are the health and nutrition implications?"
-      ];
-    }
-
-    if (name.includes('startup') || name.includes('tech') || name.includes('ai')) {
-      return [
-        "How can this technology solve local problems and challenges?",
-        "What are the job market implications and skill requirements?",
-        "How does this innovation impact traditional industries?",
-        "What are the ethical considerations and potential risks?"
-      ];
-    }
-
-    if (name.includes('music') || name.includes('fashion')) {
-      return [
-        "How does this trend reflect generational changes and values?",
-        "What impact does this have on local artists and creators?",
-        "How can we preserve cultural heritage while embracing new trends?",
-        "What are the economic opportunities for local businesses?"
-      ];
-    }
-
-    if (name.includes('education') || name.includes('school')) {
-      return [
-        "How can we improve access to quality education for all students?",
-        "What role does technology play in modern learning?",
-        "How do educational policies impact student outcomes?",
-        "What are the challenges and opportunities in remote learning?"
-      ];
-    }
-
-    if (name.includes('politics') || name.includes('news')) {
-      return [
-        "How does this political development affect local communities?",
-        "What are the long-term implications for democracy and governance?",
-        "How can citizens become more engaged in the political process?",
-        "What are the economic and social consequences of this policy?"
-      ];
-    }
-
-    if (name.includes('traffic') || name.includes('transport')) {
-      return [
-        "How can we improve public transportation infrastructure?",
-        "What are the environmental impacts of current transport systems?",
-        "How does traffic congestion affect local businesses and quality of life?",
-        "What innovative solutions can reduce transportation costs?"
-      ];
-    }
-
-    // Default suggestions for general topics
-    return [
-      "How does this topic impact local communities and daily life?",
-      "What are the underlying causes and contributing factors?",
-      "How can we address the challenges and leverage opportunities?",
-      "What lessons can other regions learn from this situation?",
-      "How does this reflect broader social, economic, or cultural trends?"
-    ];
   };
 
   const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false) => {
@@ -606,8 +565,6 @@ const TrendingTopics: React.FC = () => {
     setPendingField(null);
   };
 
-  const handleRegionLabel = (value: string) => regions.find(r => r.value === value)?.label || value;
-
   const handleTopicSelect = async (topic: TrendingTopic) => {
     setSelectedTopic(topic);
     setHypothesis('');
@@ -723,6 +680,12 @@ const TrendingTopics: React.FC = () => {
     setChapters(updatedChapters);
   };
 
+  const wordClickHandler = useCallback((w: any) => {
+    const word = (w && w.text) || '';
+    const hit = trendingTopics.find(t => (t as any).category === word || t.name === word);
+    if (hit) handleTopicSelect(hit);
+  }, [trendingTopics]);
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -776,98 +739,154 @@ const TrendingTopics: React.FC = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {trendingTopics.map((topic, index) => {
-          const category = getCategoryFromTopic(topic.name);
-          const categoryColor = getCategoryColor(category);
+      {/* Trends view toggle */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <ToggleButtonGroup size="small" value={trendView} exclusive onChange={(_, v) => v && setTrendView(v)}>
+          <ToggleButton value="list">List</ToggleButton>
+          <ToggleButton value="cloud">Word Cloud</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
 
-          return (
-            <Grid item xs={12} md={6} lg={4} key={topic.id}>
-              <Card
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    transition: 'transform 0.2s ease-in-out',
-                    boxShadow: 4,
-                  }
-                }}
-                onClick={() => handleTopicSelect(topic)}
-              >
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: getTrendingColor(index),
-                        mr: 2,
-                        fontWeight: 'bold',
-                        fontSize: '1.2rem'
-                      }}
-                    >
-                      #{index + 1}
-                    </Avatar>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" gutterBottom sx={{ wordBreak: 'break-word' }}>
-                        {topic.name}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Chip
-                          label={category}
-                          size="small"
-                          sx={{
-                            bgcolor: categoryColor,
-                            color: 'white',
-                            fontWeight: 'bold'
-                          }}
-                        />
-                        <Chip
-                          icon={<TwitterIcon />}
-                          label={formatTweetVolume(topic.tweet_volume)}
-                          size="small"
-                          variant="outlined"
-                          sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
-                        />
+      {trendView === 'list' ? (
+        <Grid container spacing={3}>
+          {trendingTopics.map((topic, index) => {
+            const category = getCategoryFromTopic(topic.name);
+            const categoryColor = getCategoryColor(category);
+
+            return (
+              <Grid item xs={12} md={6} lg={4} key={topic.id}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      transition: 'transform 0.2s ease-in-out',
+                      boxShadow: 4,
+                    }
+                  }}
+                  onClick={() => handleTopicSelect(topic)}
+                >
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                      <Avatar
+                        sx={{
+                          bgcolor: getTrendingColor(index),
+                          mr: 2,
+                          fontWeight: 'bold',
+                          fontSize: '1.2rem'
+                        }}
+                      >
+                        #{index + 1}
+                      </Avatar>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" gutterBottom sx={{ wordBreak: 'break-word' }}>
+                          {topic.category}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Chip
+                            label={topic.name}
+                            size="small"
+                            sx={{
+                              bgcolor: categoryColor,
+                              color: 'white',
+                              fontWeight: 'bold'
+                            }}
+                          />
+                          {topic.postCountText ? (
+                            <Chip
+                              icon={<TwitterIcon />}
+                              label={topic.postCountText}
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
+                            />
+                          ) : (
+                            <Chip
+                              icon={<TwitterIcon />}
+                              label={formatTweetVolume(topic.tweet_volume)}
+                              size="small"
+                              variant="outlined"
+                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
+                            />
+                          )}
+                        </Box>
                       </Box>
                     </Box>
+
+                    {topic.promoted_content && (
+                      <Box sx={{ mb: 2 }}>
+                        <Chip
+                          label="Promoted"
+                          size="small"
+                          color="secondary"
+                          variant="outlined"
+                        />
+                      </Box>
+                    )}
+                  </CardContent>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => handleTopicSelect(topic)}
+                      sx={{
+                        borderColor: '#1DA1F2',
+                        color: '#1DA1F2',
+                        '&:hover': {
+                          borderColor: '#0d8bd9',
+                          backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                        }
+                      }}
+                    >
+                      Explore the Topic
+                    </Button>
                   </Box>
-
-                  {topic.promoted_content && (
-                    <Box sx={{ mb: 2 }}>
-                      <Chip
-                        label="Promoted"
-                        size="small"
-                        color="secondary"
-                        variant="outlined"
-                      />
-                    </Box>
-                  )}
-                </CardContent>
-
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, borderTop: '1px solid #e0e0e0' }}>
-                  <Button
-                    size="small"
-                    variant="text"
-                    onClick={() => handleTopicSelect(topic)}
-                    sx={{
-                      borderColor: '#1DA1F2',
-                      color: '#1DA1F2',
-                      '&:hover': {
-                        borderColor: '#0d8bd9',
-                        backgroundColor: 'rgba(29, 161, 242, 0.1)',
-                      }
-                    }}
-                  >
-                    Explore the Topic
-                  </Button>
-                </Box>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      ) : (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          {trendingTopics.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">No trends to display.</Typography>
+          ) : (
+            <WordCloudChart data={[
+              { text: "C# corner", value: 10 },
+              { text: "Articles", value: 4 },
+              { text: "Profile", value: 3 },
+              { text: "Docs", value: 1 },
+              { text: "Mahesh Chand", value: 7 },
+              { text: "Answers", value: 2 },
+              { text: "Tech", value: 6 },
+              { text: "Tutorials", value: 3 },
+              { text: "AWS", value: 2 },
+              { text: "Azure", value: 2 },
+              { text: "Santosh", value: 5 },
+              { text: "Books", value: 4 },
+              { text: "Events", value: 9 },
+              { text: "MVP", value: 8 },
+              { text: "Unit Test", value: 5 },
+              { text: "Introduction", value: 1 },
+              { text: "Featured", value: 1 },
+              { text: "Success", value: 5 },
+              { text: "Microsoft", value: 5 },
+              { text: "Live", value: 8 },
+              { text: "REST", value: 1 },
+              { text: "Profile", value: 4 },
+              { text: "Reputation", value: 4 },
+              { text: "Gold Member", value: 4 },
+              { text: "Web", value: 5 },
+              { text: "Block Chain", value: 5 },
+              { text: "AI", value: 9 },
+            ]} handleWordClick={wordClickHandler}></WordCloudChart>
+          )}
+        </Paper>
+      )}
 
       {trendingTopics.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
