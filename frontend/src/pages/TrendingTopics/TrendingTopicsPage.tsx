@@ -1,5 +1,5 @@
 import React from 'react';
-import TrendingTopics from '../../components/TrendingTopics';
+import TrendingTopics from '../../components/TrendingTopics/TrendingTopics';
 import styles from './TrendingTopicsPage.module.css';
 
 const TrendingTopicsPage: React.FC = () => {

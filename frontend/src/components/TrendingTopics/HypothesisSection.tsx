@@ -11,6 +11,7 @@ interface HypothesisSectionProps {
   hypothesisSuggestions: string[];
   loadingHypothesisSuggestions: boolean;
   enhancingHypothesis: boolean;
+  selectedRegion: string;
   onFetchHypothesisSuggestions: () => void;
   onHypothesisChange: (hypothesis: string) => void;
   onEnhanceHypothesis: () => void;
@@ -23,6 +24,7 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
   hypothesisSuggestions,
   loadingHypothesisSuggestions,
   enhancingHypothesis,
+  selectedRegion,
   onFetchHypothesisSuggestions,
   onHypothesisChange,
   onEnhanceHypothesis,
@@ -39,7 +41,7 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
       </Typography>
 
       {/* Hypothesis Suggestions */}
-      <Box sx={{ mb: 2, opacity: 0.6 }}>
+      <Box sx={{ mb: 2, opacity: USE_HARDCODED ? 0.6 : 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
             💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.topic}":
@@ -48,14 +50,37 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
             size="small"
             variant="outlined"
             onClick={onFetchHypothesisSuggestions}
-            disabled={!selectedTopic || loadingHypothesisSuggestions}
+            disabled={USE_HARDCODED || !selectedTopic || loadingHypothesisSuggestions}
             sx={{ minWidth: 'auto', px: 0.5, py: 0.25, fontSize: '0.6rem', height: 24 }}
           >
             🔄
           </Button>
         </Box>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
-          {(!selectedTopic || !selectedTopicDetails.trim()) ? (
+          {USE_HARDCODED ? (
+            // Show hardcoded hypothesis suggestions in hardcoded mode
+            HelperFunctions.generateFallbackHypothesisSuggestions(selectedTopic?.topic || '', selectedRegion).map((suggestion: string, idx: number) => (
+              <Chip
+                key={idx}
+                label={suggestion}
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  onHypothesisChange(suggestion);
+                  // Don't automatically scroll anywhere - let user stay where they are
+                }}
+                sx={{
+                  cursor: 'pointer',
+                  fontSize: '0.55rem',
+                  height: 20,
+                  '&:hover': {
+                    backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                    borderColor: '#1DA1F2'
+                  }
+                }}
+              />
+            ))
+          ) : (!selectedTopic || !selectedTopicDetails.trim()) ? (
             null
           ) : loadingHypothesisSuggestions ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -74,14 +99,14 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                 onClick={() => {
                   onHypothesisChange(suggestion);
                 }}
-                sx={{ 
-                  cursor: 'pointer', 
+                sx={{
+                  cursor: 'pointer',
                   fontSize: '0.55rem',
                   height: 20,
-                  '&:hover': { 
-                    backgroundColor: 'rgba(29, 161, 242, 0.1)', 
-                    borderColor: '#1DA1F2' 
-                  } 
+                  '&:hover': {
+                    backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                    borderColor: '#1DA1F2'
+                  }
                 }}
               />
             ))
@@ -106,9 +131,9 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
           variant="contained"
           size="small"
           onClick={onEnhanceHypothesis}
-          disabled={!selectedTopic || !hypothesis.trim() || enhancingHypothesis}
-          sx={{ 
-            bgcolor: '#9c27b0', 
+          disabled={USE_HARDCODED || !selectedTopic || !hypothesis.trim() || enhancingHypothesis}
+          sx={{
+            bgcolor: '#9c27b0',
             '&:hover': { bgcolor: '#7b1fa2' },
             fontSize: '0.7rem',
             px: 2,

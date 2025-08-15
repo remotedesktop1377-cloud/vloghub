@@ -6,3 +6,5 @@ export { default as ChaptersSection } from './ChaptersSection';
 export { default as HeaderSection } from './HeaderSection';
 export { default as SelectedTopicHeader } from './SelectedTopicHeader';
 export { default as RightPanel } from './RightPanel';
+export { default as ConfirmationDialog } from './ConfirmationDialog';
+export { default as NarrationPickerDialog } from './NarrationPickerDialog';

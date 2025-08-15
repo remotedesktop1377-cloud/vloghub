@@ -61,6 +61,8 @@ import VideoDurationSection from './VideoDurationSection';
 import ChaptersSection from './ChaptersSection';
 import HeaderSection from './HeaderSection';
 import SelectedTopicHeader from './SelectedTopicHeader';
+import ConfirmationDialog from './ConfirmationDialog';
+import NarrationPickerDialog from './NarrationPickerDialog';
 
 
 const TrendingTopics: React.FC = () => {
@@ -80,7 +82,7 @@ const TrendingTopics: React.FC = () => {
       try {
         targetElement = document.querySelector(selector);
         if (targetElement) {
-          console.log(`Found ${sectionName} section with selector: ${selector}`);
+          // console.log(`Found ${sectionName} section with selector: ${selector}`);
           break;
         }
       } catch (e) {
@@ -539,9 +541,16 @@ const TrendingTopics: React.FC = () => {
     HelperFunctions.handleDragEnd(result, chapters, setChapters);
   };
 
-  const wordClickHandler = useCallback((w: any) => {
-    HelperFunctions.handleWordClick(w, trendingTopics, handleTopicSelect);
-  }, [trendingTopics]);
+  const wordClickHandler = useCallback(async (w: any) => {
+    // find the topic which have same topic name
+    const topic = trendingTopics.find(t => t.topic === w.text);
+
+    if (topic) {
+      await handleTopicSelect(topic);
+    } else {
+      console.log('No matching topic found for:', w.text);
+    }
+  }, [trendingTopics, handleTopicSelect]);
 
   if (loading) {
     return (
@@ -621,8 +630,6 @@ const TrendingTopics: React.FC = () => {
                     width={330}
                     height={230}
                     data={trendingTopics
-                      .filter(topic => topic.postCountValue && topic.postCountValue > 0)
-                      // .slice(0, 30)
                       .map(topic => ({
                         text: topic.topic,
                         value: topic.postCountValue || 1
@@ -657,8 +664,6 @@ const TrendingTopics: React.FC = () => {
                     width={330}
                     height={230}
                     data={trendingTopics
-                      .filter(topic => topic.postCountValue && topic.postCountValue > 0)
-                      // .slice(0, 30)
                       .map(topic => ({
                         text: topic.topic,
                         value: topic.postCountValue || 1
@@ -696,6 +701,7 @@ const TrendingTopics: React.FC = () => {
               topicSuggestions={topicSuggestions}
               loadingTopicSuggestions={loadingTopicSuggestions}
               enhancingDetails={enhancingDetails}
+              selectedRegion={selectedRegion}
               onGetTopicSuggestions={getTopicSuggestions}
               onTopicDetailsChange={setSelectedTopicDetails}
               onEnhanceTopicDetails={handleEnhanceTopicDetails}
@@ -708,6 +714,7 @@ const TrendingTopics: React.FC = () => {
               hypothesisSuggestions={hypothesisSuggestions}
               loadingHypothesisSuggestions={loadingHypothesisSuggestions}
               enhancingHypothesis={enhancingHypothesis}
+              selectedRegion={selectedRegion}
               onFetchHypothesisSuggestions={fetchHypothesisSuggestions}
               onHypothesisChange={setHypothesis}
               onEnhanceHypothesis={handleEnhanceHypothesis}
@@ -774,6 +781,41 @@ const TrendingTopics: React.FC = () => {
           </Box>
         </Box>
       )}
+
+      {/* Confirmation Dialog */}
+      {pendingField && (
+        <ConfirmationDialog
+          open={confirmOpen}
+          onClose={handleConfirmReject}
+          onAccept={handleConfirmAccept}
+          onReject={handleConfirmReject}
+          pendingField={pendingField}
+          originalText={pendingField === 'topicDetails' ? selectedTopicDetails : hypothesis}
+          enhancedText={pendingEnhancedText}
+        />
+      )}
+
+      {/* Narration Variations Picker */}
+      <NarrationPickerDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        pickerLoading={pickerLoading}
+        pickerNarrations={pickerNarrations}
+        chapters={chapters}
+        pickerChapterIndex={pickerChapterIndex}
+        editingChapter={editingChapter}
+        onNarrationSelect={(chapterIndex, narration) => {
+          if (chapterIndex === null) return;
+          const updated = [...chapters];
+          updated[chapterIndex] = { ...updated[chapterIndex], narration: narration } as any;
+          setChapters(updated);
+          if (editingChapter === chapterIndex) {
+            setEditNarration(narration);
+          }
+          setPickerOpen(false);
+        }}
+        onEditNarrationChange={setEditNarration}
+      />
 
     </Box>
   );

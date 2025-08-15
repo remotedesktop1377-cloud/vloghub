@@ -578,6 +578,71 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                   <input id="upload-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => onUploadFiles(e.target.files)} />
                 </Box>
               )}
+
+              {/* Bottom Action Buttons */}
+              <Box sx={{ 
+                p: 2, 
+                borderTop: '1px solid #e0e0e0', 
+                backgroundColor: '#fafafa',
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 1.5 
+              }}>
+                <Typography variant="subtitle2" sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#666', mb: 1 }}>
+                  Media Actions
+                </Typography>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 3v10m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 21H4a2 2 0 01-2-2v0a2 2 0 012-2h16a2 2 0 012 2v0a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>}
+                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75 }}
+                  >
+                    Download all Narrations
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 16V8m0 0l-3 3m3-3l3 3M7 20h10a4 4 0 004-4 4 4 0 00-4-4h-.26A8 8 0 104 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>}
+                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75 }}
+                  >
+                    Upload Chroma key
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    size="small"
+                    fullWidth
+                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M8 5h8a3 3 0 013 3v8a3 3 0 01-3 3H8a3 3 0 01-3-3V8a3 3 0 013-3zm3 3v8l6-4-6-4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>}
+                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75, bgcolor: '#1DA1F2', '&:hover': { bgcolor: '#0d8bd9' } }}
+                  >
+                    Generate Video
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>}
+                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75 }}
+                  >
+                    Re-generate all Assets
+                  </Button>
+                </Box>
+              </Box>
             </Paper>
           </Box>
         </Box>
