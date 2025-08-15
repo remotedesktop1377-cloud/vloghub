@@ -355,20 +355,6 @@ const TrendingTopics: React.FC = () => {
     return 'General';
   };
 
-  const getCategoryColor = (category: string): string => {
-    switch (category) {
-      case 'Sports': return '#4caf50';
-      case 'Weather': return '#2196f3';
-      case 'Food & Dining': return '#ff9800';
-      case 'Technology': return '#9c27b0';
-      case 'Entertainment': return '#e91e63';
-      case 'Education': return '#607d8b';
-      case 'Politics & News': return '#f44336';
-      case 'Transportation': return '#795548';
-      default: return '#757575';
-    }
-  };
-
   const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false) => {
     if (!topicName.trim()) return;
 
@@ -699,14 +685,14 @@ const TrendingTopics: React.FC = () => {
       {/* Header with Region Selection and Refresh */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <TrendingIcon sx={{ fontSize: 32, color: '#1DA1F2', mr: 2 }} />
-          <Typography variant="h5" gutterBottom>
+          <TrendingIcon sx={{ fontSize: 16, color: '#1DA1F2', mr: 1 }} />
+          <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem' }}>
             Trending Topics
           </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
+          <FormControl size="small" sx={{ minWidth: 100 }}>
             <InputLabel>Region</InputLabel>
             <Select
               value={selectedRegion}
@@ -730,6 +716,11 @@ const TrendingTopics: React.FC = () => {
           >
             Refresh
           </Button>
+
+          <ToggleButtonGroup size="small" value={trendView} exclusive onChange={(_, v) => v && setTrendView(v)}>
+            <ToggleButton value="list">List</ToggleButton>
+            <ToggleButton value="cloud">Word Cloud</ToggleButton>
+          </ToggleButtonGroup>
         </Box>
       </Box>
 
@@ -739,22 +730,14 @@ const TrendingTopics: React.FC = () => {
         </Alert>
       )}
 
-      {/* Trends view toggle */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <ToggleButtonGroup size="small" value={trendView} exclusive onChange={(_, v) => v && setTrendView(v)}>
-          <ToggleButton value="list">List</ToggleButton>
-          <ToggleButton value="cloud">Word Cloud</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+
 
       {trendView === 'list' ? (
-        <Grid container spacing={3}>
+        <Grid container spacing={1.5}>
           {trendingTopics.map((topic, index) => {
-            const category = getCategoryFromTopic(topic.name);
-            const categoryColor = getCategoryColor(category);
 
             return (
-              <Grid item xs={12} md={6} lg={4} key={topic.id}>
+              <Grid item xs={6} md={4} lg={2} key={topic.id}>
                 <Card
                   sx={{
                     height: '100%',
@@ -769,20 +752,22 @@ const TrendingTopics: React.FC = () => {
                   }}
                   onClick={() => handleTopicSelect(topic)}
                 >
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                  <CardContent sx={{ flexGrow: 1, p: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                       <Avatar
                         sx={{
                           bgcolor: getTrendingColor(index),
-                          mr: 2,
-                          fontWeight: 'bold',
-                          fontSize: '1.2rem'
+                          mr: 1,
+                          // fontWeight: 'bold',
+                          fontSize: '0.7rem',
+                          width: 25,
+                          height: 25
                         }}
                       >
                         #{index + 1}
                       </Avatar>
                       <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" gutterBottom sx={{ wordBreak: 'break-word' }}>
+                        <Typography variant="body1" gutterBottom sx={{ wordBreak: 'break-word', fontSize: '0.7rem', fontWeight: 'bold' }}>
                           {topic.category}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -790,26 +775,28 @@ const TrendingTopics: React.FC = () => {
                             label={topic.name}
                             size="small"
                             sx={{
-                              bgcolor: categoryColor,
+                              bgcolor: '#AEAEAE',
                               color: 'white',
-                              fontWeight: 'bold'
+                              // fontWeight: 'bold',
+                              fontSize: '0.5rem',
+                              height: 16
                             }}
                           />
                           {topic.postCountText ? (
                             <Chip
-                              icon={<TwitterIcon />}
+                              // icon={<TwitterIcon sx={{ fontSize: '0.6rem' }} />}
                               label={topic.postCountText}
                               size="small"
                               variant="outlined"
-                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
+                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
                             />
                           ) : (
                             <Chip
-                              icon={<TwitterIcon />}
+                              // icon={<TwitterIcon sx={{ fontSize: '0.6rem' }} />}
                               label={formatTweetVolume(topic.tweet_volume)}
                               size="small"
                               variant="outlined"
-                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2' }}
+                              sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
                             />
                           )}
                         </Box>
@@ -817,18 +804,19 @@ const TrendingTopics: React.FC = () => {
                     </Box>
 
                     {topic.promoted_content && (
-                      <Box sx={{ mb: 2 }}>
+                      <Box sx={{ mb: 1 }}>
                         <Chip
                           label="Promoted"
                           size="small"
                           color="secondary"
                           variant="outlined"
+                          sx={{ fontSize: '0.5rem', height: 16 }}
                         />
                       </Box>
                     )}
                   </CardContent>
 
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, borderTop: '1px solid #e0e0e0' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 1, borderTop: '1px solid #e0e0e0' }}>
                     <Button
                       size="small"
                       variant="text"
@@ -836,6 +824,7 @@ const TrendingTopics: React.FC = () => {
                       sx={{
                         borderColor: '#1DA1F2',
                         color: '#1DA1F2',
+                        fontSize: '0.5rem',
                         '&:hover': {
                           borderColor: '#0d8bd9',
                           backgroundColor: 'rgba(29, 161, 242, 0.1)',
@@ -855,42 +844,102 @@ const TrendingTopics: React.FC = () => {
           {trendingTopics.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No trends to display.</Typography>
           ) : (
-            <WordCloudChart data={[
-              { text: "C# corner", value: 10 },
-              { text: "Articles", value: 4 },
-              { text: "Profile", value: 3 },
-              { text: "Docs", value: 1 },
-              { text: "Mahesh Chand", value: 7 },
-              { text: "Answers", value: 2 },
-              { text: "Tech", value: 6 },
-              { text: "Tutorials", value: 3 },
-              { text: "AWS", value: 2 },
-              { text: "Azure", value: 2 },
-              { text: "Santosh", value: 5 },
-              { text: "Books", value: 4 },
-              { text: "Events", value: 9 },
-              { text: "MVP", value: 8 },
-              { text: "Unit Test", value: 5 },
-              { text: "Introduction", value: 1 },
-              { text: "Featured", value: 1 },
-              { text: "Success", value: 5 },
-              { text: "Microsoft", value: 5 },
-              { text: "Live", value: 8 },
-              { text: "REST", value: 1 },
-              { text: "Profile", value: 4 },
-              { text: "Reputation", value: 4 },
-              { text: "Gold Member", value: 4 },
-              { text: "Web", value: 5 },
-              { text: "Block Chain", value: 5 },
-              { text: "AI", value: 9 },
-            ]} handleWordClick={wordClickHandler}></WordCloudChart>
+            <Box sx={{ display: 'flex', width: '100%', minHeight: 330 }}>
+              {/* Left Column - 50% width */}
+              <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column' }}>
+                {/* Left Label */}
+                <Box sx={{ textAlign: 'center', mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
+                    Gemini Topics
+                  </Typography>
+                </Box>
+                {/* Left Word Cloud */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  flex: 1,
+                  border: '2px dashed #ccc',
+                  borderRadius: 1,
+                  margin: 1,
+                  padding: 1
+                }}>
+                  <WordCloudChart
+                    width={330}
+                    height={230}
+                    data={[
+                      { text: "C# corner", value: 10 },
+                      { text: "Articles", value: 4 },
+                      { text: "Profile", value: 3 },
+                      { text: "Docs", value: 1 },
+                      { text: "Mahesh Chand", value: 7 },
+                      { text: "Answers", value: 2 },
+                      { text: "Tech", value: 6 },
+                      { text: "Tutorials", value: 3 },
+                      { text: "AWS", value: 2 },
+                      { text: "Azure", value: 2 },
+                      { text: "Santosh", value: 5 },
+                      { text: "Books", value: 4 },
+                      { text: "Events", value: 9 },
+                      { text: "MVP", value: 8 },
+                    ]}
+                    handleWordClick={wordClickHandler}
+                  />
+                </Box>
+              </Box>
+              
+
+              
+              {/* Right Column - 50% width */}
+              <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column' }}>
+                {/* Right Label */}
+                <Box sx={{ textAlign: 'center', mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ fontSize: '1rem',  }}>
+                    Twitter Topics
+                  </Typography>
+                </Box>
+                {/* Right Word Cloud */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  flex: 1,
+                  border: '2px dashed #ccc',
+                  borderRadius: 1,
+                  margin: 1,
+                  padding: 1
+                }}>
+                  <WordCloudChart
+                    width={330}
+                    height={230}
+                    data={[
+                      { text: "Unit Test", value: 5 },
+                      { text: "Introduction", value: 1 },
+                      { text: "Featured", value: 1 },
+                      { text: "Success", value: 5 },
+                      { text: "Microsoft", value: 5 },
+                      { text: "Live", value: 8 },
+                      { text: "REST", value: 1 },
+                      { text: "Profile", value: 4 },
+                      { text: "Reputation", value: 4 },
+                      { text: "Gold Member", value: 4 },
+                      { text: "Web", value: 5 },
+                      { text: "Block Chain", value: 5 },
+                      { text: "AI", value: 9 },
+                      { text: "Machine Learning", value: 7 },
+                    ]}
+                    handleWordClick={wordClickHandler}
+                  />
+                </Box>
+              </Box>
+            </Box>
           )}
         </Paper>
       )}
 
       {trendingTopics.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="h6" color="text.secondary">
+          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
             No trending topics found for {regions.find(r => r.value === selectedRegion)?.label}
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -916,7 +965,7 @@ const TrendingTopics: React.FC = () => {
                 <TrendingIcon />
               </Avatar>
               <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="h4" gutterBottom sx={{ wordBreak: 'break-word' }}>
+                <Typography variant="h5" gutterBottom sx={{ wordBreak: 'break-word', fontSize: '1.2rem' }}>
                   {selectedTopic.name}
                 </Typography>
                 <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
@@ -949,7 +998,7 @@ const TrendingTopics: React.FC = () => {
 
             {/* Topic Details */}
             <Paper sx={{ p: 2, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
                 Your Topic
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -1034,7 +1083,7 @@ const TrendingTopics: React.FC = () => {
             {/* Hypothesis Input */}
             <Paper sx={{ p: 2, mb: 3, opacity: selectedTopic ? 1 : 0.6 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
                   Your Hypothesis
                 </Typography>
               </Box>
@@ -1111,14 +1160,14 @@ const TrendingTopics: React.FC = () => {
 
             {/* Video Duration */}
             <Paper sx={{ p: 2, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="subtitle1" gutterBottom sx={{ fontSize: '0.8rem' }}>
                 Video Duration
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Select the desired length for your generated video content.
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <FormControl sx={{ minWidth: 200 }}>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
                   <InputLabel>Duration</InputLabel>
                   <Select
                     value={duration}
@@ -1534,7 +1583,7 @@ const TrendingTopics: React.FC = () => {
                             }}>
                               <svg width="42" height="42" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M8 5h8a3 3 0 013 3v8a3 3 0 01-3 3H8a3 3 0 01-3-3V8a3 3 0 013-3zm3 3v8l6-4-6-4z" /></svg>
                             </Box>
-                            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>What do you want to create?</Typography>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: '0.8rem' }}>What do you want to create?</Typography>
                             <Typography variant="body2" color="text.secondary">
                               Type in what you'd like to generate and add it to your scene.
                             </Typography>
@@ -1616,9 +1665,9 @@ const TrendingTopics: React.FC = () => {
                                 background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center'
                               }}>
-                                <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 16V8m0 0l-3 3m3-3l3 3M7 20h10a4 4 0 004-4 4 4 0 00-4-4h-.26A8 8 0 104 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 16V8m0 0l-3 3m3-3l3 3M7 20h10a4 4 0 004-4 4 4 0 00-4-4h-.26A8 8 0 104 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                               </Box>
-                              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>Upload Asset</Typography>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.8rem' }}>Upload Asset</Typography>
                               <Typography variant="body2" color="text.secondary">
                                 Click to browse or drag & drop your file here
                               </Typography>
@@ -1640,7 +1689,7 @@ const TrendingTopics: React.FC = () => {
                   textAlign: 'center',
                   py: 8
                 }}>
-                  <Typography variant="h6" sx={{ color: '#666', mb: 2 }}>
+                  <Typography variant="subtitle1" sx={{ color: '#666', mb: 2, fontSize: '0.8rem' }}>
                     📚 Generated Chapters
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#999', mb: 3, maxWidth: '300px' }}>

@@ -7,6 +7,8 @@ interface TrendingTopic {
   url: string;
   promoted_content?: string;
   query: string;
+  category: string;
+  postCountText: string;
 }
 
 interface TrendingTopicsResponse {
