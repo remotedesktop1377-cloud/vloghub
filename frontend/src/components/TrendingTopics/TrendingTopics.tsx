@@ -112,6 +112,8 @@ const TrendingTopics: React.FC = () => {
   const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
   const [pickerLoading, setPickerLoading] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>(DEFAULT_AI_PROMPT);
+  const [mediaManagementOpen, setMediaManagementOpen] = useState<boolean>(false);
+  const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isDraggingUpload, setIsDraggingUpload] = useState<boolean>(false);
   const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
@@ -894,6 +896,10 @@ const TrendingTopics: React.FC = () => {
               onChapterImagesMapChange={setChapterImagesMap}
               onGeneratedImagesChange={setGeneratedImages}
               onRightTabIndexChange={setRightTabIndex}
+              mediaManagementOpen={mediaManagementOpen}
+              mediaManagementChapterIndex={mediaManagementChapterIndex}
+              onMediaManagementOpen={setMediaManagementOpen}
+              onMediaManagementChapterIndex={setMediaManagementChapterIndex}
             />
 
           </Box>

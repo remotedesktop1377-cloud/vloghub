@@ -77,6 +77,10 @@ interface ChaptersSectionProps {
   onChapterImagesMapChange: (map: Record<number, string[]>) => void;
   onGeneratedImagesChange: (images: string[]) => void;
   onRightTabIndexChange: (index: number) => void;
+  mediaManagementOpen: boolean;
+  mediaManagementChapterIndex: number | null;
+  onMediaManagementOpen: (open: boolean) => void;
+  onMediaManagementChapterIndex: (index: number | null) => void;
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
@@ -125,525 +129,450 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   onChapterImagesMapChange,
   onGeneratedImagesChange,
   onRightTabIndexChange,
+  mediaManagementOpen,
+  mediaManagementChapterIndex,
+  onMediaManagementOpen,
+  onMediaManagementChapterIndex,
 }) => {
   return (
     <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
       {chaptersGenerated && chapters.length > 0 ? (
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-          {/* Left Side - Chapters List */}
-          <Box sx={{ flex: '1 1 50%', minWidth: 0 }}>
-            <Box sx={{ width: '100%' }}>
-              <DragDropContext onDragEnd={onDragEnd}>
-                <Droppable droppableId="chapters">
-                  {(provided) => (
-                    <Box
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      sx={{ display: 'flex', flexDirection: 'column', gap: 0.6, alignItems: 'flex-start' }}
-                    >
-                      {chapters.map((chapter, index) => (
-                        <Box key={chapter.id || index.toString()} sx={{ width: 'fit-content' }}>
-                          <Draggable key={(chapter.id || index.toString()) + '-draggable'} draggableId={chapter.id || index.toString()} index={index}>
-                            {(provided, snapshot) => (
-                              <Card
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                variant="elevation"
-                                sx={{
-                                  borderRadius: 2,
-                                  transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
-                                  boxShadow: snapshot.isDragging ? 8 : 0,
-                                  '&:hover': { boxShadow: 0 }
-                                }}
-                              >
-                                <CardContent sx={{ p: 0, height: 'auto', '&:last-child': { paddingBottom: 0 } }}>
-                                  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-start', bgcolor: selectedChapterIndex === index ? 'rgba(29,161,242,0.06)' : 'transparent' }} onClick={() => onSelectChapter(index)}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                      {/* Drag Handle */}
-                                      <Box
-                                        {...provided.dragHandleProps}
-                                        sx={{
-                                          mr: 2,
-                                          cursor: 'grab',
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          color: '#9c27b0',
-                                          '&:active': { cursor: 'grabbing' }
-                                        }}
-                                      >
-                                        <DragIcon fontSize="small" />
-                                      </Box>
+        <Box sx={{ width: '100%' }}>
+          {/* Full Width - Chapters List */}
+          <Box sx={{ width: '100%' }}>
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="chapters">
+                {(provided) => (
+                  <Box
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    sx={{ display: 'flex', flexDirection: 'column', gap: 0.6, alignItems: 'stretch', width: '100%' }}
+                  >
+                    {chapters.map((chapter, index) => (
+                      <Box key={chapter.id || index.toString()} sx={{ width: '100%' }}>
+                        <Draggable key={(chapter.id || index.toString()) + '-draggable'} draggableId={chapter.id || index.toString()} index={index}>
+                          {(provided, snapshot) => (
+                            <Card
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              variant="elevation"
+                              sx={{
+                                transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
+                                boxShadow: snapshot.isDragging ? 8 : 0,
+                                width: '100%',
+                                bgcolor: selectedChapterIndex === index ? 'rgba(29,161,242,0.06)' : 'transparent',
+                                cursor: 'pointer',
+                                // transition: 'background-color 0.2s ease',
+                                overflow: 'hidden',
+                                borderColor: selectedChapterIndex === index ? '#1DA1F2' : '#e9ecef',
+                                borderWidth: 1,
+                                borderStyle: 'solid',
+                                borderRadius: 1,
+                                transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
+                                '&:hover': {
+                                  borderColor: '#1DA1F2',
+                                  boxShadow: '0 0 0 3px rgba(29, 161, 242, 0.08)',
+                                  backgroundColor: 'rgba(29, 161, 242, 0.02)'
+                                }
+                              }}
+                              onClick={() => onSelectChapter(index)}
+                            >
+                              <CardContent sx={{ p: 0, width: '100%', height: 'auto', '&:last-child': { paddingBottom: 0 } }}>
+                                <Box sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  height: '100%',
+                                }}>
+                                  {/* Drag Handle */}
+                                  <Box
+                                    {...provided.dragHandleProps}
+                                    sx={{
+                                      mr: 2,
+                                      cursor: 'grab',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#9c27b0',
+                                      '&:active': { cursor: 'grabbing' }
+                                    }}
+                                  >
+                                    <DragIcon fontSize="small" />
+                                  </Box>
 
-                                      {/* Narration Content - centered with integrated left strip number */}
-                                      <Box sx={{ width: '100%', maxWidth: 760, mx: 0 }}>
-                                        <Box sx={{
-                                          display: 'flex',
-                                          alignItems: 'stretch',
-                                          borderWidth: 1,
-                                          borderStyle: 'solid',
-                                          borderColor: selectedChapterIndex === index ? '#1DA1F2' : '#e9ecef',
-                                          borderRadius: 1,
-                                          overflow: 'hidden',
-                                          bgcolor: '#fff',
-                                          transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
-                                          '&:hover': {
-                                            borderColor: '#1DA1F2',
-                                            boxShadow: '0 0 0 3px rgba(29, 161, 242, 0.08)',
-                                            backgroundColor: 'rgba(29, 161, 242, 0.02)'
-                                          }
-                                        }}>
-                                          <Box sx={{
-                                            width: 48,
-                                            bgcolor: 'rgba(29,161,242,0.08)',
-                                            color: '#1DA1F2',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: 'bold',
-                                            flexShrink: 0
-                                          }}>
-                                            {index + 1}
-                                          </Box>
-                                          <Box sx={{ flexGrow: 1 }}>
-                                            {editingChapter === index ? (
-                                              <TextField
-                                                value={editNarration}
-                                                onChange={(e) => onEditNarrationChange(e.target.value)}
-                                                variant="standard"
-                                                InputProps={{ disableUnderline: true }}
-                                                multiline
-                                                minRows={4}
-                                                fullWidth
-                                                sx={{ px: 1.5, py: 1.5 }}
-                                              />
-                                            ) : (
+                                  {/* Narration Content - centered with integrated left strip number */}
+                                  <Box sx={{ width: '100%', height: '100%', minHeight: '120px', }}>
+                                    <Box sx={{
+                                      display: 'flex',
+                                      height: '100%',
+                                      bgcolor: 'rgba(29,161,242,0.08)',
+                                    }}>
+                                      <Box sx={{
+                                        width: 48,
+                                        color: '#1DA1F2',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 'bold',
+                                        flexShrink: 0
+                                      }}>
+                                        {index + 1}
+                                      </Box>
+                                      <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%' }}>
+                                        {editingChapter === index ? (
+                                          <TextField
+                                            value={editNarration}
+                                            onChange={(e) => onEditNarrationChange(e.target.value)}
+                                            variant="standard"
+                                            InputProps={{ disableUnderline: true }}
+                                            multiline
+                                            minRows={4}
+                                            fullWidth
+                                            sx={{ px: 1.5, py: 1.5, width: '100%', height: '100%', bgcolor: '#fff' }}
+                                          />
+                                        ) : (
+                                          <>
+                                            {/* Content Area - 50% Narration + 50% Media */}
+                                            <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%', minHeight: '120px', bgcolor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+                                              {/* Narration Content - 50% */}
                                               <Box sx={{
-                                                p: 1.5,
-                                                maxHeight: '200px',
+                                                flex: '1 1 50%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                height: '100%',
                                                 overflow: 'auto',
-                                                bgcolor: '#fff'
+                                                justifyContent: 'flex-start',
+                                                alignItems: 'flex-start'
                                               }}>
-                                                <Typography variant="body1" sx={{ lineHeight: 1.6, color: '#495057' }}>
+                                                <Typography variant="body2" sx={{
+                                                  lineHeight: 1.5,
+                                                  color: '#495057',
+                                                  fontSize: '0.8rem',
+                                                  textAlign: 'start',
+                                                  px: 1.5,
+                                                  py: 1,
+                                                }}>
                                                   {chapter.narration || 'Narration content will be generated here.'}
                                                 </Typography>
                                               </Box>
-                                            )}
-                                          </Box>
-                                        </Box>
-                                      </Box>
 
-                                      {/* Chapter Actions */}
-                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
-                                        {editingChapter === index ? (
-                                          <>
-                                            {/* Save Button */}
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => onSaveEdit(index)}
-                                              sx={{
-                                                color: '#4caf50',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(76, 175, 80, 0.1)',
-                                                  color: '#388e3c'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Save changes"
-                                            >
-                                              <CheckIcon fontSize="small" />
-                                            </IconButton>
+                                              {/* Media Section - 50% */}
+                                              <Box sx={{
+                                                flex: '1 1 50%',
+                                                px: 1.5,
+                                                py: 1,
+                                                height: '100%',
+                                                maxHeight: '120px',
+                                                overflow: 'auto',
+                                                bgcolor: '#fafafa',
+                                                borderLeft: '1px solid #f0f0f0'
+                                              }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#999', fontSize: '0.65rem' }}>
+                                                    📎 Media ({(chapterImagesMap[index] || []).length})
+                                                  </Typography>
+                                                  <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{
+                                                      fontSize: '0.6rem',
+                                                      py: 0.2,
+                                                      px: 0.6,
+                                                      minHeight: 'auto',
+                                                      borderColor: '#1976d2',
+                                                      color: '#1976d2',
+                                                      '&:hover': {
+                                                        borderColor: '#1565c0',
+                                                        bgcolor: 'rgba(25, 118, 210, 0.04)'
+                                                      }
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      onMediaManagementChapterIndex(index);
+                                                      onMediaManagementOpen(true);
+                                                    }}
+                                                  >
+                                                    {(chapterImagesMap[index] || []).length > 0 ? 'Manage' : 'Add'}
+                                                  </Button>
+                                                </Box>
 
-                                            {/* Cancel Button */}
-                                            <IconButton
-                                              size="small"
-                                              onClick={onCancelEdit}
-                                              sx={{
-                                                color: '#ff9800',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                  color: '#f57c00'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Cancel editing"
-                                            >
-                                              <CloseIcon fontSize="small" />
-                                            </IconButton>
-                                          </>
-                                        ) : (
-                                          <>
-                                            {/* Magic variations for this chapter */}
-                                            <IconButton
-                                              className="chapter-actions"
-                                              size="small"
-                                              onClick={async () => {
-                                                try {
-                                                  onPickerOpen(true);
-                                                  onPickerChapterIndex(index);
-                                                  onPickerLoading(true);
-                                                  const chapter = chapters[index];
-                                                  const res = await fetch('/api/get-narration-variations', {
-                                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({
-                                                      narration: chapter.narration,
-                                                      noOfNarrations: 5
-                                                    })
-                                                  });
-                                                  const data = await res.json();
-                                                  const vars: string[] = Array.isArray(data?.variations) ? data.variations : [];
-                                                  onPickerNarrations(vars);
-                                                } catch (e) {
-                                                  console.error('picker fetch failed', e);
-                                                  onPickerNarrations([chapters[index].narration]);
-                                                } finally {
-                                                  onPickerLoading(false);
-                                                }
-                                              }}
-                                              sx={{
-                                                opacity: selectedChapterIndex === index ? 1 : 0,
-                                                transition: 'opacity 0.2s ease',
-                                                color: '#1DA1F2',
-                                                '&:hover': { bgcolor: 'rgba(29,161,242,0.1)', color: '#0d8bd9' },
-                                                width: 36, height: 36,
-                                              }}
-                                              title="Magic variations"
-                                            >
-                                              <MagicIcon fontSize="small" />
-                                            </IconButton>
-                                            {/* Edit Chapter Button */}
-                                            <IconButton
-                                              className="chapter-actions"
-                                              size="small"
-                                              onClick={() => onStartEdit(index, chapter.heading || '', chapter.narration || '')}
-                                              sx={{
-                                                opacity: selectedChapterIndex === index ? 1 : 0,
-                                                transition: 'opacity 0.2s ease',
-                                                color: '#ff9800',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                                  color: '#f57c00'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Edit chapter"
-                                            >
-                                              <CreateIcon fontSize="small" />
-                                            </IconButton>
-
-                                            {/* Delete Icon */}
-                                            <IconButton
-                                              className="chapter-actions"
-                                              size="small"
-                                              onClick={() => onDeleteChapter(index)}
-                                              sx={{
-                                                opacity: selectedChapterIndex === index ? 1 : 0,
-                                                transition: 'opacity 0.2s ease',
-                                                color: '#ff4444',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(255,68,68,0.1)',
-                                                  color: '#cc0000'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Delete chapter"
-                                            >
-                                              <DeleteIcon fontSize="small" />
-                                            </IconButton>
-
-                                            {/* Add Chapter After This One Button */}
-                                            <IconButton
-                                              className="chapter-actions"
-                                              size="small"
-                                              onClick={() => onAddChapterAfter(index)}
-                                              sx={{
-                                                opacity: selectedChapterIndex === index ? 1 : 0,
-                                                transition: 'opacity 0.2s ease',
-                                                color: '#1DA1F2',
-                                                '&:hover': {
-                                                  bgcolor: 'rgba(29, 161, 242, 0.1)',
-                                                  color: '#0d8bd9'
-                                                },
-                                                width: 36,
-                                                height: 36,
-                                              }}
-                                              title="Add chapter after this one"
-                                            >
-                                              <AddIcon fontSize="small" />
-                                            </IconButton>
+                                                {/* Media Display */}
+                                                {(chapterImagesMap[index] || []).length > 0 ? (
+                                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
+                                                    {(chapterImagesMap[index] || []).slice(0, 4).map((imageUrl, imgIndex) => (
+                                                      <Box
+                                                        key={imgIndex}
+                                                        sx={{
+                                                          position: 'relative',
+                                                          width: '75px',
+                                                          height: '75px',
+                                                          borderRadius: 0.5,
+                                                          overflow: 'hidden',
+                                                          border: '1px solid #e0e0e0',
+                                                          cursor: 'pointer',
+                                                          transition: 'transform 0.2s',
+                                                          '&:hover': {
+                                                            transform: 'scale(1.02)',
+                                                            borderColor: '#1976d2'
+                                                          }
+                                                        }}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          window.open(imageUrl, '_blank');
+                                                        }}
+                                                      >
+                                                        <img
+                                                          src={imageUrl}
+                                                          alt={`Chapter ${index + 1} Media ${imgIndex + 1}`}
+                                                          style={{
+                                                            position: 'absolute',
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover'
+                                                          }}
+                                                        />
+                                                        {/* Delete Button */}
+                                                        <IconButton
+                                                          size="small"
+                                                          sx={{
+                                                            position: 'absolute',
+                                                            top: 2,
+                                                            right: 2,
+                                                            bgcolor: 'rgba(255,255,255,0.9)',
+                                                            width: 14,
+                                                            height: 14,
+                                                            minWidth: 14,
+                                                            '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                                                          }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const currentImages = chapterImagesMap[index] || [];
+                                                            const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
+                                                            onChapterImagesMapChange({
+                                                              ...chapterImagesMap,
+                                                              [index]: updatedImages
+                                                            });
+                                                          }}
+                                                        >
+                                                          <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                          </svg>
+                                                        </IconButton>
+                                                      </Box>
+                                                    ))}
+                                                    {(chapterImagesMap[index] || []).length > 4 && (
+                                                      <Box sx={{
+                                                        position: 'relative',
+                                                        width: '50px',
+                                                        height: '50px',
+                                                        borderRadius: 0.5,
+                                                        border: '1px dashed #ccc',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        bgcolor: '#f9f9f9',
+                                                        cursor: 'pointer',
+                                                        fontSize: '0.5rem',
+                                                        color: '#666'
+                                                      }}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          onMediaManagementChapterIndex(index);
+                                                          onMediaManagementOpen(true);
+                                                        }}
+                                                      >
+                                                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                          +{(chapterImagesMap[index] || []).length - 4}
+                                                        </Box>
+                                                      </Box>
+                                                    )}
+                                                  </Box>
+                                                ) : (
+                                                  <Box sx={{
+                                                    border: '1px dashed #ddd',
+                                                    borderRadius: 1,
+                                                    p: 1,
+                                                    textAlign: 'center',
+                                                    bgcolor: '#f9f9f9',
+                                                    cursor: 'pointer'
+                                                  }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      onMediaManagementChapterIndex(index);
+                                                      onMediaManagementOpen(true);
+                                                    }}
+                                                  >
+                                                    <Typography variant="caption" sx={{ color: '#999', fontSize: '0.6rem' }}>
+                                                      Click to add media
+                                                    </Typography>
+                                                  </Box>
+                                                )}
+                                              </Box>
+                                            </Box>
                                           </>
                                         )}
                                       </Box>
                                     </Box>
                                   </Box>
-                                </CardContent>
-                              </Card>
-                            )}
-                          </Draggable>
-                        </Box>
-                      ))}
-                      {provided.placeholder}
-                    </Box>
-                  )}
-                </Droppable>
-              </DragDropContext>
-            </Box>
-          </Box>
 
-          {/* Right Side - Media Panel */}
-          <Box sx={{ flex: '1 1 50%', minWidth: 0 }}>
-            <Paper sx={{ p: 0, overflow: 'hidden' }}>
-              <Tabs value={rightTabIndex} onChange={(_, v) => onRightTabChange(v)} variant="fullWidth" sx={{ borderBottom: '1px solid #e0e0e0' }}>
-                <Tab label="Stock Media" />
-                <Tab label="AI Generation" />
-                <Tab label="Upload Media" />
-              </Tabs>
-              {rightTabIndex === 0 && (
-                <>
-                  <Box sx={{ p: 1.5, borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 1, justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="caption">AI (Single Image)</Typography>
-                      <Switch size="small" checked={aiImagesEnabled} onChange={(e) => {
-                        const enabled = e.target.checked;
-                        onUseAIChange(enabled);
-                        // Update current panel instantly
-                        if (!enabled) {
-                          onGeneratedImagesChange([fallbackImages[selectedChapterIndex % fallbackImages.length]]);
-                        } else {
-                          const imgs = chapterImagesMap[selectedChapterIndex] || [];
-                          onGeneratedImagesChange(imgs.length ? [imgs[0]] : [fallbackImages[selectedChapterIndex % fallbackImages.length]]);
-                        }
-                      }} />
-                    </Box>
-                    {!aiImagesEnabled ? null : (
-                      <Button
-                        startIcon={<MagicIcon />}
-                        variant="contained"
-                        size="small"
-                        disabled={imagesLoading || chapters.length === 0}
-                        onClick={async () => {
-                          try {
-                            const currentIdx = selectedChapterIndex;
-                            const visuals = `${currentIdx + 1}. ${chapters[currentIdx]?.visuals || ''}`;
-                            const res = await fetch('/api/generate-images', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ visuals })
-                            });
-                            const data = await res.json();
-                            const newImgsAll: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : fallbackImages;
-                            const newImgs = [newImgsAll[0]];
-                            onChapterImagesMapChange({
-                              ...chapterImagesMap,
-                              [currentIdx]: [...newImgs, ...(chapterImagesMap[currentIdx] || [])]
-                            });
-                            onGeneratedImagesChange([...newImgs, ...generatedImages]);
-                          } catch (e) {
-                            console.error('Failed to fetch images', e);
-                            const newImgs = [fallbackImages[selectedChapterIndex % fallbackImages.length]];
-                            onChapterImagesMapChange({
-                              ...chapterImagesMap,
-                              [selectedChapterIndex]: [...newImgs, ...(chapterImagesMap[selectedChapterIndex] || [])]
-                            });
-                            onGeneratedImagesChange([...newImgs, ...generatedImages]);
-                          }
-                        }}
-                      >
-                        {imagesLoading ? 'Fetching...' : 'Magic'}
-                      </Button>)}
-                  </Box>
-                  <Box sx={{ p: 1.5 }}>
-                    {aiImagesEnabled ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        {(generatedImages.length ? generatedImages.slice(0, 1) : ((chapterImagesMap[selectedChapterIndex] || []).slice(0, 1).length ? (chapterImagesMap[selectedChapterIndex] || []).slice(0, 1) : [fallbackImages[selectedChapterIndex % fallbackImages.length]])).map((src, idx) => (
-                          <Box key={idx} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: '100%', maxWidth: 320, aspectRatio: '1 / 1' }}>
-                            <Box component="img" src={src} alt={`generated-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                            <IconButton
-                              sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,1)' }, opacity: 0, transition: 'opacity 0.2s ease', '.MuiBox-root:hover &': { opacity: 1 } }}
-                              onClick={() => onDownloadImage(src, idx)}
-                              title="Download"
-                            >
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 3v10m0 0l-4-4m4 4l4-4" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <path d="M20 21H4a2 2 0 01-2-2v0a2 2 0 012-2h16a2 2 0 012 2v0a2 2 0 01-2 2z" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </IconButton>
-                          </Box>
-                        ))}
-                        {!imagesLoading && generatedImages.length === 0 && (!chapterImagesMap[selectedChapterIndex] || chapterImagesMap[selectedChapterIndex].length === 0) && (
-                          <Typography variant="body2" color="text.secondary">
-                            Generate images from the script to see results here.
-                          </Typography>
-                        )}
+                                  {/* Chapter Actions */}
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
+                                    {editingChapter === index ? (
+                                      <>
+                                        {/* Save Button */}
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => onSaveEdit(index)}
+                                          sx={{
+                                            color: '#4caf50',
+                                            '&:hover': {
+                                              bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                              color: '#388e3c'
+                                            },
+                                            width: 36,
+                                            height: 36,
+                                          }}
+                                          title="Save changes"
+                                        >
+                                          <CheckIcon fontSize="small" />
+                                        </IconButton>
+
+                                        {/* Cancel Button */}
+                                        <IconButton
+                                          size="small"
+                                          onClick={onCancelEdit}
+                                          sx={{
+                                            color: '#ff9800',
+                                            '&:hover': {
+                                              bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                              color: '#f57c00'
+                                            },
+                                            width: 36,
+                                            height: 36,
+                                          }}
+                                          title="Cancel editing"
+                                        >
+                                          <CloseIcon fontSize="small" />
+                                        </IconButton>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {/* Magic variations for this chapter */}
+                                        <IconButton
+                                          className="chapter-actions"
+                                          size="small"
+                                          onClick={async () => {
+                                            try {
+                                              onPickerOpen(true);
+                                              onPickerChapterIndex(index);
+                                              onPickerLoading(true);
+                                              const chapter = chapters[index];
+                                              const res = await fetch('/api/get-narration-variations', {
+                                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  narration: chapter.narration,
+                                                  noOfNarrations: 5
+                                                })
+                                              });
+                                              const data = await res.json();
+                                              const vars: string[] = Array.isArray(data?.variations) ? data.variations : [];
+                                              onPickerNarrations(vars);
+                                            } catch (e) {
+                                              console.error('picker fetch failed', e);
+                                              onPickerNarrations([chapters[index].narration]);
+                                            } finally {
+                                              onPickerLoading(false);
+                                            }
+                                          }}
+                                          sx={{
+                                            opacity: selectedChapterIndex === index ? 1 : 0,
+                                            transition: 'opacity 0.2s ease',
+                                            color: '#1DA1F2',
+                                            '&:hover': { bgcolor: 'rgba(29,161,242,0.1)', color: '#0d8bd9' },
+                                            width: 36, height: 36,
+                                          }}
+                                          title="Magic variations"
+                                        >
+                                          <MagicIcon fontSize="small" />
+                                        </IconButton>
+                                        {/* Edit Chapter Button */}
+                                        <IconButton
+                                          className="chapter-actions"
+                                          size="small"
+                                          onClick={() => onStartEdit(index, chapter.heading || '', chapter.narration || '')}
+                                          sx={{
+                                            opacity: selectedChapterIndex === index ? 1 : 0,
+                                            transition: 'opacity 0.2s ease',
+                                            color: '#ff9800',
+                                            '&:hover': {
+                                              bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                              color: '#f57c00'
+                                            },
+                                            width: 36,
+                                            height: 36,
+                                          }}
+                                          title="Edit chapter"
+                                        >
+                                          <CreateIcon fontSize="small" />
+                                        </IconButton>
+
+                                        {/* Delete Icon */}
+                                        <IconButton
+                                          className="chapter-actions"
+                                          size="small"
+                                          onClick={() => onDeleteChapter(index)}
+                                          sx={{
+                                            opacity: selectedChapterIndex === index ? 1 : 0,
+                                            transition: 'opacity 0.2s ease',
+                                            color: '#ff4444',
+                                            '&:hover': {
+                                              bgcolor: 'rgba(255,68,68,0.1)',
+                                              color: '#cc0000'
+                                            },
+                                            width: 36,
+                                            height: 36,
+                                          }}
+                                          title="Delete chapter"
+                                        >
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+
+                                        {/* Add Chapter After This One Button */}
+                                        <IconButton
+                                          className="chapter-actions"
+                                          size="small"
+                                          onClick={() => onAddChapterAfter(index)}
+                                          sx={{
+                                            opacity: selectedChapterIndex === index ? 1 : 0,
+                                            transition: 'opacity 0.2s ease',
+                                            color: '#1DA1F2',
+                                            '&:hover': {
+                                              bgcolor: 'rgba(29, 161, 242, 0.1)',
+                                              color: '#0d8bd9'
+                                            },
+                                            width: 36,
+                                            height: 36,
+                                          }}
+                                          title="Add chapter after this one"
+                                        >
+                                          <AddIcon fontSize="small" />
+                                        </IconButton>
+                                      </>
+                                    )}
+                                  </Box>
+
+                                </Box>
+                              </CardContent>
+                            </Card>
+
+                          )}
+                        </Draggable>
                       </Box>
-                    ) : (
-                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 160px)', justifyContent: 'center', gap: 1.5 }}>
-                        {[...uploadedImages, ...fallbackImages].map((src, idx) => (
-                          <Box key={idx} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: 160, aspectRatio: '1 / 1' }}>
-                            <Box component="img" src={src} alt={`dummy-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
+                    ))}
+
                   </Box>
-                </>
-              )}
-              {rightTabIndex === 1 && (
-                <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <Box sx={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 2,
-                      mx: 'auto',
-                      mb: 2,
-                      background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <svg width="42" height="42" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M8 5h8a3 3 0 013 3v8a3 3 0 01-3 3H8a3 3 0 01-3-3V8a3 3 0 013-3zm3 3v8l6-4-6-4z" /></svg>
-                    </Box>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: '0.8rem' }}>What do you want to create?</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Type in what you'd like to generate and add it to your scene.
-                    </Typography>
-                  </Box>
-
-                  <TextField
-                    value={aiPrompt}
-                    onChange={(e) => onAIPromptChange(e.target.value)}
-                    multiline
-                    minRows={3}
-                    placeholder="Describe what you want to generate..."
-                    sx={{
-                      '& .MuiOutlinedInput-root': { borderRadius: 2 },
-                    }}
-                  />
-
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button variant="text" fullWidth sx={{ flex: 1 }} onClick={() => onAIPromptChange('')}>Cancel</Button>
-                    <Button
-                      fullWidth
-                      sx={{ flex: 1 }}
-                      variant="contained"
-                      onClick={onGenerateImages}
-                      disabled={imagesLoading || !aiPrompt.trim()}
-                    >
-                      {imagesLoading ? 'Generating...' : 'Generate'}
-                    </Button>
-                  </Box>
-                </Box>
-              )}
-              {rightTabIndex === 2 && (
-                <Box sx={{ p: 2 }}>
-                  <Box
-                    onDragOver={(e) => { e.preventDefault(); }}
-                    onDragLeave={() => { }}
-                    onDrop={(e) => { e.preventDefault(); onUploadFiles(e.dataTransfer.files); }}
-                    onClick={() => onTriggerFileUpload()}
-                    sx={{
-                      border: '2px dashed #cbd5e1',
-                      borderColor: isDraggingUpload ? '#5b76ff' : '#cbd5e1',
-                      borderRadius: 2,
-                      height: 360,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      backgroundColor: isDraggingUpload ? 'rgba(91,118,255,0.04)' : 'transparent'
-                    }}
-                  >
-                    <Box>
-                      <Box sx={{
-                        width: 88,
-                        height: 88,
-                        borderRadius: '50%',
-                        mx: 'auto',
-                        mb: 2,
-                        background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 16V8m0 0l-3 3m3-3l3 3M7 20h10a4 4 0 004-4 4 4 0 00-4-4h-.26A8 8 0 104 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      </Box>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.8rem' }}>Upload Asset</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Click to browse or drag & drop your file here
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <input id="upload-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => onUploadFiles(e.target.files)} />
-                </Box>
-              )}
-
-              {/* Bottom Action Buttons */}
-              <Box sx={{ 
-                p: 2, 
-                borderTop: '1px solid #e0e0e0', 
-                backgroundColor: '#fafafa',
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 1.5 
-              }}>
-                <Typography variant="subtitle2" sx={{ fontSize: '0.75rem', fontWeight: 600, color: '#666', mb: 1 }}>
-                  Media Actions
-                </Typography>
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 3v10m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M20 21H4a2 2 0 01-2-2v0a2 2 0 012-2h16a2 2 0 012 2v0a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>}
-                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75 }}
-                  >
-                    Download all Narrations
-                  </Button>
-
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 16V8m0 0l-3 3m3-3l3 3M7 20h10a4 4 0 004-4 4 4 0 00-4-4h-.26A8 8 0 104 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>}
-                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75 }}
-                  >
-                    Upload Chroma key
-                  </Button>
-
-                  <Button
-                    variant="contained"
-                    size="small"
-                    fullWidth
-                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M8 5h8a3 3 0 013 3v8a3 3 0 01-3 3H8a3 3 0 01-3-3V8a3 3 0 013-3zm3 3v8l6-4-6-4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>}
-                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75, bgcolor: '#1DA1F2', '&:hover': { bgcolor: '#0d8bd9' } }}
-                  >
-                    Generate Video
-                  </Button>
-
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    startIcon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>}
-                    sx={{ justifyContent: 'flex-start', fontSize: '0.7rem', py: 0.75 }}
-                  >
-                    Re-generate all Assets
-                  </Button>
-                </Box>
-              </Box>
-            </Paper>
+                )}
+              </Droppable>
+            </DragDropContext>
           </Box>
         </Box>
       ) : (
@@ -675,6 +604,385 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           </Box>
         </Box>
       )}
+
+      {/* Media Management Dialog */}
+      <Dialog
+        open={mediaManagementOpen}
+        onClose={() => onMediaManagementOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { minHeight: '600px' }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">
+            Manage Media - Chapter {(mediaManagementChapterIndex || 0) + 1}
+          </Typography>
+          <IconButton
+            onClick={() => onMediaManagementOpen(false)}
+            sx={{
+              ml: 1,
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6l12 12" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '500px' }}>
+
+            {/* Media Management Tabs */}
+            <Box sx={{ flex: 1 }}>
+              <Tabs value={rightTabIndex} onChange={(_, v) => onRightTabChange(v)} variant="fullWidth" sx={{ borderBottom: '1px solid #e0e0e0' }}>
+                <Tab label="Stock Media" />
+                <Tab label="AI Generation" />
+              </Tabs>
+
+              <Box sx={{ height: 'calc(100% - 48px)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                {rightTabIndex === 0 && (
+                  <Box sx={{ p: 1.5, height: '100%' }}>
+                    {/* Check if current chapter has any media */}
+                    {(chapterImagesMap[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex] || []).length === 0 ? (
+                      // No media - Show centered information message
+                      <Box
+                        onClick={() => {
+                          // Create a temporary file input for this specific upload
+                          const tempFileInput = document.createElement('input');
+                          tempFileInput.type = 'file';
+                          tempFileInput.accept = 'image/*';
+                          tempFileInput.multiple = true;
+                          tempFileInput.style.display = 'none';
+                          tempFileInput.onchange = (e) => {
+                            const target = e.target as HTMLInputElement;
+                            if (target.files && target.files.length > 0) {
+                              // Create object URLs for the files
+                              const imgs: string[] = [];
+                              Array.from(target.files).forEach((file) => {
+                                if (file.type.startsWith('image/')) {
+                                  const url = URL.createObjectURL(file);
+                                  imgs.push(url);
+                                }
+                              });
+
+                              if (imgs.length > 0) {
+                                // Add images to the current chapter
+                                const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
+                                onChapterImagesMapChange({
+                                  ...chapterImagesMap,
+                                  [currentIdx]: [...(chapterImagesMap[currentIdx] || []), ...imgs]
+                                });
+                              }
+                            }
+                            // Clean up the temporary input
+                            document.body.removeChild(tempFileInput);
+                          };
+                          document.body.appendChild(tempFileInput);
+                          tempFileInput.click();
+                        }}
+                        sx={{
+                          height: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          border: '2px dashed #e0e0e0',
+                          borderRadius: 2,
+                          backgroundColor: 'rgba(249, 250, 251, 1)',
+                          '&:hover': {
+                            borderColor: '#5b76ff',
+                            backgroundColor: 'rgba(91,118,255,0.04)'
+                          },
+                          transition: 'all 0.2s ease',
+                          py: 6
+                        }}
+                      >
+                        <Box sx={{
+                          width: 80,
+                          height: 80,
+                          borderRadius: 2,
+                          mx: 'auto',
+                          mb: 2,
+                          background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: '0.9rem', color: '#374151' }}>
+                          No Media Added Yet
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, lineHeight: 1.5 }}>
+                          Click here to add images for Chapter {(mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex) + 1}. You can select multiple images at once.
+                        </Typography>
+                      </Box>
+                    ) : (
+                      // Has media - Show grid with Add Media box + uploaded images
+                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 80px)', justifyContent: 'flex-start', gap: 1 }}>
+                        {/* Add Media Box - First Position */}
+                        <Box
+                          onClick={() => {
+                            // Create a temporary file input for this specific upload
+                            const tempFileInput = document.createElement('input');
+                            tempFileInput.type = 'file';
+                            tempFileInput.accept = 'image/*';
+                            tempFileInput.multiple = true;
+                            tempFileInput.style.display = 'none';
+                            tempFileInput.onchange = (e) => {
+                              const target = e.target as HTMLInputElement;
+                              if (target.files && target.files.length > 0) {
+                                // Create object URLs for the files
+                                const imgs: string[] = [];
+                                Array.from(target.files).forEach((file) => {
+                                  if (file.type.startsWith('image/')) {
+                                    const url = URL.createObjectURL(file);
+                                    imgs.push(url);
+                                  }
+                                });
+
+                                if (imgs.length > 0) {
+                                  // Add images to the current chapter
+                                  const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
+                                  onChapterImagesMapChange({
+                                    ...chapterImagesMap,
+                                    [currentIdx]: [...(chapterImagesMap[currentIdx] || []), ...imgs]
+                                  });
+                                }
+                              }
+                              // Clean up the temporary input
+                              document.body.removeChild(tempFileInput);
+                            };
+                            document.body.appendChild(tempFileInput);
+                            tempFileInput.click();
+                          }}
+                          sx={{
+                            position: 'relative',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            width: 80,
+                            aspectRatio: '1 / 1',
+                            border: '2px dashed #cbd5e1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            backgroundColor: 'rgba(249, 250, 251, 1)',
+                            '&:hover': {
+                              borderColor: '#5b76ff',
+                              backgroundColor: 'rgba(91,118,255,0.04)'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Box sx={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              mx: 'auto',
+                              mb: 0.5,
+                              background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </Box>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.6rem' }}>
+                              Add
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Chapter-specific Media with Delete Icons */}
+                        {(chapterImagesMap[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex] || []).map((src, idx) => (
+                          <Box key={`chapter-${idx}`} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: 80, aspectRatio: '1 / 1' }}>
+                            <Box component="img" src={src} alt={`chapter-media-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            {/* Delete Icon */}
+                            <IconButton
+                              onClick={() => {
+                                const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
+                                const currentImages = chapterImagesMap[currentIdx] || [];
+                                const updatedImages = currentImages.filter((_, imgIdx) => imgIdx !== idx);
+                                onChapterImagesMapChange({
+                                  ...chapterImagesMap,
+                                  [currentIdx]: updatedImages
+                                });
+                              }}
+                              sx={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                bgcolor: 'rgba(255,255,255,0.9)',
+                                width: 18,
+                                height: 18,
+                                '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+                                transition: 'all 0.2s ease'
+                              }}
+                              size="small"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                )}
+                {rightTabIndex === 1 && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1 }}>
+                    {/* Header Section */}
+                    <Box sx={{ textAlign: 'center', p: 2.5, pb: 1 }}>
+                      <Box sx={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 3,
+                        mx: 'auto',
+                        mb: 2,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 6px 24px rgba(102, 126, 234, 0.3)',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: 3,
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          filter: 'blur(6px)',
+                          opacity: 0.5,
+                          zIndex: -1
+                        }
+                      }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor" />
+                        </svg>
+                      </Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, fontSize: '1rem', color: '#2d3748' }}>
+                        AI Image Generator
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#718096', fontSize: '0.9rem' }}>
+                        Describe your vision and watch AI bring it to life
+                      </Typography>
+                    </Box>
+
+                    {/* Input Section - Takes available space */}
+                    <Box sx={{ flex: 1, px: 2.5, display: 'flex', flexDirection: 'column' }}>
+                      <TextField
+                        value={aiPrompt}
+                        onChange={(e) => onAIPromptChange(e.target.value)}
+                        multiline
+                        minRows={3}
+                        maxRows={4}
+                        placeholder="E.g., A majestic mountain landscape at sunset with golden clouds..."
+                        variant="outlined"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 3,
+                            backgroundColor: '#f7fafc',
+                            '& fieldset': {
+                              border: '2px solid #e2e8f0',
+                            },
+                            '&:hover fieldset': {
+                              border: '2px solid #cbd5e0',
+                            },
+                            '&.Mui-focused fieldset': {
+                              border: '2px solid #667eea',
+                              boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)'
+                            }
+                          },
+                          '& .MuiOutlinedInput-input': {
+                            padding: '14px',
+                            fontSize: '0.9rem',
+                            lineHeight: 1.4
+                          }
+                        }}
+                      />
+                    </Box>
+
+                    {/* Action Buttons - Sticky at absolute bottom */}
+                    <Box sx={{ p: 2.5, pt: 2, mt: 'auto' }}>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          onClick={() => onAIPromptChange('')}
+                          sx={{
+                            flex: 1,
+                            borderRadius: 3,
+                            py: 1.4,
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            borderColor: '#e2e8f0',
+                            color: '#4a5568',
+                            '&:hover': {
+                              borderColor: '#cbd5e0',
+                              backgroundColor: '#f7fafc'
+                            }
+                          }}
+                        >
+                          Clear
+                        </Button>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          onClick={onGenerateImages}
+                          disabled={imagesLoading || !aiPrompt.trim()}
+                          sx={{
+                            flex: 2,
+                            borderRadius: 3,
+                            py: 1.4,
+                            fontSize: '0.9rem',
+                            fontWeight: 700,
+                            textTransform: 'none',
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            boxShadow: '0 3px 12px rgba(102, 126, 234, 0.4)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.5)',
+                              transform: 'translateY(-1px)'
+                            },
+                            '&:disabled': {
+                              background: '#e2e8f0',
+                              color: '#a0aec0',
+                              boxShadow: 'none'
+                            },
+                            transition: 'all 0.2s ease'
+                          }}
+                          startIcon={imagesLoading ? (
+                            <CircularProgress size={16} sx={{ color: '#fff' }} />
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z" />
+                            </svg>
+                          )}
+                        >
+                          {imagesLoading ? 'Creating Magic...' : 'Generate Image'}
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Box>
+                )}
+
+              </Box>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
 
       {/* Narration Variations Picker */}
       <Dialog open={pickerOpen} onClose={() => onPickerOpen(false)} maxWidth="md" fullWidth>
