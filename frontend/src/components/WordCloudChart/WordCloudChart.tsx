@@ -15,9 +15,8 @@ interface IWordCloudChartProps {
 
 export function WordCloudChart(props: IWordCloudChartProps) {
     const [data, setData] = useState<WordData[]>([]);
-    const [max, setMax] = useState(100);
     const [selectedWord, setSelectedWord] = useState<string | null>(null);
-    
+
     // Use useRef to maintain stable references that never change
     const stableRefs = useRef({
         randomSeed: Math.random(),
@@ -34,9 +33,8 @@ export function WordCloudChart(props: IWordCloudChartProps) {
         if (props.data && props.data.length > 0) {
             const values = props.data.map((r) => r.value);
             const newMax = Math.max(...values);
-            setMax(newMax);
             setData(props.data);
-            
+
             // Update the stable references with new max value
             // Make biggest word 30px, smallest word 15px (ensuring all words are visible)
             stableRefs.current.fontSize = (word: any) => {
@@ -56,26 +54,47 @@ export function WordCloudChart(props: IWordCloudChartProps) {
     }, [props.data, selectedWord]);
 
     if (!data || data.length === 0) {
-        return <div>Loading word cloud...</div>;
+        return <div style={{
+            width: props.width || 500,
+            height: props.height || 450,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            fontSize: '14px',
+            color: '#666'
+        }}>Loading word cloud...</div>;
     }
 
     return (
-        <div style={{ width: props.width || 1000, height: props.height || 300, overflow: 'hidden', cursor: 'pointer' }}>
-            <WordCloud
-                width={props.width || 1000}
-                height={props.height || 300}
-                data={data}
-                fontSize={stableRefs.current.fontSize}
-                rotate={stableRefs.current.rotate}
-                padding={1}
-                spiral="archimedean"
-                random={() => stableRefs.current.randomSeed}
-                onWordClick={(e, d) => {
-                    stableRefs.current.handleWordClick(d);
-                }}
-                fill={stableRefs.current.fill}
-                // fontWeight="bold"
-            />
+        <div style={{
+            width: props.width || 500,
+            height: props.height || 450,
+            position: 'relative',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+        }}>
+            <div style={{
+                width: (props.width || 500) - 20,
+                height: (props.height || 450) - 20,
+            }}>
+                <WordCloud
+                    width={(props.width || 500) - 20}
+                    height={(props.height || 450) - 20}
+                    data={data}
+                    fontSize={stableRefs.current.fontSize}
+                    rotate={stableRefs.current.rotate}
+                    padding={5}
+                    spiral="archimedean"
+                    random={() => 0.5}
+                    onWordClick={(e, d) => {
+                        // console.log('Word clicked:', d);
+                        stableRefs.current.handleWordClick(d);
+                    }}
+                    fill={stableRefs.current.fill}
+                    fontWeight="bold"
+                />
+            </div>
         </div>
     );
 }

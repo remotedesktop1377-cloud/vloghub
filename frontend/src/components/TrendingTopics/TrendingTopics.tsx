@@ -640,7 +640,7 @@ const TrendingTopics: React.FC = () => {
             {/* Gemini Topics Grid */}
             <Box className={styles.gridColumn}>
               <Box className={styles.gridLabel}>
-                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2 }}>
+                <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
                   Gemini Topics
                 </Typography>
               </Box>
@@ -665,7 +665,7 @@ const TrendingTopics: React.FC = () => {
                           {topic.topic}
                         </Typography>
 
-                        <Box sx={{ display: 'flex', flexDirection:'column', mt: 1 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
                           <Chip
                             label={topic.category}
                             size="small"
@@ -690,7 +690,7 @@ const TrendingTopics: React.FC = () => {
             {/* Twitter Topics Grid */}
             <Box className={styles.gridColumn}>
               <Box className={styles.gridLabel}>
-                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2 }}>
+                <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
                   Twitter Topics
                 </Typography>
               </Box>
@@ -710,11 +710,11 @@ const TrendingTopics: React.FC = () => {
                         border: '1px solid red'
                       }}
                     >
-                      <CardContent sx={{ p: 2 }}>                        
+                      <CardContent sx={{ p: 2 }}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
                           {topic.topic}
                         </Typography>
-                        <Box sx={{ display: 'flex', flexDirection:'column', mt: 1 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
                           <Chip
                             label={topic.category}
                             size="small"
@@ -746,14 +746,14 @@ const TrendingTopics: React.FC = () => {
               {/* Left Column - Gemini Word Cloud */}
               <Box className={styles.wordCloudColumn}>
                 <Box className={styles.wordCloudLabel}>
-                  <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
+                  <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
                     Gemini Topics
                   </Typography>
                 </Box>
                 <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
                     width={500}
-                    height={400}
+                    height={450}
                     data={(() => {
                       console.log(`🟢 Total Gemini Topics: ${geminiTrendingTopics.length}`);
                       return geminiTrendingTopics.map(topic => {
@@ -771,17 +771,17 @@ const TrendingTopics: React.FC = () => {
               {/* Right Column - Twitter Word Cloud */}
               <Box className={styles.wordCloudColumn}>
                 <Box className={styles.wordCloudLabel}>
-                  <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
+                  <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
                     Twitter Topics
                   </Typography>
                 </Box>
                 <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
                     width={500}
-                    height={400}
+                    height={450}
                     data={trendingTopics
                       .map(topic => {
-                          return {
+                        return {
                           text: topic.topic,
                           value: topic.value || 1 // Higher value = larger word
                         };
