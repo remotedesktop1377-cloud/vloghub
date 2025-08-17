@@ -1,0 +1,113 @@
+/* TrendingTopics Component Styles */
+.trendingTopicsContainer {
+  padding: 1rem;
+}
+
+.wordCloudSection {
+  display: flex;
+  width: 100%;
+  min-height: 330px;
+}
+
+.wordCloudColumn {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+}
+
+.wordCloudLabel {
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.wordCloudContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  margin: 0.25rem;
+  padding: 0.25rem;
+  background-color: #fafafa;
+  transition: border-color 0.3s ease;
+}
+
+.wordCloudContainer:hover {
+  border-color: #1976d2;
+  background-color: #f5f5f5;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.errorAlert {
+  margin-bottom: 1.5rem;
+}
+
+.noTrendsContainer {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.noTrendsText {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.noTrendsSubtext {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.topicDetailsSection {
+  margin-top: 1rem;
+}
+
+.topicDetailsContent {
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+}
+
+.confirmationDialog {
+  z-index: 1400;
+}
+
+.narrationPickerDialog {
+  z-index: 1400;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .wordCloudSection {
+    flex-direction: column;
+  }
+  
+  .wordCloudColumn {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  
+  .wordCloudContainer {
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .trendingTopicsContainer {
+    padding: 0.5rem;
+  }
+  
+  .wordCloudContainer {
+    min-height: 150px;
+  }
+} 

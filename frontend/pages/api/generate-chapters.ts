@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenAI } from "@google/genai";
 import { AI_CONFIG } from '@/config/aiConfig';
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || '' });
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 const ScriptSchema = {
   type: "object",

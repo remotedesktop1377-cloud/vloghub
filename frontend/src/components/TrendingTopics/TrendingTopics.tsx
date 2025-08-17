@@ -7,6 +7,7 @@ import { durationOptions, DurationOption } from '../../data/mockDurationOptions'
 import { USE_HARDCODED, HARDCODED_TOPIC, HARDCODED_HYPOTHESIS, DEFAULT_AI_PROMPT } from '../../data/constants';
 import { apiService } from '../../utils/apiService';
 import { HelperFunctions } from '../../utils/helperFunctions';
+import styles from './TrendingTopics.module.css';
 import {
   Box,
   Typography,
@@ -135,6 +136,7 @@ const TrendingTopics: React.FC = () => {
   };
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [geminiTrendingTopics, setGeminiTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState('pakistan');
@@ -161,7 +163,7 @@ const TrendingTopics: React.FC = () => {
 
   // Confirm dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingEnhancedText, setPendingEnhancedText] = useState('');
+  const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
   const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
 
   // Right panel state (tabs and generated images)
@@ -253,6 +255,7 @@ const TrendingTopics: React.FC = () => {
   const fetchTrendingTopics = async (region: string) => {
     if (USE_HARDCODED) {
       setTrendingTopics(mockTrendingTopics);
+      setGeminiTrendingTopics(mockTrendingTopics);
       setLoading(false);
       return; // skip API in hardcoded mode
     }
@@ -260,18 +263,33 @@ const TrendingTopics: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const result = await apiService.getTrendingTopics(region);
+      // Fetch from both sources in parallel
+      const [twitterResult, geminiResult] = await Promise.all([
+        apiService.getTrendingTopics(region),
+        apiService.getGeminiTrendingTopics(region)
+      ]);
 
-      if (result.success && result.data) {
-        setTrendingTopics(result.data.data || []);
+      // Handle Twitter results
+      if (twitterResult.success && twitterResult.data) {
+        setTrendingTopics(twitterResult.data.data || []);
       } else {
-        console.warn('Trending API not ok, using mock data. Error:', result.error);
+        console.warn('Twitter API not ok, using mock data. Error:', twitterResult.error);
         setTrendingTopics(mockTrendingTopics);
-        setError(null);
       }
+
+      // Handle Gemini results
+      if (geminiResult.success && geminiResult.data) {
+        setGeminiTrendingTopics(geminiResult.data.data || []);
+      } else {
+        console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
+        setGeminiTrendingTopics(mockTrendingTopics);
+      }
+
+      setError(null);
     } catch (err) {
       console.error('Error fetching trending topics, using mock data:', err);
       setTrendingTopics(mockTrendingTopics);
+      setGeminiTrendingTopics(mockTrendingTopics);
       setError(null);
     } finally {
       setLoading(false);
@@ -289,6 +307,7 @@ const TrendingTopics: React.FC = () => {
       setSelectedTopicDetails(HARDCODED_TOPIC);
       setHypothesis(HARDCODED_HYPOTHESIS);
       setTrendingTopics(mockTrendingTopics);
+      setGeminiTrendingTopics(mockTrendingTopics);
       // Provide mock chapters so we don't call the backend
       setChapters(mockChapters);
       setChaptersGenerated(true);
@@ -396,23 +415,29 @@ const TrendingTopics: React.FC = () => {
   }, [selectedTopicDetails, selectedTopic, selectedRegion]);
 
   const handleEnhanceTopicDetails = async () => {
-    if (USE_HARDCODED) return;
     if (!selectedTopic || !selectedTopicDetails.trim()) return;
     try {
       setEnhancingDetails(true);
-      const result = await apiService.enhanceTopicDetails({
-        topic: selectedTopic.topic,
-        details: selectedTopicDetails,
-        region: selectedRegion,
-        targetWords: 160,
-      });
-
-      if (result.success && result.data?.enhancedText) {
+      if (USE_HARDCODED) {
+        const enhanced = `${selectedTopicDetails} (refined for clarity and impact)`;
         setPendingField('topicDetails');
-        setPendingEnhancedText(result.data.enhancedText);
+        setPendingEnhancedOptions([enhanced]);
         setConfirmOpen(true);
       } else {
-        console.error('Failed to enhance details', result.error);
+        const result = await apiService.enhanceTopicDetails({
+          topic: selectedTopic.topic,
+          details: selectedTopicDetails,
+          region: selectedRegion,
+          targetWords: 160,
+        });
+
+        if (result.success && result.data?.enhancedOptions && result.data.enhancedOptions.length > 0) {
+          setPendingField('topicDetails');
+          setPendingEnhancedOptions(result.data.enhancedOptions);
+          setConfirmOpen(true);
+        } else {
+          console.error('Failed to enhance details', result.error);
+        }
       }
     } catch (e) {
       console.error('Error enhancing details', e);
@@ -432,9 +457,9 @@ const TrendingTopics: React.FC = () => {
         region: selectedRegion
       });
 
-      if (result.success && result.data?.enhancedText) {
+      if (result.success && result.data?.enhancedOptions && result.data.enhancedOptions.length > 0) {
         setPendingField('hypothesis');
-        setPendingEnhancedText(result.data.enhancedText);
+        setPendingEnhancedOptions(result.data.enhancedOptions);
         setConfirmOpen(true);
       }
     } catch (e) {
@@ -444,20 +469,20 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-  const handleConfirmAccept = () => {
+  const handleConfirmAccept = (selectedOption: string) => {
     if (pendingField === 'topicDetails') {
-      setSelectedTopicDetails(pendingEnhancedText);
+      setSelectedTopicDetails(selectedOption);
     } else if (pendingField === 'hypothesis') {
-      setHypothesis(pendingEnhancedText);
+      setHypothesis(selectedOption);
     }
     setConfirmOpen(false);
-    setPendingEnhancedText('');
+    setPendingEnhancedOptions([]);
     setPendingField(null);
   };
 
   const handleConfirmReject = () => {
     setConfirmOpen(false);
-    setPendingEnhancedText('');
+    setPendingEnhancedOptions([]);
     setPendingField(null);
   };
 
@@ -542,26 +567,29 @@ const TrendingTopics: React.FC = () => {
   };
 
   const wordClickHandler = useCallback(async (w: any) => {
-    // find the topic which have same topic name
-    const topic = trendingTopics.find(t => t.topic === w.text);
+    // find the topic which have same topic name from both sources
+    const twitterTopic = trendingTopics.find(t => t.topic === w.text);
+    const geminiTopic = geminiTrendingTopics.find(t => t.topic === w.text);
 
-    if (topic) {
-      await handleTopicSelect(topic);
+    if (twitterTopic) {
+      await handleTopicSelect(twitterTopic);
+    } else if (geminiTopic) {
+      await handleTopicSelect(geminiTopic);
     } else {
       console.log('No matching topic found for:', w.text);
     }
-  }, [trendingTopics, handleTopicSelect]);
+  }, [trendingTopics, geminiTrendingTopics, handleTopicSelect]);
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+      <Box className={styles.loadingContainer}>
         <CircularProgress size={60} />
       </Box>
     );
   }
 
   return (
-    <Box>
+    <Box className={styles.trendingTopicsContainer}>
       {/* Loading Overlay for AI Operations */}
       <LoadingOverlay
         generatingChapters={generatingChapters}
@@ -583,7 +611,7 @@ const TrendingTopics: React.FC = () => {
       />
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" className={styles.errorAlert}>
           {error}
         </Alert>
       )}
@@ -606,30 +634,21 @@ const TrendingTopics: React.FC = () => {
           {trendingTopics.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No trends to display.</Typography>
           ) : (
-            <Box sx={{ display: 'flex', width: '100%', minHeight: 330 }}>
+            <Box className={styles.wordCloudSection}>
               {/* Left Column - 50% width */}
-              <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column' }}>
+              <Box className={styles.wordCloudColumn}>
                 {/* Left Label */}
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
+                <Box className={styles.wordCloudLabel}>
                   <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
                     Gemini Topics
                   </Typography>
                 </Box>
                 {/* Left Word Cloud */}
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  flex: 1,
-                  border: '2px dashed #ccc',
-                  borderRadius: 1,
-                  margin: 1,
-                  padding: 1
-                }}>
+                <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
                     width={330}
                     height={230}
-                    data={trendingTopics
+                    data={geminiTrendingTopics
                       .map(topic => ({
                         text: topic.topic,
                         value: topic.postCountValue || 1
@@ -639,27 +658,16 @@ const TrendingTopics: React.FC = () => {
                 </Box>
               </Box>
 
-
-
               {/* Right Column - 50% width */}
-              <Box sx={{ width: '50%', display: 'flex', flexDirection: 'column' }}>
+              <Box className={styles.wordCloudColumn}>
                 {/* Right Label */}
-                <Box sx={{ textAlign: 'center', mb: 2 }}>
+                <Box className={styles.wordCloudLabel}>
                   <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
                     Twitter Topics
                   </Typography>
                 </Box>
                 {/* Right Word Cloud */}
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  flex: 1,
-                  border: '2px dashed #ccc',
-                  borderRadius: 1,
-                  margin: 1,
-                  padding: 1
-                }}>
+                <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
                     width={330}
                     height={230}
@@ -678,11 +686,11 @@ const TrendingTopics: React.FC = () => {
       )}
 
       {trendingTopics.length === 0 && !loading && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+        <Box className={styles.noTrendsContainer}>
+          <Typography variant="body1" color="text.secondary" className={styles.noTrendsText}>
             No trending topics found for {regions.find(r => r.value === selectedRegion)?.label}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" className={styles.noTrendsSubtext}>
             Try selecting a different region or refreshing the data.
           </Typography>
         </Box>
@@ -690,10 +698,10 @@ const TrendingTopics: React.FC = () => {
 
       {/* Topic Details Section */}
       {selectedTopic && (
-        <Box sx={{ mt: 2 }}>
+        <Box className={styles.topicDetailsSection}>
           <SelectedTopicHeader selectedTopic={selectedTopic} />
 
-          <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+          <Box className={styles.topicDetailsContent}>
 
             <TopicDetailsSection
               selectedTopic={selectedTopic}
@@ -791,7 +799,7 @@ const TrendingTopics: React.FC = () => {
           onReject={handleConfirmReject}
           pendingField={pendingField}
           originalText={pendingField === 'topicDetails' ? selectedTopicDetails : hypothesis}
-          enhancedText={pendingEnhancedText}
+          enhancedOptions={pendingEnhancedOptions}
         />
       )}
 

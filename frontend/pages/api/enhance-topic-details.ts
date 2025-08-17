@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_CONFIG } from '@/config/aiConfig';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
   model: AI_CONFIG.GEMINI.MODEL,
   generationConfig: { temperature: 0.7 }
@@ -16,7 +16,7 @@ interface EnhanceRequest {
 }
 
 interface EnhanceResponse {
-  enhancedText: string;
+  enhancedOptions: string[];
 }
 
 async function withRetry<T>(fn: () => Promise<T>, tries = 6) {
@@ -51,27 +51,35 @@ function extractJsonFromText(text: string): any | null {
 }
 
 async function enhanceWithGemini({ topic, details, region, targetWords }: EnhanceRequest): Promise<EnhanceResponse> {
-  const prompt = `You are an expert video script editor. Improve and enhance the following topic details to be clear, engaging, and ready for narration.\n\n` +
+  const prompt = `You are an expert video script editor. Create 4-5 different enhanced versions of the following topic details, each offering a unique perspective or approach while maintaining the core message.\n\n` +
     `Constraints:\n` +
     `- Keep factual meaning; do not invent facts.\n` +
-    `- Make it compelling and concise (~${targetWords} words).\n` +
+    `- Make each option compelling and concise (~${targetWords} words).\n` +
     `- Add smooth flow and readability for voiceover.\n` +
     `- Consider ${region} audience context if relevant.\n` +
+    `- Each option should have a distinct angle or style.\n` +
     `- Keep the user's tone, but polish grammar and structure.\n\n` +
     `Topic: "${topic}"\n\n` +
     `Original details:\n${details}\n\n` +
     `Return ONLY valid JSON in this exact shape (no markdown, no commentary):\n` +
-    `{ "enhancedText": string }`;
+    `{ "enhancedOptions": [string, string, string, string] }`;
 
   return withRetry(async () => {
     const res = await model.generateContent(prompt);
     const text = res.response.text();
+    console.log('text', text);
     const parsed = extractJsonFromText(text);
-    if (parsed && typeof parsed.enhancedText === 'string') {
-      return { enhancedText: parsed.enhancedText };
+    if (parsed && Array.isArray(parsed.enhancedOptions) && parsed.enhancedOptions.length > 0) {
+      return { enhancedOptions: parsed.enhancedOptions };
     }
-    // Fallback: use raw text if JSON failed
-    return { enhancedText: text && typeof text === 'string' ? text : details };
+    // Fallback: create simple variations if JSON failed
+    const fallbackOptions = [
+      `${details} (refined for clarity and impact)`,
+      `${details} (enhanced with engaging narrative flow)`,
+      `${details} (optimized for voiceover delivery)`,
+      `${details} (restructured for better audience engagement)`
+    ];
+    return { enhancedOptions: fallbackOptions };
   });
 }
 

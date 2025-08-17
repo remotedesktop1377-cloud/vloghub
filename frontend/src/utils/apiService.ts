@@ -291,6 +291,9 @@ export const apiService = {
   // Trending Topics
   getTrendingTopics: (region: string) => 
     ApiService.get(API_ENDPOINTS.TRENDING_TOPICS, { region }),
+  
+  getGeminiTrendingTopics: (region: string) => 
+    ApiService.get(API_ENDPOINTS.GEMINI_TRENDING_TOPICS, { region }),
 
   // Topic Suggestions
   getTopicSuggestions: (body: { topic: string; region: string }) =>

@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_CONFIG } from '@/config/aiConfig';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
   model: AI_CONFIG.GEMINI.MODEL,
   generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }
@@ -16,7 +16,7 @@ interface EnhanceHypothesisRequest {
 }
 
 interface EnhanceHypothesisResponse {
-  enhancedText: string;
+  enhancedOptions: string[];
 }
 
 async function withRetry<T>(fn: () => Promise<T>, tries = 6) {
@@ -41,21 +41,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const { topic, hypothesis, details, region } = req.body as EnhanceHypothesisRequest;
     if (!topic || !hypothesis) return res.status(400).json({ error: 'Topic and hypothesis are required' });
 
-    const prompt = `You are an expert script editor. Improve the following hypothesis to be clear, testable, and compelling in one sentence.\n` +
+    const prompt = `You are an expert script editor. Create 4-5 different improved versions of the following hypothesis, each offering a unique perspective or approach while maintaining the core message.\n` +
       `- Keep original meaning, adjust for clarity and strength.\n` +
       `- Avoid buzzwords, keep it specific.\n` +
-      `- Consider audience in ${region}.\n\n` +
+      `- Consider audience in ${region}.\n` +
+      `- Each option should have a distinct angle or style.\n\n` +
       `Topic: "${topic}"\n` +
       (details ? `Details: ${details}\n` : '') +
       `Original hypothesis: ${hypothesis}\n\n` +
-      `Return just the improved one-line hypothesis (no JSON, no extra text).`;
+      `Return ONLY valid JSON in this exact shape (no markdown, no commentary):\n` +
+      `{ "enhancedOptions": [string, string, string, string] }`;
 
     const result = await withRetry(async () => {
       const resGen = await model.generateContent(prompt);
-      return resGen.response.text().trim();
+      // console.log('resGen', resGen);
+      const text = resGen.response.text();
+      const parsed = JSON.parse(text);
+      if (parsed && Array.isArray(parsed.enhancedOptions) && parsed.enhancedOptions.length > 0) {
+        return parsed.enhancedOptions;
+      }
+      // Fallback: create simple variations if JSON failed
+      return [
+        `${hypothesis} (refined for clarity and impact)`,
+        `${hypothesis} (enhanced with engaging narrative flow)`,
+        `${hypothesis} (optimized for voiceover delivery)`,
+        `${hypothesis} (restructured for better audience engagement)`
+      ];
     });
 
-    return res.status(200).json({ enhancedText: result });
+    return res.status(200).json({ enhancedOptions: result });
   } catch (e) {
     console.error('Error enhancing hypothesis:', e);
     return res.status(500).json({ error: 'Failed to enhance hypothesis' });

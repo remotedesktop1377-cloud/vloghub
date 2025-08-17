@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AI_CONFIG } from '../../src/config/aiConfig';
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
   model: AI_CONFIG.GEMINI.MODEL,
   generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }

@@ -11,9 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     try {
-        const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            res.status(500).json({ error: 'Missing GOOGLE_API_KEY' });
+            res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
             return;
         }
 
