@@ -74,7 +74,7 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                     stableRefs.current.handleWordClick(d);
                 }}
                 fill={stableRefs.current.fill}
-                fontWeight="bold"
+                // fontWeight="bold"
             />
         </div>
     );

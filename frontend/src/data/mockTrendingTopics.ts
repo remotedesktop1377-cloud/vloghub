@@ -4,6 +4,9 @@ export interface TrendingTopic {
   topic: string;
   value: number;
   timestamp: string;
+  description?: string;
+  source_reference?: string;
+  engagement_count?: number;
 }
 
 export const mockTrendingTopics: TrendingTopic[] = [
@@ -12,21 +15,30 @@ export const mockTrendingTopics: TrendingTopic[] = [
     "category": "#PakistanHameshaZindabad",
     "topic": "Only on X · Trending",
     "value": 20,
-    "timestamp": "2025-08-13T13:30:29.306Z"
+    "timestamp": "2025-08-13T13:30:29.306Z",
+    "description": "Popular patriotic hashtag trending across Pakistani social media celebrating national pride and unity",
+    "source_reference": "Twitter, Instagram, TikTok",
+    "engagement_count": 1850000
   },
   {
     "id": "2",
     "category": "#14AugustBalochistanKeSang",
     "topic": "#14AugustBalochistanKeSang",
     "value": 19,
-    "timestamp": "2025-08-13T13:30:29.306Z"
+    "timestamp": "2025-08-13T13:30:29.306Z",
+    "description": "Balochistan-specific Independence Day celebrations highlighting the province's culture and heritage",
+    "source_reference": "Twitter, Regional Media",
+    "engagement_count": 1650000
   },
   {
     "id": "3",
     "category": "#آزادی_بھی_قید_میں_ہے",
     "topic": "#آزادی_بھی_قید_میں_ہے",
     "value": 18,
-    "timestamp": "2025-08-13T13:30:29.306Z"
+    "timestamp": "2025-08-13T13:30:29.306Z",
+    "description": "Political discourse about freedom and current state of democracy in Pakistan",
+    "source_reference": "Twitter, Political Forums",
+    "engagement_count": 1420000
   },
   {
     "id": "4",

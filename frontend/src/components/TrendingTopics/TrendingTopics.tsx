@@ -757,12 +757,6 @@ const TrendingTopics: React.FC = () => {
                     data={(() => {
                       console.log(`🟢 Total Gemini Topics: ${geminiTrendingTopics.length}`);
                       return geminiTrendingTopics.map(topic => {
-                        console.log('🟢 Gemini Cloud Data:', {
-                          topic: topic.topic,
-                          value: topic.value,
-                          text: topic.topic,
-                          cloudValue: topic.value || 1
-                        });
                         return {
                           text: topic.topic,
                           value: topic.value || 1 // Higher value = larger word
@@ -787,15 +781,9 @@ const TrendingTopics: React.FC = () => {
                     height={400}
                     data={trendingTopics
                       .map(topic => {
-                        const cloudValue = topic.value || 1;
-                        console.log('🔵 Twitter Cloud Data:', {
-                          topic: topic.topic,
-                          value: topic.value,
-                          cloudValue: cloudValue
-                        });
-                        return {
+                          return {
                           text: topic.topic,
-                          value: cloudValue // Higher value = larger word
+                          value: topic.value || 1 // Higher value = larger word
                         };
                       })}
                     handleWordClick={wordClickHandler}

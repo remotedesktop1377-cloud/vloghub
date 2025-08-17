@@ -28,11 +28,16 @@ const fetchTwitterTrendingTopics = async (region: string): Promise<TrendingTopic
       throw new Error('Twitter API request failed');
     } else {
       const data = await response.json();
+      console.log('🐦 Twitter API Response:', {
+        totalTopics: data.data?.length || 0,
+        sampleTopic: data.data?.[0],
+      });
       // Transform Twitter API response to match our TrendingTopic interface
       const transformedData = data.data.map((tweet: any, index: number) => ({
-        category: tweet.category || '',
-        topic: tweet.text,
-        value: 21 - (index + 1), // Higher index = larger value = bigger word in cloud
+        id: `twitter-${index + 1}`,
+        category: tweet.category || tweet.hashtag || '#Trending',
+        topic: tweet.text || tweet.name || 'Unknown Topic',
+        value: tweet.tweet_volume || tweet.post_count || (1800000 - (index * 90000)), // Use actual engagement metrics
         timestamp: new Date().toISOString(),
       }));
       
@@ -43,8 +48,11 @@ const fetchTwitterTrendingTopics = async (region: string): Promise<TrendingTopic
 
   } catch (error) {
     console.error('Error fetching Twitter trending topics:', error);
-    // Fallback to mock data
-    return mockTrendingTopics;
+    // Fallback to mock data with proper ID assignment
+    return mockTrendingTopics.map((topic, index) => ({
+      ...topic,
+      id: `twitter-${index + 1}`, // Ensure proper Twitter IDs
+    }));
   }
 };
 

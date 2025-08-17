@@ -3,10 +3,14 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_CONFIG } from '@/config/aiConfig';
 
 interface GeminiTrendingTopic {
+  id: string;
   category: string;
   topic: string;
   value: number;
   timestamp: string;
+  description?: string;
+  source_reference?: string;
+  engagement_count?: number;
 }
 
 interface GeminiTrendingTopicsResponse {
@@ -27,16 +31,20 @@ const fetchGeminiTrendingTopics = async (region: string): Promise<GeminiTrending
 
     const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL });
 
-    const prompt = `Generate the top 20 trending topics for ${region} as of today. 
+    const prompt = `Generate the top 20 trending topics for ${region} as of today with realistic engagement metrics. 
     
     Focus on current events, social media trends, news, entertainment, sports, technology, and local interests that are popular in ${region}.
     
     Return the response as a JSON array with exactly 20 items, each containing:
     - topic: the trending topic name (keep it concise, 2-5 words)
     - category: one of [News, Entertainment, Sports, Technology, Politics, Social, Business, Education, Health, Culture]
+    - engagement_count: realistic number representing posts/mentions/views (range: 50,000 to 2,000,000)
+    - source_reference: a brief source like "Twitter", "News Media", "YouTube", "TikTok", etc.
     - description: brief explanation of why it's trending
     
-    Format: [{"topic": "topic name", "category": "category", "description": "brief description"}]`;
+    Sort by engagement_count (highest first). Make the engagement numbers realistic and varied.
+    
+    Format: [{"topic": "topic name", "category": "category", "engagement_count": 150000, "source_reference": "Twitter", "description": "brief description"}]`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -48,14 +56,21 @@ const fetchGeminiTrendingTopics = async (region: string): Promise<GeminiTrending
     }
     
     const parsedData = JSON.parse(jsonMatch[0]);
-    console.log(parsedData.length)
+    console.log('📊 Gemini API Response:', {
+      totalTopics: parsedData.length,
+      sampleTopic: parsedData[0],
+    });
 
     // Transform to match our interface
     const transformedData = parsedData.map((item: any, index: number) => ({
+      id: `gemini-${index + 1}`,
       category: item.category || 'Social',
       topic: item.topic || 'Unknown Topic',
-      value: 21 - (index + 1), // Higher index = larger value = bigger word in cloud
+      value: item.engagement_count || (2000000 - (index * 100000)), // Use actual engagement count
       timestamp: new Date().toISOString(),
+      description: item.description || undefined,
+      source_reference: item.source_reference || undefined,
+      engagement_count: item.engagement_count || undefined,
     }));
     
     // Sort by value (higher = first)
@@ -64,126 +79,155 @@ const fetchGeminiTrendingTopics = async (region: string): Promise<GeminiTrending
   } catch (error) {
     console.error('Error fetching Gemini trending topics:', error);
     
-    // Fallback data for Pakistan
+    // Fallback data for Pakistan with realistic engagement metrics
     const fallbackTopics: GeminiTrendingTopic[] = [
       {
+        id: 'gemini-1',
         category: 'Politics',
         topic: 'Imran Khan Cases',
-        value: 20,
+        value: 1850000,
         timestamp: new Date().toISOString(),
+        description: 'Legal proceedings and court hearings related to former PM Imran Khan continue to dominate headlines',
+        source_reference: 'News Media, Twitter',
+        engagement_count: 1850000,
       },
       {
+        id: 'gemini-2',
         category: 'Sports',
         topic: 'T20 World Cup 2024',
-        value: 19,
+        value: 1650000,
         timestamp: new Date().toISOString(),
+        description: 'Cricket fans discussing Pakistan team performance and upcoming matches in the T20 World Cup',
+        source_reference: 'Sports Media, Twitter, YouTube',
+        engagement_count: 1650000,
       },
       {
+        id: 'gemini-3',
         category: 'Politics',
         topic: 'Federal Budget FY25',
-        value: 18,
+        value: 1420000,
         timestamp: new Date().toISOString(),
+        description: 'Public discourse on the newly announced federal budget and its impact on economy and taxation',
+        source_reference: 'News Media, Economic Forums',
+        engagement_count: 1420000,
       },
       {
+        id: 'gemini-4',
         category: 'News',
         topic: 'Heatwave & Loadshedding',
-        value: 17,
+        value: 1280000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-5',
         category: 'Business',
         topic: 'IMF Loan Negotiations',
-        value: 16,
+        value: 1150000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-6',
         category: 'Culture',
         topic: 'Eid-ul-Adha Shopping',
-        value: 15,
+        value: 980000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-7',
         category: 'News',
         topic: 'Petrol Price Increase',
-        value: 14,
+        value: 850000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-8',
         category: 'Entertainment',
         topic: 'Pakistani Dramas',
-        value: 13,
+        value: 720000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-9',
         category: 'Technology',
         topic: 'AI Adoption Pakistan',
-        value: 12,
+        value: 650000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-10',
         category: 'Social',
         topic: 'Social Media Challenges',
-        value: 11,
+        value: 580000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-11',
         category: 'Education',
         topic: 'Online Learning',
-        value: 10,
+        value: 520000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-12',
         category: 'Health',
         topic: 'Mental Health',
-        value: 9,
+        value: 450000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-13',
         category: 'Business',
         topic: 'Startup Ecosystem',
-        value: 8,
+        value: 380000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-14',
         category: 'Technology',
         topic: 'Digital Pakistan',
-        value: 7,
+        value: 320000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-15',
         category: 'Entertainment',
         topic: 'Bollywood News',
-        value: 6,
+        value: 280000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-16',
         category: 'Sports',
         topic: 'Cricket Updates',
-        value: 5,
+        value: 220000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-17',
         category: 'Social',
         topic: 'Climate Change',
-        value: 4,
+        value: 180000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-18',
         category: 'Culture',
         topic: 'Pakistani Cuisine',
-        value: 3,
+        value: 150000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-19',
         category: 'News',
         topic: 'Regional Updates',
-        value: 2,
+        value: 120000,
         timestamp: new Date().toISOString(),
       },
       {
+        id: 'gemini-20',
         category: 'Health',
         topic: 'Wellness Trends',
-        value: 1,
+        value: 95000,
         timestamp: new Date().toISOString(),
       },
     ];

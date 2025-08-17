@@ -54,18 +54,18 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
     <>
       <Paper sx={{ p: 1.5, opacity: selectedTopic ? 1 : 0.6 }} data-section="hypothesis">
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-          <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.7rem', fontWeight: 600 }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
             Your Hypothesis
           </Typography>
         </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.65rem', display: 'block' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.75rem', display: 'block' }}>
           Describe your hypothesis, angle, or unique perspective on this topic. This will help generate relevant video content.
         </Typography>
 
         {/* Hypothesis Suggestions */}
         <Box sx={{ mb: 2, opacity: USE_HARDCODED ? 0.6 : 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
               💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.topic}":
             </Typography>
             <Button
@@ -93,8 +93,8 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                   }}
                   sx={{ 
                     cursor: 'pointer', 
-                    fontSize: '0.55rem',
-                    height: 20,
+                    fontSize: '0.65rem',
+                    height: 22,
                     '&:hover': { 
                       backgroundColor: 'rgba(29, 161, 242, 0.1)', 
                       borderColor: '#1DA1F2' 
@@ -107,7 +107,7 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
             ) : loadingHypothesisSuggestions ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <CircularProgress size={12} />
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                   Generating hypothesis suggestions...
                 </Typography>
               </Box>
@@ -123,8 +123,8 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                   }}
                   sx={{ 
                     cursor: 'pointer', 
-                    fontSize: '0.55rem',
-                    height: 20,
+                    fontSize: '0.65rem',
+                    height: 22,
                     '&:hover': { 
                       backgroundColor: 'rgba(29, 161, 242, 0.1)', 
                       borderColor: '#1DA1F2' 
@@ -145,7 +145,7 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
           value={hypothesis}
           disabled={!selectedTopic}
           onChange={(e) => onHypothesisChange(e.target.value)}
-          sx={{ mb: 1.5, '& .MuiInputBase-input': { fontSize: '0.7rem' } }}
+          sx={{ mb: 1.5, '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
           size="small"
         />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
