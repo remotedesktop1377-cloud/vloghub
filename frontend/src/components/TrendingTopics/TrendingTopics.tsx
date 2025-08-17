@@ -67,6 +67,55 @@ import NarrationPickerDialog from './NarrationPickerDialog';
 
 
 const TrendingTopics: React.FC = () => {
+
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [geminiTrendingTopics, setGeminiTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRegion, setSelectedRegion] = useState('pakistan');
+
+  // Topic Details State
+  const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
+  const [selectedTopicDetails, setSelectedTopicDetails] = useState<string>('');
+  const [hypothesis, setHypothesis] = useState('');
+  const [duration, setDuration] = useState('1');
+  const [generatingChapters, setGeneratingChapters] = useState(false);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [chaptersGenerated, setChaptersGenerated] = useState(false);
+  const [editingChapter, setEditingChapter] = useState<number | null>(null);
+  const [editHeading, setEditHeading] = useState('');
+  const [editNarration, setEditNarration] = useState('');
+
+  // Suggestions/Enhance states
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
+  const [enhancingDetails, setEnhancingDetails] = useState(false);
+  const [hypothesisSuggestions, setHypothesisSuggestions] = useState<string[]>([]);
+  const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
+  const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
+
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
+  const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
+
+  // Right panel state (tabs and generated images)
+  const [rightTabIndex, setRightTabIndex] = useState(0);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+
+  const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
+  const [chapterImagesMap, setChapterImagesMap] = useState<Record<number, string[]>>({});
+  const [aiImagesEnabled, setAiImagesEnabled] = useState<boolean>(false);
+  const [pickerOpen, setPickerOpen] = useState<boolean>(false);
+  const [pickerChapterIndex, setPickerChapterIndex] = useState<number | null>(null);
+  const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
+  const [pickerLoading, setPickerLoading] = useState<boolean>(false);
+  const [aiPrompt, setAiPrompt] = useState<string>(DEFAULT_AI_PROMPT);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isDraggingUpload, setIsDraggingUpload] = useState<boolean>(false);
+  const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
+
   // Utility function for smooth scrolling to sections
   const scrollToSection = (sectionName: string) => {
 
@@ -134,54 +183,6 @@ const TrendingTopics: React.FC = () => {
       }
     }
   };
-
-  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
-  const [geminiTrendingTopics, setGeminiTrendingTopics] = useState<TrendingTopic[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState('pakistan');
-
-  // Topic Details State
-  const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
-  const [selectedTopicDetails, setSelectedTopicDetails] = useState<string>('');
-  const [hypothesis, setHypothesis] = useState('');
-  const [duration, setDuration] = useState('1');
-  const [generatingChapters, setGeneratingChapters] = useState(false);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [chaptersGenerated, setChaptersGenerated] = useState(false);
-  const [editingChapter, setEditingChapter] = useState<number | null>(null);
-  const [editHeading, setEditHeading] = useState('');
-  const [editNarration, setEditNarration] = useState('');
-
-  // Suggestions/Enhance states
-  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
-  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
-  const [enhancingDetails, setEnhancingDetails] = useState(false);
-  const [hypothesisSuggestions, setHypothesisSuggestions] = useState<string[]>([]);
-  const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
-  const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
-
-  // Confirm dialog state
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
-  const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
-
-  // Right panel state (tabs and generated images)
-  const [rightTabIndex, setRightTabIndex] = useState(0);
-  const [imagesLoading, setImagesLoading] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-
-  const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
-  const [chapterImagesMap, setChapterImagesMap] = useState<Record<number, string[]>>({});
-  const [aiImagesEnabled, setAiImagesEnabled] = useState<boolean>(false);
-  const [pickerOpen, setPickerOpen] = useState<boolean>(false);
-  const [pickerChapterIndex, setPickerChapterIndex] = useState<number | null>(null);
-  const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
-  const [pickerLoading, setPickerLoading] = useState<boolean>(false);
-  const [aiPrompt, setAiPrompt] = useState<string>(DEFAULT_AI_PROMPT);
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [isDraggingUpload, setIsDraggingUpload] = useState<boolean>(false);
-  const [trendView, setTrendView] = useState<'cloud' | 'list'>('cloud');
 
   const handleUploadFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -271,7 +272,15 @@ const TrendingTopics: React.FC = () => {
 
       // Handle Twitter results
       if (twitterResult.success && twitterResult.data) {
-        setTrendingTopics(twitterResult.data.data || []);
+        const twitterData = twitterResult.data.data || [];
+        console.log('🔵 Twitter API Response Data:', twitterData);
+        console.log('🔵 Twitter Topics with Values:', twitterData.map((t: any) => ({
+          topic: t.topic,
+          value: t.value
+        })));
+        // Sort by value (higher = first)
+        const sortedTwitterData = twitterData.sort((a: any, b: any) => b.value - a.value);
+        setTrendingTopics(sortedTwitterData);
       } else {
         console.warn('Twitter API not ok, using mock data. Error:', twitterResult.error);
         setTrendingTopics(mockTrendingTopics);
@@ -279,7 +288,15 @@ const TrendingTopics: React.FC = () => {
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
-        setGeminiTrendingTopics(geminiResult.data.data || []);
+        const geminiData = geminiResult.data.data || [];
+        console.log('🟢 Gemini API Response Data:', geminiData);
+        console.log('🟢 Gemini Topics with Values:', geminiData.map((t: any) => ({
+          topic: t.topic,
+          value: t.value
+        })));
+        // Sort by value (higher = first)
+        const sortedGeminiData = geminiData.sort((a: any, b: any) => b.value - a.value);
+        setGeminiTrendingTopics(sortedGeminiData);
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
         setGeminiTrendingTopics(mockTrendingTopics);
@@ -303,7 +320,7 @@ const TrendingTopics: React.FC = () => {
   // Initialize hardcoded topic/hypothesis if flag enabled
   useEffect(() => {
     if (USE_HARDCODED) {
-      setSelectedTopic({ id: 'hardcoded', ranking: 0, category: 'Hardcoded', topic: HARDCODED_TOPIC, postCount: '', postCountValue: null, timestamp: new Date().toISOString() });
+      setSelectedTopic({ id: 'hardcoded', category: 'Hardcoded', topic: HARDCODED_TOPIC, value: 20, timestamp: new Date().toISOString() });
       setSelectedTopicDetails(HARDCODED_TOPIC);
       setHypothesis(HARDCODED_HYPOTHESIS);
       setTrendingTopics(mockTrendingTopics);
@@ -616,66 +633,171 @@ const TrendingTopics: React.FC = () => {
         </Alert>
       )}
 
-      {trendView === 'list' ? (
-        <TrendingTopicsList
-          trendingTopics={trendingTopics}
-          selectedRegion={selectedRegion}
-          regions={regions}
-          onTopicSelect={handleTopicSelect}
-          onExploreTopic={(topic) => {
-            // Scroll to topic details section immediately
-            scrollToSection('topic-details');
-            // Then handle topic selection
-            handleTopicSelect(topic);
-          }}
-        />
+      {trendView === 'grid' ? (
+        /* Grid View - Two grids side by side */
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Box className={styles.gridSection}>
+            {/* Gemini Topics Grid */}
+            <Box className={styles.gridColumn}>
+              <Box className={styles.gridLabel}>
+                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2 }}>
+                  Gemini Topics
+                </Typography>
+              </Box>
+              <Grid container spacing={2}>
+                {geminiTrendingTopics.map((topic, index) => (
+                  <Grid item xs={12} sm={6} md={5} lg={4} key={`gemini-${index}`}>
+                    <Card
+                      className={styles.topicCard}
+                      onClick={() => handleTopicSelect(topic)}
+                      sx={{
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: 3
+                        },
+                        border: '1px solid blue'
+                      }}
+                    >
+                      <CardContent sx={{ p: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                          {topic.topic}
+                        </Typography>
+
+                        <Box sx={{ display: 'flex', flexDirection:'column', mt: 1 }}>
+                          <Chip
+                            label={topic.category}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', mb: 1, alignSelf: 'flex-start' }}
+                          />
+                          <Chip
+                            label={`${topic.value} posts`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', width: 'fit-content', pl: 1, pr: 1 }}
+                          />
+
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+
+            {/* Twitter Topics Grid */}
+            <Box className={styles.gridColumn}>
+              <Box className={styles.gridLabel}>
+                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600, mb: 2 }}>
+                  Twitter Topics
+                </Typography>
+              </Box>
+              <Grid container spacing={2}>
+                {trendingTopics.map((topic, index) => (
+                  <Grid item xs={12} sm={6} md={5} lg={4} key={`twitter-${index}`}>
+                    <Card
+                      className={styles.topicCard}
+                      onClick={() => handleTopicSelect(topic)}
+                      sx={{
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: 3
+                        },
+                        border: '1px solid red'
+                      }}
+                    >
+                      <CardContent sx={{ p: 2 }}>                        
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                          {topic.topic}
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection:'column', mt: 1 }}>
+                          <Chip
+                            label={topic.category}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', mb: 1, alignSelf: 'flex-start' }}
+                          />
+                          <Chip
+                            label={`${topic.value} posts`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem', width: 'fit-content', pl: 1, pr: 1 }}
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </Box>
+        </Paper>
       ) : (
+        /* Cloud View - Two word clouds side by side */
         <Paper sx={{ p: 2, mb: 2 }}>
           {trendingTopics.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No trends to display.</Typography>
           ) : (
             <Box className={styles.wordCloudSection}>
-              {/* Left Column - 50% width */}
+              {/* Left Column - Gemini Word Cloud */}
               <Box className={styles.wordCloudColumn}>
-                {/* Left Label */}
                 <Box className={styles.wordCloudLabel}>
                   <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
                     Gemini Topics
                   </Typography>
                 </Box>
-                {/* Left Word Cloud */}
                 <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
-                    width={330}
-                    height={230}
-                    data={geminiTrendingTopics
-                      .map(topic => ({
-                        text: topic.topic,
-                        value: topic.postCountValue || 1
-                      }))}
+                    width={500}
+                    height={400}
+                    data={(() => {
+                      console.log(`🟢 Total Gemini Topics: ${geminiTrendingTopics.length}`);
+                      return geminiTrendingTopics.map(topic => {
+                        console.log('🟢 Gemini Cloud Data:', {
+                          topic: topic.topic,
+                          value: topic.value,
+                          text: topic.topic,
+                          cloudValue: topic.value || 1
+                        });
+                        return {
+                          text: topic.topic,
+                          value: topic.value || 1 // Higher value = larger word
+                        };
+                      });
+                    })()}
                     handleWordClick={wordClickHandler}
                   />
                 </Box>
               </Box>
 
-              {/* Right Column - 50% width */}
+              {/* Right Column - Twitter Word Cloud */}
               <Box className={styles.wordCloudColumn}>
-                {/* Right Label */}
                 <Box className={styles.wordCloudLabel}>
                   <Typography variant="subtitle2" sx={{ fontSize: '1rem', }}>
                     Twitter Topics
                   </Typography>
                 </Box>
-                {/* Right Word Cloud */}
                 <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
-                    width={330}
-                    height={230}
+                    width={500}
+                    height={400}
                     data={trendingTopics
-                      .map(topic => ({
-                        text: topic.topic,
-                        value: topic.postCountValue || 1
-                      }))}
+                      .map(topic => {
+                        const cloudValue = topic.value || 1;
+                        console.log('🔵 Twitter Cloud Data:', {
+                          topic: topic.topic,
+                          value: topic.value,
+                          cloudValue: cloudValue
+                        });
+                        return {
+                          text: topic.topic,
+                          value: cloudValue // Higher value = larger word
+                        };
+                      })}
                     handleWordClick={wordClickHandler}
                   />
                 </Box>

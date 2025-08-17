@@ -38,7 +38,12 @@ export function WordCloudChart(props: IWordCloudChartProps) {
             setData(props.data);
             
             // Update the stable references with new max value
-            stableRefs.current.fontSize = (word: any) => Math.max(10, (50 * word.value) / newMax);
+            // Make biggest word 30px, smallest word 15px (ensuring all words are visible)
+            stableRefs.current.fontSize = (word: any) => {
+                const calculatedSize = Math.max(15, (15 * word.value) / newMax + 15);
+                console.log(`🔤 Word "${word.text}" (value: ${word.value}) → fontSize: ${calculatedSize}px`);
+                return calculatedSize;
+            };
             stableRefs.current.fill = (d: any, i: any) => {
                 // Highlight selected word with different color
                 if (selectedWord === d.text) {
@@ -62,8 +67,8 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                 data={data}
                 fontSize={stableRefs.current.fontSize}
                 rotate={stableRefs.current.rotate}
-                padding={2}
-                spiral="rectangular"
+                padding={1}
+                spiral="archimedean"
                 random={() => stableRefs.current.randomSeed}
                 onWordClick={(e, d) => {
                     stableRefs.current.handleWordClick(d);

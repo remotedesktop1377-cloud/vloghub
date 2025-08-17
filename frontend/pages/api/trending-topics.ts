@@ -29,14 +29,15 @@ const fetchTwitterTrendingTopics = async (region: string): Promise<TrendingTopic
     } else {
       const data = await response.json();
       // Transform Twitter API response to match our TrendingTopic interface
-      return data.data.map((tweet: any, index: number) => ({
-        ranking: index + 1,
+      const transformedData = data.data.map((tweet: any, index: number) => ({
         category: tweet.category || '',
         topic: tweet.text,
-        postCount: `${Math.floor(Math.random() * 100000) + 1000} posts`,
-        postCountValue: Math.floor(Math.random() * 100000) + 1000,
+        value: 21 - (index + 1), // Higher index = larger value = bigger word in cloud
         timestamp: new Date().toISOString(),
       }));
+      
+      // Sort by value (higher = first)
+      return transformedData.sort((a: any, b: any) => b.value - a.value);
 
     }
 

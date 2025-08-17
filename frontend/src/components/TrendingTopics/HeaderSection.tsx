@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, FormControl, InputLabel, Select, MenuItem, Button, ToggleButtonGroup, ToggleButton, Typography } from '@mui/material';
-import { Refresh as RefreshIcon, ViewList as ViewListIcon, Cloud as CloudIcon } from '@mui/icons-material';
+import { Refresh as RefreshIcon, GridOn as GridIcon, Cloud as CloudIcon } from '@mui/icons-material';
 import { Region } from '../../data/mockRegions';
 
 interface HeaderSectionProps {
@@ -8,8 +8,8 @@ interface HeaderSectionProps {
   regions: Region[];
   onRegionChange: (region: string) => void;
   onRefresh: () => void;
-  trendView: 'list' | 'cloud';
-  onTrendViewChange: (view: 'list' | 'cloud') => void;
+  trendView: 'grid' | 'cloud';
+  onTrendViewChange: (view: 'grid' | 'cloud') => void;
   loading: boolean;
 }
 
@@ -64,9 +64,9 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
             onChange={(_, newView) => newView && onTrendViewChange(newView)}
             size="small"
           >
-            <ToggleButton value="list">
-              <ViewListIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
-              List
+            <ToggleButton value="grid">
+              <GridIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+              Grid
             </ToggleButton>
             <ToggleButton value="cloud">
               <CloudIcon sx={{ fontSize: '1rem', mr: 0.5 }} />

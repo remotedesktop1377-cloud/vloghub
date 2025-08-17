@@ -3,11 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_CONFIG } from '@/config/aiConfig';
 
 interface GeminiTrendingTopic {
-  ranking: number;
   category: string;
   topic: string;
-  postCount: string;
-  postCountValue: number;
+  value: number;
   timestamp: string;
 }
 
@@ -53,14 +51,15 @@ const fetchGeminiTrendingTopics = async (region: string): Promise<GeminiTrending
     console.log(parsedData.length)
 
     // Transform to match our interface
-    return parsedData.map((item: any, index: number) => ({
-      ranking: index + 1,
+    const transformedData = parsedData.map((item: any, index: number) => ({
       category: item.category || 'Social',
       topic: item.topic || 'Unknown Topic',
-      postCount: `${(21 - (index + 1)) * 5000} posts`,
-      postCountValue: 21 - (index + 1), // Higher ranking = larger value = bigger word in cloud
+      value: 21 - (index + 1), // Higher index = larger value = bigger word in cloud
       timestamp: new Date().toISOString(),
     }));
+    
+    // Sort by value (higher = first)
+    return transformedData.sort((a: any, b: any) => b.value - a.value);
 
   } catch (error) {
     console.error('Error fetching Gemini trending topics:', error);
@@ -68,168 +67,129 @@ const fetchGeminiTrendingTopics = async (region: string): Promise<GeminiTrending
     // Fallback data for Pakistan
     const fallbackTopics: GeminiTrendingTopic[] = [
       {
-        ranking: 1,
         category: 'Politics',
         topic: 'Imran Khan Cases',
-        postCount: '100,000 posts',
-        postCountValue: 20,
+        value: 20,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 2,
         category: 'Sports',
         topic: 'T20 World Cup 2024',
-        postCount: '95,000 posts',
-        postCountValue: 19,
+        value: 19,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 3,
         category: 'Politics',
         topic: 'Federal Budget FY25',
-        postCount: '90,000 posts',
-        postCountValue: 18,
+        value: 18,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 4,
         category: 'News',
         topic: 'Heatwave & Loadshedding',
-        postCount: '85,000 posts',
-        postCountValue: 17,
+        value: 17,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 5,
         category: 'Business',
         topic: 'IMF Loan Negotiations',
-        postCount: '80,000 posts',
-        postCountValue: 16,
+        value: 16,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 6,
         category: 'Culture',
         topic: 'Eid-ul-Adha Shopping',
-        postCount: '75,000 posts',
-        postCountValue: 15,
+        value: 15,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 7,
         category: 'News',
         topic: 'Petrol Price Increase',
-        postCount: '70,000 posts',
-        postCountValue: 14,
+        value: 14,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 8,
         category: 'Entertainment',
         topic: 'Pakistani Dramas',
-        postCount: '65,000 posts',
-        postCountValue: 13,
+        value: 13,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 9,
         category: 'Technology',
         topic: 'AI Adoption Pakistan',
-        postCount: '60,000 posts',
-        postCountValue: 12,
+        value: 12,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 10,
         category: 'Social',
         topic: 'Social Media Challenges',
-        postCount: '55,000 posts',
-        postCountValue: 11,
+        value: 11,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 11,
         category: 'Education',
         topic: 'Online Learning',
-        postCount: '50,000 posts',
-        postCountValue: 10,
+        value: 10,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 12,
         category: 'Health',
         topic: 'Mental Health',
-        postCount: '45,000 posts',
-        postCountValue: 9,
+        value: 9,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 13,
         category: 'Business',
         topic: 'Startup Ecosystem',
-        postCount: '40,000 posts',
-        postCountValue: 8,
+        value: 8,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 14,
         category: 'Technology',
         topic: 'Digital Pakistan',
-        postCount: '35,000 posts',
-        postCountValue: 7,
+        value: 7,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 15,
         category: 'Entertainment',
         topic: 'Bollywood News',
-        postCount: '30,000 posts',
-        postCountValue: 6,
+        value: 6,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 16,
         category: 'Sports',
         topic: 'Cricket Updates',
-        postCount: '25,000 posts',
-        postCountValue: 5,
+        value: 5,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 17,
         category: 'Social',
         topic: 'Climate Change',
-        postCount: '20,000 posts',
-        postCountValue: 4,
+        value: 4,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 18,
         category: 'Culture',
         topic: 'Pakistani Cuisine',
-        postCount: '15,000 posts',
-        postCountValue: 3,
+        value: 3,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 19,
         category: 'News',
         topic: 'Regional Updates',
-        postCount: '10,000 posts',
-        postCountValue: 2,
+        value: 2,
         timestamp: new Date().toISOString(),
       },
       {
-        ranking: 20,
         category: 'Health',
         topic: 'Wellness Trends',
-        postCount: '5,000 posts',
-        postCountValue: 1,
+        value: 1,
         timestamp: new Date().toISOString(),
       },
     ];
     
-    return fallbackTopics;
+    // Sort by value (higher = first)
+    return fallbackTopics.sort((a, b) => b.value - a.value);
   }
 };
 
