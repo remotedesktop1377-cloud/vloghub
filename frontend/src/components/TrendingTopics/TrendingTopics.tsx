@@ -582,7 +582,49 @@ const TrendingTopics: React.FC = () => {
   };
 
   const handleDragEnd = (result: DropResult) => {
-    HelperFunctions.handleDragEnd(result, chapters, setChapters);
+    if (!result.destination) return;
+
+    const { source, destination } = result;
+    if (source.index === destination.index) return;
+
+    // Reorder chapters
+    const updatedChapters = Array.from(chapters);
+    const [reorderedChapter] = updatedChapters.splice(source.index, 1);
+    updatedChapters.splice(destination.index, 0, reorderedChapter);
+    setChapters(updatedChapters);
+
+    // Reorder chapter images map to follow the chapters
+    const updatedChapterImagesMap: Record<number, string[]> = {};
+    
+    // Create a temporary mapping of old indices to their images
+    const tempImageMap: Record<number, string[]> = {};
+    Object.keys(chapterImagesMap).forEach(key => {
+      tempImageMap[parseInt(key)] = chapterImagesMap[parseInt(key)];
+    });
+
+    // Reorder the images based on the new chapter order
+    updatedChapters.forEach((chapter, newIndex) => {
+      // Find the original index of this chapter
+      const originalIndex = chapters.findIndex(c => c.id === chapter.id);
+      if (originalIndex !== -1 && tempImageMap[originalIndex]) {
+        updatedChapterImagesMap[newIndex] = tempImageMap[originalIndex];
+      }
+    });
+
+    setChapterImagesMap(updatedChapterImagesMap);
+
+    // Update selected chapter index if needed
+    if (selectedChapterIndex === source.index) {
+      setSelectedChapterIndex(destination.index);
+    } else if (selectedChapterIndex >= Math.min(source.index, destination.index) && 
+               selectedChapterIndex <= Math.max(source.index, destination.index)) {
+      // Adjust selected index if it's in the affected range
+      if (source.index < destination.index && selectedChapterIndex > source.index) {
+        setSelectedChapterIndex(selectedChapterIndex - 1);
+      } else if (source.index > destination.index && selectedChapterIndex < source.index) {
+        setSelectedChapterIndex(selectedChapterIndex + 1);
+      }
+    }
   };
 
   const wordClickHandler = useCallback(async (w: any) => {
