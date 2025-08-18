@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { mockTrendingTopics, TrendingTopic } from '../../data/mockTrendingTopics';
-import { mockChapters, Chapter } from '../../data/mockChapters';
+import { Chapter } from '../../types/chapters';
 import { fallbackImages } from '../../data/mockImages';
 import { regions, Region } from '../../data/mockRegions';
 import { durationOptions, DurationOption } from '../../data/mockDurationOptions';
 import { USE_HARDCODED, HARDCODED_TOPIC, HARDCODED_HYPOTHESIS, DEFAULT_AI_PROMPT } from '../../data/constants';
 import { apiService } from '../../utils/apiService';
 import { HelperFunctions } from '../../utils/helperFunctions';
+import { generateChapterImages } from '../../utils/chapterImageGenerator';
 import styles from './TrendingTopics.module.css';
 import {
   Box,
@@ -64,6 +65,7 @@ import HeaderSection from './HeaderSection';
 import SelectedTopicHeader from './SelectedTopicHeader';
 import ConfirmationDialog from './ConfirmationDialog';
 import NarrationPickerDialog from './NarrationPickerDialog';
+import { mockChapters } from '@/data/mockChapters';
 
 
 const TrendingTopics: React.FC = () => {
@@ -537,9 +539,32 @@ const TrendingTopics: React.FC = () => {
       });
 
       if (result.success && result.data?.chapters && Array.isArray(result.data.chapters)) {
-        setChapters(result.data.chapters);
+        const chaptersWithEmptyMedia = result.data.chapters.map((chapter: Chapter) => ({
+          ...chapter,
+          media: { image: null, audio: null, video: null }
+        }));
+
+        setChapters(chaptersWithEmptyMedia);
         setChaptersGenerated(true);
         setError(null);
+
+        // Auto-generate images for chapters
+        try {
+          const chaptersWithImages = await generateChapterImages(chaptersWithEmptyMedia);
+          setChapters(chaptersWithImages);
+
+          // Add generated images to the stock images array
+          const newGeneratedImages = chaptersWithImages
+            .map(chapter => chapter.assets?.image)
+            .filter((image): image is string => Boolean(image));
+
+          if (newGeneratedImages.length > 0) {
+            setGeneratedImages(prev => [...prev, ...newGeneratedImages]);
+          }
+        } catch (imageError) {
+          console.error('Error generating chapter images:', imageError);
+          // Don't set error state as chapters are still generated, just without images
+        }
       } else {
         setError(result.error || 'Invalid response format from API');
       }
@@ -561,7 +586,7 @@ const TrendingTopics: React.FC = () => {
 
   const handleEditChapter = (index: number) => {
     setEditingChapter(index);
-    setEditHeading(chapters[index].heading || '');
+    setEditHeading(chapters[index].on_screen_text || '');
     setEditNarration(chapters[index].narration || '');
   };
 
@@ -595,7 +620,7 @@ const TrendingTopics: React.FC = () => {
 
     // Reorder chapter images map to follow the chapters
     const updatedChapterImagesMap: Record<number, string[]> = {};
-    
+
     // Create a temporary mapping of old indices to their images
     const tempImageMap: Record<number, string[]> = {};
     Object.keys(chapterImagesMap).forEach(key => {
@@ -616,8 +641,8 @@ const TrendingTopics: React.FC = () => {
     // Update selected chapter index if needed
     if (selectedChapterIndex === source.index) {
       setSelectedChapterIndex(destination.index);
-    } else if (selectedChapterIndex >= Math.min(source.index, destination.index) && 
-               selectedChapterIndex <= Math.max(source.index, destination.index)) {
+    } else if (selectedChapterIndex >= Math.min(source.index, destination.index) &&
+      selectedChapterIndex <= Math.max(source.index, destination.index)) {
       // Adjust selected index if it's in the affected range
       if (source.index < destination.index && selectedChapterIndex > source.index) {
         setSelectedChapterIndex(selectedChapterIndex - 1);
@@ -942,6 +967,22 @@ const TrendingTopics: React.FC = () => {
               mediaManagementChapterIndex={mediaManagementChapterIndex}
               onMediaManagementOpen={setMediaManagementOpen}
               onMediaManagementChapterIndex={setMediaManagementChapterIndex}
+              onChaptersUpdate={(updatedChapters) => {
+                setChapters(updatedChapters);
+                // Update generatedImages to keep sync with chapter AI images
+                const currentAIImages = updatedChapters
+                  .map(chapter => chapter.assets?.image)
+                  .filter((image): image is string => Boolean(image));
+
+                // Update generatedImages to include current AI images
+                setGeneratedImages(prev => {
+                  // Remove old AI images and add current ones, keeping other generated images
+                  const nonAIImages = prev.filter(img =>
+                    !chapters.some(ch => ch.assets?.image === img)
+                  );
+                  return [...nonAIImages, ...currentAIImages];
+                });
+              }}
             />
 
           </Box>

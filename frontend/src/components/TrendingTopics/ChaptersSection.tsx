@@ -27,7 +27,7 @@ import {
   AutoFixHigh as MagicIcon
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { Chapter } from '../../data/mockChapters';
+import { Chapter } from '../../types/chapters';
 import { fallbackImages } from '../../data/mockImages';
 import { HelperFunctions } from '../../utils/helperFunctions';
 
@@ -81,6 +81,7 @@ interface ChaptersSectionProps {
   mediaManagementChapterIndex: number | null;
   onMediaManagementOpen: (open: boolean) => void;
   onMediaManagementChapterIndex: (index: number | null) => void;
+  onChaptersUpdate: (chapters: Chapter[]) => void;
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
@@ -133,6 +134,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   mediaManagementChapterIndex,
   onMediaManagementOpen,
   onMediaManagementChapterIndex,
+  onChaptersUpdate,
 }) => {
   return (
     <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
@@ -268,7 +270,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#999', fontSize: '0.65rem' }}>
-                                                    📎 Media ({(chapterImagesMap[index] || []).length})
+                                                    📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.image ? 1 : 0)})
                                                   </Typography>
                                                   <Button
                                                     size="small"
@@ -291,14 +293,103 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       onMediaManagementOpen(true);
                                                     }}
                                                   >
-                                                    {(chapterImagesMap[index] || []).length > 0 ? 'Manage' : 'Add'}
+                                                    {((chapterImagesMap[index] || []).length > 0 || chapter.assets?.image) ? 'Manage' : 'Add'}
                                                   </Button>
                                                 </Box>
 
                                                 {/* Media Display */}
-                                                {(chapterImagesMap[index] || []).length > 0 ? (
+                                                {((chapterImagesMap[index] || []).length > 0 || chapter.assets?.image) ? (
                                                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
-                                                    {(chapterImagesMap[index] || []).slice(0, 4).map((imageUrl, imgIndex) => (
+                                                    {/* Show Generated Chapter Image First */}
+                                                    {chapter.assets?.image && (
+                                                      <Box
+                                                        sx={{
+                                                          position: 'relative',
+                                                          width: '75px',
+                                                          height: '75px',
+                                                          borderRadius: 0.5,
+                                                          overflow: 'hidden',
+                                                          border: '2px solid #4caf50',
+                                                          cursor: 'pointer',
+                                                          transition: 'transform 0.2s',
+                                                          '&:hover': {
+                                                            transform: 'scale(1.02)',
+                                                            borderColor: '#388e3c'
+                                                          }
+                                                        }}
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          if (chapter.assets?.image) {
+                                                            window.open(chapter.assets.image, '_blank');
+                                                          }
+                                                        }}
+                                                      >
+                                                        <img
+                                                          src={chapter.assets?.image || ''}
+                                                          alt={`Generated Chapter ${index + 1} Image`}
+                                                          style={{
+                                                            position: 'absolute',
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover'
+                                                          }}
+                                                        />
+                                                        {/* Delete Button */}
+                                                        <IconButton
+                                                          size="small"
+                                                          sx={{
+                                                            position: 'absolute',
+                                                            top: 2,
+                                                            right: 2,
+                                                            bgcolor: 'rgba(255,255,255,0.9)',
+                                                            width: 14,
+                                                            height: 14,
+                                                            minWidth: 14,
+                                                            '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                                                          }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            // Remove the AI generated image from chapter
+                                                            const updatedChapters = chapters.map((ch, chIndex) => {
+                                                              if (chIndex === index) {
+                                                                return {
+                                                                  ...ch,
+                                                                  media: {
+                                                                    ...ch.assets,
+                                                                    image: null
+                                                                  }
+                                                                };
+                                                              }
+                                                              return ch;
+                                                            });
+                                                            onChaptersUpdate(updatedChapters);
+                                                          }}
+                                                        >
+                                                          <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                          </svg>
+                                                        </IconButton>
+                                                        {/* Generated Badge */}
+                                                        <Box
+                                                          sx={{
+                                                            position: 'absolute',
+                                                            bottom: 2,
+                                                            left: 2,
+                                                            bgcolor: '#4caf50',
+                                                            color: 'white',
+                                                            fontSize: '0.6rem',
+                                                            px: 0.5,
+                                                            py: 0.1,
+                                                            borderRadius: 0.5,
+                                                            fontWeight: 'bold'
+                                                          }}
+                                                        >
+                                                          AI
+                                                        </Box>
+                                                      </Box>
+                                                    )}
+                                                    {/* Show Additional Images */}
+                                                    {(chapterImagesMap[index] || []).slice(0, chapter.assets?.image ? 3 : 4).map((imageUrl, imgIndex) => (
                                                       <Box
                                                         key={imgIndex}
                                                         sx={{
@@ -393,17 +484,33 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     p: 1,
                                                     textAlign: 'center',
                                                     bgcolor: '#f9f9f9',
-                                                    cursor: 'pointer'
+                                                    cursor: generatingChapters ? 'default' : 'pointer',
+                                                    minHeight: '60px',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
                                                   }}
                                                     onClick={(e) => {
+                                                      if (!generatingChapters) {
                                                       e.stopPropagation();
                                                       onMediaManagementChapterIndex(index);
                                                       onMediaManagementOpen(true);
+                                                      }
                                                     }}
                                                   >
-                                                    <Typography variant="caption" sx={{ color: '#999', fontSize: '0.6rem' }}>
-                                                      Click to add media
-                                                    </Typography>
+                                                    {generatingChapters ? (
+                                                      <>
+                                                        <CircularProgress size={16} sx={{ mb: 0.5 }} />
+                                                        <Typography variant="caption" sx={{ color: '#666', fontSize: '0.6rem' }}>
+                                                          Generating AI image...
+                                                        </Typography>
+                                                      </>
+                                                    ) : (
+                                                      <Typography variant="caption" sx={{ color: '#999', fontSize: '0.6rem' }}>
+                                                        Click to add media
+                                                      </Typography>
+                                                    )}
                                                   </Box>
                                                 )}
                                               </Box>
@@ -498,7 +605,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         <IconButton
                                           className="chapter-actions"
                                           size="small"
-                                          onClick={() => onStartEdit(index, chapter.heading || '', chapter.narration || '')}
+                                          onClick={() => onStartEdit(index, chapter.narration || '', chapter.narration || '')}
                                           sx={{
                                             opacity: selectedChapterIndex === index ? 1 : 0,
                                             transition: 'opacity 0.2s ease',

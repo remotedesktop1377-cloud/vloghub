@@ -1,5 +1,5 @@
 import React from 'react';
-import TrendingTopics from '../src/components/TrendingTopics/TrendingTopics';
+import TrendingTopics from '../src/components/TrendingTopics/TrendingTopicsPage';
 
 const Dashboard: React.FC = () => {
   return (

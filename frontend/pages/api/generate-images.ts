@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-// Using direct HTTP call to Gemini image-generation endpoint
 
-type Data = { images: string[] } | { error: string };
+type Data = { imageUrl: string } | { error: string };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
     if (req.method !== 'POST') {
@@ -10,88 +9,86 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     try {
-        const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+        const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
             res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
             return;
         }
 
-        const { visuals } = req.body as { visuals?: string };
-        if (!visuals || !visuals.trim()) {
-            res.status(400).json({ error: 'visuals is required' });
+        const { prompt, width, height, seed } = req.body as { 
+            prompt?: string; 
+            width?: number; 
+            height?: number; 
+            seed?: number; 
+        };
+        if (!prompt || !prompt.trim()) {
+            res.status(400).json({ error: 'prompt is required' });
             return;
         }
-// const genAI = new GoogleGenAI({apiKey});
-        // const prompt = `You are an assistant that creates stock-like illustrative images for a video script.
-        // Return 9 square thumbnails as base64 PNG data URLs only, in JSON array format.
-        // Each image should be different and representative of the script sections. Avoid text overlay.
-        // Script:\n${visuals}`;
+        // Generate image with Gemini
+        const imageUrl = await generateWithGeminiImage(prompt, { width, height, seed });
 
+        res.status(200).json({ imageUrl });
+    } catch (e: any) {
+        console.error('generate-images error', e);
+        res.status(500).json({ error: e?.message ?? 'Generation failed' });
+    }
+}
 
- // const response = await genAI.models.generateImages({
-        //   model: 'imagen-4.0-generate-preview-06-06',
-        //   prompt,
-        //   config: { numberOfImages: 4 },
-        // });
+// Swap this using your preferred client (Google AI Studio Images API / Vertex AI Imagen 3)
+async function generateWithGeminiImage(prompt: string, opts?: { width?: number; height?: number; seed?: number }) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error('Missing GEMINI_API_KEY');
+    }
 
-  // const images: string[] = [];
-        // if (Array.isArray((response as any)?.generatedImages)) {
-        //   for (const generatedImage of (response as any).generatedImages) {
-        //     const imgBytes: string | undefined = generatedImage?.image?.imageBytes;
-        //     if (imgBytes && typeof imgBytes === 'string') {
-        //       images.push(`data:image/png;base64,${imgBytes}`);
-        //     }
-        //   }
-        // }
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
+    
+    // Enhanced prompt for better image generation
+    const enhancedPrompt = `Create a cinematic, stock-style image based on this description. Avoid text overlay. Make it visually appealing and professional. Description: ${prompt}`;
 
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
+    const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: enhancedPrompt }] }],
+            generationConfig: { 
+                responseModalities: ['TEXT', 'IMAGE'],
+                // Note: Gemini API doesn't directly support width/height/seed in this format
+                // You would need to adapt based on your actual API client
+            }
+        })
+    });
 
-        // const prompt = `Create cinematic, stock-style thumbnails (1:1) based on these visual directions. Avoid text overlay. Provide multiple diverse options. Visuals:\n${visuals}`;
-        const prompt = `Create cinematic, stock-style thumbnails (1:1) based on these visual directions. Avoid text overlay. Visuals:\n${visuals}`;
+    if (!resp.ok) {
+        const errText = await resp.text();
+        console.error('Gemini image HTTP error:', resp.status, errText);
+        throw new Error(`Gemini HTTP ${resp.status}: ${errText}`);
+    }
 
-        const resp = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseModalities: ['TEXT','IMAGE'] }
-          })
-        });
-
-        if (!resp.ok) {
-          const errText = await resp.text();
-          console.error('Gemini image HTTP error:', resp.status, errText);
-          return res.status(500).json({ error: `Gemini HTTP ${resp.status}` });
-        }
-
-        const json: any = await resp.json();
-        const images: string[] = [];
-
-        const candidates = Array.isArray(json?.candidates) ? json.candidates : [];
-        for (const cand of candidates) {
-          const parts = (cand?.content?.parts || []).concat(cand?.content?.part || []);
-          for (const part of parts) {
+    const json: any = await resp.json();
+    
+    // Extract image from response
+    const candidates = Array.isArray(json?.candidates) ? json.candidates : [];
+    for (const cand of candidates) {
+        const parts = (cand?.content?.parts || []).concat(cand?.content?.part || []);
+        for (const part of parts) {
             // Try various shapes Gemini might return
             const inline = part?.inlineData || part?.inline_data;
             if (inline?.data) {
-              const mime = inline?.mimeType || inline?.mime_type || 'image/png';
-              images.push(`data:${mime};base64,${inline.data}`);
-              continue;
+                const mime = inline?.mimeType || inline?.mime_type || 'image/png';
+                // Return base64 data URL - in production, you should upload to storage and return URL
+                return `data:${mime};base64,${inline.data}`;
             }
             if (part?.text && typeof part.text === 'string') {
-              // Sometimes text may contain a data URL; try to extract
-              const match = part.text.match(/data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+/);
-              if (match) images.push(match[0]);
+                // Sometimes text may contain a data URL; try to extract
+                const match = part.text.match(/data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+/);
+                if (match) return match[0];
             }
-          }
         }
-
-        // Fallback: empty array if parsing fails
-        res.status(200).json({ images });
-    } catch (e: any) {
-        console.error('generate-images error', e);
-        res.status(500).json({ error: 'Failed to generate images' });
     }
+    
+    throw new Error('No image generated in response');
 }
 
 

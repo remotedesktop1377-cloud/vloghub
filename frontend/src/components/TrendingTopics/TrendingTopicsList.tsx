@@ -78,16 +78,16 @@ const TrendingTopicsList: React.FC<TrendingTopicsListProps> = ({
                         height: 16
                       }}
                     />
-                    {topic.postCount ? (
+                    {topic.value ? (
                       <Chip
-                        label={topic.postCount}
+                        label={topic.value}
                         size="small"
                         variant="outlined"
                         sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
                       />
                     ) : (
                       <Chip
-                        label={topic.postCountValue ? HelperFunctions.formatTweetVolume(topic.postCountValue) : '0'}
+                        label={topic.value ? HelperFunctions.formatTweetVolume(topic.value) : '0'}
                         size="small"
                         variant="outlined"
                         sx={{ borderColor: '#1DA1F2', color: '#1DA1F2', fontSize: '0.5rem', height: 16 }}
