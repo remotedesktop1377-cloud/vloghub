@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Map voiceover style to ElevenLabs settings
     const getVoiceSettings = (style: string) => {
       const lowerStyle = style.toLowerCase();
-      
+
       if (lowerStyle.includes('energetic') || lowerStyle.includes('excited')) {
         return { stability: 0.3, similarity_boost: 0.8, speed: 1.1 };
       } else if (lowerStyle.includes('calm') || lowerStyle.includes('soothing')) {
@@ -77,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     // Get the audio data as array buffer
     const audioBuffer = await response.arrayBuffer();
-    
+
     // Convert to base64 for data URL
     const audioBase64 = Buffer.from(audioBuffer).toString('base64');
     const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;

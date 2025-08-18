@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { toast } from 'react-toastify';
 import { mockTrendingTopics, TrendingTopic } from '../../data/mockTrendingTopics';
 import { Chapter } from '../../types/chapters';
 import { fallbackImages } from '../../data/mockImages';
@@ -96,6 +97,12 @@ const TrendingTopics: React.FC = () => {
   const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
   const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
 
+  // Chroma Key Upload states
+  const [chromaKeyFile, setChromaKeyFile] = useState<File | null>(null);
+  const [chromaKeyUrl, setChromaKeyUrl] = useState<string | null>(null);
+  const [uploadingChromaKey, setUploadingChromaKey] = useState(false);
+  const [chromaKeyUploadProgress, setChromaKeyUploadProgress] = useState(0);
+
   // Confirm dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
@@ -113,7 +120,7 @@ const TrendingTopics: React.FC = () => {
   const [pickerChapterIndex, setPickerChapterIndex] = useState<number | null>(null);
   const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
   const [pickerLoading, setPickerLoading] = useState<boolean>(false);
-  const [aiPrompt, setAiPrompt] = useState<string>(DEFAULT_AI_PROMPT);
+  const [aiPrompt, setAiPrompt] = useState<string>('');
   const [mediaManagementOpen, setMediaManagementOpen] = useState<boolean>(false);
   const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -606,6 +613,122 @@ const TrendingTopics: React.FC = () => {
     HelperFunctions.cancelEdit(setEditingChapter, setEditHeading, setEditNarration);
   };
 
+  // Video Production Actions
+  const handleDownloadAllNarrations = () => {
+    if (!chapters.length) return;
+    
+    try {
+      chapters.forEach((chapter, index) => {
+        if (chapter.assets?.audio) {
+          // Create a download link for each audio file
+          const link = document.createElement('a');
+          link.href = chapter.assets.audio;
+          link.download = `chapter-${index + 1}-narration.mp3`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      });
+    } catch (error) {
+      console.error('Error downloading narrations:', error);
+    }
+  };
+
+  const handleUploadChromaKey = () => {
+    // Create a file input for chroma key upload
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,video/*';
+    input.onchange = async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        
+        try {
+          setUploadingChromaKey(true);
+          setChromaKeyUploadProgress(0);
+          
+          // Simulate upload progress
+          const totalSteps = 10;
+          for (let i = 1; i <= totalSteps; i++) {
+            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay per step
+            setChromaKeyUploadProgress((i / totalSteps) * 100);
+          }
+          
+          // Store the file and create URL
+          const url = URL.createObjectURL(file);
+          setChromaKeyFile(file);
+          setChromaKeyUrl(url);
+          
+          console.log('Chroma key uploaded:', file.name, url);
+          toast.success(`Chroma key "${file.name}" uploaded successfully!`);
+        } catch (error) {
+          console.error('Error uploading chroma key:', error);
+          toast.error('Failed to upload chroma key. Please try again.');
+        } finally {
+          setUploadingChromaKey(false);
+          setChromaKeyUploadProgress(0);
+        }
+      }
+    };
+    input.click();
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!chapters.length) {
+      toast.error('No chapters available for video generation');
+      return;
+    }
+    
+    if (!chromaKeyFile || !chromaKeyUrl) {
+      toast.error('Please upload a chroma key before generating video');
+      return;
+    }
+    
+    try {
+      console.log('Generating video with chapters:', chapters);
+      console.log('Using chroma key:', chromaKeyFile.name);
+      // TODO: Implement video generation API call
+      toast.success('Video generation started! This feature is coming soon.');
+    } catch (error) {
+      console.error('Error generating video:', error);
+      toast.error('Error generating video. Please try again.');
+    }
+  };
+
+  const handleRegenerateAllAssets = async () => {
+    if (!chapters.length) {
+      toast.error('No chapters available for asset regeneration');
+      return;
+    }
+    
+    try {
+      setGeneratingChapters(true);
+      console.log('Regenerating all assets for chapters:', chapters);
+      
+      // Call the same image generation function that's used during chapter creation
+      const { generateChapterImages } = await import('@/utils/chapterImageGenerator');
+      const updatedChapters = await generateChapterImages(chapters);
+      setChapters(updatedChapters);
+      
+      // Update generatedImages to include new AI images
+      const newGeneratedImages = updatedChapters
+        .map(chapter => chapter.assets?.image)
+        .filter((image): image is string => Boolean(image));
+
+      if (newGeneratedImages.length > 0) {
+        setGeneratedImages(prev => [...prev, ...newGeneratedImages]);
+      }
+      
+      toast.success('All assets regenerated successfully!');
+    } catch (error) {
+      console.error('Error regenerating assets:', error);
+      toast.error('Error regenerating assets. Please try again.');
+    } finally {
+      setGeneratingChapters(false);
+    }
+  };
+
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -914,6 +1037,14 @@ const TrendingTopics: React.FC = () => {
               generatingChapters={generatingChapters}
               onGenerateChapters={handleGenerateChapters}
               hypothesis={hypothesis}
+              hasChapters={chapters.length > 0}
+              onDownloadAllNarrations={handleDownloadAllNarrations}
+              onUploadChromaKey={handleUploadChromaKey}
+              onGenerateVideo={handleGenerateVideo}
+              onRegenerateAllAssets={handleRegenerateAllAssets}
+              chromaKeyFile={chromaKeyFile}
+              uploadingChromaKey={uploadingChromaKey}
+              chromaKeyUploadProgress={chromaKeyUploadProgress}
             />
 
             {/* Video Chapters Section */}
