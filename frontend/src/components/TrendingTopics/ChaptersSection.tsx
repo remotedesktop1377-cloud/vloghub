@@ -30,6 +30,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import { Chapter } from '../../types/chapters';
 import { fallbackImages } from '../../data/mockImages';
 import { HelperFunctions } from '../../utils/helperFunctions';
+import { AudioPlayer } from '../AudioPlayer/AudioPlayer';
 
 interface ChaptersSectionProps {
   chapters: Chapter[];
@@ -252,9 +253,71 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   textAlign: 'start',
                                                   px: 1.5,
                                                   py: 1,
+                                                  mb: chapter.assets?.audio ? 1 : 0,
                                                 }}>
                                                   {chapter.narration || 'Narration content will be generated here.'}
                                                 </Typography>
+
+                                                {/* Debug Info */}
+                                                {/* <Box sx={{ px: 1.5, pb: 0.5 }}>
+                                                  <Typography variant="caption" sx={{ 
+                                                    fontSize: '0.6rem', 
+                                                    color: '#666',
+                                                    fontFamily: 'monospace',
+                                                    bgcolor: '#f5f5f5',
+                                                    px: 0.5,
+                                                    py: 0.2,
+                                                    borderRadius: 0.5
+                                                  }}>
+                                                    Audio: {chapter.assets?.audio ? 'EXISTS' : 'NULL'} | 
+                                                    Style: {chapter.voiceover_style || 'NONE'} |
+                                                    Generating: {generatingChapters ? 'YES' : 'NO'}
+                                                  </Typography>
+                                                </Box> */}
+
+                                                {/* Audio Player */}
+                                                {/* {chapter.assets?.audio && (
+                                                  <Box sx={{ px: 1.5, pb: 1 }}>
+                                                    <AudioPlayer
+                                                      audioUrl={chapter.assets.audio}
+                                                      title={`Chapter ${index + 1} Audio`}
+                                                      voiceStyle={chapter.voiceover_style}
+                                                    />
+                                                  </Box>
+                                                )} */}
+
+                                                {/* Voice Generation Status */}
+                                                {/* {!chapter.assets?.audio && generatingChapters && (
+                                                  <Box sx={{ px: 1.5, pb: 1 }}>
+                                                    <Box sx={{ 
+                                                      display: 'flex', 
+                                                      alignItems: 'center', 
+                                                      gap: 1,
+                                                      p: 1,
+                                                      bgcolor: '#e3f2fd',
+                                                      borderRadius: 1,
+                                                      border: '1px solid #bbdefb'
+                                                    }}>
+                                                      <CircularProgress size={12} />
+                                                      <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#1976d2' }}>
+                                                        Generating voice: {chapter.voiceover_style || 'conversational'}
+                                                      </Typography>
+                                                    </Box>
+                                                  </Box>
+                                                )} */}
+
+                                                {/* No Audio Message */}
+                                                {/* {!chapter.assets?.audio && !generatingChapters && (
+                                                  <Box sx={{ px: 1.5, pb: 1 }}>
+                                                    <Typography variant="caption" sx={{ 
+                                                      fontSize: '0.65rem', 
+                                                      color: '#ff9800',
+                                                      fontStyle: 'italic'
+                                                    }}>
+                                                      No audio generated. Style: {chapter.voiceover_style || 'None'}
+                                                    </Typography>
+                                                  </Box>
+                                                )} */}
                                               </Box>
 
                                               {/* Media Section - 50% */}
@@ -493,9 +556,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   }}
                                                     onClick={(e) => {
                                                       if (!generatingChapters) {
-                                                      e.stopPropagation();
-                                                      onMediaManagementChapterIndex(index);
-                                                      onMediaManagementOpen(true);
+                                                        e.stopPropagation();
+                                                        onMediaManagementChapterIndex(index);
+                                                        onMediaManagementOpen(true);
                                                       }
                                                     }}
                                                   >

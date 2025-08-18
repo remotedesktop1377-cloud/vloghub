@@ -90,12 +90,13 @@ Uses the existing `chapter.visuals` field to create optimized prompts:
 ```typescript
 interface Chapter {
   id: string;
-  heading: string;
+  time_range: string;
   narration: string;
-  visuals: string;        // Used for image prompts
-  brollIdeas: string[];
+  voiceover_style: string;
+  visual_guidance: string;
+  on_screen_text: string;
   duration: string;
-  media?: {               // NEW: Auto-populated
+  assets?: {
     image?: string | null;
     audio?: string | null;
     video?: string | null;
