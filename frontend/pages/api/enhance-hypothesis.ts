@@ -41,16 +41,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const { topic, hypothesis, details, region } = req.body as EnhanceHypothesisRequest;
     if (!topic || !hypothesis) return res.status(400).json({ error: 'Topic and hypothesis are required' });
 
-    const prompt = `You are an expert script editor. Create 4-5 different improved versions of the following hypothesis, each offering a unique perspective or approach while maintaining the core message.\n` +
-      `- Keep original meaning, adjust for clarity and strength.\n` +
-      `- Avoid buzzwords, keep it specific.\n` +
-      `- Consider audience in ${region}.\n` +
-      `- Each option should have a distinct angle or style.\n\n` +
+    const prompt = `You are an expert content paraphraser. Create exactly 5 single-line enhanced paraphrases of the following hypothesis. Each paraphrase should be a complete, standalone sentence that captures the essence of the original.\n\n` +
+      `Constraints:\n` +
+      `- Each paraphrase must be a SINGLE LINE (no line breaks)\n` +
+      `- Maximum 5 paraphrases total\n` +
+      `- Keep original meaning; do not invent facts\n` +
+      `- Make each option clear, engaging, and concise\n` +
+      `- Avoid buzzwords, keep it specific\n` +
+      `- Consider audience in ${region}\n` +
+      `- Each paraphrase should have a slightly different angle or emphasis\n` +
+      `- Polish grammar and improve readability\n\n` +
       `Topic: "${topic}"\n` +
       (details ? `Details: ${details}\n` : '') +
       `Original hypothesis: ${hypothesis}\n\n` +
       `Return ONLY valid JSON in this exact shape (no markdown, no commentary):\n` +
-      `{ "enhancedOptions": [string, string, string, string] }`;
+      `{ "enhancedOptions": [string, string, string, string, string] }`;
 
     const result = await withRetry(async () => {
       const resGen = await model.generateContent(prompt);
@@ -60,12 +65,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       if (parsed && Array.isArray(parsed.enhancedOptions) && parsed.enhancedOptions.length > 0) {
         return parsed.enhancedOptions;
       }
-      // Fallback: create simple variations if JSON failed
+      // Fallback: create simple single-line paraphrases if JSON failed
       return [
-        `${hypothesis} (refined for clarity and impact)`,
-        `${hypothesis} (enhanced with engaging narrative flow)`,
-        `${hypothesis} (optimized for voiceover delivery)`,
-        `${hypothesis} (restructured for better audience engagement)`
+        hypothesis.trim(),
+        `Enhanced version: ${hypothesis.trim()}`,
+        `Refined approach: ${hypothesis.trim()}`,
+        `Alternative perspective: ${hypothesis.trim()}`,
+        `Polished version: ${hypothesis.trim()}`
       ];
     });
 

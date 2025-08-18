@@ -51,18 +51,19 @@ function extractJsonFromText(text: string): any | null {
 }
 
 async function enhanceWithGemini({ topic, details, region, targetWords }: EnhanceRequest): Promise<EnhanceResponse> {
-  const prompt = `You are an expert video script editor. Create 4-5 different enhanced versions of the following topic details, each offering a unique perspective or approach while maintaining the core message.\n\n` +
+  const prompt = `You are an expert content paraphraser. Create exactly 5 single-line enhanced paraphrases of the following topic details. Each paraphrase should be a complete, standalone sentence that captures the essence of the original.\n\n` +
     `Constraints:\n` +
-    `- Keep factual meaning; do not invent facts.\n` +
-    `- Make each option compelling and concise (~${targetWords} words).\n` +
-    `- Add smooth flow and readability for voiceover.\n` +
-    `- Consider ${region} audience context if relevant.\n` +
-    `- Each option should have a distinct angle or style.\n` +
-    `- Keep the user's tone, but polish grammar and structure.\n\n` +
+    `- Each paraphrase must be a SINGLE LINE (no line breaks)\n` +
+    `- Maximum 5 paraphrases total\n` +
+    `- Keep factual meaning; do not invent facts\n` +
+    `- Make each option clear, engaging, and concise\n` +
+    `- Consider ${region} audience context if relevant\n` +
+    `- Each paraphrase should have a slightly different angle or emphasis\n` +
+    `- Polish grammar and improve readability\n\n` +
     `Topic: "${topic}"\n\n` +
     `Original details:\n${details}\n\n` +
     `Return ONLY valid JSON in this exact shape (no markdown, no commentary):\n` +
-    `{ "enhancedOptions": [string, string, string, string] }`;
+    `{ "enhancedOptions": [string, string, string, string, string] }`;
 
   return withRetry(async () => {
     const res = await model.generateContent(prompt);
@@ -72,12 +73,13 @@ async function enhanceWithGemini({ topic, details, region, targetWords }: Enhanc
     if (parsed && Array.isArray(parsed.enhancedOptions) && parsed.enhancedOptions.length > 0) {
       return { enhancedOptions: parsed.enhancedOptions };
     }
-    // Fallback: create simple variations if JSON failed
+    // Fallback: create simple single-line paraphrases if JSON failed
     const fallbackOptions = [
-      `${details} (refined for clarity and impact)`,
-      `${details} (enhanced with engaging narrative flow)`,
-      `${details} (optimized for voiceover delivery)`,
-      `${details} (restructured for better audience engagement)`
+      details.trim(),
+      `Enhanced version: ${details.trim()}`,
+      `Refined approach: ${details.trim()}`,
+      `Alternative perspective: ${details.trim()}`,
+      `Polished version: ${details.trim()}`
     ];
     return { enhancedOptions: fallbackOptions };
   });
