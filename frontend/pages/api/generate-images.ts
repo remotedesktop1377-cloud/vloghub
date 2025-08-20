@@ -44,8 +44,8 @@ async function generateWithGeminiImage(prompt: string, opts?: { width?: number; 
 
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`;
     
-    // Enhanced prompt for better image generation
-    const enhancedPrompt = `Create a cinematic, stock-style image based on this description. Avoid text overlay. Make it visually appealing and professional. Description: ${prompt}`;
+    // Use the enhanced prompt directly, but add technical specifications for Gemini
+    const enhancedPrompt = `${prompt} Professional photography quality, stock image style, broadcast-ready visuals, no watermarks or text overlays.`;
 
     const resp = await fetch(endpoint, {
         method: 'POST',

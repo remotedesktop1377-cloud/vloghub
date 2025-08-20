@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return res.status(400).json({ error: 'Text is required' });
     }
 
-    const apiKey = process.env.ELEVENLABS_API_KEY;
+    const apiKey = process.env.ELEVENLABS_API_KEYS;
     if (!apiKey) {
       console.warn('⚠️ ElevenLabs API key not configured, returning mock audio');
       // For testing: return a mock audio data URL

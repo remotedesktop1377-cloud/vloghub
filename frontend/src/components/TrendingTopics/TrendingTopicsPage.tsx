@@ -536,6 +536,11 @@ const TrendingTopics: React.FC = () => {
       setError(null);
       setChapters([]);
       setChaptersGenerated(false);
+      
+      // Clear all existing assets when generating new chapters
+      setChapterImagesMap({});
+      setGeneratedImages([]);
+      setUploadedImages([]);
 
       const result = await apiService.generateChapters({
         topic: selectedTopic.topic,
@@ -561,13 +566,41 @@ const TrendingTopics: React.FC = () => {
           setChapters(chaptersWithImages);
 
           // Add generated images to the stock images array
-          const newGeneratedImages = chaptersWithImages
-            .map(chapter => chapter.assets?.image)
-            .filter((image): image is string => Boolean(image));
+          const newGeneratedImages: string[] = [];
+          const chapterImagesForMap: Record<number, string[]> = {};
+
+          chaptersWithImages.forEach((chapter, index) => {
+            // Add primary image to generated images
+            if (chapter.assets?.image) {
+              newGeneratedImages.push(chapter.assets.image);
+            }
+
+            // Add all generated images (primary + additional) to chapter images map for testing
+            const allChapterImages: string[] = [];
+            if (chapter.assets?.image) {
+              allChapterImages.push(chapter.assets.image);
+            }
+            if ((chapter as any).additionalImages && Array.isArray((chapter as any).additionalImages)) {
+              allChapterImages.push(...(chapter as any).additionalImages);
+              // Also add additional images to the generated images array for stock
+              newGeneratedImages.push(...(chapter as any).additionalImages);
+            }
+            
+            if (allChapterImages.length > 0) {
+              chapterImagesForMap[index] = allChapterImages;
+            }
+          });
 
           if (newGeneratedImages.length > 0) {
             setGeneratedImages(prev => [...prev, ...newGeneratedImages]);
           }
+
+          // Set the chapter images map with all generated images
+          if (Object.keys(chapterImagesForMap).length > 0) {
+            setChapterImagesMap(prev => ({ ...prev, ...chapterImagesForMap }));
+          }
+
+          console.log(`🎨 Generated ${newGeneratedImages.length} total images for ${chaptersWithImages.length} chapters`);
         } catch (imageError) {
           console.error('Error generating chapter images:', imageError);
           // Don't set error state as chapters are still generated, just without images

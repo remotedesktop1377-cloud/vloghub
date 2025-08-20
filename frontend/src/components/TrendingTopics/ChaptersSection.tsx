@@ -15,7 +15,8 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Switch
+  Switch,
+  Tooltip
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -24,13 +25,16 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   DragIndicator as DragIcon,
-  AutoFixHigh as MagicIcon
+  AutoFixHigh as MagicIcon,
+  Visibility as PreviewIcon
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Chapter } from '../../types/chapters';
 import { fallbackImages } from '../../data/mockImages';
 import { HelperFunctions } from '../../utils/helperFunctions';
 import { AudioPlayer } from '../AudioPlayer/AudioPlayer';
+import { ImageViewModal, ImageViewMode } from '../ImageViewer/ImageViewModal';
+import { useImageViewer, formatChapterImages } from '../../hooks/useImageViewer';
 
 interface ChaptersSectionProps {
   chapters: Chapter[];
@@ -137,6 +141,25 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   onMediaManagementChapterIndex,
   onChaptersUpdate,
 }) => {
+  // Image viewer hook for enhanced image viewing
+  const imageViewer = useImageViewer();
+
+  // Handle opening image viewer for a chapter
+  const handleImageClick = (chapterIndex: number, imageIndex: number = 0) => {
+    const chapter = chapters[chapterIndex];
+    const chapterImages = chapterImagesMap[chapterIndex] || [];
+
+    const images = formatChapterImages(
+      chapterImages,
+      chapter.assets?.image || undefined,
+      chapter.visual_guidance // Use visual_guidance as prompt
+    );
+
+    if (images.length > 0) {
+      imageViewer.openViewer(images, imageIndex, 'preview');
+    }
+  };
+
   return (
     <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
       {chaptersGenerated && chapters.length > 0 ? (
@@ -362,184 +385,185 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
                                                 {/* Media Display */}
                                                 {((chapterImagesMap[index] || []).length > 0 || chapter.assets?.image) ? (
-                                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
-                                                    {/* Show Generated Chapter Image First */}
-                                                    {chapter.assets?.image && (
-                                                      <Box
-                                                        sx={{
-                                                          position: 'relative',
-                                                          width: '75px',
-                                                          height: '75px',
-                                                          borderRadius: 0.5,
-                                                          overflow: 'hidden',
-                                                          border: '2px solid #4caf50',
-                                                          cursor: 'pointer',
-                                                          transition: 'transform 0.2s',
-                                                          '&:hover': {
-                                                            transform: 'scale(1.02)',
-                                                            borderColor: '#388e3c'
-                                                          }
-                                                        }}
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          if (chapter.assets?.image) {
-                                                            window.open(chapter.assets.image, '_blank');
-                                                          }
-                                                        }}
-                                                      >
-                                                        <img
-                                                          src={chapter.assets?.image || ''}
-                                                          alt={`Generated Chapter ${index + 1} Image`}
-                                                          style={{
-                                                            position: 'absolute',
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover'
-                                                          }}
-                                                        />
-                                                        {/* Delete Button */}
-                                                        <IconButton
-                                                          size="small"
-                                                          sx={{
-                                                            position: 'absolute',
-                                                            top: 2,
-                                                            right: 2,
-                                                            bgcolor: 'rgba(255,255,255,0.9)',
-                                                            width: 14,
-                                                            height: 14,
-                                                            minWidth: 14,
-                                                            '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
-                                                          }}
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            // Remove the AI generated image from chapter
-                                                            const updatedChapters = chapters.map((ch, chIndex) => {
-                                                              if (chIndex === index) {
-                                                                return {
-                                                                  ...ch,
-                                                                  media: {
-                                                                    ...ch.assets,
-                                                                    image: null
-                                                                  }
-                                                                };
-                                                              }
-                                                              return ch;
-                                                            });
-                                                            onChaptersUpdate(updatedChapters);
-                                                          }}
-                                                        >
-                                                          <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                          </svg>
-                                                        </IconButton>
-                                                        {/* Generated Badge */}
+                                                  <>
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
+                                                      {/* Show Generated Chapter Image First */}
+                                                      {chapter.assets?.image && (
                                                         <Box
                                                           sx={{
-                                                            position: 'absolute',
-                                                            bottom: 2,
-                                                            left: 2,
-                                                            bgcolor: '#4caf50',
-                                                            color: 'white',
-                                                            fontSize: '0.6rem',
-                                                            px: 0.5,
-                                                            py: 0.1,
+                                                            position: 'relative',
+                                                            width: '75px',
+                                                            height: '75px',
                                                             borderRadius: 0.5,
-                                                            fontWeight: 'bold'
-                                                          }}
-                                                        >
-                                                          AI
-                                                        </Box>
-                                                      </Box>
-                                                    )}
-                                                    {/* Show Additional Images */}
-                                                    {(chapterImagesMap[index] || []).slice(0, chapter.assets?.image ? 3 : 4).map((imageUrl, imgIndex) => (
-                                                      <Box
-                                                        key={imgIndex}
-                                                        sx={{
-                                                          position: 'relative',
-                                                          width: '75px',
-                                                          height: '75px',
-                                                          borderRadius: 0.5,
-                                                          overflow: 'hidden',
-                                                          border: '1px solid #e0e0e0',
-                                                          cursor: 'pointer',
-                                                          transition: 'transform 0.2s',
-                                                          '&:hover': {
-                                                            transform: 'scale(1.02)',
-                                                            borderColor: '#1976d2'
-                                                          }
-                                                        }}
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          window.open(imageUrl, '_blank');
-                                                        }}
-                                                      >
-                                                        <img
-                                                          src={imageUrl}
-                                                          alt={`Chapter ${index + 1} Media ${imgIndex + 1}`}
-                                                          style={{
-                                                            position: 'absolute',
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover'
-                                                          }}
-                                                        />
-                                                        {/* Delete Button */}
-                                                        <IconButton
-                                                          size="small"
-                                                          sx={{
-                                                            position: 'absolute',
-                                                            top: 2,
-                                                            right: 2,
-                                                            bgcolor: 'rgba(255,255,255,0.9)',
-                                                            width: 14,
-                                                            height: 14,
-                                                            minWidth: 14,
-                                                            '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                                                            overflow: 'hidden',
+                                                            border: '2px solid #4caf50',
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.2s',
+                                                            '&:hover': {
+                                                              transform: 'scale(1.02)',
+                                                              borderColor: '#388e3c'
+                                                            }
                                                           }}
                                                           onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const currentImages = chapterImagesMap[index] || [];
-                                                            const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
-                                                            onChapterImagesMapChange({
-                                                              ...chapterImagesMap,
-                                                              [index]: updatedImages
-                                                            });
+                                                            handleImageClick(index, 0);
                                                           }}
                                                         >
-                                                          <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                          </svg>
-                                                        </IconButton>
-                                                      </Box>
-                                                    ))}
-                                                    {(chapterImagesMap[index] || []).length > 4 && (
-                                                      <Box sx={{
-                                                        position: 'relative',
-                                                        width: '50px',
-                                                        height: '50px',
-                                                        borderRadius: 0.5,
-                                                        border: '1px dashed #ccc',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        bgcolor: '#f9f9f9',
-                                                        cursor: 'pointer',
-                                                        fontSize: '0.5rem',
-                                                        color: '#666'
-                                                      }}
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          onMediaManagementChapterIndex(index);
-                                                          onMediaManagementOpen(true);
-                                                        }}
-                                                      >
-                                                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                          +{(chapterImagesMap[index] || []).length - 4}
+                                                          <img
+                                                            src={chapter.assets?.image || ''}
+                                                            alt={`Generated Chapter ${index + 1} Image`}
+                                                            style={{
+                                                              position: 'absolute',
+                                                              width: '100%',
+                                                              height: '100%',
+                                                              objectFit: 'cover'
+                                                            }}
+                                                          />
+                                                          {/* Delete Button */}
+                                                          <IconButton
+                                                            size="small"
+                                                            sx={{
+                                                              position: 'absolute',
+                                                              top: 2,
+                                                              right: 2,
+                                                              bgcolor: 'rgba(255,255,255,0.9)',
+                                                              width: 14,
+                                                              height: 14,
+                                                              minWidth: 14,
+                                                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                                                            }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              // Remove the AI generated image from chapter
+                                                              const updatedChapters = chapters.map((ch, chIndex) => {
+                                                                if (chIndex === index) {
+                                                                  return {
+                                                                    ...ch,
+                                                                    media: {
+                                                                      ...ch.assets,
+                                                                      image: null
+                                                                    }
+                                                                  };
+                                                                }
+                                                                return ch;
+                                                              });
+                                                              onChaptersUpdate(updatedChapters);
+                                                            }}
+                                                          >
+                                                            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                              <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                          </IconButton>
+                                                          {/* Generated Badge */}
+                                                          <Box
+                                                            sx={{
+                                                              position: 'absolute',
+                                                              bottom: 2,
+                                                              left: 2,
+                                                              bgcolor: '#4caf50',
+                                                              color: 'white',
+                                                              fontSize: '0.6rem',
+                                                              px: 0.5,
+                                                              py: 0.1,
+                                                              borderRadius: 0.5,
+                                                              fontWeight: 'bold'
+                                                            }}
+                                                          >
+                                                            AI
+                                                          </Box>
                                                         </Box>
-                                                      </Box>
-                                                    )}
-                                                  </Box>
+                                                      )}
+                                                      {/* Show Additional Images */}
+                                                      {(chapterImagesMap[index] || []).slice(0, chapter.assets?.image ? 3 : 4).map((imageUrl, imgIndex) => (
+                                                        <Box
+                                                          key={imgIndex}
+                                                          sx={{
+                                                            position: 'relative',
+                                                            width: '75px',
+                                                            height: '75px',
+                                                            borderRadius: 0.5,
+                                                            overflow: 'hidden',
+                                                            border: '1px solid #e0e0e0',
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.2s',
+                                                            '&:hover': {
+                                                              transform: 'scale(1.02)',
+                                                              borderColor: '#1976d2'
+                                                            }
+                                                          }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const imageIndex = chapter.assets?.image ? imgIndex + 1 : imgIndex;
+                                                            handleImageClick(index, imageIndex);
+                                                          }}
+                                                        >
+                                                          <img
+                                                            src={imageUrl}
+                                                            alt={`Chapter ${index + 1} Media ${imgIndex + 1}`}
+                                                            style={{
+                                                              position: 'absolute',
+                                                              width: '100%',
+                                                              height: '100%',
+                                                              objectFit: 'cover'
+                                                            }}
+                                                          />
+                                                          {/* Delete Button */}
+                                                          <IconButton
+                                                            size="small"
+                                                            sx={{
+                                                              position: 'absolute',
+                                                              top: 2,
+                                                              right: 2,
+                                                              bgcolor: 'rgba(255,255,255,0.9)',
+                                                              width: 14,
+                                                              height: 14,
+                                                              minWidth: 14,
+                                                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                                                            }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              const currentImages = chapterImagesMap[index] || [];
+                                                              const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
+                                                              onChapterImagesMapChange({
+                                                                ...chapterImagesMap,
+                                                                [index]: updatedImages
+                                                              });
+                                                            }}
+                                                          >
+                                                            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                              <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                          </IconButton>
+                                                        </Box>
+                                                      ))}
+                                                      {(chapterImagesMap[index] || []).length > 4 && (
+                                                        <Box sx={{
+                                                          position: 'relative',
+                                                          width: '50px',
+                                                          height: '50px',
+                                                          borderRadius: 0.5,
+                                                          border: '1px dashed #ccc',
+                                                          display: 'flex',
+                                                          alignItems: 'center',
+                                                          justifyContent: 'center',
+                                                          bgcolor: '#f9f9f9',
+                                                          cursor: 'pointer',
+                                                          fontSize: '0.5rem',
+                                                          color: '#666'
+                                                        }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onMediaManagementChapterIndex(index);
+                                                            onMediaManagementOpen(true);
+                                                          }}
+                                                        >
+                                                          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            +{(chapterImagesMap[index] || []).length - 4}
+                                                          </Box>
+                                                        </Box>
+                                                      )}
+                                                    </Box>
+                                                  </>
                                                 ) : (
                                                   <Box sx={{
                                                     border: '1px dashed #ddd',
@@ -1182,6 +1206,29 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           <Button onClick={() => onPickerOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Image View Modal */}
+      <ImageViewModal
+        open={imageViewer.isOpen}
+        onClose={imageViewer.closeViewer}
+        images={imageViewer.images}
+        currentIndex={imageViewer.currentIndex}
+        onIndexChange={imageViewer.setCurrentIndex}
+        viewMode={imageViewer.viewMode}
+        onViewModeChange={imageViewer.setViewMode}
+        title={`Chapter ${chapters.findIndex(ch => {
+          const chapterImages = chapterImagesMap[chapters.indexOf(ch)] || [];
+          const images = formatChapterImages(
+            chapterImages,
+            ch.assets?.image || undefined,
+            ch.visual_guidance // Use visual_guidance as prompt
+          );
+          return images.some(img => img.url === imageViewer.currentImage?.url);
+        }) + 1} Images`}
+        showNavigation={true}
+        showDownload={true}
+        showViewModeSelector={true}
+      />
     </Paper>
   );
 };
