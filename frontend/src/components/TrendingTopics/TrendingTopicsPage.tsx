@@ -984,7 +984,10 @@ const TrendingTopics: React.FC = () => {
                       return geminiTrendingTopics.map(topic => {
                         return {
                           text: topic.topic,
-                          value: topic.value || 1 // Higher value = larger word
+                          value: topic.value || 1, // Higher value = larger word
+                          category: topic.category,
+                          description: topic.description,
+                          source_reference: topic.source_reference
                         };
                       });
                     })()}
@@ -1008,7 +1011,10 @@ const TrendingTopics: React.FC = () => {
                       .map(topic => {
                         return {
                           text: topic.topic,
-                          value: topic.value || 1 // Higher value = larger word
+                          value: topic.value || 1, // Higher value = larger word
+                          category: topic.category,
+                          description: topic.description,
+                          source_reference: topic.source_reference
                         };
                       })}
                     handleWordClick={wordClickHandler}

@@ -1,9 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import WordCloud from 'react-d3-cloud';
+import styles from './WordCloudChart.module.css';
 
 export interface WordData {
     text: string;
     value: number;
+    category?: string;
+    description?: string;
+    source_reference?: string;
 }
 
 interface IWordCloudChartProps {
@@ -16,6 +20,17 @@ interface IWordCloudChartProps {
 export function WordCloudChart(props: IWordCloudChartProps) {
     const [data, setData] = useState<WordData[]>([]);
     const [selectedWord, setSelectedWord] = useState<string | null>(null);
+    const [tooltip, setTooltip] = useState<{
+        visible: boolean;
+        x: number;
+        y: number;
+        word: WordData | null;
+    }>({
+        visible: false,
+        x: 0,
+        y: 0,
+        word: null
+    });
 
     // Use useRef to maintain stable references that never change
     const stableRefs = useRef({
@@ -26,6 +41,19 @@ export function WordCloudChart(props: IWordCloudChartProps) {
         handleWordClick: (word: any) => {
             setSelectedWord(word.text);
             props.handleWordClick(word);
+        },
+        handleWordMouseEnter: (event: any, word: any) => {
+            const rect = event.target.getBoundingClientRect();
+            const containerRect = event.target.closest('div').getBoundingClientRect();
+            setTooltip({
+                visible: true,
+                x: rect.left + rect.width / 2 - containerRect.left,
+                y: rect.top - containerRect.top,
+                word: word
+            });
+        },
+        handleWordMouseLeave: () => {
+            setTooltip(prev => ({ ...prev, visible: false }));
         }
     });
 
@@ -54,30 +82,32 @@ export function WordCloudChart(props: IWordCloudChartProps) {
     }, [props.data, selectedWord]);
 
     if (!data || data.length === 0) {
-        return <div style={{
-            width: props.width || 500,
-            height: props.height || 450,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            fontSize: '14px',
-            color: '#666'
-        }}>Loading word cloud...</div>;
+        return <div 
+            className={styles.loadingContainer}
+            style={{
+                width: props.width || 500,
+                height: props.height || 450,
+            }}
+        >
+            Loading word cloud...
+        </div>;
     }
 
     return (
-        <div style={{
-            width: props.width || 500,
-            height: props.height || 450,
-            position: 'relative',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-        }}>
-            <div style={{
-                width: (props.width || 500) - 20,
-                height: (props.height || 450) - 20,
-            }}>
+        <div 
+            className={styles.wordCloudContainer}
+            style={{
+                width: props.width || 500,
+                height: props.height || 450,
+            }}
+        >
+            <div 
+                className={styles.wordCloudWrapper}
+                style={{
+                    width: (props.width || 500) - 20,
+                    height: (props.height || 450) - 20,
+                }}
+            >
                 <WordCloud
                     width={(props.width || 500) - 20}
                     height={(props.height || 450) - 20}
@@ -91,9 +121,46 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                         // console.log('Word clicked:', d);
                         stableRefs.current.handleWordClick(d);
                     }}
+                    onWordMouseOver={(e, d) => {
+                        stableRefs.current.handleWordMouseEnter(e, d);
+                    }}
+                    onWordMouseOut={() => {
+                        stableRefs.current.handleWordMouseLeave();
+                    }}
                     fill={stableRefs.current.fill}
                     fontWeight="bold"
                 />
+                {tooltip.visible && tooltip.word && (
+                    <div
+                        className={`${styles.tooltip} ${tooltip.visible ? styles.visible : ''}`}
+                        style={{
+                            left: tooltip.x,
+                            top: tooltip.y,
+                        }}
+                    >
+                        <div className={styles.tooltipTitle}>
+                            <strong>{tooltip.word.text}</strong>
+                        </div>
+                        <div className={styles.tooltipField}>
+                            <span className={styles.tooltipLabel}>Engagement:</span> {tooltip.word.value}
+                        </div>
+                        {tooltip.word.category && (
+                            <div className={styles.tooltipField}>
+                                <span className={styles.tooltipLabel}>Category:</span> {tooltip.word.category}
+                            </div>
+                        )}
+                        {tooltip.word.description && (
+                            <div className={styles.tooltipField}>
+                                <span className={styles.tooltipLabel}>Description:</span> {tooltip.word.description}
+                            </div>
+                        )}
+                        {tooltip.word.source_reference && (
+                            <div className={styles.tooltipField}>
+                                <span className={styles.tooltipLabel}>Source:</span> {tooltip.word.source_reference}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,0 +1,79 @@
+.wordCloudContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.wordCloudWrapper {
+  position: relative;
+}
+
+.wordCloudWrapper text {
+  cursor: pointer !important;
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+}
+
+.tooltipTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+.tooltipField {
+  margin-bottom: 4px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.tooltipField:last-child {
+  margin-bottom: 0;
+}
+
+.tooltipLabel {
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-right: 4px;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+}
