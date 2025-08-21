@@ -63,7 +63,7 @@ import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
 import ChaptersSection from './ChaptersSection';
 import HeaderSection from './HeaderSection';
-import SelectedTopicHeader from './SelectedTopicHeader';
+
 import ConfirmationDialog from './ConfirmationDialog';
 import NarrationPickerDialog from './NarrationPickerDialog';
 import { mockChapters } from '@/data/mockChapters';
@@ -155,9 +155,7 @@ const TrendingTopics: React.FC = () => {
       const elements = document.querySelectorAll('h6, .MuiTypography-subtitle1');
       Array.from(elements).forEach(element => {
         const text = element.textContent || '';
-        if (sectionName === 'topic-details' && text.includes('Your Topic')) {
-          targetElement = element.closest('.MuiPaper-root');
-        } else if (sectionName === 'hypothesis' && text.includes('Your Hypothesis')) {
+        if (sectionName === 'hypothesis' && text.includes('Your Hypothesis')) {
           targetElement = element.closest('.MuiPaper-root');
         }
       });
@@ -339,8 +337,7 @@ const TrendingTopics: React.FC = () => {
       setHypothesisSuggestions([]);
       setLoadingTopicSuggestions(true);
       setError(null);
-      // Auto-scroll to topic details section after fallback suggestions
-      scrollToSection('topic-details');
+
 
       const result = await apiService.getTopicSuggestions({
         topic: topicName,
@@ -382,8 +379,7 @@ const TrendingTopics: React.FC = () => {
     if (!selectedTopicDetails || !selectedTopicDetails.trim()) return;
     if (loadingTopicSuggestions) return;
     try {
-      // Auto-scroll to hypothesis section after suggestions are loaded
-      scrollToSection('hypothesis');
+
       setLoadingHypothesisSuggestions(true);
       const result = await apiService.getHypothesisSuggestions({
         topic: selectedTopic.topic,
@@ -790,11 +786,12 @@ const TrendingTopics: React.FC = () => {
     console.log('🔍 Available topics:', trendingTopics.map(t => t.topic));
     
     // find the topic which matches the clicked word
-    const selectedTopic = trendingTopics.find(t => t.topic === w.text);
+    const foundTopic = trendingTopics.find(t => t.topic === w.text);
 
-    if (selectedTopic) {
-      console.log('✅ Selecting topic:', selectedTopic.topic);
-      await handleTopicSelect(selectedTopic);
+    if (foundTopic) {
+      console.log('✅ Selecting topic:', foundTopic.topic);
+      console.log('✅ Found topic object:', foundTopic);
+      await handleTopicSelect(foundTopic);
     } else {
       console.log('❌ No matching topic found for:', w.text);
     }
@@ -945,29 +942,121 @@ const TrendingTopics: React.FC = () => {
           </Box>
         </Paper>
       ) : (
-        /* Cloud View - Single word cloud for trending topics */
+        /* Cloud View - Centered word cloud with permanent details panel on right */
         <Paper sx={{ p: 2, mb: 2 }}>
           {trendingTopics.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No trends to display.</Typography>
           ) : (
-            <Box className={styles.wordCloudSection}>
-              {/* Single Word Cloud */}
-              <Box className={styles.wordCloudColumn} sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Box className={styles.wordCloudContainer}>
-                  <WordCloudChart
-                    width={800}
-                    height={450}
-                    data={trendingTopics.map(topic => {
-                      return {
-                        text: topic.topic,
-                        value: topic.value || 1, // Higher value = larger word
-                        category: topic.category,
-                        description: topic.description,
-                        source_reference: topic.source_reference
-                      };
-                    })}
-                    handleWordClick={wordClickHandler}
-                  />
+            <Box sx={{ display: 'flex', gap: 3, height: '400px' }}>
+              {/* Centered Word Cloud Container */}
+              <Box sx={{ 
+                flex: 1,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <WordCloudChart
+                  width={600}
+                  height={400}
+                  data={trendingTopics.map(topic => {
+                    return {
+                      text: topic.topic,
+                      value: topic.value || 1,
+                      category: topic.category,
+                      description: topic.description,
+                      source_reference: topic.source_reference,
+                      id: topic.id
+                    };
+                  })}
+                  handleWordClick={wordClickHandler}
+                />
+              </Box>
+              
+              {/* Permanent Details Panel on Right */}
+              <Box sx={{ 
+                width: '320px',
+                border: '1px solid #e0e0e0',
+                borderRadius: 2,
+                backgroundColor: '#fafafa',
+                display: 'flex',
+                flexDirection: 'column',
+                flexShrink: 0
+              }}>
+                {/* Panel Header */}
+                <Box sx={{ 
+                  p: 2, 
+                  borderBottom: '1px solid #e0e0e0',
+                  backgroundColor: '#f5f5f5'
+                }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                    Topic Details
+                  </Typography>
+                </Box>
+                
+                {/* Panel Content */}
+                <Box sx={{ 
+                  flex: 1, 
+                  p: 2,
+                  overflowY: 'auto',
+                  '&::-webkit-scrollbar': {
+                    width: '6px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: '#f1f1f1',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: '#c1c1c1',
+                    borderRadius: '3px',
+                  },
+                }}>
+                  {selectedTopic ? (
+                    <Box>
+                      {console.log('🎯 Rendering topic details for:', selectedTopic)}
+                      {/* Selected Topic */}
+                      <Typography variant="h6" sx={{ 
+                        fontWeight: 700, 
+                        color: '#1976d2',
+                        mb: 2,
+                        fontSize: '1.2rem',
+                        lineHeight: 1.3
+                      }}>
+                        {selectedTopic.topic}
+                      </Typography>
+                      
+                      {/* Description */}
+                      <Typography variant="body2" sx={{ 
+                        color: '#333',
+                        lineHeight: 1.6,
+                        fontSize: '0.95rem'
+                      }}>
+                        {selectedTopic.description}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '100%',
+                      textAlign: 'center',
+                      color: '#999'
+                    }}>
+                      <Box sx={{ 
+                        fontSize: '2rem',
+                        mb: 2,
+                        opacity: 0.3
+                      }}>
+                        🔍
+                      </Box>
+                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                        Click on any topic
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                        to see detailed information
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             </Box>
@@ -989,8 +1078,6 @@ const TrendingTopics: React.FC = () => {
       {/* Topic Details Section */}
       {selectedTopic && (
         <Box className={styles.topicDetailsSection}>
-          <SelectedTopicHeader selectedTopic={selectedTopic} />
-
           <Box className={styles.topicDetailsContent}>
 
             <TopicDetailsSection

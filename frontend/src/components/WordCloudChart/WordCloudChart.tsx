@@ -20,17 +20,7 @@ interface IWordCloudChartProps {
 export function WordCloudChart(props: IWordCloudChartProps) {
     const [data, setData] = useState<WordData[]>([]);
     const [selectedWord, setSelectedWord] = useState<string | null>(null);
-    const [tooltip, setTooltip] = useState<{
-        visible: boolean;
-        x: number;
-        y: number;
-        word: WordData | null;
-    }>({
-        visible: false,
-        x: 0,
-        y: 0,
-        word: null
-    });
+
 
     // Use useRef to maintain stable references that never change
     const stableRefs = useRef({
@@ -41,19 +31,6 @@ export function WordCloudChart(props: IWordCloudChartProps) {
         handleWordClick: (word: any) => {
             setSelectedWord(word.text);
             props.handleWordClick(word);
-        },
-        handleWordMouseEnter: (event: any, word: any) => {
-            const rect = event.target.getBoundingClientRect();
-            const containerRect = event.target.closest('div').getBoundingClientRect();
-            setTooltip({
-                visible: true,
-                x: rect.left + rect.width / 2 - containerRect.left,
-                y: rect.top - containerRect.top,
-                word: word
-            });
-        },
-        handleWordMouseLeave: () => {
-            setTooltip(prev => ({ ...prev, visible: false }));
         }
     });
 
@@ -121,46 +98,10 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                         // console.log('Word clicked:', d);
                         stableRefs.current.handleWordClick(d);
                     }}
-                    onWordMouseOver={(e, d) => {
-                        stableRefs.current.handleWordMouseEnter(e, d);
-                    }}
-                    onWordMouseOut={() => {
-                        stableRefs.current.handleWordMouseLeave();
-                    }}
                     fill={stableRefs.current.fill}
                     fontWeight="bold"
                 />
-                {tooltip.visible && tooltip.word && (
-                    <div
-                        className={`${styles.tooltip} ${tooltip.visible ? styles.visible : ''}`}
-                        style={{
-                            left: tooltip.x,
-                            top: tooltip.y,
-                        }}
-                    >
-                        <div className={styles.tooltipTitle}>
-                            <strong>{tooltip.word.text}</strong>
-                        </div>
-                        <div className={styles.tooltipField}>
-                            <span className={styles.tooltipLabel}>Engagement:</span> {tooltip.word.value}
-                        </div>
-                        {tooltip.word.category && (
-                            <div className={styles.tooltipField}>
-                                <span className={styles.tooltipLabel}>Category:</span> {tooltip.word.category}
-                            </div>
-                        )}
-                        {tooltip.word.description && (
-                            <div className={styles.tooltipField}>
-                                <span className={styles.tooltipLabel}>Description:</span> {tooltip.word.description}
-                            </div>
-                        )}
-                        {tooltip.word.source_reference && (
-                            <div className={styles.tooltipField}>
-                                <span className={styles.tooltipLabel}>Source:</span> {tooltip.word.source_reference}
-                            </div>
-                        )}
-                    </div>
-                )}
+
             </div>
         </div>
     );
