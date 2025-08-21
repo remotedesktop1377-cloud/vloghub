@@ -62,7 +62,7 @@ function extractJsonFromText(text: string): any | null {
 }
 
 async function getHypothesisSuggestions({ topic, details = '', region = 'pakistan', num = 5, tone = 'Engaging, research-focused' }: HypothesisSuggestionsRequest) {
-  const prompt = `You are a senior editorial strategist for video scripts. Generate concise hypothesis options a creator could explore for the topic.\n\n` +
+  const prompt = `You are a senior editorial strategist for video scripts. Generate concise hypothesis options a creator could explore for the ${topic}.\n\n` +
     `Requirements:\n` +
     `- Return exactly ${num} distinct hypotheses\n` +
     `- Each hypothesis should be a single sentence (max 25 words)\n` +

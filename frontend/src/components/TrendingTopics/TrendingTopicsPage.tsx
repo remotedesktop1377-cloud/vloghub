@@ -837,60 +837,111 @@ const TrendingTopics: React.FC = () => {
       )}
 
       {trendView === 'grid' ? (
-        /* Grid View - Single grid for trending topics */
+        /* List View - Simple list for trending topics */
         <Paper sx={{ p: 2, mb: 2 }}>
-          <Box className={styles.gridSection}>
-            {/* Trending Topics Grid */}
-            <Box className={styles.gridColumn}>
-              <Box className={styles.gridLabel}>
-                <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
-                  Trending Topics
-                </Typography>
-              </Box>
-              <Grid container spacing={2}>
-                {trendingTopics.map((topic, index) => (
-                  <Grid item xs={12} sm={6} md={5} lg={4} key={`gemini-${index}`}>
-                    <Card
-                      className={styles.topicCard}
+          <Box className={styles.listSection}>
+            {/* Trending Topics List */}
+            <Box sx={{ width: '100%' }}>
+              {/* Fixed height container with scroll */}
+              <Box 
+                sx={{ 
+                  height: '400px', // Fixed height container
+                  overflowY: 'auto', // Enable vertical scrolling
+                  overflowX: 'hidden', // Hide horizontal scroll
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 1,
+                  backgroundColor: '#fafafa',
+                  p: 1,
+                  // Custom scrollbar styling
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: '#f1f1f1',
+                    borderRadius: '4px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: '#c1c1c1',
+                    borderRadius: '4px',
+                    '&:hover': {
+                      background: '#a8a8a8',
+                    },
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {trendingTopics.map((topic, index) => {
+                    const isSelected = selectedTopic?.id === topic.id;
+                    return (
+                    <Box
+                      key={`topic-${index}`}
                       onClick={() => handleTopicSelect(topic)}
                       sx={{
                         cursor: 'pointer',
-                        transition: 'all 0.3s ease',
+                        transition: 'all 0.2s ease',
                         '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: 3
+                          backgroundColor: isSelected ? '#e3f2fd' : '#f5f5f5',
+                          borderLeft: '3px solid #1976d2',
+                          paddingLeft: '15px'
                         },
-                        border: '1px solid blue'
+                        border: isSelected ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                        borderLeft: isSelected ? '4px solid #1976d2' : '1px solid #e0e0e0',
+                        borderRadius: 1,
+                        p: 1.5,
+                        paddingLeft: isSelected ? '14px' : '12px',
+                        mb: 0.5,
+                        backgroundColor: isSelected ? '#e3f2fd' : '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        minHeight: '60px',
+                        boxShadow: isSelected ? '0 2px 8px rgba(25, 118, 210, 0.2)' : 'none'
                       }}
-                    >
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                          {topic.topic}
-                        </Typography>
-
-                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
-                          <Chip
-                            label={topic.category}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem', mb: 1, alignSelf: 'flex-start' }}
-                          />
-                          <Chip
-                            label={`${topic.value} posts`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem', width: 'fit-content', pl: 1, pr: 1 }}
-                          />
-
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+                  >
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      {/* Topic */}
+                      <Typography 
+                        variant="subtitle2" 
+                        sx={{ 
+                          fontWeight: 600, 
+                          color: '#1976d2',
+                          fontSize: '0.95rem',
+                          minWidth: '200px',
+                          flexShrink: 0
+                        }}
+                      >
+                        {topic.topic}
+                      </Typography>
+                      
+                      {/* Separator */}
+                      <Box 
+                        sx={{ 
+                          width: '1px', 
+                          height: '30px', 
+                          backgroundColor: '#e0e0e0',
+                          flexShrink: 0 
+                        }} 
+                      />
+                      
+                      {/* Description */}
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: '#666',
+                          fontSize: '0.85rem',
+                          lineHeight: 1.3,
+                          flex: 1
+                        }}
+                      >
+                        {topic.description}
+                      </Typography>
+                    </Box>
+                  </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
             </Box>
-
-
           </Box>
         </Paper>
       ) : (
@@ -902,11 +953,6 @@ const TrendingTopics: React.FC = () => {
             <Box className={styles.wordCloudSection}>
               {/* Single Word Cloud */}
               <Box className={styles.wordCloudColumn} sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Box className={styles.wordCloudLabel}>
-                  <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
-                    Trending Topics
-                  </Typography>
-                </Box>
                 <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
                     width={800}
