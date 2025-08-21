@@ -288,10 +288,7 @@ export class ApiService {
 
 // Specific API service functions for common operations
 export const apiService = {
-  // Trending Topics
-  getTrendingTopics: (region: string) => 
-    ApiService.get(API_ENDPOINTS.TRENDING_TOPICS, { region }),
-  
+  // Trending Topics (Gemini only)
   getGeminiTrendingTopics: (region: string) => 
     ApiService.get(API_ENDPOINTS.GEMINI_TRENDING_TOPICS, { region }),
 

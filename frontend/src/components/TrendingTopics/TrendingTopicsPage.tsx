@@ -72,7 +72,6 @@ import { mockChapters } from '@/data/mockChapters';
 const TrendingTopics: React.FC = () => {
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
-  const [geminiTrendingTopics, setGeminiTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState('pakistan');
@@ -267,7 +266,6 @@ const TrendingTopics: React.FC = () => {
   const fetchTrendingTopics = async (region: string) => {
     if (USE_HARDCODED) {
       setTrendingTopics(mockTrendingTopics);
-      setGeminiTrendingTopics(mockTrendingTopics);
       setLoading(false);
       return; // skip API in hardcoded mode
     }
@@ -275,27 +273,8 @@ const TrendingTopics: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch from both sources in parallel
-      const [twitterResult, geminiResult] = await Promise.all([
-        apiService.getTrendingTopics(region),
-        apiService.getGeminiTrendingTopics(region)
-      ]);
-
-      // Handle Twitter results
-      if (twitterResult.success && twitterResult.data) {
-        const twitterData = twitterResult.data.data || [];
-        console.log('🔵 Twitter API Response Data:', twitterData);
-        console.log('🔵 Twitter Topics with Values:', twitterData.map((t: any) => ({
-          topic: t.topic,
-          value: t.value
-        })));
-        // Sort by value (higher = first)
-        const sortedTwitterData = twitterData.sort((a: any, b: any) => b.value - a.value);
-        setTrendingTopics(sortedTwitterData);
-      } else {
-        console.warn('Twitter API not ok, using mock data. Error:', twitterResult.error);
-        setTrendingTopics(mockTrendingTopics);
-      }
+      // Fetch from Gemini API only
+      const geminiResult = await apiService.getGeminiTrendingTopics(region);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
@@ -307,17 +286,16 @@ const TrendingTopics: React.FC = () => {
         })));
         // Sort by value (higher = first)
         const sortedGeminiData = geminiData.sort((a: any, b: any) => b.value - a.value);
-        setGeminiTrendingTopics(sortedGeminiData);
+        setTrendingTopics(sortedGeminiData);
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
-        setGeminiTrendingTopics(mockTrendingTopics);
+        setTrendingTopics(mockTrendingTopics);
       }
 
       setError(null);
     } catch (err) {
       console.error('Error fetching trending topics, using mock data:', err);
       setTrendingTopics(mockTrendingTopics);
-      setGeminiTrendingTopics(mockTrendingTopics);
       setError(null);
     } finally {
       setLoading(false);
@@ -335,7 +313,6 @@ const TrendingTopics: React.FC = () => {
       setSelectedTopicDetails(HARDCODED_TOPIC);
       setHypothesis(HARDCODED_HYPOTHESIS);
       setTrendingTopics(mockTrendingTopics);
-      setGeminiTrendingTopics(mockTrendingTopics);
       // Provide mock chapters so we don't call the backend
       setChapters(mockChapters);
       setChaptersGenerated(true);
@@ -809,18 +786,19 @@ const TrendingTopics: React.FC = () => {
   };
 
   const wordClickHandler = useCallback(async (w: any) => {
-    // find the topic which have same topic name from both sources
-    const twitterTopic = trendingTopics.find(t => t.topic === w.text);
-    const geminiTopic = geminiTrendingTopics.find(t => t.topic === w.text);
+    console.log('🔍 Word clicked:', w.text);
+    console.log('🔍 Available topics:', trendingTopics.map(t => t.topic));
+    
+    // find the topic which matches the clicked word
+    const selectedTopic = trendingTopics.find(t => t.topic === w.text);
 
-    if (twitterTopic) {
-      await handleTopicSelect(twitterTopic);
-    } else if (geminiTopic) {
-      await handleTopicSelect(geminiTopic);
+    if (selectedTopic) {
+      console.log('✅ Selecting topic:', selectedTopic.topic);
+      await handleTopicSelect(selectedTopic);
     } else {
-      console.log('No matching topic found for:', w.text);
+      console.log('❌ No matching topic found for:', w.text);
     }
-  }, [trendingTopics, geminiTrendingTopics, handleTopicSelect]);
+  }, [trendingTopics, handleTopicSelect]);
 
   if (loading) {
     return (
@@ -859,18 +837,18 @@ const TrendingTopics: React.FC = () => {
       )}
 
       {trendView === 'grid' ? (
-        /* Grid View - Two grids side by side */
+        /* Grid View - Single grid for trending topics */
         <Paper sx={{ p: 2, mb: 2 }}>
           <Box className={styles.gridSection}>
-            {/* Gemini Topics Grid */}
+            {/* Trending Topics Grid */}
             <Box className={styles.gridColumn}>
               <Box className={styles.gridLabel}>
                 <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
-                  Gemini Topics
+                  Trending Topics
                 </Typography>
               </Box>
               <Grid container spacing={2}>
-                {geminiTrendingTopics.map((topic, index) => (
+                {trendingTopics.map((topic, index) => (
                   <Grid item xs={12} sm={6} md={5} lg={4} key={`gemini-${index}`}>
                     <Card
                       className={styles.topicCard}
@@ -912,111 +890,36 @@ const TrendingTopics: React.FC = () => {
               </Grid>
             </Box>
 
-            {/* Twitter Topics Grid */}
-            <Box className={styles.gridColumn}>
-              <Box className={styles.gridLabel}>
-                <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
-                  Twitter Topics
-                </Typography>
-              </Box>
-              <Grid container spacing={2}>
-                {trendingTopics.map((topic, index) => (
-                  <Grid item xs={12} sm={6} md={5} lg={4} key={`twitter-${index}`}>
-                    <Card
-                      className={styles.topicCard}
-                      onClick={() => handleTopicSelect(topic)}
-                      sx={{
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: 3
-                        },
-                        border: '1px solid red'
-                      }}
-                    >
-                      <CardContent sx={{ p: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                          {topic.topic}
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
-                          <Chip
-                            label={topic.category}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem', mb: 1, alignSelf: 'flex-start' }}
-                          />
-                          <Chip
-                            label={`${topic.value} posts`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem', width: 'fit-content', pl: 1, pr: 1 }}
-                          />
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
+
           </Box>
         </Paper>
       ) : (
-        /* Cloud View - Two word clouds side by side */
+        /* Cloud View - Single word cloud for trending topics */
         <Paper sx={{ p: 2, mb: 2 }}>
           {trendingTopics.length === 0 ? (
             <Typography variant="body2" color="text.secondary">No trends to display.</Typography>
           ) : (
             <Box className={styles.wordCloudSection}>
-              {/* Left Column - Gemini Word Cloud */}
-              <Box className={styles.wordCloudColumn}>
+              {/* Single Word Cloud */}
+              <Box className={styles.wordCloudColumn} sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <Box className={styles.wordCloudLabel}>
                   <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
-                    Gemini Topics
+                    Trending Topics
                   </Typography>
                 </Box>
                 <Box className={styles.wordCloudContainer}>
                   <WordCloudChart
-                    width={500}
+                    width={800}
                     height={450}
-                    data={(() => {
-                      console.log(`🟢 Total Gemini Topics: ${geminiTrendingTopics.length}`);
-                      return geminiTrendingTopics.map(topic => {
-                        return {
-                          text: topic.topic,
-                          value: topic.value || 1, // Higher value = larger word
-                          category: topic.category,
-                          description: topic.description,
-                          source_reference: topic.source_reference
-                        };
-                      });
-                    })()}
-                    handleWordClick={wordClickHandler}
-                  />
-                </Box>
-              </Box>
-
-              {/* Right Column - Twitter Word Cloud */}
-              <Box className={styles.wordCloudColumn}>
-                <Box className={styles.wordCloudLabel}>
-                  <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
-                    Twitter Topics
-                  </Typography>
-                </Box>
-                <Box className={styles.wordCloudContainer}>
-                  <WordCloudChart
-                    width={500}
-                    height={450}
-                    data={trendingTopics
-                      .map(topic => {
-                        return {
-                          text: topic.topic,
-                          value: topic.value || 1, // Higher value = larger word
-                          category: topic.category,
-                          description: topic.description,
-                          source_reference: topic.source_reference
-                        };
-                      })}
+                    data={trendingTopics.map(topic => {
+                      return {
+                        text: topic.topic,
+                        value: topic.value || 1, // Higher value = larger word
+                        category: topic.category,
+                        description: topic.description,
+                        source_reference: topic.source_reference
+                      };
+                    })}
                     handleWordClick={wordClickHandler}
                   />
                 </Box>

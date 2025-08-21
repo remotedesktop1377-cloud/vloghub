@@ -1,6 +1,5 @@
 export const API_ENDPOINTS = {
-  // Trending Topics
-  TRENDING_TOPICS: '/api/trending-topics',
+  // Trending Topics (Gemini only)
   GEMINI_TRENDING_TOPICS: '/api/gemini-trending-topics',
   
   // Topic Management
