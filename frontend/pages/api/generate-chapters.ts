@@ -33,6 +33,9 @@ interface GenerateChaptersRequest {
   topic: string;
   hypothesis: string;
   duration: number;
+  selectedTopicSuggestions?: string[];
+  selectedHypothesisSuggestions?: string[];
+  topicDetails?: string;
 }
 
 interface GenerateChaptersResponse {
@@ -52,7 +55,14 @@ export default async function handler(
   }
 
   try {
-    const { topic, hypothesis, duration }: GenerateChaptersRequest = req.body;
+    const { 
+      topic, 
+      hypothesis, 
+      duration, 
+      selectedTopicSuggestions = [], 
+      selectedHypothesisSuggestions = [],
+      topicDetails 
+    }: GenerateChaptersRequest = req.body;
 
     // Validate input
     if (!topic || !hypothesis || !duration) {
@@ -70,9 +80,27 @@ export default async function handler(
     // Convert minutes to seconds
     const durationSeconds = duration * 60;
 
+    // Build comprehensive topic including selected suggestions
+    let comprehensiveTopic = `${topic} - ${hypothesis}`;
+    
+    // Add topic details if provided
+    if (topicDetails) {
+      comprehensiveTopic += `\n\nTopic Details: ${topicDetails}`;
+    }
+    
+    // Add selected topic suggestions
+    if (selectedTopicSuggestions.length > 0) {
+      comprehensiveTopic += `\n\nSelected Topic Aspects to Cover: ${selectedTopicSuggestions.join(', ')}`;
+    }
+    
+    // Add selected hypothesis suggestions
+    if (selectedHypothesisSuggestions.length > 0) {
+      comprehensiveTopic += `\n\nSelected Hypothesis Angles to Explore: ${selectedHypothesisSuggestions.join(', ')}`;
+    }
+
     // Generate video script using the new schema
     const script = await generateVideoScript({
-      topic: `${topic} - ${hypothesis}`,
+      topic: comprehensiveTopic,
       durationSeconds,
       platform: "YouTube",
       tone: "Engaging, clear, research-focused",

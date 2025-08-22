@@ -11,6 +11,7 @@ const model = genAI.getGenerativeModel({
 interface TopicSuggestionsRequest {
   topic: string;
   region?: string;
+  currentSuggestions?: string[];
 }
 
 interface TopicSuggestionsResponse {
@@ -69,7 +70,16 @@ function extractJsonFromText(text: string): any | null {
   return null;
 }
 
-async function getTopicSuggestionsFromGemini({ topic, region = AI_CONFIG.CONTENT.DEFAULT_REGION }: TopicSuggestionsRequest) {
+async function getTopicSuggestionsFromGemini({ topic, region = AI_CONFIG.CONTENT.DEFAULT_REGION, currentSuggestions = [] }: TopicSuggestionsRequest) {
+  const avoidDuplicatesSection = currentSuggestions.length > 0 
+    ? `\n\nIMPORTANT: Generate DIFFERENT suggestions from these existing ones:\n${currentSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n` +
+      `Your new suggestions should:\n` +
+      `- Explore different angles and perspectives\n` +
+      `- Avoid similar wording or concepts\n` +
+      `- Bring fresh insights and unique approaches\n` +
+      `- Be distinctly different from the existing suggestions\n`
+    : '';
+
   const prompt = `You are a creative content strategist specializing in video content creation.\n\n` +
     `Analyze the topic and generate engaging topic suggestions that would make compelling video content.\n\n` +
     `Guidelines:\n` +
@@ -79,7 +89,8 @@ async function getTopicSuggestionsFromGemini({ topic, region = AI_CONFIG.CONTENT
     `- Focus on trending angles, controversies, or unique perspectives\n` +
     `- Make suggestions that would generate viewer interest and engagement\n` +
     `- Keep each suggestion concise but descriptive (15–25 words)\n` +
-    `- Avoid generic or overly broad topics\n\n` +
+    `- Avoid generic or overly broad topics\n` +
+    avoidDuplicatesSection +
     `Topic: "${topic}"\n\n` +
     `Return ONLY valid JSON in this exact shape (no markdown, no commentary):\n` +
     `{ "suggestions": string[] }`;
@@ -121,13 +132,17 @@ export default async function handler(
   }
 
   try {
-    const { topic, region } = req.body as TopicSuggestionsRequest;
+    const { topic, region, currentSuggestions } = req.body as TopicSuggestionsRequest;
+    
+    console.log('🎯 API received request:', { topic, region, currentSuggestionsCount: currentSuggestions?.length || 0 });
+    console.log('📋 Current suggestions:', currentSuggestions);
 
     if (!topic) {
       return res.status(400).json({ error: 'Topic is required' });
     }
 
-    const suggestions = await getTopicSuggestionsFromGemini({ topic, region });
+    const suggestions = await getTopicSuggestionsFromGemini({ topic, region, currentSuggestions });
+    console.log('✨ Generated new suggestions:', suggestions.suggestions);
 
     return res.status(200).json({
       suggestions: suggestions.suggestions,

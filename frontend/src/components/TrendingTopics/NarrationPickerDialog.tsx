@@ -9,7 +9,7 @@ import {
   Typography,
   CircularProgress
 } from '@mui/material';
-import { Chapter } from '../../data/mockChapters';
+import { Chapter } from '../../types/chapters';
 
 interface NarrationPickerDialogProps {
   open: boolean;

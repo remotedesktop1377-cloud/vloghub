@@ -90,9 +90,11 @@ const TrendingTopics: React.FC = () => {
 
   // Suggestions/Enhance states
   const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [selectedTopicSuggestions, setSelectedTopicSuggestions] = useState<string[]>([]);
   const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
   const [enhancingDetails, setEnhancingDetails] = useState(false);
   const [hypothesisSuggestions, setHypothesisSuggestions] = useState<string[]>([]);
+  const [selectedHypothesisSuggestions, setSelectedHypothesisSuggestions] = useState<string[]>([]);
   const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
   const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
 
@@ -106,6 +108,7 @@ const TrendingTopics: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
   const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
+  const [originalSuggestionText, setOriginalSuggestionText] = useState<string | null>(null);
 
   // Right panel state (tabs and generated images)
   const [rightTabIndex, setRightTabIndex] = useState(0);
@@ -329,7 +332,7 @@ const TrendingTopics: React.FC = () => {
     fetchTrendingTopics(selectedRegion);
   };
 
-  const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false) => {
+  const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false, currentSuggestions?: string[]) => {
     if (!topicName.trim()) return;
 
     try {
@@ -338,11 +341,15 @@ const TrendingTopics: React.FC = () => {
       setLoadingTopicSuggestions(true);
       setError(null);
 
-
+      // Use passed currentSuggestions or fallback to current state
+      const suggestionsToAvoid = currentSuggestions || topicSuggestions;
+      console.log('🚀 Calling API with current suggestions:', suggestionsToAvoid);
       const result = await apiService.getTopicSuggestions({
         topic: topicName,
-        region: selectedRegion
+        region: selectedRegion,
+        currentSuggestions: suggestionsToAvoid // Pass current suggestions to avoid duplicates
       });
+      console.log('📡 API response:', result);
 
       if (result.success && result.data) {
         const suggestions = Array.isArray(result.data)
@@ -385,7 +392,8 @@ const TrendingTopics: React.FC = () => {
         topic: selectedTopic.topic,
         details: selectedTopicDetails,
         region: selectedRegion,
-        num: 5
+        num: 5,
+        currentSuggestions: hypothesisSuggestions // Pass current suggestions to avoid duplicates
       });
 
       if (result.success && result.data) {
@@ -415,19 +423,31 @@ const TrendingTopics: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopicDetails, selectedTopic, selectedRegion]);
 
-  const handleEnhanceTopicDetails = async () => {
-    if (!selectedTopic || !selectedTopicDetails.trim()) return;
+  const handleEnhanceTopicDetails = async (originalText?: string) => {
+    // Determine what text to enhance - either the provided suggestion or the current text field
+    const textToEnhance = originalText || selectedTopicDetails.trim();
+    
+    if (!selectedTopic || !textToEnhance) return;
+    
     try {
       setEnhancingDetails(true);
+      
+      // Store the original suggestion text if provided
+      if (originalText) {
+        setOriginalSuggestionText(originalText);
+      } else {
+        setOriginalSuggestionText(null);
+      }
+      
       if (USE_HARDCODED) {
-        const enhanced = `${selectedTopicDetails} (refined for clarity and impact)`;
+        const enhanced = `${textToEnhance} (refined for clarity and impact)`;
         setPendingField('topicDetails');
         setPendingEnhancedOptions([enhanced]);
         setConfirmOpen(true);
       } else {
         const result = await apiService.enhanceTopicDetails({
           topic: selectedTopic.topic,
-          details: selectedTopicDetails,
+          details: textToEnhance,
           region: selectedRegion,
           targetWords: 160,
         });
@@ -447,13 +467,25 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-  const handleEnhanceHypothesis = async () => {
-    if (!selectedTopic || !hypothesis.trim()) return;
+  const handleEnhanceHypothesis = async (originalText?: string) => {
+    // Determine what text to enhance - either the provided suggestion or the current text field
+    const textToEnhance = originalText || hypothesis.trim();
+    
+    if (!selectedTopic || !textToEnhance) return;
+    
     try {
       setEnhancingHypothesis(true);
+      
+      // Store the original suggestion text if provided
+      if (originalText) {
+        setOriginalSuggestionText(originalText);
+      } else {
+        setOriginalSuggestionText(null);
+      }
+      
       const result = await apiService.enhanceHypothesis({
         topic: selectedTopic.topic,
-        hypothesis,
+        hypothesis: textToEnhance,
         details: selectedTopicDetails,
         region: selectedRegion
       });
@@ -473,18 +505,53 @@ const TrendingTopics: React.FC = () => {
   const handleConfirmAccept = (selectedOption: string) => {
     if (pendingField === 'topicDetails') {
       setSelectedTopicDetails(selectedOption);
+      
+      // If this enhancement came from a suggestion, replace it in the suggestions list
+      if (originalSuggestionText && topicSuggestions.includes(originalSuggestionText)) {
+        const updatedSuggestions = topicSuggestions.map(suggestion => 
+          suggestion === originalSuggestionText ? selectedOption : suggestion
+        );
+        setTopicSuggestions(updatedSuggestions);
+        
+        // Update selected suggestions as well if the original was selected
+        if (selectedTopicSuggestions.includes(originalSuggestionText)) {
+          const updatedSelectedSuggestions = selectedTopicSuggestions.map(suggestion =>
+            suggestion === originalSuggestionText ? selectedOption : suggestion
+          );
+          setSelectedTopicSuggestions(updatedSelectedSuggestions);
+        }
+      }
     } else if (pendingField === 'hypothesis') {
       setHypothesis(selectedOption);
+      
+      // If this enhancement came from a suggestion, replace it in the suggestions list
+      if (originalSuggestionText && hypothesisSuggestions.includes(originalSuggestionText)) {
+        const updatedSuggestions = hypothesisSuggestions.map(suggestion => 
+          suggestion === originalSuggestionText ? selectedOption : suggestion
+        );
+        setHypothesisSuggestions(updatedSuggestions);
+        
+        // Update selected suggestions as well if the original was selected
+        if (selectedHypothesisSuggestions.includes(originalSuggestionText)) {
+          const updatedSelectedSuggestions = selectedHypothesisSuggestions.map(suggestion =>
+            suggestion === originalSuggestionText ? selectedOption : suggestion
+          );
+          setSelectedHypothesisSuggestions(updatedSelectedSuggestions);
+        }
+      }
     }
+    
     setConfirmOpen(false);
     setPendingEnhancedOptions([]);
     setPendingField(null);
+    setOriginalSuggestionText(null);
   };
 
   const handleConfirmReject = () => {
     setConfirmOpen(false);
     setPendingEnhancedOptions([]);
     setPendingField(null);
+    setOriginalSuggestionText(null);
   };
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
@@ -520,7 +587,10 @@ const TrendingTopics: React.FC = () => {
         hypothesis,
         details: selectedTopicDetails,
         region: selectedRegion,
-        duration: duration
+        duration: duration,
+        selectedTopicSuggestions: selectedTopicSuggestions,
+        selectedHypothesisSuggestions: selectedHypothesisSuggestions,
+        topicDetails: selectedTopicDetails
       });
 
       if (result.success && result.data?.chapters && Array.isArray(result.data.chapters)) {
@@ -1011,7 +1081,6 @@ const TrendingTopics: React.FC = () => {
                 }}>
                   {selectedTopic ? (
                     <Box>
-                      {console.log('🎯 Rendering topic details for:', selectedTopic)}
                       {/* Selected Topic */}
                       <Typography variant="h6" sx={{ 
                         fontWeight: 700, 
@@ -1084,12 +1153,15 @@ const TrendingTopics: React.FC = () => {
               selectedTopic={selectedTopic}
               selectedTopicDetails={selectedTopicDetails}
               topicSuggestions={topicSuggestions}
+              selectedTopicSuggestions={selectedTopicSuggestions}
               loadingTopicSuggestions={loadingTopicSuggestions}
               enhancingDetails={enhancingDetails}
               selectedRegion={selectedRegion}
-              onGetTopicSuggestions={getTopicSuggestions}
+
               onTopicDetailsChange={setSelectedTopicDetails}
               onEnhanceTopicDetails={handleEnhanceTopicDetails}
+              onTopicSuggestionsChange={setSelectedTopicSuggestions}
+              onRestoreTopicSuggestions={(suggestions) => setTopicSuggestions(suggestions)}
             />
 
             <HypothesisSection
@@ -1097,12 +1169,15 @@ const TrendingTopics: React.FC = () => {
               selectedTopicDetails={selectedTopicDetails}
               hypothesis={hypothesis}
               hypothesisSuggestions={hypothesisSuggestions}
+              selectedHypothesisSuggestions={selectedHypothesisSuggestions}
               loadingHypothesisSuggestions={loadingHypothesisSuggestions}
               enhancingHypothesis={enhancingHypothesis}
               selectedRegion={selectedRegion}
               onFetchHypothesisSuggestions={fetchHypothesisSuggestions}
               onHypothesisChange={setHypothesis}
               onEnhanceHypothesis={handleEnhanceHypothesis}
+              onHypothesisSuggestionsChange={setSelectedHypothesisSuggestions}
+              onRestoreHypothesisSuggestions={(suggestions) => setHypothesisSuggestions(suggestions)}
             />
 
             <VideoDurationSection

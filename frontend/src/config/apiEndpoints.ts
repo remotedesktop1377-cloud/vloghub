@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
   // Content Enhancement
   ENHANCE_TOPIC_DETAILS: '/api/enhance-topic-details',
   ENHANCE_HYPOTHESIS: '/api/enhance-hypothesis',
+  ENHANCE_TOPIC_SUGGESTIONS: '/api/enhance-topic-suggestions',
   
   // Content Generation
   GENERATE_CHAPTERS: '/api/generate-chapters',

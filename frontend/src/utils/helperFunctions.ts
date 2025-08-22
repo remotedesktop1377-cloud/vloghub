@@ -1,5 +1,5 @@
 import { TrendingTopic } from '../data/mockTrendingTopics';
-import { Chapter } from '../data/mockChapters';
+import { Chapter } from '../types/chapters';
 import { DropResult } from 'react-beautiful-dnd';
 
 export class HelperFunctions {
@@ -44,8 +44,8 @@ export class HelperFunctions {
    * Handle drag and drop reordering of chapters
    */
   static handleDragEnd(
-    result: DropResult, 
-    chapters: Chapter[], 
+    result: DropResult,
+    chapters: Chapter[],
     setChapters: (chapters: Chapter[]) => void
   ): void {
     if (!result.destination) return;
@@ -64,17 +64,23 @@ export class HelperFunctions {
    * Add a new chapter after a specific index
    */
   static addChapterAfter(
-    index: number, 
-    chapters: Chapter[], 
+    index: number,
+    chapters: Chapter[],
     setChapters: (chapters: Chapter[]) => void
   ): void {
     const newChapter: Chapter = {
       id: Date.now().toString(),
-      heading: 'New Chapter',
+      time_range: '',
       narration: 'Enter chapter narration here...',
-      visuals: 'Enter visual description here...',
-      brollIdeas: ['Enter b-roll idea here...'],
-      duration: '0:30'
+      voiceover_style: '',
+      visual_guidance: 'Enter visual guidance here...',
+      on_screen_text: '',
+      duration: '0:30',
+      assets: {
+        image: null,
+        audio: null,
+        video: null
+      }
     };
 
     const updatedChapters = [...chapters];
@@ -86,8 +92,8 @@ export class HelperFunctions {
    * Delete a chapter at a specific index
    */
   static deleteChapter(
-    index: number, 
-    chapters: Chapter[], 
+    index: number,
+    chapters: Chapter[],
     setChapters: (chapters: Chapter[]) => void
   ): void {
     const updatedChapters = chapters.filter((_, i) => i !== index);
@@ -98,18 +104,24 @@ export class HelperFunctions {
    * Save edited chapter
    */
   static saveEdit(
-    index: number, 
-    chapters: Chapter[], 
+    index: number,
+    chapters: Chapter[],
     setChapters: (chapters: Chapter[]) => void,
-    editHeading: string, 
+    editHeading: string,
     editNarration: string,
     setEditingChapter: (index: number | null) => void
   ): void {
     const updatedChapters = [...chapters];
+    
     updatedChapters[index] = {
       ...updatedChapters[index],
-      heading: editHeading,
-      narration: editNarration
+      // update the model change here as well
+      time_range: updatedChapters[index].time_range,
+      voiceover_style: updatedChapters[index].voiceover_style,
+      visual_guidance: updatedChapters[index].visual_guidance,
+      on_screen_text: updatedChapters[index].on_screen_text,
+      duration: updatedChapters[index].duration,
+      assets: updatedChapters[index].assets,
     };
     setChapters(updatedChapters);
     setEditingChapter(null);
@@ -132,8 +144,8 @@ export class HelperFunctions {
    * Handle word click from word cloud
    */
   static handleWordClick(
-    word: any, 
-    trendingTopics: TrendingTopic[], 
+    word: any,
+    trendingTopics: TrendingTopic[],
     onTopicSelect: (topic: TrendingTopic) => void
   ): void {
     const wordText = (word && word.text) || '';
@@ -189,11 +201,14 @@ export class HelperFunctions {
    * Validate chapter data
    */
   static validateChapter(chapter: Chapter): boolean {
+    
     return !!(
-      chapter.heading?.trim() &&
+      chapter.id?.trim() &&
+      chapter.time_range?.trim() &&
       chapter.narration?.trim() &&
-      chapter.visuals?.trim() &&
-      chapter.brollIdeas?.length > 0 &&
+      chapter.voiceover_style?.trim() &&
+      chapter.visual_guidance?.trim() &&
+      chapter.on_screen_text?.trim() &&
       chapter.duration?.trim()
     );
   }
@@ -235,12 +250,20 @@ export class HelperFunctions {
    */
   static filterTopicsBySearch(topics: TrendingTopic[], searchTerm: string): TrendingTopic[] {
     if (!searchTerm.trim()) return topics;
-    
+
     const term = searchTerm.toLowerCase();
-    return topics.filter(topic => 
+    return topics.filter(topic =>
       topic.topic.toLowerCase().includes(term) ||
       topic.category.toLowerCase().includes(term) ||
-      topic.postCount.toLowerCase().includes(term)
+      (topic.description?.toLowerCase().includes(term) ?? false) ||
+      (topic.source_reference?.toLowerCase().includes(term) ?? false)
+    );
+    
+    return topics.filter(topic =>
+      topic.topic.toLowerCase().includes(term) ||
+      topic.category.toLowerCase().includes(term) ||
+      (topic.description?.toLowerCase().includes(term) ?? false) ||
+      (topic.source_reference?.toLowerCase().includes(term) ?? false)
     );
   }
 
@@ -249,16 +272,22 @@ export class HelperFunctions {
    */
   static sortTopics(topics: TrendingTopic[], sortBy: 'ranking' | 'postCount' | 'category'): TrendingTopic[] {
     const sortedTopics = [...topics];
-    
-    switch (sortBy) {
-      case 'ranking':
-        return sortedTopics.sort((a, b) => a.ranking - b.ranking);
-      case 'postCount':
-        return sortedTopics.sort((a, b) => (b.postCountValue || 0) - (a.postCountValue || 0));
-      case 'category':
-        return sortedTopics.sort((a, b) => a.category.localeCompare(b.category));
-      default:
-        return sortedTopics;
-    }
+    // Fix: Add missing ranking and postCountValue properties to topics for sorting
+    // According to the TrendingTopic interface, there is no 'ranking' or 'postCountValue' property.
+    // We'll use 'value' as the ranking/post count for sorting.
+      switch (sortBy) {
+        case 'ranking':
+          // Use 'value' as the ranking for sorting (descending order: higher value = higher ranking)
+          return sortedTopics.sort((a, b) => b.value - a.value);
+        case 'postCount':
+          // Use 'engagement_count' as the post count for sorting (descending order)
+          return sortedTopics.sort(
+            (a, b) => (b.engagement_count || 0) - (a.engagement_count || 0)
+          );
+        case 'category':
+          return sortedTopics.sort((a, b) => a.category.localeCompare(b.category));
+        default:
+          return sortedTopics;
+      }
   }
 } 
