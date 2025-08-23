@@ -1,6 +1,6 @@
 import React from 'react';
-import { Grid, Card, CardContent, Box, Typography, Chip, Avatar, Button } from '@mui/material';
-import { TrendingUp as TrendingIcon } from '@mui/icons-material';
+import { Grid, Card, CardContent, Box, Typography, Chip, Avatar, Button, Tooltip } from '@mui/material';
+import { TrendingUp as TrendingIcon, Cached as CachedIcon } from '@mui/icons-material';
 import { TrendingTopic } from '../../data/mockTrendingTopics';
 import { HelperFunctions } from '../../utils/helperFunctions';
 
@@ -10,6 +10,7 @@ interface TrendingTopicsListProps {
   regions: Array<{ value: string; label: string }>;
   onTopicSelect: (topic: TrendingTopic) => void;
   onExploreTopic: (topic: TrendingTopic) => void;
+  lastUpdated?: string;
 }
 
 const TrendingTopicsList: React.FC<TrendingTopicsListProps> = ({
@@ -18,7 +19,20 @@ const TrendingTopicsList: React.FC<TrendingTopicsListProps> = ({
   regions,
   onTopicSelect,
   onExploreTopic,
+  lastUpdated,
 }) => {
+  const isDataFresh = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      return diffHours < 1; // Consider data fresh if less than 1 hour old
+    } catch (error) {
+      return false;
+    }
+  };
+
   if (trendingTopics.length === 0) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -42,6 +56,7 @@ const TrendingTopicsList: React.FC<TrendingTopicsListProps> = ({
               display: 'flex',
               flexDirection: 'column',
               cursor: 'pointer',
+              position: 'relative',
               '&:hover': {
                 transform: 'translateY(-4px)',
                 transition: 'transform 0.2s ease-in-out',
@@ -50,6 +65,22 @@ const TrendingTopicsList: React.FC<TrendingTopicsListProps> = ({
             }}
             onClick={() => onTopicSelect(topic)}
           >
+            {/* Cache indicator */}
+            {lastUpdated && !isDataFresh(lastUpdated) && (
+              <Tooltip title="Data from cache - click refresh for fresh data">
+                <CachedIcon
+                  sx={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 4,
+                    fontSize: '0.8rem',
+                    color: 'text.secondary',
+                    opacity: 0.7,
+                  }}
+                />
+              </Tooltip>
+            )}
+            
             <CardContent sx={{ flexGrow: 1, p: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                 <Avatar

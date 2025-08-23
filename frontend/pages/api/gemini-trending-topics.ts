@@ -31,7 +31,7 @@ const fetchGeminiTrendingTopics = async (region: string): Promise<GeminiTrending
 
     const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL });
 
-    const prompt = `Generate the top 20 trending topics for ${region} as of today with realistic engagement metrics. 
+    const prompt = `Generate the top 20 trending topics for ${region} as of last thirty minutes with realistic engagement metrics. 
     
     Focus on current events, social media trends, news, entertainment, sports, technology, and local interests that are popular in ${region}.
     
@@ -56,10 +56,10 @@ const fetchGeminiTrendingTopics = async (region: string): Promise<GeminiTrending
     }
     
     const parsedData = JSON.parse(jsonMatch[0]);
-    console.log('📊 Gemini API Response:', {
-      totalTopics: parsedData.length,
-      sampleTopic: parsedData[0],
-    });
+    // console.log('📊 Gemini API Response:', {
+    //   totalTopics: parsedData.length,
+    //   sampleTopic: parsedData[0],
+    // });
 
     // Transform to match our interface
     const transformedData = parsedData.map((item: any, index: number) => ({

@@ -317,7 +317,8 @@ export const apiService = {
     topic: string;
     hypothesis: string;
     details: string;
-    region: string
+    region: string;
+    currentSuggestions?: string[];
   }) => ApiService.post(API_ENDPOINTS.ENHANCE_HYPOTHESIS, body),
 
   enhanceTopicSuggestions: (body: {
@@ -351,6 +352,18 @@ export const apiService = {
     selectedHypothesisSuggestions?: string[];
     topicDetails?: string;
   }) => ApiService.post(API_ENDPOINTS.GENERATE_CHAPTERS, body),
+
+  generateScript: (body: {
+    topic: string;
+    hypothesis: string;
+    details: string;
+    region: string;
+    duration: string;
+    language?: string;
+    selectedTopicSuggestions?: string[];
+    selectedHypothesisSuggestions?: string[];
+    topicDetails?: string;
+  }) => ApiService.post(API_ENDPOINTS.GENERATE_SCRIPT, body),
 
   generateImages: (body: {
     topic: string;

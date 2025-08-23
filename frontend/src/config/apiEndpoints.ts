@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   
   // Content Generation
   GENERATE_CHAPTERS: '/api/generate-chapters',
+  GENERATE_SCRIPT: '/api/generate-script',
   GENERATE_IMAGES: '/api/generate-images',
   
   // Narration

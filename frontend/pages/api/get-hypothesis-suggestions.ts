@@ -108,9 +108,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   try {
     const { topic, details, region, num, tone, currentSuggestions } = req.body as HypothesisSuggestionsRequest;
     if (!topic) return res.status(400).json({ error: 'Topic is required' });
-
+    // console.log("Hypothesis current Suggestions: ", currentSuggestions)
     const data = await getHypothesisSuggestions({ topic, details, region, num, tone, currentSuggestions });
-    console.log(data.suggestions)
+    
     return res.status(200).json({ suggestions: data.suggestions });
   } catch (e) {
     console.error('Error in get-hypothesis-suggestions:', e);

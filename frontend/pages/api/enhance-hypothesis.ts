@@ -13,6 +13,7 @@ interface EnhanceHypothesisRequest {
   hypothesis: string;
   details?: string;
   region?: string;
+  currentSuggestions?: string[];
 }
 
 interface EnhanceHypothesisResponse {
@@ -38,8 +39,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { topic, hypothesis, details, region } = req.body as EnhanceHypothesisRequest;
+    const { topic, hypothesis, details, region, currentSuggestions = [] } = req.body as EnhanceHypothesisRequest;
     if (!topic || !hypothesis) return res.status(400).json({ error: 'Topic and hypothesis are required' });
+
+    const avoidDuplicatesSection = currentSuggestions.length > 0 
+      ? `\n\nIMPORTANT: Generate DIFFERENT hypotheses from these existing ones:\n${currentSuggestions.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n` +
+        `Your new hypotheses should:\n` +
+        `- Explore different research angles and perspectives\n` +
+        `- Avoid similar hypotheses or conclusions\n` +
+        `- Bring fresh investigative approaches\n` +
+        `- Be distinctly different from the existing hypotheses\n` +
+        `- Consider alternative viewpoints and methodologies\n`
+      : '';
 
     const prompt = `You are an expert content paraphraser. Create exactly 5 single-line enhanced paraphrases of the following hypothesis. Each paraphrase should be a complete, standalone sentence that captures the essence of the original.\n\n` +
       `Constraints:\n` +
@@ -50,7 +61,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       `- Avoid buzzwords, keep it specific\n` +
       `- Consider audience in ${region}\n` +
       `- Each paraphrase should have a slightly different angle or emphasis\n` +
-      `- Polish grammar and improve readability\n\n` +
+      `- Polish grammar and improve readability\n` +
+      avoidDuplicatesSection +
       `Topic: "${topic}"\n` +
       (details ? `Details: ${details}\n` : '') +
       `Original hypothesis: ${hypothesis}\n\n` +

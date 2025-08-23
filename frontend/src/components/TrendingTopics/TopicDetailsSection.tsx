@@ -6,6 +6,7 @@ import { HelperFunctions } from '../../utils/helperFunctions';
 import { USE_HARDCODED } from '../../data/constants';
 import TopicSuggestionsEnhanceDialog from './TopicSuggestionsEnhanceDialog';
 import { apiService } from '../../utils/apiService';
+import { getDirectionSx } from '../../utils/languageUtils';
 
 interface TopicDetailsSectionProps {
   selectedTopic: TrendingTopic;
@@ -15,6 +16,7 @@ interface TopicDetailsSectionProps {
   enhancingDetails: boolean;
   selectedRegion: string;
   selectedTopicSuggestions?: string[];
+  language?: string;
 
   onTopicDetailsChange: (details: string) => void;
   onEnhanceTopicDetails: (originalText?: string) => void;
@@ -30,6 +32,7 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
   enhancingDetails,
   selectedRegion,
   selectedTopicSuggestions = [],
+  language = 'english',
 
   onTopicDetailsChange,
   onEnhanceTopicDetails,
@@ -107,7 +110,6 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
         topic: selectedTopic.topic,
         region: selectedRegion
       });
-      debugger;
 
       // console.log('📥 API Response:', result);
       // console.log('📝 API Response type:', typeof result);
@@ -228,7 +230,6 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
                       size="medium"
                       variant="outlined"
                       onClick={() => {
-                        onTopicDetailsChange(suggestion);
                         // Also toggle the checkbox selection
                         if (onTopicSuggestionsChange) {
                           handleToggleTopicSuggestion(suggestion);
@@ -302,7 +303,6 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
                       size="medium"
                       variant="outlined"
                       onClick={() => {
-                        onTopicDetailsChange(suggestion);
                         // Also toggle the checkbox selection
                         if (onTopicSuggestionsChange) {
                           handleToggleTopicSuggestion(suggestion);
@@ -368,7 +368,16 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
           placeholder="Enter your topic details..."
           value={selectedTopicDetails}
           onChange={(e) => onTopicDetailsChange(e.target.value)}
-          sx={{ mb: 1.5, '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
+          // sx={{ 
+          //   mb: 1.5, 
+          //   '& .MuiInputBase-input': { 
+          //     fontSize: '0.8rem',
+          //     ...getDirectionSx(language)
+          //   },
+          //   '& .MuiInputBase-root': {
+          //     ...getDirectionSx(language)
+          //   }
+          // }}
           size="small"
           InputProps={{
             endAdornment: (
@@ -404,8 +413,6 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
           }}
         />
       </Paper>
-
-
 
       {/* Enhancement Dialog */}
       <TopicSuggestionsEnhanceDialog

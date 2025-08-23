@@ -769,35 +769,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
             </DragDropContext>
           </Box>
         </Box>
-      ) : (
-        <Box sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          textAlign: 'center',
-          py: 8
-        }}>
-          <Typography variant="subtitle1" sx={{ color: '#666', mb: 2, fontSize: '0.8rem' }}>
-            📚 Generated Chapters
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#999', mb: 3, maxWidth: '300px' }}>
-            Your video chapters will appear here once you generate them using the form on the left.
-          </Typography>
-          <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            color: '#ccc',
-            fontSize: '0.875rem'
-          }}>
-            <Typography variant="body2" sx={{ color: '#ccc' }}>
-              Enter your hypothesis and click "Generate Chapters" to get started
-            </Typography>
-          </Box>
-        </Box>
-      )}
+      ) : null}
 
       {/* Media Management Dialog */}
       <Dialog

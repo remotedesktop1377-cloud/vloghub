@@ -26,7 +26,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   if (!isLoading) return null;
 
   const getLoadingTitle = () => {
-    if (generatingChapters) return 'Generating Chapters';
+    if (generatingChapters) return 'Generating Script';
     if (enhancingDetails) return 'Enhancing Topic Details';
     if (enhancingHypothesis) return 'Enhancing Hypothesis';
     if (imagesLoading) return 'Generating Images';
@@ -35,7 +35,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   };
 
   const getLoadingDescription = () => {
-    if (generatingChapters) return 'Please wait while AI creates engaging chapter content...';
+    if (generatingChapters) return 'Please wait while AI creates script...';
     if (enhancingDetails) return 'Please wait while AI enhances your topic details...';
     if (enhancingHypothesis) return 'Please wait while AI enhances your hypothesis...';
     if (imagesLoading) return 'Please wait while AI generates creative images...';

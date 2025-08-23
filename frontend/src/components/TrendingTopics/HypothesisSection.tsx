@@ -6,6 +6,7 @@ import { HelperFunctions } from '../../utils/helperFunctions';
 import { USE_HARDCODED } from '../../data/constants';
 import TopicSuggestionsEnhanceDialog from './TopicSuggestionsEnhanceDialog';
 import { apiService } from '../../utils/apiService';
+import { getDirectionSx } from '../../utils/languageUtils';
 
 interface HypothesisSectionProps {
   selectedTopic: TrendingTopic;
@@ -16,6 +17,8 @@ interface HypothesisSectionProps {
   enhancingHypothesis: boolean;
   selectedRegion: string;
   selectedHypothesisSuggestions?: string[];
+  selectedTopicSuggestions?: string[];
+  language?: string;
   onFetchHypothesisSuggestions: () => void;
   onHypothesisChange: (hypothesis: string) => void;
   onEnhanceHypothesis: (originalText?: string) => void;
@@ -32,6 +35,8 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
   enhancingHypothesis,
   selectedRegion,
   selectedHypothesisSuggestions = [],
+  selectedTopicSuggestions = [],
+  language = 'english',
   onFetchHypothesisSuggestions,
   onHypothesisChange,
   onEnhanceHypothesis,
@@ -48,10 +53,6 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
   const [enhancingAllHypothesisSuggestions, setEnhancingAllHypothesisSuggestions] = useState(false);
   const [originalHypothesisSuggestionsForEnhancement, setOriginalHypothesisSuggestionsForEnhancement] = useState<string[]>([]);
 
-  const handleSuggestionSelect = (suggestion: string) => {
-    onHypothesisChange(suggestion);
-    setShowSuggestionsPopup(false);
-  };
 
   const handleEnhanceFromSuggestion = (suggestion: string) => {
     // Call enhance directly with the suggestion text without modifying the text field
@@ -60,7 +61,7 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
 
   const handleToggleHypothesisSuggestion = (suggestion: string) => {
     if (!onHypothesisSuggestionsChange) return;
-    
+
     const isSelected = selectedHypothesisSuggestions.includes(suggestion);
     if (isSelected) {
       onHypothesisSuggestionsChange(selectedHypothesisSuggestions.filter(s => s !== suggestion));
@@ -71,7 +72,7 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
 
   const handleSelectAllHypothesisSuggestions = () => {
     if (!onHypothesisSuggestionsChange) return;
-    
+
     if (selectedHypothesisSuggestions.length === hypothesisSuggestions.length) {
       // Deselect all
       onHypothesisSuggestionsChange([]);
@@ -105,10 +106,12 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
       setOriginalHypothesisSuggestionsForEnhancement(currentSuggs);
       setShowEnhanceDialog(true);
 
-      const result = await apiService.enhanceTopicSuggestions({
-        suggestions: currentSuggs,
-        topic: `${selectedTopic.topic} - ${selectedTopicDetails}`,
-        region: selectedRegion
+      const result = await apiService.enhanceHypothesis({
+        topic: selectedTopic.topic,
+        hypothesis: currentSuggs.join('\n'),
+        details: selectedTopicDetails,
+        region: selectedRegion,
+        currentSuggestions: hypothesisSuggestions // Pass existing hypothesis suggestions to avoid duplicates
       });
 
       let enhancedResults: string[] = [];
@@ -157,12 +160,12 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
     if (USE_HARDCODED) {
       return HelperFunctions.generateFallbackHypothesisSuggestions(selectedTopic?.topic || '', selectedRegion);
     }
-    
+
     // While loading, show preserved suggestions. After loading, show new suggestions
     if (loadingHypothesisSuggestions && preservedSuggestions.length > 0) {
       return preservedSuggestions;
     }
-    
+
     // If we have new suggestions from API, show them. Otherwise show preserved.
     return newSuggestions.length > 0 ? newSuggestions : preservedSuggestions;
   };
@@ -190,15 +193,15 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
   return (
     <>
       <Paper sx={{ p: 1.5, opacity: selectedTopic ? 1 : 0.6 }} data-section="hypothesis">
-                  <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.85rem', fontWeight: 500, mb: 1 }}>
-            Your Hypothesis - Describe your hypothesis, angle, or unique perspective on this topic.
-          </Typography>
+        <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.85rem', fontWeight: 500, mb: 1 }}>
+          Your Hypothesis - Describe your hypothesis, angle, or unique perspective on this topic.
+        </Typography>
 
         {/* Hypothesis Suggestions */}
         <Box sx={{ mb: 2, opacity: USE_HARDCODED ? 0.6 : 1 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-              💡 Suggested hypotheses for "{selectedTopicDetails ? selectedTopicDetails : selectedTopic?.topic}":
+              💡 Suggested hypotheses for "{selectedTopic?.topic}":
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
               {hypothesisSuggestions.length > 0 && onHypothesisSuggestionsChange && (
@@ -255,15 +258,14 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                       size="medium"
                       variant="outlined"
                       onClick={() => {
-                        onHypothesisChange(suggestion);
-                        // Also toggle the checkbox selection
+                        // Don't populate the hypothesis field, just toggle the checkbox selection
                         if (onHypothesisSuggestionsChange) {
                           handleToggleHypothesisSuggestion(suggestion);
                         }
                         // Don't automatically scroll anywhere - let user stay where they are
                       }}
-                      sx={{ 
-                        cursor: 'pointer', 
+                      sx={{
+                        cursor: 'pointer',
                         fontSize: '0.8rem',
                         height: 32,
                         px: 2,
@@ -273,10 +275,10 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                           fontSize: '0.8rem',
                           padding: '0 8px'
                         },
-                        '&:hover': { 
-                          backgroundColor: 'rgba(29, 161, 242, 0.1)', 
-                          borderColor: '#1DA1F2' 
-                        } 
+                        '&:hover': {
+                          backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                          borderColor: '#1DA1F2'
+                        }
                       }}
                     />
                     <IconButton
@@ -305,13 +307,11 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                   </Box>
                 </Box>
               ))
-            ) : (!selectedTopic || !selectedTopicDetails.trim()) ? (
-              null
-            ) : loadingHypothesisSuggestions && hypothesisSuggestions.length === 0 ? (
+            ) : loadingHypothesisSuggestions ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <CircularProgress size={12} />
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                  Generating hypothesis suggestions...
+                  {selectedTopicSuggestions.length > 0 ? '🔄 Generating hypothesis suggestions based on your selected topic suggestions...' : 'Generating hypothesis suggestions...'}
                 </Typography>
               </Box>
             ) : (
@@ -331,14 +331,13 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                       size="medium"
                       variant="outlined"
                       onClick={() => {
-                        onHypothesisChange(suggestion);
-                        // Also toggle the checkbox selection
+                        // Don't populate the hypothesis field, just toggle the checkbox selection
                         if (onHypothesisSuggestionsChange) {
                           handleToggleHypothesisSuggestion(suggestion);
                         }
                       }}
-                      sx={{ 
-                        cursor: 'pointer', 
+                      sx={{
+                        cursor: 'pointer',
                         fontSize: '0.8rem',
                         height: 32,
                         px: 2,
@@ -348,10 +347,10 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                           fontSize: '0.8rem',
                           padding: '0 8px'
                         },
-                        '&:hover': { 
-                          backgroundColor: 'rgba(29, 161, 242, 0.1)', 
-                          borderColor: '#1DA1F2' 
-                        } 
+                        '&:hover': {
+                          backgroundColor: 'rgba(29, 161, 242, 0.1)',
+                          borderColor: '#1DA1F2'
+                        }
                       }}
                     />
                     <IconButton
@@ -393,7 +392,16 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
           value={hypothesis}
           disabled={!selectedTopic}
           onChange={(e) => onHypothesisChange(e.target.value)}
-          sx={{ mb: 1.5, '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
+          sx={{
+            mb: 1.5,
+            '& .MuiInputBase-input': {
+              fontSize: '0.8rem',
+              ...getDirectionSx(language)
+            },
+            '& .MuiInputBase-root': {
+              ...getDirectionSx(language)
+            }
+          }}
           size="small"
           InputProps={{
             endAdornment: (
@@ -405,11 +413,11 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
                   }}
                   disabled={USE_HARDCODED || !selectedTopic || !hypothesis.trim() || enhancingHypothesis}
                   size="small"
-                  sx={{ 
-                    bgcolor: '#9c27b0', 
+                  sx={{
+                    bgcolor: '#9c27b0',
                     color: 'white',
                     '&:hover': { bgcolor: '#7b1fa2' },
-                    '&:disabled': { 
+                    '&:disabled': {
                       bgcolor: '#e0e0e0',
                       color: '#999'
                     },
@@ -431,8 +439,8 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
       </Paper>
 
       {/* Hypothesis Suggestions Popup */}
-      <Dialog 
-        open={showSuggestionsPopup} 
+      <Dialog
+        open={showSuggestionsPopup}
         onClose={() => setShowSuggestionsPopup(false)}
         maxWidth="sm"
         fullWidth
@@ -442,11 +450,11 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
         </DialogTitle>
         <DialogContent>
           {loadingHypothesisSuggestions ? (
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
               py: 4,
               gap: 2,
               minHeight: '200px'
@@ -459,7 +467,7 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
           ) : (
             <>
               <Typography>
-                {hasNewSuggestions 
+                {hasNewSuggestions
                   ? 'Review the new hypothesis suggestions below. Accept to replace all current suggestions with these new ones:'
                   : 'Current hypothesis suggestions:'
                 }
@@ -502,9 +510,9 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
               <Button onClick={handleRejectSuggestions} color="primary">
                 Reject
               </Button>
-              <Button 
-                onClick={handleAcceptSuggestions} 
-                color="primary" 
+              <Button
+                onClick={handleAcceptSuggestions}
+                color="primary"
                 variant="contained"
               >
                 Accept All New Suggestions

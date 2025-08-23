@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
 import { mockTrendingTopics, TrendingTopic } from '../../data/mockTrendingTopics';
-import { Chapter } from '../../types/chapters';
-import { fallbackImages } from '../../data/mockImages';
+
+
 import { regions, Region } from '../../data/mockRegions';
 import { durationOptions, DurationOption } from '../../data/mockDurationOptions';
+import { languageOptions, LanguageOption } from '../../data/mockLanguageOptions';
+import { getDirectionSx } from '../../utils/languageUtils';
 import { USE_HARDCODED, HARDCODED_TOPIC, HARDCODED_HYPOTHESIS, DEFAULT_AI_PROMPT } from '../../data/constants';
 import { apiService } from '../../utils/apiService';
 import { HelperFunctions } from '../../utils/helperFunctions';
-import { generateChapterImages } from '../../utils/chapterImageGenerator';
+import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
+
 import styles from './TrendingTopics.module.css';
 import {
   Box,
@@ -52,6 +56,7 @@ import {
   Close as CloseIcon,
   Add as AddIcon,
   DragIndicator as DragIcon,
+  Cached as CachedIcon,
 } from '@mui/icons-material';
 import { AutoFixHigh as MagicIcon } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
@@ -61,32 +66,28 @@ import TrendingTopicsList from './TrendingTopicsList';
 import TopicDetailsSection from './TopicDetailsSection';
 import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
-import ChaptersSection from './ChaptersSection';
+
+import ScriptApprovalDialog from './ScriptApprovalDialog';
 import HeaderSection from './HeaderSection';
 
 import ConfirmationDialog from './ConfirmationDialog';
-import NarrationPickerDialog from './NarrationPickerDialog';
-import { mockChapters } from '@/data/mockChapters';
-
 
 const TrendingTopics: React.FC = () => {
+  const router = useRouter();
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState('pakistan');
+  const [lastUpdated, setLastUpdated] = useState<string>('');
 
   // Topic Details State
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
   const [selectedTopicDetails, setSelectedTopicDetails] = useState<string>('');
   const [hypothesis, setHypothesis] = useState('');
   const [duration, setDuration] = useState('1');
+  const [language, setLanguage] = useState('english');
   const [generatingChapters, setGeneratingChapters] = useState(false);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [chaptersGenerated, setChaptersGenerated] = useState(false);
-  const [editingChapter, setEditingChapter] = useState<number | null>(null);
-  const [editHeading, setEditHeading] = useState('');
-  const [editNarration, setEditNarration] = useState('');
 
   // Suggestions/Enhance states
   const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
@@ -98,11 +99,10 @@ const TrendingTopics: React.FC = () => {
   const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
   const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
 
-  // Chroma Key Upload states
-  const [chromaKeyFile, setChromaKeyFile] = useState<File | null>(null);
-  const [chromaKeyUrl, setChromaKeyUrl] = useState<string | null>(null);
-  const [uploadingChromaKey, setUploadingChromaKey] = useState(false);
-  const [chromaKeyUploadProgress, setChromaKeyUploadProgress] = useState(0);
+  // Script generation states
+  const [generatedScript, setGeneratedScript] = useState<string>('');
+  const [showScriptDialog, setShowScriptDialog] = useState(false);
+  const [editedScript, setEditedScript] = useState<string>('');
 
   // Confirm dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -110,23 +110,6 @@ const TrendingTopics: React.FC = () => {
   const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
   const [originalSuggestionText, setOriginalSuggestionText] = useState<string | null>(null);
 
-  // Right panel state (tabs and generated images)
-  const [rightTabIndex, setRightTabIndex] = useState(0);
-  const [imagesLoading, setImagesLoading] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-
-  const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
-  const [chapterImagesMap, setChapterImagesMap] = useState<Record<number, string[]>>({});
-  const [aiImagesEnabled, setAiImagesEnabled] = useState<boolean>(false);
-  const [pickerOpen, setPickerOpen] = useState<boolean>(false);
-  const [pickerChapterIndex, setPickerChapterIndex] = useState<number | null>(null);
-  const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
-  const [pickerLoading, setPickerLoading] = useState<boolean>(false);
-  const [aiPrompt, setAiPrompt] = useState<string>('');
-  const [mediaManagementOpen, setMediaManagementOpen] = useState<boolean>(false);
-  const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  const [isDraggingUpload, setIsDraggingUpload] = useState<boolean>(false);
   const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
 
   // Utility function for smooth scrolling to sections
@@ -195,81 +178,50 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-  const handleUploadFiles = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const imgs: string[] = [];
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return;
-      const url = URL.createObjectURL(file);
-      imgs.push(url);
-    });
-    if (imgs.length === 0) return;
-    setUploadedImages((prev) => [...imgs, ...prev]);
-    // Mirror AI Generation flow: send to Stock Media single view with the first image
-    const first = imgs[0];
-    setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
-    setGeneratedImages([first]);
-    setAiImagesEnabled(true);
-    setRightTabIndex(0);
-  };
+  // Cache management functions
+  const { getCachedData, setCachedData } = useTrendingTopicsCache();
 
-  // Handler functions for the ChaptersSection component
-  const handleGenerateImages = async () => {
+  // Function to clear cache for current region
+  const clearCurrentRegionCache = () => {
     try {
-      setImagesLoading(true);
-      const visuals = aiPrompt;
-      const res = await fetch('/api/generate-images', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visuals })
-      });
-      const data = await res.json();
-      const imgs: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : [fallbackImages[selectedChapterIndex % fallbackImages.length]];
-      const first = imgs[0];
-      setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
-      setGeneratedImages([first]);
-      setAiImagesEnabled(true);
-      setRightTabIndex(0);
-    } catch (e) {
-      console.error('AI generate failed', e);
-      const first = fallbackImages[selectedChapterIndex % fallbackImages.length];
-      setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
-      setGeneratedImages([first]);
-      setRightTabIndex(0);
-    } finally { setImagesLoading(false); }
-  };
-
-  const handleImageSelect = (imageUrl: string) => {
-    setGeneratedImages([imageUrl]);
-  };
-
-  const handleImageDeselect = (imageUrl: string) => {
-    setGeneratedImages(generatedImages.filter(img => img !== imageUrl));
-  };
-
-  const handleDownloadImage = (src: string, idx: number) => {
-    HelperFunctions.downloadImage(src, idx);
-  };
-
-  const handleTriggerFileUpload = () => {
-    HelperFunctions.triggerFileUpload();
-  };
-
-  const selectChapter = (idx: number) => {
-    setSelectedChapterIndex(idx);
-    if (aiImagesEnabled) {
-      const imgs = chapterImagesMap[idx] || [];
-      const fallback = [fallbackImages[idx % fallbackImages.length]];
-      setGeneratedImages(imgs.length > 0 ? [imgs[0]] : fallback);
-    } else {
-      setGeneratedImages(fallbackImages);
+      const cacheKey = `trending_topics_${selectedRegion}`;
+      localStorage.removeItem(cacheKey);
+      toast.success('Cache cleared for current region');
+    } catch (error) {
+      console.warn('Error clearing cache:', error);
+      toast.error('Failed to clear cache');
     }
   };
 
-  const fetchTrendingTopics = async (region: string) => {
+  const fetchTrendingTopics = async (region: string, forceRefresh: boolean = false) => {
     if (USE_HARDCODED) {
       setTrendingTopics(mockTrendingTopics);
       setLoading(false);
+      setLastUpdated(new Date().toISOString());
       return; // skip API in hardcoded mode
     }
+
+    // Check cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const cachedData = getCachedData<TrendingTopic[]>(region);
+      if (cachedData) {
+        setTrendingTopics(cachedData);
+        setLoading(false);
+        // Try to get timestamp from cache
+        try {
+          const cacheKey = `trending_topics_${region}`;
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const { timestamp } = JSON.parse(cached);
+            setLastUpdated(timestamp);
+          }
+        } catch (error) {
+          console.warn('Error reading timestamp from cache:', error);
+        }
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -280,17 +232,26 @@ const TrendingTopics: React.FC = () => {
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
         const geminiData = geminiResult.data.data || [];
-        console.log('🟢 Gemini API Response Data:', geminiData);
-        console.log('🟢 Gemini Topics with Values:', geminiData.map((t: any) => ({
-          topic: t.topic,
-          value: t.value
-        })));
+        // console.log('🟢 Gemini API Response Data:', geminiData);
+        // console.log('🟢 Gemini Topics with Values:', geminiData.map((t: any) => ({
+        //   topic: t.topic,
+        //   value: t.value
+        // })));
         // Sort by value (higher = first)
         const sortedGeminiData = geminiData.sort((a: any, b: any) => b.value - a.value);
         setTrendingTopics(sortedGeminiData);
+
+        // Cache the fresh data
+        setCachedData(region, sortedGeminiData);
+        setLastUpdated(new Date().toISOString());
+
+        if (forceRefresh) {
+          toast.success('Trending topics refreshed successfully!');
+        }
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
         setTrendingTopics(mockTrendingTopics);
+        setLastUpdated(new Date().toISOString());
       }
 
       setError(null);
@@ -298,6 +259,7 @@ const TrendingTopics: React.FC = () => {
       console.error('Error fetching trending topics, using mock data:', err);
       setTrendingTopics(mockTrendingTopics);
       setError(null);
+      setLastUpdated(new Date().toISOString());
     } finally {
       setLoading(false);
     }
@@ -314,22 +276,22 @@ const TrendingTopics: React.FC = () => {
       setSelectedTopicDetails(HARDCODED_TOPIC);
       setHypothesis(HARDCODED_HYPOTHESIS);
       setTrendingTopics(mockTrendingTopics);
-      // Provide mock chapters so we don't call the backend
-      setChapters(mockChapters);
-      setChaptersGenerated(true);
-      // Default view: chapter 1 selected, multiple images (dummy grid)
-      setSelectedChapterIndex(0);
-      setGeneratedImages(fallbackImages);
       setLoading(false);
     }
   }, []);
 
   const handleRegionChange = (region: string) => {
     setSelectedRegion(region);
+    // Reset selections when region changes
+    setSelectedTopicSuggestions([]);
+    setSelectedHypothesisSuggestions([]);
   };
 
   const handleRefresh = () => {
-    fetchTrendingTopics(selectedRegion);
+    fetchTrendingTopics(selectedRegion, true); // Force refresh
+    // Reset selections when refreshing
+    setSelectedTopicSuggestions([]);
+    setSelectedHypothesisSuggestions([]);
   };
 
   const getTopicSuggestions = async (topicName: string, applyToDetails: boolean = false, currentSuggestions?: string[]) => {
@@ -338,26 +300,29 @@ const TrendingTopics: React.FC = () => {
     try {
       // While topic suggestions load, clear hypothesis suggestions and avoid showing loaders there
       setHypothesisSuggestions([]);
+      setSelectedHypothesisSuggestions([]); // Also clear selected hypothesis suggestions
       setLoadingTopicSuggestions(true);
       setError(null);
 
       // Use passed currentSuggestions or fallback to current state
       const suggestionsToAvoid = currentSuggestions || topicSuggestions;
-      console.log('🚀 Calling API with current suggestions:', suggestionsToAvoid);
+      // console.log('🚀 Calling API with current suggestions:', suggestionsToAvoid);
       const result = await apiService.getTopicSuggestions({
         topic: topicName,
         region: selectedRegion,
         currentSuggestions: suggestionsToAvoid // Pass current suggestions to avoid duplicates
       });
-      console.log('📡 API response:', result);
+      // console.log('📡 API response:', result);
 
       if (result.success && result.data) {
         const suggestions = Array.isArray(result.data)
           ? result.data
           : (Array.isArray(result.data?.suggestions) ? result.data.suggestions : []);
         setTopicSuggestions(suggestions || []);
-        if (applyToDetails && suggestions && suggestions.length > 0) {
-          setSelectedTopicDetails(suggestions[0]);
+
+        // Automatically fetch hypothesis suggestions when topic suggestions are updated
+        if (suggestions && suggestions.length > 0 && selectedTopic) {
+          autoFetchHypothesisSuggestions();
         }
 
       } else {
@@ -365,7 +330,11 @@ const TrendingTopics: React.FC = () => {
         // Fallback to default suggestions
         const fallback = HelperFunctions.generateFallbackTopicSuggestions(topicName, selectedRegion);
         setTopicSuggestions(fallback);
-        if (applyToDetails) setSelectedTopicDetails(fallback[0]);
+
+        // Automatically fetch hypothesis suggestions when fallback suggestions are set
+        if (fallback && fallback.length > 0 && selectedTopic) {
+          autoFetchHypothesisSuggestions();
+        }
 
       }
     } catch (err) {
@@ -373,7 +342,11 @@ const TrendingTopics: React.FC = () => {
       // Fallback to default suggestions
       const fallback = HelperFunctions.generateFallbackTopicSuggestions(topicName, selectedRegion);
       setTopicSuggestions(fallback);
-      if (applyToDetails) setSelectedTopicDetails(fallback[0]);
+
+      // Automatically fetch hypothesis suggestions when fallback suggestions are set
+      if (fallback && fallback.length > 0 && selectedTopic) {
+        autoFetchHypothesisSuggestions();
+      }
 
     } finally {
       setLoadingTopicSuggestions(false);
@@ -383,14 +356,23 @@ const TrendingTopics: React.FC = () => {
   const fetchHypothesisSuggestions = async () => {
     if (USE_HARDCODED) return;
     if (!selectedTopic) return;
-    if (!selectedTopicDetails || !selectedTopicDetails.trim()) return;
     if (loadingTopicSuggestions) return;
     try {
 
       setLoadingHypothesisSuggestions(true);
+
+      // Create enhanced details that include selected topic suggestions
+      let enhancedDetails = selectedTopicDetails;
+      if (selectedTopicSuggestions.length > 0) {
+        enhancedDetails = `${selectedTopicDetails}\n\nSelected Topic Suggestions:\n${selectedTopicSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).join('\n')}`;
+
+        // Show toast notification that hypothesis is being generated based on topic suggestions
+        toast.info(`🔄 Generating hypothesis suggestions based on ${selectedTopicSuggestions.length} selected topic suggestion${selectedTopicSuggestions.length !== 1 ? 's' : ''}...`);
+      }
+
       const result = await apiService.getHypothesisSuggestions({
         topic: selectedTopic.topic,
-        details: selectedTopicDetails,
+        details: enhancedDetails,
         region: selectedRegion,
         num: 5,
         currentSuggestions: hypothesisSuggestions // Pass current suggestions to avoid duplicates
@@ -415,30 +397,47 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
+  // useEffect for fetching hypothesis suggestions when topic suggestions are updated
   useEffect(() => {
-    // Only fetch when topic is selected and details are present, and not while topic suggestions are loading
+    // Fetch hypothesis suggestions when topic suggestions change and we have a selected topic
+    if (!USE_HARDCODED && selectedTopic && !loadingTopicSuggestions && topicSuggestions.length > 0) {
+      autoFetchHypothesisSuggestions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topicSuggestions, selectedTopic, selectedRegion]);
+
+  // useEffect for fetching hypothesis suggestions when topic details are manually changed
+  useEffect(() => {
+    // Fetch hypothesis suggestions when topic details are manually typed or changed
     if (!USE_HARDCODED && selectedTopic && selectedTopicDetails.trim().length > 0 && !loadingTopicSuggestions) {
-      fetchHypothesisSuggestions();
+      // Debounce the hypothesis suggestions fetch to avoid too many API calls
+      const timeoutId = setTimeout(() => {
+        autoFetchHypothesisSuggestions();
+      }, 500); // 500ms delay
+
+      return () => clearTimeout(timeoutId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopicDetails, selectedTopic, selectedRegion]);
 
+
+
   const handleEnhanceTopicDetails = async (originalText?: string) => {
     // Determine what text to enhance - either the provided suggestion or the current text field
     const textToEnhance = originalText || selectedTopicDetails.trim();
-    
+
     if (!selectedTopic || !textToEnhance) return;
-    
+
     try {
       setEnhancingDetails(true);
-      
+
       // Store the original suggestion text if provided
       if (originalText) {
         setOriginalSuggestionText(originalText);
       } else {
         setOriginalSuggestionText(null);
       }
-      
+
       if (USE_HARDCODED) {
         const enhanced = `${textToEnhance} (refined for clarity and impact)`;
         setPendingField('topicDetails');
@@ -470,19 +469,19 @@ const TrendingTopics: React.FC = () => {
   const handleEnhanceHypothesis = async (originalText?: string) => {
     // Determine what text to enhance - either the provided suggestion or the current text field
     const textToEnhance = originalText || hypothesis.trim();
-    
+
     if (!selectedTopic || !textToEnhance) return;
-    
+
     try {
       setEnhancingHypothesis(true);
-      
+
       // Store the original suggestion text if provided
       if (originalText) {
         setOriginalSuggestionText(originalText);
       } else {
         setOriginalSuggestionText(null);
       }
-      
+
       const result = await apiService.enhanceHypothesis({
         topic: selectedTopic.topic,
         hypothesis: textToEnhance,
@@ -504,43 +503,45 @@ const TrendingTopics: React.FC = () => {
 
   const handleConfirmAccept = (selectedOption: string) => {
     if (pendingField === 'topicDetails') {
-      setSelectedTopicDetails(selectedOption);
-      
       // If this enhancement came from a suggestion, replace it in the suggestions list
       if (originalSuggestionText && topicSuggestions.includes(originalSuggestionText)) {
-        const updatedSuggestions = topicSuggestions.map(suggestion => 
+        const updatedSuggestions = topicSuggestions.map(suggestion =>
           suggestion === originalSuggestionText ? selectedOption : suggestion
         );
         setTopicSuggestions(updatedSuggestions);
-        
+
         // Update selected suggestions as well if the original was selected
         if (selectedTopicSuggestions.includes(originalSuggestionText)) {
           const updatedSelectedSuggestions = selectedTopicSuggestions.map(suggestion =>
             suggestion === originalSuggestionText ? selectedOption : suggestion
           );
-          setSelectedTopicSuggestions(updatedSelectedSuggestions);
+          handleTopicSuggestionsChange(updatedSelectedSuggestions);
         }
       }
+
+      // Automatically fetch hypothesis suggestions when topic details are updated
+      autoFetchHypothesisSuggestions();
     } else if (pendingField === 'hypothesis') {
-      setHypothesis(selectedOption);
-      
+      // Don't populate the hypothesis field - only update the suggestions list
+      // The user should manually type in the hypothesis field if they want to
+
       // If this enhancement came from a suggestion, replace it in the suggestions list
       if (originalSuggestionText && hypothesisSuggestions.includes(originalSuggestionText)) {
-        const updatedSuggestions = hypothesisSuggestions.map(suggestion => 
+        const updatedSuggestions = hypothesisSuggestions.map(suggestion =>
           suggestion === originalSuggestionText ? selectedOption : suggestion
         );
         setHypothesisSuggestions(updatedSuggestions);
-        
+
         // Update selected suggestions as well if the original was selected
         if (selectedHypothesisSuggestions.includes(originalSuggestionText)) {
           const updatedSelectedSuggestions = selectedHypothesisSuggestions.map(suggestion =>
             suggestion === originalSuggestionText ? selectedOption : suggestion
           );
-          setSelectedHypothesisSuggestions(updatedSelectedSuggestions);
+          handleHypothesisSuggestionsChange(updatedSelectedSuggestions);
         }
       }
     }
-    
+
     setConfirmOpen(false);
     setPendingEnhancedOptions([]);
     setPendingField(null);
@@ -554,307 +555,146 @@ const TrendingTopics: React.FC = () => {
     setOriginalSuggestionText(null);
   };
 
+  // Wrapper functions to always fetch hypothesis suggestions when checkbox selections change
+  const handleTopicSuggestionsChange = (suggestions: string[]) => {
+    setSelectedTopicSuggestions(suggestions);
+    // Always fetch hypothesis suggestions when topic suggestions selection changes
+    if (suggestions.length > 0 && selectedTopic) {
+      // If topic details are empty, use the first selected suggestion as topic details
+      // Fetch hypothesis suggestions when topic suggestions selection changes
+      autoFetchHypothesisSuggestions();
+    }
+  };
+
+  // Function to automatically fetch hypothesis suggestions when topic suggestions are updated
+  const autoFetchHypothesisSuggestions = () => {
+    if (!USE_HARDCODED && selectedTopic && topicSuggestions.length > 0) {
+      setTimeout(() => {
+        fetchHypothesisSuggestions();
+      }, 200); // Small delay to ensure state is updated
+    }
+  };
+
+  const handleHypothesisSuggestionsChange = (suggestions: string[]) => {
+    setSelectedHypothesisSuggestions(suggestions);
+  };
+
   const handleTopicSelect = async (topic: TrendingTopic) => {
     setSelectedTopic(topic);
     setHypothesis('');
-    setChapters([]);
-    setChaptersGenerated(false);
-    setEditingChapter(null);
     setTopicSuggestions([]); // Reset suggestions
+    setSelectedTopicSuggestions([]); // Reset selected topic suggestions
+    setHypothesisSuggestions([]); // Reset hypothesis suggestions
+    setSelectedHypothesisSuggestions([]); // Reset selected hypothesis suggestions
     setSelectedTopicDetails(''); // Clear topic details to refresh
     // Fetch new topic suggestions without auto-filling topic details
     await getTopicSuggestions(topic.topic);
   };
 
-  const handleGenerateChapters = async () => {
-    if (!hypothesis.trim() || !selectedTopic) {
+  const handleGenerateScript = async () => {
+    if (selectedHypothesisSuggestions.length === 0 || !selectedTopic) {
       return;
     }
 
     try {
-      setGeneratingChapters(true);
+      setGeneratingChapters(true); // Keep using same loading state for now
       setError(null);
-      setChapters([]);
-      setChaptersGenerated(false);
-      
-      // Clear all existing assets when generating new chapters
-      setChapterImagesMap({});
-      setGeneratedImages([]);
-      setUploadedImages([]);
 
-      const result = await apiService.generateChapters({
+      const result = await apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
         details: selectedTopicDetails,
         region: selectedRegion,
         duration: duration,
+        language: language,
         selectedTopicSuggestions: selectedTopicSuggestions,
         selectedHypothesisSuggestions: selectedHypothesisSuggestions,
         topicDetails: selectedTopicDetails
       });
+      console.log('🟢 Script generation result:', result);
+      if (result.success && result.data?.script) {
+        // Show script approval dialog with structured data
+        setGeneratedScript(result.data.script);
+        setEditedScript(result.data.script);
 
-      if (result.success && result.data?.chapters && Array.isArray(result.data.chapters)) {
-        const chaptersWithEmptyMedia = result.data.chapters.map((chapter: Chapter) => ({
-          ...chapter,
-          media: { image: null, audio: null, video: null }
-        }));
+        // Store additional script metadata for later use
+        const scriptMetadata = {
+          title: result.data.title || 'Untitled Script',
+          hook: result.data.hook || '',
+          mainContent: result.data.mainContent || '',
+          conclusion: result.data.conclusion || '',
+          callToAction: result.data.callToAction || '',
+          estimatedWords: result.data.estimatedWords || 0,
+          emotionalTone: result.data.emotionalTone || 'Engaging',
+          pacing: result.data.pacing || 'Dynamic'
+        };
 
-        setChapters(chaptersWithEmptyMedia);
-        setChaptersGenerated(true);
+        // Store metadata in localStorage for the script production page
+        localStorage.setItem('scriptMetadata', JSON.stringify(scriptMetadata));
+
+        setShowScriptDialog(true);
         setError(null);
-
-        // Auto-generate images for chapters
-        try {
-          const chaptersWithImages = await generateChapterImages(chaptersWithEmptyMedia);
-          setChapters(chaptersWithImages);
-
-          // Add generated images to the stock images array
-          const newGeneratedImages: string[] = [];
-          const chapterImagesForMap: Record<number, string[]> = {};
-
-          chaptersWithImages.forEach((chapter, index) => {
-            // Add primary image to generated images
-            if (chapter.assets?.image) {
-              newGeneratedImages.push(chapter.assets.image);
-            }
-
-            // Add all generated images (primary + additional) to chapter images map for testing
-            const allChapterImages: string[] = [];
-            if (chapter.assets?.image) {
-              allChapterImages.push(chapter.assets.image);
-            }
-            if ((chapter as any).additionalImages && Array.isArray((chapter as any).additionalImages)) {
-              allChapterImages.push(...(chapter as any).additionalImages);
-              // Also add additional images to the generated images array for stock
-              newGeneratedImages.push(...(chapter as any).additionalImages);
-            }
-            
-            if (allChapterImages.length > 0) {
-              chapterImagesForMap[index] = allChapterImages;
-            }
-          });
-
-          if (newGeneratedImages.length > 0) {
-            setGeneratedImages(prev => [...prev, ...newGeneratedImages]);
-          }
-
-          // Set the chapter images map with all generated images
-          if (Object.keys(chapterImagesForMap).length > 0) {
-            setChapterImagesMap(prev => ({ ...prev, ...chapterImagesForMap }));
-          }
-
-          console.log(`🎨 Generated ${newGeneratedImages.length} total images for ${chaptersWithImages.length} chapters`);
-        } catch (imageError) {
-          console.error('Error generating chapter images:', imageError);
-          // Don't set error state as chapters are still generated, just without images
-        }
       } else {
-        setError(result.error || 'Invalid response format from API');
+        setError(result.error || 'Failed to generate script');
       }
     } catch (err) {
-      console.error('Error generating chapters:', err);
-      setError('Failed to generate chapters. Please try again.');
+      console.error('Error generating script:', err);
+      setError('Failed to generate script. Please try again.');
     } finally {
       setGeneratingChapters(false);
     }
   };
 
-  const handleAddChapterAfter = (index: number) => {
-    HelperFunctions.addChapterAfter(index, chapters, setChapters);
-  };
+  const handleScriptApproval = () => {
+    // Navigate to script production page with the approved script data
+    console.log('Script approved, navigating to script production page...');
 
-  const handleDeleteChapter = (index: number) => {
-    HelperFunctions.deleteChapter(index, chapters, setChapters);
-  };
+    // Store script data for the next page
+    // Use edited script if it exists, otherwise use generated script
+    const finalScript = editedScript || generatedScript;
 
-  const handleEditChapter = (index: number) => {
-    setEditingChapter(index);
-    setEditHeading(chapters[index].on_screen_text || '');
-    setEditNarration(chapters[index].narration || '');
-  };
-
-  const handleStartEdit = (index: number, heading: string, narration: string) => {
-    setEditingChapter(index);
-    setEditHeading(heading);
-    setEditNarration(narration);
-  };
-
-  const handleSaveEdit = (index: number) => {
-    HelperFunctions.saveEdit(index, chapters, setChapters, editHeading, editNarration, setEditingChapter);
-    setEditHeading('');
-    setEditNarration('');
-  };
-
-  const handleCancelEdit = () => {
-    HelperFunctions.cancelEdit(setEditingChapter, setEditHeading, setEditNarration);
-  };
-
-  // Video Production Actions
-  const handleDownloadAllNarrations = () => {
-    if (!chapters.length) return;
-    
-    try {
-      chapters.forEach((chapter, index) => {
-        if (chapter.assets?.audio) {
-          // Create a download link for each audio file
-          const link = document.createElement('a');
-          link.href = chapter.assets.audio;
-          link.download = `chapter-${index + 1}-narration.mp3`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      });
-    } catch (error) {
-      console.error('Error downloading narrations:', error);
-    }
-  };
-
-  const handleUploadChromaKey = () => {
-    // Create a file input for chroma key upload
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,video/*';
-    input.onchange = async (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (files && files.length > 0) {
-        const file = files[0];
-        
-        try {
-          setUploadingChromaKey(true);
-          setChromaKeyUploadProgress(0);
-          
-          // Simulate upload progress
-          const totalSteps = 10;
-          for (let i = 1; i <= totalSteps; i++) {
-            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay per step
-            setChromaKeyUploadProgress((i / totalSteps) * 100);
-          }
-          
-          // Store the file and create URL
-          const url = URL.createObjectURL(file);
-          setChromaKeyFile(file);
-          setChromaKeyUrl(url);
-          
-          console.log('Chroma key uploaded:', file.name, url);
-          toast.success(`Chroma key "${file.name}" uploaded successfully!`);
-        } catch (error) {
-          console.error('Error uploading chroma key:', error);
-          toast.error('Failed to upload chroma key. Please try again.');
-        } finally {
-          setUploadingChromaKey(false);
-          setChromaKeyUploadProgress(0);
-        }
-      }
+    const scriptData = {
+      script: finalScript,
+      topic: selectedTopic?.topic || '',
+      hypothesis,
+      details: selectedTopicDetails,
+      region: selectedRegion,
+      duration,
+      language,
+      selectedTopicSuggestions,
+      selectedHypothesisSuggestions,
     };
-    input.click();
+
+    // Store in localStorage as backup
+    localStorage.setItem('approvedScript', JSON.stringify(scriptData));
+
+    // Show success message
+    toast.success('Script approved! Navigating to production pipeline...');
+
+    // Navigate to script production page with query params
+    router.push('/script-production');
+
+    setShowScriptDialog(false);
+    setGeneratedScript('');
   };
 
-  const handleGenerateVideo = async () => {
-    if (!chapters.length) {
-      toast.error('No chapters available for video generation');
-      return;
-    }
-    
-    if (!chromaKeyFile || !chromaKeyUrl) {
-      toast.error('Please upload a chroma key before generating video');
-      return;
-    }
-    
-    try {
-      console.log('Generating video with chapters:', chapters);
-      console.log('Using chroma key:', chromaKeyFile.name);
-      // TODO: Implement video generation API call
-      toast.success('Video generation started! This feature is coming soon.');
-    } catch (error) {
-      console.error('Error generating video:', error);
-      toast.error('Error generating video. Please try again.');
-    }
+  const handleScriptRejection = () => {
+    // Clear the script and allow user to try again
+    setGeneratedScript('');
+    setEditedScript('');
+    setShowScriptDialog(false);
   };
 
-  const handleRegenerateAllAssets = async () => {
-    if (!chapters.length) {
-      toast.error('No chapters available for asset regeneration');
-      return;
-    }
-    
-    try {
-      setGeneratingChapters(true);
-      console.log('Regenerating all assets for chapters:', chapters);
-      
-      // Call the same image generation function that's used during chapter creation
-      const { generateChapterImages } = await import('@/utils/chapterImageGenerator');
-      const updatedChapters = await generateChapterImages(chapters);
-      setChapters(updatedChapters);
-      
-      // Update generatedImages to include new AI images
-      const newGeneratedImages = updatedChapters
-        .map(chapter => chapter.assets?.image)
-        .filter((image): image is string => Boolean(image));
-
-      if (newGeneratedImages.length > 0) {
-        setGeneratedImages(prev => [...prev, ...newGeneratedImages]);
-      }
-      
-      toast.success('All assets regenerated successfully!');
-    } catch (error) {
-      console.error('Error regenerating assets:', error);
-      toast.error('Error regenerating assets. Please try again.');
-    } finally {
-      setGeneratingChapters(false);
-    }
+  const handleScriptChange = (newScript: string) => {
+    setEditedScript(newScript);
   };
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
 
-    const { source, destination } = result;
-    if (source.index === destination.index) return;
-
-    // Reorder chapters
-    const updatedChapters = Array.from(chapters);
-    const [reorderedChapter] = updatedChapters.splice(source.index, 1);
-    updatedChapters.splice(destination.index, 0, reorderedChapter);
-    setChapters(updatedChapters);
-
-    // Reorder chapter images map to follow the chapters
-    const updatedChapterImagesMap: Record<number, string[]> = {};
-
-    // Create a temporary mapping of old indices to their images
-    const tempImageMap: Record<number, string[]> = {};
-    Object.keys(chapterImagesMap).forEach(key => {
-      tempImageMap[parseInt(key)] = chapterImagesMap[parseInt(key)];
-    });
-
-    // Reorder the images based on the new chapter order
-    updatedChapters.forEach((chapter, newIndex) => {
-      // Find the original index of this chapter
-      const originalIndex = chapters.findIndex(c => c.id === chapter.id);
-      if (originalIndex !== -1 && tempImageMap[originalIndex]) {
-        updatedChapterImagesMap[newIndex] = tempImageMap[originalIndex];
-      }
-    });
-
-    setChapterImagesMap(updatedChapterImagesMap);
-
-    // Update selected chapter index if needed
-    if (selectedChapterIndex === source.index) {
-      setSelectedChapterIndex(destination.index);
-    } else if (selectedChapterIndex >= Math.min(source.index, destination.index) &&
-      selectedChapterIndex <= Math.max(source.index, destination.index)) {
-      // Adjust selected index if it's in the affected range
-      if (source.index < destination.index && selectedChapterIndex > source.index) {
-        setSelectedChapterIndex(selectedChapterIndex - 1);
-      } else if (source.index > destination.index && selectedChapterIndex < source.index) {
-        setSelectedChapterIndex(selectedChapterIndex + 1);
-      }
-    }
-  };
 
   const wordClickHandler = useCallback(async (w: any) => {
     console.log('🔍 Word clicked:', w.text);
     console.log('🔍 Available topics:', trendingTopics.map(t => t.topic));
-    
+
     // find the topic which matches the clicked word
     const foundTopic = trendingTopics.find(t => t.topic === w.text);
 
@@ -882,8 +722,8 @@ const TrendingTopics: React.FC = () => {
         generatingChapters={generatingChapters}
         enhancingDetails={enhancingDetails}
         enhancingHypothesis={enhancingHypothesis}
-        imagesLoading={imagesLoading}
-        pickerLoading={pickerLoading}
+        imagesLoading={false}
+        pickerLoading={false}
       />
 
       {/* Header with Region Selection and Refresh */}
@@ -892,9 +732,11 @@ const TrendingTopics: React.FC = () => {
         regions={regions}
         onRegionChange={handleRegionChange}
         onRefresh={handleRefresh}
+        onClearCache={clearCurrentRegionCache}
         trendView={trendView}
         onTrendViewChange={setTrendView}
         loading={loading}
+        lastUpdated={lastUpdated}
       />
 
       {error && (
@@ -910,8 +752,8 @@ const TrendingTopics: React.FC = () => {
             {/* Trending Topics List */}
             <Box sx={{ width: '100%' }}>
               {/* Fixed height container with scroll */}
-              <Box 
-                sx={{ 
+              <Box
+                sx={{
                   height: '400px', // Fixed height container
                   overflowY: 'auto', // Enable vertical scrolling
                   overflowX: 'hidden', // Hide horizontal scroll
@@ -939,71 +781,108 @@ const TrendingTopics: React.FC = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   {trendingTopics.map((topic, index) => {
                     const isSelected = selectedTopic?.id === topic.id;
+                    const isDataFresh = lastUpdated ? (() => {
+                      try {
+                        const date = new Date(lastUpdated);
+                        const now = new Date();
+                        const diffMs = now.getTime() - date.getTime();
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        return diffHours < 1; // Consider data fresh if less than 1 hour old
+                      } catch (error) {
+                        return false;
+                      }
+                    })() : false;
+
                     return (
-                    <Box
-                      key={`topic-${index}`}
-                      onClick={() => handleTopicSelect(topic)}
-                      sx={{
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: isSelected ? '#e3f2fd' : '#f5f5f5',
-                          borderLeft: '3px solid #1976d2',
-                          paddingLeft: '15px'
-                        },
-                        border: isSelected ? '2px solid #1976d2' : '1px solid #e0e0e0',
-                        borderLeft: isSelected ? '4px solid #1976d2' : '1px solid #e0e0e0',
-                        borderRadius: 1,
-                        p: 1.5,
-                        paddingLeft: isSelected ? '14px' : '12px',
-                        mb: 0.5,
-                        backgroundColor: isSelected ? '#e3f2fd' : '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        minHeight: '60px',
-                        boxShadow: isSelected ? '0 2px 8px rgba(25, 118, 210, 0.2)' : 'none'
-                      }}
-                  >
-                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
-                      {/* Topic */}
-                      <Typography 
-                        variant="subtitle2" 
-                        sx={{ 
-                          fontWeight: 600, 
-                          color: '#1976d2',
-                          fontSize: '0.95rem',
-                          minWidth: '200px',
-                          flexShrink: 0
+                      <Box
+                        key={`topic-${index}`}
+                        onClick={() => handleTopicSelect(topic)}
+                        sx={{
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          position: 'relative',
+                          '&:hover': {
+                            backgroundColor: isSelected ? '#e3f2fd' : '#f5f5f5',
+                            borderLeft: '3px solid #1976d2',
+                            paddingLeft: '15px'
+                          },
+                          border: isSelected ? '2px solid #1976d2' : '1px solid #e0e0e0',
+                          borderLeft: isSelected ? '4px solid #1976d2' : '1px solid #e0e0e0',
+                          borderRadius: 1,
+                          p: 1.5,
+                          paddingLeft: isSelected ? '14px' : '12px',
+                          mb: 0.5,
+                          backgroundColor: isSelected ? '#e3f2fd' : '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          minHeight: '60px',
+                          boxShadow: isSelected ? '0 2px 8px rgba(25, 118, 210, 0.2)' : 'none'
                         }}
                       >
-                        {topic.topic}
-                      </Typography>
-                      
-                      {/* Separator */}
-                      <Box 
-                        sx={{ 
-                          width: '1px', 
-                          height: '30px', 
-                          backgroundColor: '#e0e0e0',
-                          flexShrink: 0 
-                        }} 
-                      />
-                      
-                      {/* Description */}
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: '#666',
-                          fontSize: '0.85rem',
-                          lineHeight: 1.3,
-                          flex: 1
-                        }}
-                      >
-                        {topic.description}
-                      </Typography>
-                    </Box>
-                  </Box>
+                        {/* Cache indicator */}
+                        {lastUpdated && !isDataFresh && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                              borderRadius: '4px',
+                              px: 1,
+                              py: 0.5,
+                            }}
+                            title="Data from cache - click refresh for fresh data"
+                          >
+                            <CachedIcon sx={{ fontSize: '0.7rem', color: 'text.secondary' }} />
+                            <Typography variant="caption" sx={{ fontSize: '0.6rem', color: 'text.secondary' }}>
+                              Cached
+                            </Typography>
+                          </Box>
+                        )}
+
+                        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+                          {/* Topic */}
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 600,
+                              color: '#1976d2',
+                              fontSize: '0.95rem',
+                              minWidth: '200px',
+                              flexShrink: 0
+                            }}
+                          >
+                            {topic.topic}
+                          </Typography>
+
+                          {/* Separator */}
+                          <Box
+                            sx={{
+                              width: '1px',
+                              height: '30px',
+                              backgroundColor: '#e0e0e0',
+                              flexShrink: 0
+                            }}
+                          />
+
+                          {/* Description */}
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: '#666',
+                              fontSize: '0.85rem',
+                              lineHeight: 1.3,
+                              flex: 1
+                            }}
+                          >
+                            {topic.description}
+                          </Typography>
+                        </Box>
+                      </Box>
                     );
                   })}
                 </Box>
@@ -1019,12 +898,54 @@ const TrendingTopics: React.FC = () => {
           ) : (
             <Box sx={{ display: 'flex', gap: 3, height: '400px' }}>
               {/* Centered Word Cloud Container */}
-              <Box sx={{ 
+              <Box sx={{
                 flex: 1,
                 display: 'flex',
+                flexDirection: 'column',
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
+                position: 'relative'
               }}>
+                {/* Cache indicator for word cloud view */}
+                {lastUpdated && (() => {
+                  try {
+                    const date = new Date(lastUpdated);
+                    const now = new Date();
+                    const diffMs = now.getTime() - date.getTime();
+                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    const isDataFresh = diffHours < 1;
+
+                    if (!isDataFresh) {
+                      return (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                            borderRadius: '4px',
+                            px: 1,
+                            py: 0.5,
+                            zIndex: 1,
+                          }}
+                          title="Data from cache - click refresh for fresh data"
+                        >
+                          <CachedIcon sx={{ fontSize: '0.8rem', color: 'text.secondary' }} />
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                            Cached
+                          </Typography>
+                        </Box>
+                      );
+                    }
+                    return null;
+                  } catch (error) {
+                    return null;
+                  }
+                })()}
+
                 <WordCloudChart
                   width={600}
                   height={400}
@@ -1041,9 +962,9 @@ const TrendingTopics: React.FC = () => {
                   handleWordClick={wordClickHandler}
                 />
               </Box>
-              
+
               {/* Permanent Details Panel on Right */}
-              <Box sx={{ 
+              <Box sx={{
                 width: '320px',
                 border: '1px solid #e0e0e0',
                 borderRadius: 2,
@@ -1053,8 +974,8 @@ const TrendingTopics: React.FC = () => {
                 flexShrink: 0
               }}>
                 {/* Panel Header */}
-                <Box sx={{ 
-                  p: 2, 
+                <Box sx={{
+                  p: 2,
                   borderBottom: '1px solid #e0e0e0',
                   backgroundColor: '#f5f5f5'
                 }}>
@@ -1062,10 +983,10 @@ const TrendingTopics: React.FC = () => {
                     Topic Details
                   </Typography>
                 </Box>
-                
+
                 {/* Panel Content */}
-                <Box sx={{ 
-                  flex: 1, 
+                <Box sx={{
+                  flex: 1,
                   p: 2,
                   overflowY: 'auto',
                   '&::-webkit-scrollbar': {
@@ -1082,8 +1003,8 @@ const TrendingTopics: React.FC = () => {
                   {selectedTopic ? (
                     <Box>
                       {/* Selected Topic */}
-                      <Typography variant="h6" sx={{ 
-                        fontWeight: 700, 
+                      <Typography variant="h6" sx={{
+                        fontWeight: 700,
                         color: '#1976d2',
                         mb: 2,
                         fontSize: '1.2rem',
@@ -1091,9 +1012,9 @@ const TrendingTopics: React.FC = () => {
                       }}>
                         {selectedTopic.topic}
                       </Typography>
-                      
+
                       {/* Description */}
-                      <Typography variant="body2" sx={{ 
+                      <Typography variant="body2" sx={{
                         color: '#333',
                         lineHeight: 1.6,
                         fontSize: '0.95rem'
@@ -1102,16 +1023,16 @@ const TrendingTopics: React.FC = () => {
                       </Typography>
                     </Box>
                   ) : (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
+                    <Box sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
                       height: '100%',
                       textAlign: 'center',
                       color: '#999'
                     }}>
-                      <Box sx={{ 
+                      <Box sx={{
                         fontSize: '2rem',
                         mb: 2,
                         opacity: 0.3
@@ -1157,11 +1078,14 @@ const TrendingTopics: React.FC = () => {
               loadingTopicSuggestions={loadingTopicSuggestions}
               enhancingDetails={enhancingDetails}
               selectedRegion={selectedRegion}
+              language={language}
 
               onTopicDetailsChange={setSelectedTopicDetails}
               onEnhanceTopicDetails={handleEnhanceTopicDetails}
-              onTopicSuggestionsChange={setSelectedTopicSuggestions}
-              onRestoreTopicSuggestions={(suggestions) => setTopicSuggestions(suggestions)}
+              onTopicSuggestionsChange={handleTopicSuggestionsChange}
+              onRestoreTopicSuggestions={(suggestions) => {
+                setTopicSuggestions(suggestions)
+              }}
             />
 
             <HypothesisSection
@@ -1173,10 +1097,12 @@ const TrendingTopics: React.FC = () => {
               loadingHypothesisSuggestions={loadingHypothesisSuggestions}
               enhancingHypothesis={enhancingHypothesis}
               selectedRegion={selectedRegion}
+              selectedTopicSuggestions={selectedTopicSuggestions}
+              language={language}
               onFetchHypothesisSuggestions={fetchHypothesisSuggestions}
               onHypothesisChange={setHypothesis}
               onEnhanceHypothesis={handleEnhanceHypothesis}
-              onHypothesisSuggestionsChange={setSelectedHypothesisSuggestions}
+              onHypothesisSuggestionsChange={handleHypothesisSuggestionsChange}
               onRestoreHypothesisSuggestions={(suggestions) => setHypothesisSuggestions(suggestions)}
             />
 
@@ -1184,86 +1110,14 @@ const TrendingTopics: React.FC = () => {
               duration={duration}
               onDurationChange={setDuration}
               durationOptions={durationOptions}
+              language={language}
+              onLanguageChange={setLanguage}
+              languageOptions={languageOptions}
               generatingChapters={generatingChapters}
-              onGenerateChapters={handleGenerateChapters}
-              hypothesis={hypothesis}
-              hasChapters={chapters.length > 0}
-              onDownloadAllNarrations={handleDownloadAllNarrations}
-              onUploadChromaKey={handleUploadChromaKey}
-              onGenerateVideo={handleGenerateVideo}
-              onRegenerateAllAssets={handleRegenerateAllAssets}
-              chromaKeyFile={chromaKeyFile}
-              uploadingChromaKey={uploadingChromaKey}
-              chromaKeyUploadProgress={chromaKeyUploadProgress}
-            />
-
-            {/* Video Chapters Section */}
-            <ChaptersSection
-              chapters={chapters}
-              chaptersGenerated={chaptersGenerated}
-              generatingChapters={generatingChapters}
-              editingChapter={editingChapter}
-              editHeading={editHeading}
-              editNarration={editNarration}
-              selectedChapterIndex={selectedChapterIndex}
-              rightTabIndex={rightTabIndex}
-              aiImagesEnabled={aiImagesEnabled}
-              imagesLoading={imagesLoading}
-              generatedImages={generatedImages}
-              aiPrompt={aiPrompt}
-              pickerOpen={pickerOpen}
-              pickerChapterIndex={pickerChapterIndex}
-              pickerNarrations={pickerNarrations}
-              pickerLoading={pickerLoading}
-              uploadedImages={uploadedImages}
-              isDraggingUpload={isDraggingUpload}
-              chapterImagesMap={chapterImagesMap}
-              onGenerateChapters={handleGenerateChapters}
-              onAddChapterAfter={handleAddChapterAfter}
-              onDeleteChapter={handleDeleteChapter}
-              onSaveEdit={handleSaveEdit}
-              onCancelEdit={handleCancelEdit}
-              onEditHeadingChange={setEditHeading}
-              onEditNarrationChange={setEditNarration}
-              onStartEdit={handleStartEdit}
-              onDragEnd={handleDragEnd}
-              onSelectChapter={selectChapter}
-              onRightTabChange={setRightTabIndex}
-              onAIPromptChange={setAiPrompt}
-              onUseAIChange={setAiImagesEnabled}
-              onGenerateImages={handleGenerateImages}
-              onImageSelect={handleImageSelect}
-              onImageDeselect={handleImageDeselect}
-              onDownloadImage={handleDownloadImage}
-              onTriggerFileUpload={handleTriggerFileUpload}
-              onUploadFiles={handleUploadFiles}
-              onPickerOpen={setPickerOpen}
-              onPickerChapterIndex={setPickerChapterIndex}
-              onPickerLoading={setPickerLoading}
-              onPickerNarrations={setPickerNarrations}
-              onChapterImagesMapChange={setChapterImagesMap}
-              onGeneratedImagesChange={setGeneratedImages}
-              onRightTabIndexChange={setRightTabIndex}
-              mediaManagementOpen={mediaManagementOpen}
-              mediaManagementChapterIndex={mediaManagementChapterIndex}
-              onMediaManagementOpen={setMediaManagementOpen}
-              onMediaManagementChapterIndex={setMediaManagementChapterIndex}
-              onChaptersUpdate={(updatedChapters) => {
-                setChapters(updatedChapters);
-                // Update generatedImages to keep sync with chapter AI images
-                const currentAIImages = updatedChapters
-                  .map(chapter => chapter.assets?.image)
-                  .filter((image): image is string => Boolean(image));
-
-                // Update generatedImages to include current AI images
-                setGeneratedImages(prev => {
-                  // Remove old AI images and add current ones, keeping other generated images
-                  const nonAIImages = prev.filter(img =>
-                    !chapters.some(ch => ch.assets?.image === img)
-                  );
-                  return [...nonAIImages, ...currentAIImages];
-                });
-              }}
+              onGenerateChapters={handleGenerateScript}
+              selectedHypothesisSuggestions={selectedHypothesisSuggestions}
+              hasChapters={false}
+              onRegenerateAllAssets={() => { }}
             />
 
           </Box>
@@ -1283,26 +1137,18 @@ const TrendingTopics: React.FC = () => {
         />
       )}
 
-      {/* Narration Variations Picker */}
-      <NarrationPickerDialog
-        open={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        pickerLoading={pickerLoading}
-        pickerNarrations={pickerNarrations}
-        chapters={chapters}
-        pickerChapterIndex={pickerChapterIndex}
-        editingChapter={editingChapter}
-        onNarrationSelect={(chapterIndex, narration) => {
-          if (chapterIndex === null) return;
-          const updated = [...chapters];
-          updated[chapterIndex] = { ...updated[chapterIndex], narration: narration } as any;
-          setChapters(updated);
-          if (editingChapter === chapterIndex) {
-            setEditNarration(narration);
-          }
-          setPickerOpen(false);
-        }}
-        onEditNarrationChange={setEditNarration}
+
+
+      {/* Script Approval Dialog */}
+      <ScriptApprovalDialog
+        open={showScriptDialog}
+        onClose={() => setShowScriptDialog(false)}
+        onApprove={handleScriptApproval}
+        onReject={handleScriptRejection}
+        script={editedScript || generatedScript}
+        topic={selectedTopic?.topic || ''}
+        language={language}
+        onScriptChange={handleScriptChange}
       />
 
     </Box>
