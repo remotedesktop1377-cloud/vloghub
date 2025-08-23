@@ -109,12 +109,80 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   const handleStartEditingScript = () => {
     setIsEditingScript(true);
     setEditedScript(script);
+    
+    // Parse the current script to populate scriptData for editing
+    const currentScript = editedScript || script;
+    const lines = currentScript.split('\n');
+    
+    let currentSection = '';
+    let currentContent = '';
+    const newScriptData: ScriptData = { ...scriptData };
+    
+    for (const line of lines) {
+      if (line.includes('📋 TITLE:')) {
+        currentSection = 'title';
+        currentContent = '';
+      } else if (line.includes('🎯 HOOK:')) {
+        if (currentSection && currentContent.trim()) {
+          (newScriptData as any)[currentSection] = currentContent.trim();
+        }
+        currentSection = 'hook';
+        currentContent = '';
+      } else if (line.includes('📝 MAIN CONTENT:')) {
+        if (currentSection && currentContent.trim()) {
+          (newScriptData as any)[currentSection] = currentContent.trim();
+        }
+        currentSection = 'mainContent';
+        currentContent = '';
+      } else if (line.includes('🏁 CONCLUSION:')) {
+        if (currentSection && currentContent.trim()) {
+          (newScriptData as any)[currentSection] = currentContent.trim();
+        }
+        currentSection = 'conclusion';
+        currentContent = '';
+      } else if (line.includes('🚀 CALL TO ACTION:')) {
+        if (currentSection && currentContent.trim()) {
+          (newScriptData as any)[currentSection] = currentContent.trim();
+        }
+        currentSection = 'callToAction';
+        currentContent = '';
+      } else if (line.trim() && currentSection) {
+        currentContent += line + '\n';
+      }
+    }
+    
+    // Save the last section
+    if (currentSection && currentContent.trim()) {
+      (newScriptData as any)[currentSection] = currentContent.trim();
+    }
+    
+    setScriptData(newScriptData);
   };
 
   const handleSaveScript = () => {
+    // Combine all sections into a single script
+    const combinedScript = [
+      scriptData.title && `📋 TITLE:\n${scriptData.title}`,
+      scriptData.hook && `🎯 HOOK:\n${scriptData.hook}`,
+      scriptData.mainContent && `📝 MAIN CONTENT:\n${scriptData.mainContent}`,
+      scriptData.conclusion && `🏁 CONCLUSION:\n${scriptData.conclusion}`,
+      scriptData.callToAction && `🚀 CALL TO ACTION:\n${scriptData.callToAction}`
+    ].filter(Boolean).join('\n\n');
+    
+    // Update the edited script state
+    setEditedScript(combinedScript);
+    
     if (onScriptChange) {
-      onScriptChange(editedScript);
+      onScriptChange(combinedScript);
     }
+    
+    // Save script metadata to localStorage
+    try {
+      localStorage.setItem('scriptMetadata', JSON.stringify(scriptData));
+    } catch (error) {
+      console.warn('Error saving script metadata:', error);
+    }
+    
     setIsEditingScript(false);
     toast.success('Script updated successfully!');
   };
@@ -230,39 +298,125 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
           </Box>
 
           <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            {isEditingScript ? (
-              <Box sx={{ flex: 1, overflow: 'auto' }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={15}
-                  variant="outlined"
-                  value={editedScript}
-                  onChange={(e) => handleScriptContentChange(e.target.value)}
-                  placeholder="Edit your script content..."
-                  sx={{
-                    '& .MuiInputBase-root': {
-                      fontFamily: isRTLLanguage(language)
-                        ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                        : '"Roboto", "Arial", sans-serif',
-                      fontSize: '0.9rem',
-                      lineHeight: 1.7,
-                      ...getDirectionSx(language)
-                    }
-                  }}
-                />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    {editedScript.trim().split(/\s+/).filter(word => word.length > 0).length} words
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TimeIcon sx={{ fontSize: '0.9rem', color: 'success.main' }} />
-                    <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                      Live: {estimatedDuration}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
+                         {isEditingScript ? (
+               <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                 {/* Hook Section */}
+                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#e3f2fd', border: '1px solid #2196f3', borderRadius: 2 }}>
+                   <Typography variant="h6" sx={{ mb: 1, color: '#1976d2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                     🎯 HOOK
+                   </Typography>
+                   <TextField
+                     fullWidth
+                     multiline
+                     rows={3}
+                     variant="outlined"
+                     value={scriptData.hook || ''}
+                     onChange={(e) => setScriptData(prev => ({ ...prev, hook: e.target.value }))}
+                     placeholder="Enter your hook content..."
+                     sx={{
+                       '& .MuiInputBase-root': {
+                         fontFamily: isRTLLanguage(language)
+                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
+                           : '"Roboto", "Arial", sans-serif',
+                         fontSize: '0.9rem',
+                         lineHeight: 1.7,
+                         ...getDirectionSx(language)
+                       }
+                     }}
+                   />
+                 </Paper>
+
+                 {/* Main Content Section */}
+                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#f3e5f5', border: '1px solid #9c27b0', borderRadius: 2 }}>
+                   <Typography variant="h6" sx={{ mb: 1, color: '#7b1fa2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                     📝 MAIN CONTENT
+                   </Typography>
+                   <TextField
+                     fullWidth
+                     multiline
+                     rows={6}
+                     variant="outlined"
+                     value={scriptData.mainContent || ''}
+                     onChange={(e) => setScriptData(prev => ({ ...prev, mainContent: e.target.value }))}
+                     placeholder="Enter your main content..."
+                     sx={{
+                       '& .MuiInputBase-root': {
+                         fontFamily: isRTLLanguage(language)
+                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
+                           : '"Roboto", "Arial", sans-serif',
+                         fontSize: '0.9rem',
+                         lineHeight: 1.7,
+                         ...getDirectionSx(language)
+                       }
+                     }}
+                   />
+                 </Paper>
+
+                 {/* Conclusion Section */}
+                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#e8f5e8', border: '1px solid #4caf50', borderRadius: 2 }}>
+                   <Typography variant="h6" sx={{ mb: 1, color: '#388e3c', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                     🏁 CONCLUSION
+                   </Typography>
+                   <TextField
+                     fullWidth
+                     multiline
+                     rows={3}
+                     variant="outlined"
+                     value={scriptData.conclusion || ''}
+                     onChange={(e) => setScriptData(prev => ({ ...prev, conclusion: e.target.value }))}
+                     placeholder="Enter your conclusion..."
+                     sx={{
+                       '& .MuiInputBase-root': {
+                         fontFamily: isRTLLanguage(language)
+                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
+                           : '"Roboto", "Arial", sans-serif',
+                         fontSize: '0.9rem',
+                         lineHeight: 1.7,
+                         ...getDirectionSx(language)
+                       }
+                     }}
+                   />
+                 </Paper>
+
+                 {/* Call to Action Section */}
+                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#fff8e1', border: '1px solid #ff9800', borderRadius: 2 }}>
+                   <Typography variant="h6" sx={{ mb: 1, color: '#f57c00', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                     🚀 CALL TO ACTION
+                   </Typography>
+                   <TextField
+                     fullWidth
+                     multiline
+                     rows={3}
+                     variant="outlined"
+                     value={scriptData.callToAction || ''}
+                     onChange={(e) => setScriptData(prev => ({ ...prev, callToAction: e.target.value }))}
+                     placeholder="Enter your call to action..."
+                     sx={{
+                       '& .MuiInputBase-root': {
+                         fontFamily: isRTLLanguage(language)
+                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
+                           : '"Roboto", "Arial", sans-serif',
+                         fontSize: '0.9rem',
+                         lineHeight: 1.7,
+                         ...getDirectionSx(language)
+                       }
+                     }}
+                   />
+                 </Paper>
+
+                 {/* Word Count and Duration */}
+                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                   <Typography variant="caption" color="text.secondary">
+                     Total words: {Object.values(scriptData).filter(val => typeof val === 'string' && val.trim()).join(' ').trim().split(/\s+/).filter(word => word.length > 0).length}
+                   </Typography>
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                     <TimeIcon sx={{ fontSize: '0.9rem', color: 'success.main' }} />
+                     <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                       Live: {estimatedDuration}
+                     </Typography>
+                   </Box>
+                 </Box>
+               </Box>
             ) : (
               <Paper
                 elevation={2}

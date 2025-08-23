@@ -723,101 +723,15 @@ const ScriptProductionPage: React.FC = () => {
                 >
                     Back
                 </Button>
-                <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-                    Script Production Pipeline
+                <Typography variant="h6" color="text.secondary">
+                    Your script has been approved! Now let's bring it to life.
                 </Typography>
             </Box>
-
-            <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
-                Your script has been approved! Now let's bring it to life.
-            </Typography>
 
             <Grid container spacing={3}>
                 {/* Left Column: Script & Details */}
                 <Grid item xs={12} lg={4}>
-                    {/* Script Summary */}
-                    <Paper sx={{ p: 3, mb: 3 }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
-                            📝 Approved Script Details
-                        </Typography>
 
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">Topic:</Typography>
-                            <Typography variant="body1" sx={{ fontWeight: 500 }}>{scriptData.topic}</Typography>
-                        </Box>
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">Hypothesis:</Typography>
-                            <Typography variant="body1">{scriptData.hypothesis}</Typography>
-                        </Box>
-
-
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">Original Duration:</Typography>
-                            <Typography variant="body1">{originalDuration} minute(s)</Typography>
-                        </Box>
-
-                        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <TimeIcon sx={{ color: 'success.main', fontSize: '1rem' }} />
-                            <Typography variant="subtitle2" color="text.secondary">
-                                {scriptModified ? 'Updated Duration:' : 'Estimated Duration:'}
-                            </Typography>
-                            <Chip
-                                label={scriptModified ? (paragraphs.length > 0 ? formatTotalDuration(paragraphs[paragraphs.length - 1].endTime) : estimatedDuration) : `${originalDuration} minute(s)`}
-                                size="small"
-                                color={scriptModified ? 'warning' : 'success'}
-                                sx={{ fontSize: '0.75rem', fontWeight: 600 }}
-                            />
-                            {scriptModified && (
-                                <Chip
-                                    label="Modified"
-                                    size="small"
-                                    color="info"
-                                    sx={{ fontSize: '0.65rem', height: 18 }}
-                                />
-                            )}
-                        </Box>
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">Region:</Typography>
-                            <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{scriptData.region}</Typography>
-                        </Box>
-
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" color="text.secondary">Language:</Typography>
-                            <Typography variant="body1" sx={{ textTransform: 'capitalize' }}>{scriptData.language}</Typography>
-                        </Box>
-
-                        {/* Script Metadata */}
-                        {scriptData.title && (
-                            <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" color="text.secondary">Script Title:</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500, color: 'primary.main' }}>{scriptData.title}</Typography>
-                            </Box>
-                        )}
-
-                        {scriptData.emotionalTone && (
-                            <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" color="text.secondary">Emotional Tone:</Typography>
-                                <Typography variant="body1" sx={{ fontStyle: 'italic' }}>{scriptData.emotionalTone}</Typography>
-                            </Box>
-                        )}
-
-                        {scriptData.pacing && (
-                            <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" color="text.secondary">Pacing:</Typography>
-                                <Typography variant="body1" sx={{ fontStyle: 'italic' }}>{scriptData.pacing}</Typography>
-                            </Box>
-                        )}
-
-                        {scriptData.estimatedWords && (
-                            <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" color="text.secondary">Estimated Words:</Typography>
-                                <Typography variant="body1" sx={{ fontWeight: 500 }}>{scriptData.estimatedWords} words</Typography>
-                            </Box>
-                        )}
-                    </Paper>
 
                     {/* Paragraph Breakdown */}
                     <Paper sx={{ p: 3, mb: 3 }}>
@@ -922,168 +836,6 @@ const ScriptProductionPage: React.FC = () => {
                         )}
                     </Paper>
 
-                    {/* Production Actions */}
-                    <Paper sx={{ p: 3 }}>
-                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                            🎬 Production Actions
-                        </Typography>
-
-                        {/* Generate Chapters */}
-                        <Box sx={{ mb: 3 }}>
-                            <Button
-                                variant="contained"
-                                fullWidth
-                                size="large"
-                                startIcon={generatingChapters ? <CircularProgress size={20} sx={{ color: 'white' }} /> : <ChapterIcon />}
-                                onClick={handleGenerateChapters}
-                                disabled={generatingChapters}
-                                sx={{
-                                    bgcolor: '#1DA1F2',
-                                    '&:hover': { bgcolor: '#0d8bd9' },
-                                    py: 1.5,
-                                    fontSize: '1rem',
-                                    fontWeight: 600,
-                                    mb: 1
-                                }}
-                            >
-                                {generatingChapters ? 'Generating Chapters...' : 'Generate Chapters'}
-                            </Button>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                Break down your script into video chapters
-                            </Typography>
-                        </Box>
-
-                        {/* Update Chapter Durations */}
-                        {scriptModified && chapters.length > 0 && (
-                            <Box sx={{ mb: 3 }}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    startIcon={<TimeIcon />}
-                                    onClick={() => updateChapterDurations('')}
-                                    disabled={generatingChapters}
-                                    sx={{
-                                        borderColor: '#ff9800',
-                                        color: '#ff9800',
-                                        '&:hover': {
-                                            bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                            borderColor: '#f57c00'
-                                        },
-                                        py: 1,
-                                        fontSize: '0.9rem',
-                                        fontWeight: 500
-                                    }}
-                                >
-                                    Update Chapter Durations
-                                </Button>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                    Sync chapter times with updated script length
-                                </Typography>
-                            </Box>
-                        )}
-
-                        {/* Other Actions */}
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    startIcon={<DownloadIcon />}
-                                    onClick={handleDownloadAllNarrations}
-                                    disabled={!chapters.length || generatingChapters}
-                                    sx={{ mb: 1 }}
-                                >
-                                    Download Narrations
-                                </Button>
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <Box sx={{ position: 'relative' }}>
-                                    <Button
-                                        variant="outlined"
-                                        fullWidth
-                                        startIcon={<UploadIcon />}
-                                        onClick={handleUploadChromaKey}
-                                        disabled={!chapters.length || generatingChapters || uploadingChromaKey}
-                                        sx={{ mb: 1 }}
-                                    >
-                                        {uploadingChromaKey ? 'Uploading...' : (chromaKeyFile ? 'Replace Chroma Key' : 'Upload Chroma Key')}
-                                    </Button>
-
-                                    {/* Upload Progress */}
-                                    {uploadingChromaKey && (
-                                        <LinearProgress
-                                            variant="determinate"
-                                            value={chromaKeyUploadProgress}
-                                            sx={{
-                                                position: 'absolute',
-                                                bottom: 0,
-                                                left: 0,
-                                                right: 0,
-                                                height: 2,
-                                                borderRadius: 0
-                                            }}
-                                        />
-                                    )}
-
-                                    {/* Chroma Key Status */}
-                                    {chromaKeyFile && !uploadingChromaKey && (
-                                        <Chip
-                                            label={chromaKeyFile.name.length > 20 ? `${chromaKeyFile.name.substring(0, 20)}...` : chromaKeyFile.name}
-                                            size="small"
-                                            color="success"
-                                            sx={{
-                                                position: 'absolute',
-                                                top: -8,
-                                                right: 8,
-                                                fontSize: '0.6rem',
-                                                height: 18,
-                                                '& .MuiChip-label': {
-                                                    px: 0.5
-                                                }
-                                            }}
-                                        />
-                                    )}
-                                </Box>
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <Button
-                                    variant="contained"
-                                    fullWidth
-                                    startIcon={<VideoIcon />}
-                                    onClick={handleGenerateVideo}
-                                    disabled={!chapters.length || generatingChapters || !chromaKeyFile || uploadingChromaKey}
-                                    sx={{
-                                        bgcolor: '#4caf50',
-                                        '&:hover': { bgcolor: '#388e3c' },
-                                        mb: 1
-                                    }}
-                                    title={!chromaKeyFile ? 'Upload chroma key first' : ''}
-                                >
-                                    Generate Video
-                                </Button>
-                            </Grid>
-
-                            <Grid item xs={12}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    startIcon={<RefreshIcon />}
-                                    onClick={handleRegenerateAllAssets}
-                                    disabled={!chapters.length || generatingChapters}
-                                    sx={{
-                                        borderColor: '#ff9800',
-                                        color: '#ff9800',
-                                        '&:hover': { bgcolor: 'rgba(255, 152, 0, 0.1)' }
-                                    }}
-                                >
-                                    Regenerate Assets
-                                </Button>
-                            </Grid>
-                        </Grid>
-                    </Paper>
                 </Grid>
 
                 {/* Right Column: Script & Chapters */}
@@ -1321,6 +1073,144 @@ const ScriptProductionPage: React.FC = () => {
                             onMediaManagementChapterIndex={setMediaManagementChapterIndex}
                         />
                     )}
+
+                    {/* Production Actions */}
+                    <Paper sx={{ p: 3 }}>
+                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
+                            🎬 Production Actions
+                        </Typography>
+
+                        {/* Update Chapter Durations */}
+                        {scriptModified && chapters.length > 0 && (
+                            <Box sx={{ mb: 3 }}>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="medium"
+                                    startIcon={<TimeIcon />}
+                                    onClick={() => updateChapterDurations('')}
+                                    disabled={generatingChapters}
+                                    sx={{
+                                        borderColor: '#ff9800',
+                                        color: '#ff9800',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(255, 152, 0, 0.1)',
+                                            borderColor: '#f57c00'
+                                        },
+                                        py: 1,
+                                        fontSize: '0.9rem',
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    Update Chapter Durations
+                                </Button>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                    Sync chapter times with updated script length
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {/* Other Actions */}
+                        <Grid container spacing={2}>
+                            <Grid item xs={12}>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    startIcon={<DownloadIcon />}
+                                    onClick={handleDownloadAllNarrations}
+                                    disabled={!chapters.length || generatingChapters}
+                                    sx={{ mb: 1 }}
+                                >
+                                    Download Narrations
+                                </Button>
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <Box sx={{ position: 'relative' }}>
+                                    <Button
+                                        variant="outlined"
+                                        fullWidth
+                                        startIcon={<UploadIcon />}
+                                        onClick={handleUploadChromaKey}
+                                        disabled={!chapters.length || generatingChapters || uploadingChromaKey}
+                                        sx={{ mb: 1 }}
+                                    >
+                                        {uploadingChromaKey ? 'Uploading...' : (chromaKeyFile ? 'Replace Chroma Key' : 'Upload Chroma Key')}
+                                    </Button>
+
+                                    {/* Upload Progress */}
+                                    {uploadingChromaKey && (
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={chromaKeyUploadProgress}
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: 0,
+                                                left: 0,
+                                                right: 0,
+                                                height: 2,
+                                                borderRadius: 0
+                                            }}
+                                        />
+                                    )}
+
+                                    {/* Chroma Key Status */}
+                                    {chromaKeyFile && !uploadingChromaKey && (
+                                        <Chip
+                                            label={chromaKeyFile.name.length > 20 ? `${chromaKeyFile.name.substring(0, 20)}...` : chromaKeyFile.name}
+                                            size="small"
+                                            color="success"
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -8,
+                                                right: 8,
+                                                fontSize: '0.6rem',
+                                                height: 18,
+                                                '& .MuiChip-label': {
+                                                    px: 0.5
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <Button
+                                    variant="contained"
+                                    fullWidth
+                                    startIcon={<VideoIcon />}
+                                    onClick={handleGenerateVideo}
+                                    disabled={!chapters.length || generatingChapters || !chromaKeyFile || uploadingChromaKey}
+                                    sx={{
+                                        bgcolor: '#4caf50',
+                                        '&:hover': { bgcolor: '#388e3c' },
+                                        mb: 1
+                                    }}
+                                    title={!chromaKeyFile ? 'Upload chroma key first' : ''}
+                                >
+                                    Generate Video
+                                </Button>
+                            </Grid>
+
+                            <Grid item xs={12}>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    startIcon={<RefreshIcon />}
+                                    onClick={handleRegenerateAllAssets}
+                                    disabled={!chapters.length || generatingChapters}
+                                    sx={{
+                                        borderColor: '#ff9800',
+                                        color: '#ff9800',
+                                        '&:hover': { bgcolor: 'rgba(255, 152, 0, 0.1)' }
+                                    }}
+                                >
+                                    Regenerate Assets
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </Paper>
                 </Grid>
             </Grid>
         </Container>
