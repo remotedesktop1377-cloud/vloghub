@@ -10,9 +10,10 @@ import {
   Paper,
   IconButton,
   TextField,
-  Chip
+  Chip,
+  Divider
 } from '@mui/material';
-import { 
+import {
   AutoFixHigh as MagicIcon,
   Close as CloseIcon,
   Check as CheckIcon,
@@ -36,6 +37,17 @@ interface ScriptApprovalDialogProps {
   onScriptChange?: (newScript: string) => void;
 }
 
+interface ScriptData {
+  title?: string;
+  hook?: string;
+  mainContent?: string;
+  conclusion?: string;
+  callToAction?: string;
+  estimatedWords?: number;
+  emotionalTone?: string;
+  pacing?: string;
+}
+
 const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   open,
   onClose,
@@ -50,15 +62,29 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   const [isEditingScript, setIsEditingScript] = useState(false);
   const [editedScript, setEditedScript] = useState(script);
   const [estimatedDuration, setEstimatedDuration] = useState('');
+  const [scriptData, setScriptData] = useState<ScriptData>({});
+
+  // Parse script data from localStorage if available
+  useEffect(() => {
+    try {
+      const storedMetadata = localStorage.getItem('scriptMetadata');
+      if (storedMetadata) {
+        const metadata = JSON.parse(storedMetadata);
+        setScriptData(metadata);
+      }
+    } catch (error) {
+      console.warn('Error parsing script metadata:', error);
+    }
+  }, [script]);
 
   // Calculate estimated duration based on script content
   const calculateDuration = (scriptContent: string): string => {
     if (!scriptContent.trim()) return '0';
-    
+
     const words = scriptContent.trim().split(/\s+/).length;
     const averageWordsPerMinute = 155;
     const minutes = words / averageWordsPerMinute;
-    
+
     if (minutes < 1) {
       const seconds = Math.round(minutes * 60);
       return `${seconds}s`;
@@ -102,6 +128,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
     setEditedScript(newScript);
     setEstimatedDuration(calculateDuration(newScript));
   };
+
   const handleApprove = () => {
     onApprove();
     onClose();
@@ -112,6 +139,41 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
     onClose();
   };
 
+  // Function to render script with embedded titles
+  const renderScriptWithTitles = () => {
+    const { title, hook, mainContent, conclusion, callToAction } = scriptData;
+
+    // If we have script metadata, format it with sections
+    if (title || hook || mainContent || conclusion || callToAction) {
+      let formattedScript = '';
+
+      if (title) {
+        formattedScript += `📋 TITLE:\n${title}\n\n`;
+      }
+
+      if (hook) {
+        formattedScript += `🎯 HOOK:\n${hook}\n\n`;
+      }
+
+      if (mainContent) {
+        formattedScript += `📝 MAIN CONTENT:\n${mainContent}\n\n`;
+      }
+
+      if (conclusion) {
+        formattedScript += `🏁 CONCLUSION:\n${conclusion}\n\n`;
+      }
+
+      if (callToAction) {
+        formattedScript += `🚀 CALL TO ACTION:\n${callToAction}\n\n`;
+      }
+
+      return formattedScript.trim();
+    }
+
+    // Fallback to original script if no metadata
+    return script;
+  };
+
   return (
     <Dialog
       open={open}
@@ -119,18 +181,18 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
       aria-labelledby="script-approval-dialog-title"
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          minHeight: '70vh',
-          maxHeight: '90vh',
-        }
-      }}
+             PaperProps={{
+         sx: {
+           height: '90vh',
+           overflow: 'hidden'
+         }
+       }}
     >
-      <DialogTitle 
-        id="script-approval-dialog-title" 
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+      <DialogTitle
+        id="script-approval-dialog-title"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
           gap: 1,
           bgcolor: 'primary.main',
           color: 'white',
@@ -145,90 +207,92 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 0 }}>
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                         <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-               ✍️ Review & customize your script before final approval
-             </Typography>
-            
-                         {/* Duration Display - moved to top right */}
-             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-               <TimeIcon sx={{ color: 'success.main', fontSize: '1rem' }} />
-               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                 Estimated Duration:
-               </Typography>
-               <Chip 
-                 label={estimatedDuration} 
-                 size="small" 
-                 color="success" 
-                 sx={{ fontSize: '0.75rem', fontWeight: 600 }}
-               />
-             </Box>
+      <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexShrink: 0 }}>
+            <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              ✍️ Review & customize your script before final approval
+            </Typography>
+
+            {/* Duration Display */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TimeIcon sx={{ color: 'success.main', fontSize: '1rem' }} />
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                Estimated Duration:
+              </Typography>
+              <Chip
+                label={estimatedDuration}
+                size="small"
+                color="success"
+                sx={{ fontSize: '0.75rem', fontWeight: 600 }}
+              />
+            </Box>
           </Box>
 
-          {isEditingScript ? (
-            <Box>
-              <TextField
-                fullWidth
-                multiline
-                rows={15}
-                variant="outlined"
-                value={editedScript}
-                onChange={(e) => handleScriptContentChange(e.target.value)}
-                placeholder="Edit your script content..."
-                sx={{
-                  '& .MuiInputBase-root': {
-                    fontFamily: isRTLLanguage(language) 
-                      ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                      : '"Roboto", "Arial", sans-serif',
-                    fontSize: '0.9rem',
-                    lineHeight: 1.7,
-                    ...getDirectionSx(language)
-                  }
-                }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {editedScript.trim().split(/\s+/).filter(word => word.length > 0).length} words
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TimeIcon sx={{ fontSize: '0.9rem', color: 'success.main' }} />
-                  <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                    Live: {estimatedDuration}
+          <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {isEditingScript ? (
+              <Box sx={{ flex: 1, overflow: 'auto' }}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={15}
+                  variant="outlined"
+                  value={editedScript}
+                  onChange={(e) => handleScriptContentChange(e.target.value)}
+                  placeholder="Edit your script content..."
+                  sx={{
+                    '& .MuiInputBase-root': {
+                      fontFamily: isRTLLanguage(language)
+                        ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
+                        : '"Roboto", "Arial", sans-serif',
+                      fontSize: '0.9rem',
+                      lineHeight: 1.7,
+                      ...getDirectionSx(language)
+                    }
+                  }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {editedScript.trim().split(/\s+/).filter(word => word.length > 0).length} words
                   </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TimeIcon sx={{ fontSize: '0.9rem', color: 'success.main' }} />
+                    <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                      Live: {estimatedDuration}
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
-            </Box>
-          ) : (
-            <Paper 
-              elevation={1} 
-              sx={{ 
-                p: 3, 
-                bgcolor: '#f8f9fa',
-                border: '1px solid #e9ecef',
-                borderRadius: 2,
-                maxHeight: '50vh',
-                overflow: 'auto',
-                ...getDirectionSx(language)
-              }}
-            >
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  whiteSpace: 'pre-wrap',
-                  lineHeight: 1.8,
-                  fontSize: '0.95rem',
-                  fontFamily: isRTLLanguage(language) 
-                    ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                    : '"Roboto", "Arial", sans-serif',
+            ) : (
+              <Paper
+                elevation={2}
+                sx={{
+                  p: 2,
+                  bgcolor: '#f8f9fa',
+                  border: '1px solid #e9ecef',
+                  borderRadius: 2,
+                  flex: 1,
+                  overflow: 'auto',
                   ...getDirectionSx(language)
                 }}
               >
-                {script}
-              </Typography>
-            </Paper>
-          )}
+                <Typography
+                  variant="body1"
+                  sx={{
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: 1.8,
+                    fontSize: '0.95rem',
+                    fontFamily: isRTLLanguage(language)
+                      ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
+                      : '"Roboto", "Arial", sans-serif',
+                    ...getDirectionSx(language)
+                  }}
+                >
+                  {renderScriptWithTitles()}
+                </Typography>
+              </Paper>
+            )}
+          </Box>
         </Box>
 
       </DialogContent>
@@ -272,8 +336,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
 
         {/* Right side - Main action buttons */}
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button 
-            onClick={handleReject} 
+          <Button
+            onClick={handleReject}
             variant="outlined"
             color="secondary"
             sx={{
