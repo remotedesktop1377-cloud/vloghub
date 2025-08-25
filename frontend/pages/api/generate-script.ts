@@ -183,7 +183,7 @@ export default async function handler(
       selectedHypothesisSuggestions
     });
 
-    console.log('✅ Script generated successfully, length:', result);
+    // console.log('✅ Script generated successfully, length:', result);
 
     return res.status(200).json(result);
 

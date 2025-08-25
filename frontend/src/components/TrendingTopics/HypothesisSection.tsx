@@ -394,13 +394,13 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
           onChange={(e) => onHypothesisChange(e.target.value)}
           sx={{
             mb: 1.5,
-            '& .MuiInputBase-input': {
-              fontSize: '0.8rem',
-              ...getDirectionSx(language)
-            },
-            '& .MuiInputBase-root': {
-              ...getDirectionSx(language)
-            }
+            // '& .MuiInputBase-input': {
+            //   fontSize: '0.8rem',
+            //   ...getDirectionSx(language)
+            // },
+            // '& .MuiInputBase-root': {
+            //   ...getDirectionSx(language)
+            // }
           }}
           size="small"
           InputProps={{

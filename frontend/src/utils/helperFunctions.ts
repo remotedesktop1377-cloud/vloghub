@@ -70,18 +70,18 @@ export class HelperFunctions {
   ): void {
     const newChapter: Chapter = {
       id: Date.now().toString(),
-      time_range: '',
-      narration: 'Enter chapter narration here...',
-      voiceover_style: '',
-      visual_guidance: 'Enter visual guidance here...',
-      on_screen_text: '',
-      duration: '0:30',
+      text: '',
+      duration: '',
+      words: 0,
+      startTime: 0,
+      endTime: 0,
+      durationInSeconds: 0,
       assets: {
         image: null,
         audio: null,
-        video: null
+        video: null,
       }
-    };
+    }
 
     const updatedChapters = [...chapters];
     updatedChapters.splice(index + 1, 0, newChapter);
@@ -112,14 +112,10 @@ export class HelperFunctions {
     setEditingChapter: (index: number | null) => void
   ): void {
     const updatedChapters = [...chapters];
-    
+
     updatedChapters[index] = {
       ...updatedChapters[index],
       // update the model change here as well
-      time_range: updatedChapters[index].time_range,
-      voiceover_style: updatedChapters[index].voiceover_style,
-      visual_guidance: updatedChapters[index].visual_guidance,
-      on_screen_text: updatedChapters[index].on_screen_text,
       duration: updatedChapters[index].duration,
       assets: updatedChapters[index].assets,
     };
@@ -198,22 +194,6 @@ export class HelperFunctions {
   }
 
   /**
-   * Validate chapter data
-   */
-  static validateChapter(chapter: Chapter): boolean {
-    
-    return !!(
-      chapter.id?.trim() &&
-      chapter.time_range?.trim() &&
-      chapter.narration?.trim() &&
-      chapter.voiceover_style?.trim() &&
-      chapter.visual_guidance?.trim() &&
-      chapter.on_screen_text?.trim() &&
-      chapter.duration?.trim()
-    );
-  }
-
-  /**
    * Get chapter duration in seconds
    */
   static getChapterDurationInSeconds(duration: string): number {
@@ -258,7 +238,7 @@ export class HelperFunctions {
       (topic.description?.toLowerCase().includes(term) ?? false) ||
       (topic.source_reference?.toLowerCase().includes(term) ?? false)
     );
-    
+
     return topics.filter(topic =>
       topic.topic.toLowerCase().includes(term) ||
       topic.category.toLowerCase().includes(term) ||
@@ -275,19 +255,123 @@ export class HelperFunctions {
     // Fix: Add missing ranking and postCountValue properties to topics for sorting
     // According to the TrendingTopic interface, there is no 'ranking' or 'postCountValue' property.
     // We'll use 'value' as the ranking/post count for sorting.
-      switch (sortBy) {
-        case 'ranking':
-          // Use 'value' as the ranking for sorting (descending order: higher value = higher ranking)
-          return sortedTopics.sort((a, b) => b.value - a.value);
-        case 'postCount':
-          // Use 'engagement_count' as the post count for sorting (descending order)
-          return sortedTopics.sort(
-            (a, b) => (b.engagement_count || 0) - (a.engagement_count || 0)
-          );
-        case 'category':
-          return sortedTopics.sort((a, b) => a.category.localeCompare(b.category));
-        default:
-          return sortedTopics;
-      }
+    switch (sortBy) {
+      case 'ranking':
+        // Use 'value' as the ranking for sorting (descending order: higher value = higher ranking)
+        return sortedTopics.sort((a, b) => b.value - a.value);
+      case 'postCount':
+        // Use 'engagement_count' as the post count for sorting (descending order)
+        return sortedTopics.sort(
+          (a, b) => (b.engagement_count || 0) - (a.engagement_count || 0)
+        );
+      case 'category':
+        return sortedTopics.sort((a, b) => a.category.localeCompare(b.category));
+      default:
+        return sortedTopics;
+    }
   }
+
+  /**
+   * Calculate estimated duration based on script content (average reading speed: 150-160 words per minute)
+   */
+  static calculateDuration(script: string): string {
+    if (!script.trim()) return '0';
+
+    const words = script.trim().split(/\s+/).length;
+    const averageWordsPerMinute = 155; // Average speaking/reading speed
+    const minutes = words / averageWordsPerMinute;
+
+    if (minutes < 1) {
+      const seconds = Math.round(minutes * 60);
+      return `${seconds}s`;
+    } else if (minutes < 60) {
+      const wholeMinutes = Math.floor(minutes);
+      const seconds = Math.round((minutes - wholeMinutes) * 60);
+      return seconds > 0 ? `${wholeMinutes}m ${seconds}s` : `${wholeMinutes}m`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = Math.round(minutes % 60);
+      return `${hours}h ${remainingMinutes}m`;
+    }
+  }
+
+  /**
+   * Format time range as mm:ss - mm:ss
+   */
+  static formatTimeRange(startSeconds: number, endSeconds: number): string {
+    const toMMSS = (totalSeconds: number) => {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const mm = String(minutes).padStart(2, '0');
+      const ss = String(seconds).padStart(2, '0');
+      return `${mm}:${ss}`;
+    };
+
+    return `${toMMSS(startSeconds)} - ${toMMSS(endSeconds)}`;
+  }
+
+  /**
+   * Format total duration from seconds
+   */
+  static formatTotalDuration(totalSeconds: number): string {
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = totalSeconds % 60;
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  }
+
+  /**
+   * Calculate duration for a single paragraph
+   */
+  static calculateParagraphDuration(words: number): string {
+    if (words === 0) return '0s';
+
+    const averageWordsPerMinute = 155;
+    const minutes = words / averageWordsPerMinute;
+
+    if (minutes < 1) {
+      const seconds = Math.round(minutes * 60);
+      return `${seconds}s`;
+    } else if (minutes < 60) {
+      const wholeMinutes = Math.floor(minutes);
+      const seconds = Math.round((minutes - wholeMinutes) * 60);
+      return seconds > 0 ? `${wholeMinutes}m ${seconds}s` : `${wholeMinutes}m`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = Math.round(minutes % 60);
+      return `${hours}h ${remainingMinutes}m`;
+    }
+  }
+
+  /**
+   * Helper function to parse duration string to seconds
+   */
+  static parseDurationToSeconds(duration: string): number {
+    if (!duration) return 0;
+
+    // Handle formats like "1m 30s", "2m", "45s", "1h 15m"
+    const timeParts = duration.match(/(\d+)([hms])/g);
+    if (!timeParts) return 0;
+
+    let totalSeconds = 0;
+    timeParts.forEach(part => {
+      const value = parseInt(part.replace(/[hms]/g, ''));
+      const unit = part.slice(-1);
+
+      switch (unit) {
+        case 'h':
+          totalSeconds += value * 3600;
+          break;
+        case 'm':
+          totalSeconds += value * 60;
+          break;
+        case 's':
+          totalSeconds += value;
+          break;
+      }
+    });
+
+    return totalSeconds;
+  }
+
 } 

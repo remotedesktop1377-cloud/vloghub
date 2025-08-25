@@ -56,7 +56,6 @@ interface ChaptersSectionProps {
   uploadedImages: string[];
   isDraggingUpload: boolean;
   chapterImagesMap: Record<number, string[]>;
-  onGenerateChapters: () => void;
   onAddChapterAfter: (index: number) => void;
   onDeleteChapter: (index: number) => void;
   onSaveEdit: (index: number) => void;
@@ -109,7 +108,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   uploadedImages,
   isDraggingUpload,
   chapterImagesMap,
-  onGenerateChapters,
   onAddChapterAfter,
   onDeleteChapter,
   onSaveEdit,
@@ -152,7 +150,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
     const images = formatChapterImages(
       chapterImages,
       chapter.assets?.image || undefined,
-      chapter.visual_guidance // Use visual_guidance as prompt
     );
 
     if (images.length > 0) {
@@ -276,9 +273,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   textAlign: 'start',
                                                   px: 1.5,
                                                   py: 1,
-                                                  mb: chapter.assets?.audio ? 1 : 0,
                                                 }}>
-                                                  {chapter.narration || 'Narration content will be generated here.'}
+                                                  {chapter.text || 'Narration content will be generated here.'}
                                                 </Typography>
 
                                                 {/* Debug Info */}
@@ -663,7 +659,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               const res = await fetch('/api/get-narration-variations', {
                                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
-                                                  narration: chapter.narration,
+                                                  narration: chapter.text,
                                                   noOfNarrations: 5
                                                 })
                                               });
@@ -672,7 +668,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               onPickerNarrations(vars);
                                             } catch (e) {
                                               console.error('picker fetch failed', e);
-                                              onPickerNarrations([chapters[index].narration]);
+                                              onPickerNarrations([chapters[index].text]);
                                             } finally {
                                               onPickerLoading(false);
                                             }
@@ -692,7 +688,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         <IconButton
                                           className="chapter-actions"
                                           size="small"
-                                          onClick={() => onStartEdit(index, chapter.narration || '', chapter.narration || '')}
+                                          onClick={() => onStartEdit(index, chapter.text || '', chapter.text || '')}
                                           sx={{
                                             opacity: selectedChapterIndex === index ? 1 : 0,
                                             transition: 'opacity 0.2s ease',
@@ -1158,7 +1154,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.narration]).map((text, idx) => (
+              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.text]).map((text, idx) => (
                 <Box key={idx} sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: '#1DA1F2', backgroundColor: 'rgba(29,161,242,0.02)' } }}
                   onClick={() => {
                     if (pickerChapterIndex === null) return;
@@ -1193,7 +1189,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           const images = formatChapterImages(
             chapterImages,
             ch.assets?.image || undefined,
-            ch.visual_guidance // Use visual_guidance as prompt
           );
           return images.some(img => img.url === imageViewer.currentImage?.url);
         }) + 1} Images`}

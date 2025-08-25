@@ -62,11 +62,10 @@ interface ScriptData {
 const ScriptProductionPage: React.FC = () => {
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
+    const [initializing, setInitializing] = useState(true);
 
     // Production states
     const [chapters, setChapters] = useState<Chapter[]>([]);
-    const [generatingChapters, setGeneratingChapters] = useState(false);
-    const [chaptersGenerated, setChaptersGenerated] = useState(false);
     const [chromaKeyFile, setChromaKeyFile] = useState<File | null>(null);
     const [chromaKeyUrl, setChromaKeyUrl] = useState<string | null>(null);
     const [uploadingChromaKey, setUploadingChromaKey] = useState(false);
@@ -98,14 +97,6 @@ const ScriptProductionPage: React.FC = () => {
     const [estimatedDuration, setEstimatedDuration] = useState('');
     const [scriptModified, setScriptModified] = useState(false);
     const [originalDuration, setOriginalDuration] = useState('');
-    const [paragraphs, setParagraphs] = useState<Array<{
-        text: string;
-        duration: string;
-        words: number;
-        startTime: number;
-        endTime: number;
-        durationInSeconds: number;
-    }>>([]);
 
     // Calculate estimated duration based on script content (average reading speed: 150-160 words per minute)
     const calculateDuration = (script: string): string => {
@@ -130,94 +121,26 @@ const ScriptProductionPage: React.FC = () => {
     };
 
     useEffect(() => {
-        // Get script data from router query or localStorage
-        const queryData = router.query;
-
-        if (queryData.script) {
-            // Try to get metadata from localStorage
-            const metadata = localStorage.getItem('scriptMetadata');
-            const scriptMetadata = metadata ? JSON.parse(metadata) : {};
-
-            // Ensure the edited script content from router query takes priority
-            const scriptContent = queryData.script as string;
-
-            setScriptData({
-                script: scriptContent, // This is the edited script content
-                topic: queryData.topic as string || '',
-                hypothesis: queryData.hypothesis as string || '',
-                details: queryData.details as string || '',
-                region: queryData.region as string || 'pakistan',
-                duration: queryData.duration as string || '1',
-                language: queryData.language as string || 'english',
-                selectedTopicSuggestions: JSON.parse(queryData.selectedTopicSuggestions as string || '[]'),
-                selectedHypothesisSuggestions: JSON.parse(queryData.selectedHypothesisSuggestions as string || '[]'),
-                // Add metadata
-                ...scriptMetadata
-            });
-
-            // Store the complete script data in localStorage for page refresh support
-            const completeScriptData = {
-                script: scriptContent,
-                topic: queryData.topic as string || '',
-                hypothesis: queryData.hypothesis as string || '',
-                details: queryData.details as string || '',
-                region: queryData.region as string || 'pakistan',
-                duration: queryData.duration as string || '1',
-                language: queryData.language as string || 'english',
-                selectedTopicSuggestions: JSON.parse(queryData.selectedTopicSuggestions as string || '[]'),
-                selectedHypothesisSuggestions: JSON.parse(queryData.selectedHypothesisSuggestions as string || '[]'),
-                ...scriptMetadata
-            };
-
-            // Store in localStorage for refresh support
-            localStorage.setItem('approvedScript', JSON.stringify(completeScriptData));
-
-            // Clean up metadata after loading
-            if (metadata) {
-                localStorage.removeItem('scriptMetadata');
-            }
-
-        } else {
-            // Try to get from localStorage as fallback
-            const stored = localStorage.getItem('approvedScript');
-            if (stored) {
+        // Load only from localStorage
+        const stored = localStorage.getItem('approvedScript');
+        const storedMeta = localStorage.getItem('scriptMetadata');
+        debugger;
+        if (stored) {
+            try {
                 const storedData = JSON.parse(stored);
-                setScriptData(storedData);
-
-                localStorage.removeItem('approvedScript'); // Clean up
+                const meta = storedMeta ? JSON.parse(storedMeta) : {};
+                setScriptData({ ...storedData, ...meta });
+            } catch (e) {
+                console.error('Failed to parse stored script data', e);
             }
         }
-    }, [router.query]);
+        setInitializing(false);
+    }, []);
 
     // Additional useEffect to handle page refresh when router.query is empty
-    useEffect(() => {
-        // If no script data is set and router query is empty, try to get from localStorage
-        if (!scriptData && Object.keys(router.query).length === 0) {
-            const stored = localStorage.getItem('approvedScript');
-            if (stored) {
-                try {
-                    const storedData = JSON.parse(stored);
-                    setScriptData(storedData);
-                    console.log('🔄 Loaded script data from localStorage on page refresh:', storedData);
-                } catch (error) {
-                    console.error('Error parsing stored script data:', error);
-                }
-            }
-        }
-    }, [scriptData, router.query]);
+    // Removed router-based refresh loader; localStorage-only loader above handles refresh
 
-    // Cleanup function to remove old script data when component unmounts
-    useEffect(() => {
-        return () => {
-            // Only clean up if we're not storing new data (i.e., user is leaving the page)
-            if (scriptData) {
-                // Keep the data for potential refresh, but clean up after a delay
-                setTimeout(() => {
-                    localStorage.removeItem('approvedScript');
-                }, 5000); // Clean up after 5 seconds
-            }
-        };
-    }, [scriptData]);
+    // Note: Do not remove approvedScript on unmount; it supports page refresh persistence
 
     // Calculate estimated duration when script data changes
     useEffect(() => {
@@ -230,7 +153,7 @@ const ScriptProductionPage: React.FC = () => {
         }
     }, [scriptData, scriptData?.duration]);
 
-    // Recalculate paragraphs when duration changes
+    // Recalculate chapters when duration changes
     useEffect(() => {
         if (scriptData?.script && scriptData?.duration) {
             updateParagraphs(scriptData.script);
@@ -240,7 +163,7 @@ const ScriptProductionPage: React.FC = () => {
     // Function to break down script into paragraphs and calculate individual durations
     const updateParagraphs = (script: string) => {
         if (!script.trim()) {
-            setParagraphs([]);
+            setChapters([]);
             return;
         }
 
@@ -253,7 +176,19 @@ const ScriptProductionPage: React.FC = () => {
         // Calculate sequential time allocation for paragraphs
         const paragraphsWithTimeRanges = calculateSequentialTimeRanges(scriptParagraphs);
 
-        setParagraphs(paragraphsWithTimeRanges);
+        // Map to Chapter[] with required fields
+        const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
+            id: `chapter-${index}-${p.startTime}`,
+            text: p.text,
+            duration: p.duration,
+            words: p.words,
+            startTime: p.startTime,
+            endTime: p.endTime,
+            durationInSeconds: p.durationInSeconds,
+            assets: { image: null, audio: null, video: null }
+        }));
+
+        setChapters(chaptersAsRequired);
     };
 
     // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
@@ -341,61 +276,51 @@ const ScriptProductionPage: React.FC = () => {
         router.push('/');
     };
 
-    const handleGenerateChapters = async () => {
-        if (!scriptData) return;
-
-        try {
-            setGeneratingChapters(true);
-            setChapters([]);
-            setChaptersGenerated(false);
-
-            const result = await apiService.generateChapters({
-                topic: scriptData.topic,
-                hypothesis: scriptData.hypothesis,
-                details: scriptData.details,
-                region: scriptData.region,
-                duration: scriptData.duration,
-                selectedTopicSuggestions: scriptData.selectedTopicSuggestions,
-                selectedHypothesisSuggestions: scriptData.selectedHypothesisSuggestions,
-                topicDetails: scriptData.details
-            });
-
-            if (result.success && result.data?.chapters && Array.isArray(result.data.chapters)) {
-                const chaptersWithEmptyMedia = result.data.chapters.map((chapter: Chapter) => ({
-                    ...chapter,
-                    media: { image: null, audio: null, video: null }
-                }));
-
-                setChapters(chaptersWithEmptyMedia);
-                setChaptersGenerated(true);
-                toast.success('Chapters generated successfully!');
-            } else {
-                toast.error(result.error || 'Failed to generate chapters');
-            }
-        } catch (err) {
-            console.error('Error generating chapters:', err);
-            toast.error('Failed to generate chapters. Please try again.');
-        } finally {
-            setGeneratingChapters(false);
-        }
-    };
-
     const handleDownloadAllNarrations = () => {
         if (!chapters.length) return;
 
         try {
-            chapters.forEach((chapter, index) => {
-                if (chapter.assets?.audio) {
-                    // Create a download link for each audio file
-                    const link = document.createElement('a');
-                    link.href = chapter.assets.audio;
-                    link.download = `chapter-${index + 1}-narration.mp3`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+            // Build script content in the same structured format used in approval
+            let content = '';
+            if (scriptData) {
+                const parts: string[] = [];
+                if (scriptData.title && scriptData.title.trim()) {
+                    parts.push(`📋 TITLE:\n${scriptData.title.trim()}`);
                 }
-            });
-            toast.success('Started downloading all narrations');
+                if (scriptData.hook && scriptData.hook.trim()) {
+                    parts.push(`🎯 HOOK:\n${scriptData.hook.trim()} -`);
+                }
+                if (scriptData.mainContent && scriptData.mainContent.trim()) {
+                    parts.push(`📝 MAIN CONTENT:\n${scriptData.mainContent.trim()}`);
+                }
+                if (scriptData.conclusion && scriptData.conclusion.trim()) {
+                    parts.push(`🏁 CONCLUSION:\n${scriptData.conclusion.trim()}`);
+                }
+                if (scriptData.callToAction && scriptData.callToAction.trim()) {
+                    parts.push(`🚀 CALL TO ACTION:\n${scriptData.callToAction.trim()}`);
+                }
+                content = parts.filter(Boolean).join('\n\n');
+                if (!content.trim() && scriptData.script) {
+                    content = scriptData.script;
+                }
+            }
+
+            if (!content.trim()) {
+                toast.error('No script content to download');
+                return;
+            }
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const safeTopic = (scriptData?.topic || 'script').toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
+            a.href = url;
+            a.download = `${safeTopic || 'script'}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('Script downloaded successfully');
         } catch (error) {
             toast.error('Failed to download narrations');
         }
@@ -405,7 +330,7 @@ const ScriptProductionPage: React.FC = () => {
         // Create a file input for chroma key upload
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = 'image/*,video/*';
+        input.accept = 'video/*';
         input.onchange = async (e) => {
             const files = (e.target as HTMLInputElement).files;
             if (files && files.length > 0) {
@@ -463,39 +388,6 @@ const ScriptProductionPage: React.FC = () => {
         // TODO: Implement actual video generation
     };
 
-    const handleRegenerateAllAssets = async () => {
-        if (!chapters.length) {
-            toast.error('No chapters available for asset regeneration');
-            return;
-        }
-
-        try {
-            setGeneratingChapters(true);
-            console.log('Regenerating all assets for chapters:', chapters);
-
-            // Call the same image generation function that's used during chapter creation
-            const { generateChapterImages } = await import('../src/utils/chapterImageGenerator');
-            const updatedChapters = await generateChapterImages(chapters);
-            setChapters(updatedChapters);
-
-            // Update generatedImages to include new AI images
-            const newGeneratedImages = updatedChapters
-                .map(chapter => chapter.assets?.image)
-                .filter((image): image is string => Boolean(image));
-
-            if (newGeneratedImages.length > 0) {
-                setGeneratedImages(prev => [...prev, ...newGeneratedImages]);
-            }
-
-            toast.success('All assets regenerated successfully!');
-        } catch (error) {
-            console.error('Error regenerating assets:', error);
-            toast.error('Error regenerating assets. Please try again.');
-        } finally {
-            setGeneratingChapters(false);
-        }
-    };
-
     // Chapter Management Functions
     const handleAddChapterAfter = (index: number) => {
         HelperFunctions.addChapterAfter(index, chapters, setChapters);
@@ -506,9 +398,9 @@ const ScriptProductionPage: React.FC = () => {
     };
 
     const handleEditChapter = (index: number) => {
-        setEditingChapter(index);
-        setEditHeading(chapters[index].on_screen_text || '');
-        setEditNarration(chapters[index].narration || '');
+        // setEditingChapter(index);
+        // setEditHeading(chapters[index].on_screen_text || '');
+        // setEditNarration(chapters[index].narration || '');
     };
 
     const handleSaveEdit = () => {
@@ -642,10 +534,10 @@ const ScriptProductionPage: React.FC = () => {
 
     // Update chapter durations when script changes
     const updateChapterDurations = (newEstimatedDuration: string) => {
-        if (chapters.length === 0 || paragraphs.length === 0) return;
+        if (chapters.length === 0 || chapters.length === 0) return;
 
         // Use the actual paragraph-based timing instead of estimated duration
-        const totalSeconds = paragraphs[paragraphs.length - 1].endTime;
+        const totalSeconds = chapters[chapters.length - 1].endTime;
 
         // Calculate duration per chapter (equal distribution)
         const secondsPerChapter = Math.floor(totalSeconds / chapters.length);
@@ -695,6 +587,15 @@ const ScriptProductionPage: React.FC = () => {
         return totalSeconds;
     };
 
+    if (initializing) {
+        return (
+            <Container maxWidth="md" sx={{ py: 4 }}>
+                <LinearProgress sx={{ mb: 2 }} />
+                <Typography variant="body2" color="text.secondary">Loading script...</Typography>
+            </Container>
+        );
+    }
+
     if (!scriptData) {
         return (
             <Container maxWidth="md" sx={{ py: 4 }}>
@@ -729,246 +630,57 @@ const ScriptProductionPage: React.FC = () => {
             </Box>
 
             <Grid container spacing={3}>
-                {/* Left Column: Script & Details */}
-                <Grid item xs={12} lg={4}>
-
-
-                    {/* Paragraph Breakdown */}
-                    <Paper sx={{ p: 3, mb: 3 }}>
-                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                            📊 Paragraph Breakdown
-                        </Typography>
-
-                        {paragraphs.length > 0 ? (
-                            <Box>
-                                {paragraphs.map((paragraph, index) => (
-                                    <Box
-                                        key={index}
-                                        sx={{
-                                            mb: 2,
-                                            p: 2,
-                                            border: '1px solid #e0e0e0',
-                                            borderRadius: 1,
-                                            bgcolor: '#fafafa',
-                                            '&:hover': { bgcolor: '#f5f5f5' }
-                                        }}
-                                    >
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                            <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600 }}>
-                                                Paragraph {index + 1}
-                                            </Typography>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Chip
-                                                    label={paragraph.duration}
-                                                    size="small"
-                                                    color="success"
-                                                    sx={{ fontSize: '0.7rem', fontWeight: 600 }}
-                                                />
-                                                <Chip
-                                                    label={`${paragraph.words} words`}
-                                                    size="small"
-                                                    color="info"
-                                                    sx={{ fontSize: '0.65rem', height: 18 }}
-                                                />
-                                            </Box>
-                                        </Box>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontSize: '0.8rem',
-                                                lineHeight: 1.4,
-                                                color: 'text.secondary',
-                                                fontFamily: isRTLLanguage(scriptData.language)
-                                                    ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                                                    : '"Roboto", "Arial", sans-serif',
-                                                ...getDirectionSx(scriptData.language)
-                                            }}
-                                        >
-                                            {paragraph.text.length > 150
-                                                ? `${paragraph.text.substring(0, 150)}...`
-                                                : paragraph.text
-                                            }
-                                        </Typography>
-                                    </Box>
-                                ))}
-
-                                <Box sx={{
-                                    mt: 2,
-                                    p: 2,
-                                    bgcolor: '#e3f2fd',
-                                    borderRadius: 1,
-                                    border: '1px solid #2196f3',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}>
-                                    <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600 }}>
-                                        Total
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Chip
-                                            label={paragraphs.length > 0 ? formatTotalDuration(paragraphs[paragraphs.length - 1].endTime) : estimatedDuration}
-                                            size="small"
-                                            color="primary"
-                                            sx={{ fontSize: '0.75rem', fontWeight: 600 }}
-                                        />
-                                        <Chip
-                                            label={`${paragraphs.reduce((sum, p) => sum + p.words, 0)} words`}
-                                            size="small"
-                                            color="primary"
-                                            sx={{ fontSize: '0.7rem', fontWeight: 600 }}
-                                        />
-                                    </Box>
-                                </Box>
-                            </Box>
-                        ) : (
-                            <Box sx={{
-                                p: 3,
-                                textAlign: 'center',
-                                color: 'text.secondary',
-                                bgcolor: '#f5f5f5',
-                                borderRadius: 1
-                            }}>
-                                <Typography variant="body2">
-                                    No paragraphs detected. Start typing your script to see the breakdown.
-                                </Typography>
-                            </Box>
-                        )}
-                    </Paper>
-
-                </Grid>
 
                 {/* Right Column: Script & Chapters */}
-                <Grid item xs={12} lg={8}>
-                    {/* Approved Script */}
-                    <Paper sx={{ p: 3, mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                            <Typography variant="h6" sx={{ color: 'primary.main' }}>
-                                📄 Approved Script Content
-                            </Typography>
-                            {/* <Button
-                                variant="outlined"
-                                size="small"
-                                startIcon={scriptModified ? <EditIcon /> : <EditIcon />}
-                                onClick={() => setScriptModified(!scriptModified)}
+                <Grid item xs={12} lg={12}>
+
+                    {/* Script Title in Bold */}
+                    {scriptData.title && (
+                        <Box sx={{ mb: 3, textAlign: 'center' }}>
+                            <Typography
+                                variant="h4"
                                 sx={{
-                                    borderColor: scriptModified ? '#ff9800' : '#1976d2',
-                                    color: scriptModified ? '#ff9800' : '#1976d2',
-                                    '&:hover': {
-                                        bgcolor: scriptModified ? 'rgba(255, 152, 0, 0.1)' : 'rgba(25, 118, 210, 0.1)'
-                                    }
-                                }}
-                            >
-                                {scriptModified ? 'View Script' : 'Edit Script'}
-                            </Button> */}
-                        </Box>
-
-                        {/* Script Title in Bold */}
-                        {scriptData.title && (
-                            <Box sx={{ mb: 3, textAlign: 'center' }}>
-                                <Typography
-                                    variant="h4"
-                                    sx={{
-                                        fontWeight: 700,
-                                        color: 'primary.main',
-                                        mb: 2,
-                                        fontFamily: isRTLLanguage(scriptData.language)
-                                            ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                                            : '"Roboto", "Arial", sans-serif',
-                                        ...getDirectionSx(scriptData.language)
-                                    }}
-                                >
-                                    {scriptData.title}
-                                </Typography>
-                                <Box sx={{ width: '60px', height: '3px', bgcolor: 'primary.main', mx: 'auto', borderRadius: 2 }} />
-                            </Box>
-                        )}
-
-
-
-                        {scriptModified ? (
-                            <Box>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    rows={12}
-                                    variant="outlined"
-                                    value={scriptData.script}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                        const newScript = e.target.value;
-                                        setScriptData(prev => prev ? { ...prev, script: newScript } : null);
-                                        setEstimatedDuration(calculateDuration(newScript));
-                                        updateParagraphs(newScript);
-                                        setScriptModified(true);
-                                    }}
-                                    placeholder="Edit your script content..."
-                                    sx={{
-                                        '& .MuiInputBase-root': {
-                                            fontFamily: isRTLLanguage(scriptData.language)
-                                                ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                                                : '"Roboto", "Arial", sans-serif',
-                                            fontSize: '0.9rem',
-                                            lineHeight: 1.7,
-                                            ...getDirectionSx(scriptData.language)
-                                        }
-                                    }}
-                                />
-
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                        {scriptData.script.trim().split(/\s+/).filter(word => word.length > 0).length} words
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <TimeIcon sx={{ fontSize: '0.9rem', color: 'success.main' }} />
-                                        <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                                            Live: {paragraphs.length > 0 ? formatTotalDuration(paragraphs[paragraphs.length - 1].endTime) : estimatedDuration}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Box>
-                        ) : (
-                            <Paper
-                                elevation={0}
-                                sx={{
-                                    p: 3,
-                                    bgcolor: '#f8f9fa',
-                                    border: '1px solid #e9ecef',
-                                    maxHeight: '300px',
-                                    overflow: 'auto',
+                                    fontWeight: 700,
+                                    color: 'primary.main',
+                                    mb: 2,
+                                    fontFamily: isRTLLanguage(scriptData.language)
+                                        ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
+                                        : '"Roboto", "Arial", sans-serif',
                                     ...getDirectionSx(scriptData.language)
                                 }}
                             >
-                                <Typography
-                                    variant="body1"
-                                    sx={{
-                                        whiteSpace: 'pre-wrap',
-                                        lineHeight: 1.7,
-                                        fontSize: '0.9rem',
-                                        fontFamily: isRTLLanguage(scriptData.language)
-                                            ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                                            : '"Roboto", "Arial", sans-serif',
-                                        ...getDirectionSx(scriptData.language)
-                                    }}
-                                >
-                                    {scriptData.script}
-                                </Typography>
-
-                            </Paper>
-                        )}
-                    </Paper>
+                                {scriptData.title}
+                            </Typography>
+                            <Box sx={{ width: '60px', height: '3px', bgcolor: 'primary.main', mx: 'auto', borderRadius: 2 }} />
+                        </Box>
+                    )}
 
                     {/* Script Components Breakdown */}
                     {(scriptData.hook || scriptData.mainContent || scriptData.conclusion || scriptData.callToAction) && (
                         <Paper sx={{ p: 3, mb: 3 }}>
                             <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                                📋 Script Components
+                                📋 Script Chapters Breakdown
                             </Typography>
 
                             {scriptData.hook && (
                                 <Box sx={{ mb: 3 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.main', mb: 1 }}>
-                                        🎯 Hook (First 15 seconds)
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.main' }}>
+                                            🎯 Hook (First 15 seconds)
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {(() => {
+                                                const words = scriptData.hook.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                                const duration = calculateParagraphDuration(words);
+                                                return (
+                                                    <>
+                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                    </>
+                                                );
+                                            })()}
+                                        </Box>
+                                    </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0f8f0', border: '1px solid #4caf50' }}>
                                         <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                                             {scriptData.hook}
@@ -979,9 +691,23 @@ const ScriptProductionPage: React.FC = () => {
 
                             {scriptData.mainContent && (
                                 <Box sx={{ mb: 3 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'info.main', mb: 1 }}>
-                                        📝 Main Content
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'info.main' }}>
+                                            📝 Main Content
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {(() => {
+                                                const words = scriptData.mainContent.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                                const duration = calculateParagraphDuration(words);
+                                                return (
+                                                    <>
+                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                    </>
+                                                );
+                                            })()}
+                                        </Box>
+                                    </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0f8ff', border: '1px solid #2196f3' }}>
                                         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                                             {scriptData.mainContent}
@@ -992,9 +718,23 @@ const ScriptProductionPage: React.FC = () => {
 
                             {scriptData.conclusion && (
                                 <Box sx={{ mb: 3 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'warning.main', mb: 1 }}>
-                                        🎬 Conclusion
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                                            🎬 Conclusion
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {(() => {
+                                                const words = scriptData.conclusion.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                                const duration = calculateParagraphDuration(words);
+                                                return (
+                                                    <>
+                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                    </>
+                                                );
+                                            })()}
+                                        </Box>
+                                    </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#fff8f0', border: '1px solid #ff9800' }}>
                                         <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                                             {scriptData.conclusion}
@@ -1005,9 +745,23 @@ const ScriptProductionPage: React.FC = () => {
 
                             {scriptData.callToAction && (
                                 <Box sx={{ mb: 3 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'secondary.main', mb: 1 }}>
-                                        📢 Call to Action
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                                            📢 Call to Action
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            {(() => {
+                                                const words = scriptData.callToAction.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                                const duration = calculateParagraphDuration(words);
+                                                return (
+                                                    <>
+                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                    </>
+                                                );
+                                            })()}
+                                        </Box>
+                                    </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#f8f0ff', border: '1px solid #9c27b0' }}>
                                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                             {scriptData.callToAction}
@@ -1021,9 +775,9 @@ const ScriptProductionPage: React.FC = () => {
                     {/* Chapters Section */}
                     {chapters.length > 0 && (
                         <ChaptersSection
+                            chaptersGenerated={true}
+                            generatingChapters={false}
                             chapters={chapters}
-                            chaptersGenerated={chaptersGenerated}
-                            generatingChapters={generatingChapters}
                             editingChapter={editingChapter}
                             editHeading={editHeading}
                             editNarration={editNarration}
@@ -1041,7 +795,6 @@ const ScriptProductionPage: React.FC = () => {
                             isDraggingUpload={isDraggingUpload}
                             chapterImagesMap={chapterImagesMap}
                             onChaptersUpdate={setChapters}
-                            onGenerateChapters={handleGenerateChapters}
                             onAddChapterAfter={handleAddChapterAfter}
                             onDeleteChapter={handleDeleteChapter}
                             onSaveEdit={handleSaveEdit}
@@ -1080,36 +833,6 @@ const ScriptProductionPage: React.FC = () => {
                             🎬 Production Actions
                         </Typography>
 
-                        {/* Update Chapter Durations */}
-                        {scriptModified && chapters.length > 0 && (
-                            <Box sx={{ mb: 3 }}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    size="medium"
-                                    startIcon={<TimeIcon />}
-                                    onClick={() => updateChapterDurations('')}
-                                    disabled={generatingChapters}
-                                    sx={{
-                                        borderColor: '#ff9800',
-                                        color: '#ff9800',
-                                        '&:hover': {
-                                            bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                            borderColor: '#f57c00'
-                                        },
-                                        py: 1,
-                                        fontSize: '0.9rem',
-                                        fontWeight: 500
-                                    }}
-                                >
-                                    Update Chapter Durations
-                                </Button>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                    Sync chapter times with updated script length
-                                </Typography>
-                            </Box>
-                        )}
-
                         {/* Other Actions */}
                         <Grid container spacing={2}>
                             <Grid item xs={12}>
@@ -1118,7 +841,7 @@ const ScriptProductionPage: React.FC = () => {
                                     fullWidth
                                     startIcon={<DownloadIcon />}
                                     onClick={handleDownloadAllNarrations}
-                                    disabled={!chapters.length || generatingChapters}
+                                    disabled={!chapters.length}
                                     sx={{ mb: 1 }}
                                 >
                                     Download Narrations
@@ -1132,7 +855,7 @@ const ScriptProductionPage: React.FC = () => {
                                         fullWidth
                                         startIcon={<UploadIcon />}
                                         onClick={handleUploadChromaKey}
-                                        disabled={!chapters.length || generatingChapters || uploadingChromaKey}
+                                        disabled={!chapters.length || uploadingChromaKey}
                                         sx={{ mb: 1 }}
                                     >
                                         {uploadingChromaKey ? 'Uploading...' : (chromaKeyFile ? 'Replace Chroma Key' : 'Upload Chroma Key')}
@@ -1181,7 +904,7 @@ const ScriptProductionPage: React.FC = () => {
                                     fullWidth
                                     startIcon={<VideoIcon />}
                                     onClick={handleGenerateVideo}
-                                    disabled={!chapters.length || generatingChapters || !chromaKeyFile || uploadingChromaKey}
+                                    disabled={!chapters.length || !chromaKeyFile || uploadingChromaKey}
                                     sx={{
                                         bgcolor: '#4caf50',
                                         '&:hover': { bgcolor: '#388e3c' },
@@ -1193,7 +916,7 @@ const ScriptProductionPage: React.FC = () => {
                                 </Button>
                             </Grid>
 
-                            <Grid item xs={12}>
+                            {/* <Grid item xs={12}>
                                 <Button
                                     variant="outlined"
                                     fullWidth
@@ -1208,7 +931,7 @@ const ScriptProductionPage: React.FC = () => {
                                 >
                                     Regenerate Assets
                                 </Button>
-                            </Grid>
+                            </Grid> */}
                         </Grid>
                     </Paper>
                 </Grid>

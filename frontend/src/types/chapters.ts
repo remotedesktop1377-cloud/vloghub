@@ -1,14 +1,15 @@
 export interface Chapter {
     id: string;
-    time_range: string;
-    narration: string;
-    voiceover_style: string;
-    visual_guidance: string;
-    on_screen_text: string;
+    text: string;
     duration: string;
+    words: number;
+    startTime: number;
+    endTime: number;
+    durationInSeconds: number;
     assets?: {
         image?: string | null;
         audio?: string | null;
         video?: string | null;
     };
 }
+

@@ -653,6 +653,13 @@ const TrendingTopics: React.FC = () => {
     // Use edited script if it exists, otherwise use generated script
     const finalScript = editedScript || generatedScript;
 
+    // Merge any script metadata if present
+    let metadata: any = null;
+    try {
+      const storedMeta = localStorage.getItem('scriptMetadata');
+      metadata = storedMeta ? JSON.parse(storedMeta) : null;
+    } catch {}
+
     const scriptData = {
       script: finalScript,
       topic: selectedTopic?.topic || '',
@@ -663,8 +670,10 @@ const TrendingTopics: React.FC = () => {
       language,
       selectedTopicSuggestions,
       selectedHypothesisSuggestions,
+      ...(metadata || {})
     };
 
+    debugger
     // Store in localStorage as backup
     localStorage.setItem('approvedScript', JSON.stringify(scriptData));
 
@@ -1149,6 +1158,7 @@ const TrendingTopics: React.FC = () => {
         topic={selectedTopic?.topic || ''}
         language={language}
         onScriptChange={handleScriptChange}
+        intendedDuration={duration}
       />
 
     </Box>

@@ -134,15 +134,15 @@ export default async function handler(
   try {
     const { topic, region, currentSuggestions } = req.body as TopicSuggestionsRequest;
     
-    console.log('🎯 API received request:', { topic, region, currentSuggestionsCount: currentSuggestions?.length || 0 });
-    console.log('📋 Current suggestions:', currentSuggestions);
+    // console.log('🎯 API received request:', { topic, region, currentSuggestionsCount: currentSuggestions?.length || 0 });
+    // console.log('📋 Current suggestions:', currentSuggestions);
 
     if (!topic) {
       return res.status(400).json({ error: 'Topic is required' });
     }
 
     const suggestions = await getTopicSuggestionsFromGemini({ topic, region, currentSuggestions });
-    console.log('✨ Generated new suggestions:', suggestions.suggestions);
+    // console.log('✨ Generated new suggestions:', suggestions.suggestions);
 
     return res.status(200).json({
       suggestions: suggestions.suggestions,

@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import { getDirectionSx, isRTLLanguage } from '../../utils/languageUtils';
 import { toast } from 'react-toastify';
+import { HelperFunctions } from '@/utils/helperFunctions';
 
 interface ScriptApprovalDialogProps {
   open: boolean;
@@ -35,6 +36,7 @@ interface ScriptApprovalDialogProps {
   topic: string;
   language?: string;
   onScriptChange?: (newScript: string) => void;
+  intendedDuration?: string; // minutes from dropdown (e.g., "1")
 }
 
 interface ScriptData {
@@ -57,6 +59,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   topic,
   language = 'english',
   onScriptChange,
+  intendedDuration,
 }) => {
   // Script editing states
   const [isEditingScript, setIsEditingScript] = useState(false);
@@ -77,32 +80,11 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
     }
   }, [script]);
 
-  // Calculate estimated duration based on script content
-  const calculateDuration = (scriptContent: string): string => {
-    if (!scriptContent.trim()) return '0';
-
-    const words = scriptContent.trim().split(/\s+/).length;
-    const averageWordsPerMinute = 155;
-    const minutes = words / averageWordsPerMinute;
-
-    if (minutes < 1) {
-      const seconds = Math.round(minutes * 60);
-      return `${seconds}s`;
-    } else if (minutes < 60) {
-      const wholeMinutes = Math.floor(minutes);
-      const seconds = Math.round((minutes - wholeMinutes) * 60);
-      return seconds > 0 ? `${wholeMinutes}m ${seconds}s` : `${wholeMinutes}m`;
-    } else {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = Math.round(minutes % 60);
-      return `${hours}h ${remainingMinutes}m`;
-    }
-  };
-
   // Update edited script and duration when script prop changes
   useEffect(() => {
     setEditedScript(script);
-    setEstimatedDuration(calculateDuration(script));
+    // Always compute based on current script content
+    setEstimatedDuration(HelperFunctions.calculateDuration(script));
   }, [script]);
 
   // Script editing functions
@@ -178,7 +160,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
     
     // Save script metadata to localStorage
     try {
-      localStorage.setItem('scriptMetadata', JSON.stringify(scriptData));
+      localStorage.setItem('scriptMetadata', JSON.stringify(combinedScript));
     } catch (error) {
       console.warn('Error saving script metadata:', error);
     }
@@ -190,11 +172,6 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   const handleCancelEditingScript = () => {
     setEditedScript(script);
     setIsEditingScript(false);
-  };
-
-  const handleScriptContentChange = (newScript: string) => {
-    setEditedScript(newScript);
-    setEstimatedDuration(calculateDuration(newScript));
   };
 
   const handleApprove = () => {
