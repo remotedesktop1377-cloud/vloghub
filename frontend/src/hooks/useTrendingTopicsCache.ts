@@ -7,7 +7,7 @@ interface CachedData<T> {
 
 export const useTrendingTopicsCache = () => {
   const getCacheKey = useCallback((region: string) => `trending_topics_${region}`, []);
-  
+
   const getCachedData = useCallback(<T>(region: string): T | null => {
     try {
       const cacheKey = getCacheKey(region);
@@ -16,8 +16,8 @@ export const useTrendingTopicsCache = () => {
         const { data, timestamp }: CachedData<T> = JSON.parse(cached);
         // Check if cache is less than 24 hours old
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-        
+        const maxAge = 1 * 60 * 60 * 1000; // 1 hours in milliseconds
+
         if (cacheAge < maxAge) {
           return data;
         } else {
@@ -70,7 +70,7 @@ export const useTrendingTopicsCache = () => {
       if (cached) {
         const { timestamp }: CachedData<any> = JSON.parse(cached);
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        const maxAge = 1 * 60 * 60 * 1000; // 1 hours in milliseconds
         return cacheAge < maxAge;
       }
     } catch (error) {

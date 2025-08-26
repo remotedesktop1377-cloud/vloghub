@@ -39,10 +39,10 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
 
   return (
     <Paper sx={{ p: 1.5 }}>
-      <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.7rem', fontWeight: 600, mb: 1 }}>
+      <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1 }}>
         Video Duration & Actions
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.65rem', display: 'block' }}>
+      <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.8rem', display: 'block' }}>
         Select the desired length for your generated video content and manage your video assets.
       </Typography>
       
@@ -50,15 +50,15 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <FormControl size="small" sx={{ minWidth: 100 }}>
-            <InputLabel sx={{ fontSize: '0.7rem' }}>Duration</InputLabel>
+            <InputLabel sx={{ fontSize: '0.85rem' }}>Duration</InputLabel>
             <Select
               value={duration}
               label="Duration"
               onChange={(e) => onDurationChange(e.target.value)}
-              sx={{ '& .MuiSelect-select': { fontSize: '0.7rem' } }}
+              sx={{ '& .MuiSelect-select': { fontSize: '0.85rem' } }}
             >
               {durationOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.7rem' }}>
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.85rem' }}>
                   {option.label}
                 </MenuItem>
               ))}
@@ -66,15 +66,15 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           </FormControl>
 
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel sx={{ fontSize: '0.7rem' }}>Language</InputLabel>
+            <InputLabel sx={{ fontSize: '0.85rem' }}>Language</InputLabel>
             <Select
               value={language}
               label="Language"
               onChange={(e) => onLanguageChange(e.target.value)}
-              sx={{ '& .MuiSelect-select': { fontSize: '0.7rem' } }}
+              sx={{ '& .MuiSelect-select': { fontSize: '0.85rem' } }}
             >
               {languageOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.7rem' }}>
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.85rem' }}>
                   {option.label}
                 </MenuItem>
               ))}
@@ -93,8 +93,8 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
             '&:hover': { bgcolor: hasChapters ? '#f57c00' : '#0d8bd9' },
             px: 3,
             py: 0.75,
-            fontSize: '0.7rem',
-            height: 32
+            fontSize: '0.85rem',
+            height: 36
           }}
         >
           {generatingChapters 

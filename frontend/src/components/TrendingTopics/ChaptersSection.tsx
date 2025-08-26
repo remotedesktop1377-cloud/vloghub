@@ -86,6 +86,7 @@ interface ChaptersSectionProps {
   onMediaManagementOpen: (open: boolean) => void;
   onMediaManagementChapterIndex: (index: number | null) => void;
   onChaptersUpdate: (chapters: Chapter[]) => void;
+  language: string;
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
@@ -138,6 +139,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   onMediaManagementOpen,
   onMediaManagementChapterIndex,
   onChaptersUpdate,
+  language,
 }) => {
   // Image viewer hook for enhanced image viewing
   const imageViewer = useImageViewer();
@@ -155,6 +157,16 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
     if (images.length > 0) {
       imageViewer.openViewer(images, imageIndex, 'preview');
     }
+  };
+
+  const getDirectionSx = (lang: string) => {
+    if (lang === 'ar' || lang === 'he') {
+      return {
+        direction: 'rtl',
+        textAlign: 'right',
+      };
+    }
+    return {};
   };
 
   return (
@@ -250,7 +262,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                             multiline
                                             minRows={4}
                                             fullWidth
-                                            sx={{ px: 1.5, py: 1.5, width: '100%', height: '100%', bgcolor: '#fff' }}
+                                            sx={{ px: 1.5, py: 1.5, width: '100%', height: '100%', bgcolor: '#fff', fontSize: '1rem',
+                                              '& .MuiInputBase-input': {
+                                                fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                                                lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.6,
+                                              },
+                                              ...HelperFunctions.getDirectionSx(language)
+                                            }}
                                           />
                                         ) : (
                                           <>
@@ -267,12 +285,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                 alignItems: 'flex-start'
                                               }}>
                                                 <Typography variant="body2" sx={{
-                                                  lineHeight: 1.5,
+                                                  lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.6,
                                                   color: '#495057',
-                                                  fontSize: '0.8rem',
-                                                  textAlign: 'start',
+                                                  fontSize: '1rem',
                                                   px: 1.5,
                                                   py: 1,
+                                                  fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                                                  ...HelperFunctions.getDirectionSx(language)
                                                 }}>
                                                   {chapter.text || 'Narration content will be generated here.'}
                                                 </Typography>

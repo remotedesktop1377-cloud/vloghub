@@ -134,7 +134,7 @@ const isFresh = lastUpdated && (() => {
 
 ### Cache Duration
 ```typescript
-const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const maxAge = 1 * 60 * 60 * 1000; // 1 hours in milliseconds
 ```
 
 ### Fresh Data Threshold

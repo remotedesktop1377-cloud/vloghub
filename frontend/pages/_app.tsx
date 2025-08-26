@@ -3,6 +3,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import Layout from '../src/components/Layout/Layout'
 import Head from 'next/head'
+import { fontVariablesClass, fontStacks } from '../src/styles/fonts'
 
 const theme = createTheme({
   palette: {
@@ -14,17 +15,36 @@ const theme = createTheme({
       main: '#dc004e',
     },
   },
+  typography: {
+    fontSize: 15,
+    fontFamily: fontStacks.inter,
+    h1: { fontFamily: fontStacks.poppins },
+    h2: { fontFamily: fontStacks.poppins },
+    h3: { fontFamily: fontStacks.poppins },
+    h4: { fontFamily: fontStacks.montserrat },
+    h5: { fontFamily: fontStacks.montserrat },
+    h6: { fontFamily: fontStacks.montserrat },
+    subtitle1: { fontFamily: fontStacks.manrope },
+    subtitle2: { fontFamily: fontStacks.manrope },
+    button: { fontFamily: fontStacks.inter },
+    caption: { fontFamily: fontStacks.manrope },
+    overline: { fontFamily: fontStacks.manrope },
+  },
 })
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <>
+    <div className={fontVariablesClass}>
       <Head>
         <link 
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@300;400;500;600;700&display=swap" 
+          href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@300;400;500;600;700&display=swap" 
           rel="stylesheet" 
         />
         <style jsx global>{`
+          /* Base font across app (non-MUI elements) */
+          html, body { font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial; }
+          body { font-size: 15px; }
+
           /* RTL Support Styles */
           [dir="rtl"] {
             text-align: right;
@@ -43,7 +63,7 @@ export default function App({ Component, pageProps }: AppProps) {
           }
           
           .ltr-text {
-            font-family: 'Roboto', 'Arial', sans-serif;
+            font-family: var(--font-inter), 'Arial', sans-serif;
             direction: ltr;
             text-align: left;
           }
@@ -60,6 +80,6 @@ export default function App({ Component, pageProps }: AppProps) {
           <Component {...pageProps} />
         </Layout>
       </ThemeProvider>
-    </>
+    </div>
   )
 }

@@ -63,7 +63,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
       const date = new Date(timestamp);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+      const maxAge = 1 * 60 * 60 * 1000; // 1 hours in milliseconds
       const remainingMs = maxAge - diffMs;
       
       if (remainingMs <= 0) return 'Expired';

@@ -91,15 +91,15 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   const handleStartEditingScript = () => {
     setIsEditingScript(true);
     setEditedScript(script);
-    
+
     // Parse the current script to populate scriptData for editing
     const currentScript = editedScript || script;
     const lines = currentScript.split('\n');
-    
+
     let currentSection = '';
     let currentContent = '';
     const newScriptData: ScriptData = { ...scriptData };
-    
+
     for (const line of lines) {
       if (line.includes('📋 TITLE:')) {
         currentSection = 'title';
@@ -132,12 +132,12 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
         currentContent += line + '\n';
       }
     }
-    
+
     // Save the last section
     if (currentSection && currentContent.trim()) {
       (newScriptData as any)[currentSection] = currentContent.trim();
     }
-    
+
     setScriptData(newScriptData);
   };
 
@@ -150,21 +150,21 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
       scriptData.conclusion && `🏁 CONCLUSION:\n${scriptData.conclusion}`,
       scriptData.callToAction && `🚀 CALL TO ACTION:\n${scriptData.callToAction}`
     ].filter(Boolean).join('\n\n');
-    
+
     // Update the edited script state
     setEditedScript(combinedScript);
-    
+
     if (onScriptChange) {
       onScriptChange(combinedScript);
     }
-    
+
     // Save script metadata to localStorage
     try {
       localStorage.setItem('scriptMetadata', JSON.stringify(combinedScript));
     } catch (error) {
       console.warn('Error saving script metadata:', error);
     }
-    
+
     setIsEditingScript(false);
     toast.success('Script updated successfully!');
   };
@@ -224,14 +224,14 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
       open={open}
       onClose={onClose}
       aria-labelledby="script-approval-dialog-title"
-      maxWidth="md"
+      maxWidth="xl"
       fullWidth
-             PaperProps={{
-         sx: {
-           height: '90vh',
-           overflow: 'hidden'
-         }
-       }}
+      PaperProps={{
+        sx: {
+          height: '95vh',
+          overflow: 'hidden'
+        }
+      }}
     >
       <DialogTitle
         id="script-approval-dialog-title"
@@ -241,7 +241,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
           gap: 1,
           bgcolor: 'primary.main',
           color: 'white',
-          py: 2
+          py: 1
         }}
       >
         <ScriptIcon />
@@ -253,152 +253,136 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
       </DialogTitle>
 
       <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-        <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexShrink: 0 }}>
-            <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexShrink: 0 }}>
+            <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '1.05rem' }}>
               ✍️ Review & customize your script before final approval
             </Typography>
 
             {/* Duration Display */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TimeIcon sx={{ color: 'success.main', fontSize: '1rem' }} />
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+              <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem' }}>
                 Estimated Duration:
               </Typography>
               <Chip
                 label={estimatedDuration}
-                size="small"
+                size="medium"
                 color="success"
-                sx={{ fontSize: '0.75rem', fontWeight: 600 }}
+                sx={{ fontSize: '1rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1 } }}
               />
             </Box>
           </Box>
 
           <Box sx={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                         {isEditingScript ? (
-               <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                 {/* Hook Section */}
-                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#e3f2fd', border: '1px solid #2196f3', borderRadius: 2 }}>
-                   <Typography variant="h6" sx={{ mb: 1, color: '#1976d2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                     🎯 HOOK
-                   </Typography>
-                   <TextField
-                     fullWidth
-                     multiline
-                     rows={3}
-                     variant="outlined"
-                     value={scriptData.hook || ''}
-                     onChange={(e) => setScriptData(prev => ({ ...prev, hook: e.target.value }))}
-                     placeholder="Enter your hook content..."
-                     sx={{
-                       '& .MuiInputBase-root': {
-                         fontFamily: isRTLLanguage(language)
-                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                           : '"Roboto", "Arial", sans-serif',
-                         fontSize: '0.9rem',
-                         lineHeight: 1.7,
-                         ...getDirectionSx(language)
-                       }
-                     }}
-                   />
-                 </Paper>
+            {isEditingScript ? (
+              <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* Hook Section */}
+                <Paper elevation={2} sx={{ p: 1, bgcolor: '#e3f2fd', border: '1px solid #2196f3', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: '#1976d2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    🎯 HOOK
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={5}
+                    variant="outlined"
+                    value={scriptData.hook || ''}
+                    onChange={(e) => setScriptData(prev => ({ ...prev, hook: e.target.value }))}
+                    placeholder="Enter your hook content..."
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                        fontSize: '1.1rem',
+                        lineHeight: 1.8,
+                        ...getDirectionSx(language)
+                      }
+                    }}
+                  />
+                </Paper>
 
-                 {/* Main Content Section */}
-                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#f3e5f5', border: '1px solid #9c27b0', borderRadius: 2 }}>
-                   <Typography variant="h6" sx={{ mb: 1, color: '#7b1fa2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                     📝 MAIN CONTENT
-                   </Typography>
-                   <TextField
-                     fullWidth
-                     multiline
-                     rows={6}
-                     variant="outlined"
-                     value={scriptData.mainContent || ''}
-                     onChange={(e) => setScriptData(prev => ({ ...prev, mainContent: e.target.value }))}
-                     placeholder="Enter your main content..."
-                     sx={{
-                       '& .MuiInputBase-root': {
-                         fontFamily: isRTLLanguage(language)
-                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                           : '"Roboto", "Arial", sans-serif',
-                         fontSize: '0.9rem',
-                         lineHeight: 1.7,
-                         ...getDirectionSx(language)
-                       }
-                     }}
-                   />
-                 </Paper>
+                {/* Main Content Section */}
+                <Paper elevation={2} sx={{ p: 1, bgcolor: '#f3e5f5', border: '1px solid #9c27b0', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: '#7b1fa2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    📝 MAIN CONTENT
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={10}
+                    variant="outlined"
+                    value={scriptData.mainContent || ''}
+                    onChange={(e) => setScriptData(prev => ({ ...prev, mainContent: e.target.value }))}
+                    placeholder="Enter your main content..."
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                        fontSize: '1.1rem',
+                        lineHeight: 1.8,
+                        ...getDirectionSx(language)
+                      }
+                    }}
+                  />
+                </Paper>
 
-                 {/* Conclusion Section */}
-                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#e8f5e8', border: '1px solid #4caf50', borderRadius: 2 }}>
-                   <Typography variant="h6" sx={{ mb: 1, color: '#388e3c', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                     🏁 CONCLUSION
-                   </Typography>
-                   <TextField
-                     fullWidth
-                     multiline
-                     rows={3}
-                     variant="outlined"
-                     value={scriptData.conclusion || ''}
-                     onChange={(e) => setScriptData(prev => ({ ...prev, conclusion: e.target.value }))}
-                     placeholder="Enter your conclusion..."
-                     sx={{
-                       '& .MuiInputBase-root': {
-                         fontFamily: isRTLLanguage(language)
-                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                           : '"Roboto", "Arial", sans-serif',
-                         fontSize: '0.9rem',
-                         lineHeight: 1.7,
-                         ...getDirectionSx(language)
-                       }
-                     }}
-                   />
-                 </Paper>
+                {/* Conclusion Section */}
+                <Paper elevation={2} sx={{ p: 1, bgcolor: '#e8f5e8', border: '1px solid #4caf50', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: '#388e3c', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    🏁 CONCLUSION
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={5}
+                    variant="outlined"
+                    value={scriptData.conclusion || ''}
+                    onChange={(e) => setScriptData(prev => ({ ...prev, conclusion: e.target.value }))}
+                    placeholder="Enter your conclusion..."
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                        fontSize: '1.1rem',
+                        lineHeight: 1.8,
+                        ...getDirectionSx(language)
+                      }
+                    }}
+                  />
+                </Paper>
 
-                 {/* Call to Action Section */}
-                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#fff8e1', border: '1px solid #ff9800', borderRadius: 2 }}>
-                   <Typography variant="h6" sx={{ mb: 1, color: '#f57c00', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                     🚀 CALL TO ACTION
-                   </Typography>
-                   <TextField
-                     fullWidth
-                     multiline
-                     rows={3}
-                     variant="outlined"
-                     value={scriptData.callToAction || ''}
-                     onChange={(e) => setScriptData(prev => ({ ...prev, callToAction: e.target.value }))}
-                     placeholder="Enter your call to action..."
-                     sx={{
-                       '& .MuiInputBase-root': {
-                         fontFamily: isRTLLanguage(language)
-                           ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                           : '"Roboto", "Arial", sans-serif',
-                         fontSize: '0.9rem',
-                         lineHeight: 1.7,
-                         ...getDirectionSx(language)
-                       }
-                     }}
-                   />
-                 </Paper>
+                {/* Call to Action Section */}
+                <Paper elevation={2} sx={{ p: 1, bgcolor: '#fff8e1', border: '1px solid #ff9800', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: '#f57c00', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    🚀 CALL TO ACTION
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={5}
+                    variant="outlined"
+                    value={scriptData.callToAction || ''}
+                    onChange={(e) => setScriptData(prev => ({ ...prev, callToAction: e.target.value }))}
+                    placeholder="Enter your call to action..."
+                    sx={{
+                      '& .MuiInputBase-root': {
+                        fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                        fontSize: '1.1rem',
+                        lineHeight: 1.8,
+                        ...getDirectionSx(language)
+                      }
+                    }}
+                  />
+                </Paper>
 
-                 {/* Word Count and Duration */}
-                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bgcolor: '#f5f5f5', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                   <Typography variant="caption" color="text.secondary">
-                     Total words: {Object.values(scriptData).filter(val => typeof val === 'string' && val.trim()).join(' ').trim().split(/\s+/).filter(word => word.length > 0).length}
-                   </Typography>
-                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                     <TimeIcon sx={{ fontSize: '0.9rem', color: 'success.main' }} />
-                     <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
-                       Live: {estimatedDuration}
-                     </Typography>
-                   </Box>
-                 </Box>
-               </Box>
+                {/* Word Count and Duration */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, }}>
+                  {/* Optional summary area can be re-enabled if needed */}
+                </Box>
+              </Box>
             ) : (
               <Paper
                 elevation={2}
                 sx={{
-                  p: 2,
+                  p: 1,
                   bgcolor: '#f8f9fa',
                   border: '1px solid #e9ecef',
                   borderRadius: 2,
@@ -411,11 +395,9 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
                   variant="body1"
                   sx={{
                     whiteSpace: 'pre-wrap',
-                    lineHeight: 1.8,
-                    fontSize: '0.95rem',
-                    fontFamily: isRTLLanguage(language)
-                      ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                      : '"Roboto", "Arial", sans-serif',
+                    lineHeight: 2.05,
+                    fontSize: '1.2rem',
+                    fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
                     ...getDirectionSx(language)
                   }}
                 >
@@ -428,16 +410,16 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
 
       </DialogContent>
 
-      <DialogActions sx={{ p: 2, bgcolor: '#f8f9fa', gap: 2, justifyContent: 'space-between' }}>
+      <DialogActions sx={{ p: 1, bgcolor: '#f8f9fa', gap: 4, justifyContent: 'space-between' }}>
         {/* Left side - Edit Script button when not editing, Save/Cancel buttons when editing */}
         <Box sx={{ display: 'flex', gap: 1 }}>
           {!isEditingScript ? (
             <Button
               variant="outlined"
-              size="medium"
+              size="large"
               startIcon={<EditIcon />}
               onClick={handleStartEditingScript}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: 'none', px: 2, py: 1 }}
             >
               Edit Script
             </Button>
@@ -445,19 +427,19 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
             <>
               <Button
                 variant="outlined"
-                size="medium"
+                size="large"
                 startIcon={<CancelIcon />}
                 onClick={handleCancelEditingScript}
-                sx={{ textTransform: 'none' }}
+                sx={{ textTransform: 'none', px: 2, py: 1 }}
               >
                 Cancel
               </Button>
               <Button
                 variant="contained"
-                size="medium"
+                size="large"
                 startIcon={<SaveIcon />}
                 onClick={handleSaveScript}
-                sx={{ textTransform: 'none' }}
+                sx={{ textTransform: 'none', px: 2, py: 1 }}
               >
                 Save Changes
               </Button>
@@ -466,15 +448,17 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
         </Box>
 
         {/* Right side - Main action buttons */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             onClick={handleReject}
             variant="outlined"
             color="secondary"
+            size="large"
             sx={{
-              minWidth: 120,
+              minWidth: 160,
               py: 1,
-              fontSize: '0.9rem'
+              px: 2,
+              fontSize: '1.05rem'
             }}
           >
             Reject & Try Again
@@ -483,10 +467,12 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
             onClick={handleApprove}
             variant="contained"
             color="primary"
+            size="large"
             sx={{
-              minWidth: 120,
+              minWidth: 160,
               py: 1,
-              fontSize: '0.9rem',
+              px: 2,
+              fontSize: '1.05rem',
               bgcolor: '#4caf50',
               '&:hover': { bgcolor: '#388e3c' }
             }}

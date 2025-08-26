@@ -374,4 +374,45 @@ export class HelperFunctions {
     return totalSeconds;
   }
 
+  /**
+   * Returns appropriate font-family stack based on language
+   * - Urdu: Noto Nastaliq Urdu
+   * - Arabic: Noto Naskh Arabic
+   * - Default (LTR): Inter/Roboto stack
+   */
+  static getFontFamilyForLanguage(language: string): string {
+    const lang = (language || '').toLowerCase();
+    if (lang.includes('urdu')) {
+      return `'Noto Nastaliq Urdu', 'Arial Unicode MS', sans-serif`;
+    }
+    if (lang.includes('arabic')) {
+      return `'Noto Naskh Arabic', 'Arial Unicode MS', sans-serif`;
+    }
+    return `var(--font-inter), 'Roboto', 'Arial', sans-serif`;
+  }
+
+  /**
+   * Returns true if the language is RTL (right-to-left)
+   */
+  static isRTLLanguage(language: string): boolean {
+    const rtlLanguages = ['urdu', 'arabic', 'persian', 'sindhi', 'pashto', 'balochi', 'hebrew'];
+    return rtlLanguages.includes((language || '').toLowerCase());
+  }
+
+  /**
+   * Returns MUI sx direction styles for a given language
+   */
+  static getDirectionSx(language: string) {
+    const isRTL = HelperFunctions.isRTLLanguage(language);
+    const direction = isRTL ? 'rtl' : 'ltr';
+    return {
+      direction,
+      textAlign: isRTL ? 'right' : 'left',
+      '& *': {
+        direction,
+        textAlign: isRTL ? 'right' : 'left'
+      }
+    } as const;
+  }
+
 } 

@@ -85,7 +85,7 @@ const TrendingTopics: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
   const [selectedTopicDetails, setSelectedTopicDetails] = useState<string>('');
   const [hypothesis, setHypothesis] = useState('');
-  const [duration, setDuration] = useState('1');
+  const [duration, setDuration] = useState('5');
   const [language, setLanguage] = useState('english');
   const [generatingChapters, setGeneratingChapters] = useState(false);
 
@@ -111,72 +111,6 @@ const TrendingTopics: React.FC = () => {
   const [originalSuggestionText, setOriginalSuggestionText] = useState<string | null>(null);
 
   const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
-
-  // Utility function for smooth scrolling to sections
-  const scrollToSection = (sectionName: string) => {
-
-    // Try multiple selectors to find the section
-    const selectors = [
-      `[data-section="${sectionName}"]`,
-      `.MuiPaper-root[data-section="${sectionName}"]`,
-    ];
-
-    let targetElement = null;
-
-    // First try the data-section selectors
-    for (const selector of selectors) {
-      try {
-        targetElement = document.querySelector(selector);
-        if (targetElement) {
-          // console.log(`Found ${sectionName} section with selector: ${selector}`);
-          break;
-        }
-      } catch (e) {
-        console.log(`Selector ${selector} failed:`, e);
-      }
-    }
-
-    // If not found, try finding by text content
-    if (!targetElement) {
-      const elements = document.querySelectorAll('h6, .MuiTypography-subtitle1');
-      Array.from(elements).forEach(element => {
-        const text = element.textContent || '';
-        if (sectionName === 'hypothesis' && text.includes('Your Hypothesis')) {
-          targetElement = element.closest('.MuiPaper-root');
-        }
-      });
-    }
-
-    if (targetElement) {
-      // Ensure the element is visible and scrollable
-      if (targetElement.scrollIntoView) {
-        targetElement.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest'
-        });
-      } else {
-        // Fallback for older browsers
-        const rect = targetElement.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        window.scrollTo({
-          top: scrollTop + rect.top - 100,
-          behavior: 'smooth'
-        });
-      }
-    } else {
-      // Fallback: scroll to the general area where these sections should be
-      const mainContent = document.querySelector('main') ||
-        document.querySelector('.MuiBox-root') ||
-        document.querySelector('body');
-      if (mainContent && mainContent.scrollIntoView) {
-        mainContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        // Last resort: scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
-  };
 
   // Cache management functions
   const { getCachedData, setCachedData } = useTrendingTopicsCache();
@@ -673,18 +607,20 @@ const TrendingTopics: React.FC = () => {
       ...(metadata || {})
     };
 
-    debugger
     // Store in localStorage as backup
     localStorage.setItem('approvedScript', JSON.stringify(scriptData));
 
-    // Show success message
-    toast.success('Script approved! Navigating to production pipeline...');
-
-    // Navigate to script production page with query params
-    router.push('/script-production');
-
+    // Close dialog and clear states immediately for faster UX
     setShowScriptDialog(false);
     setGeneratedScript('');
+
+    // Navigate immediately - this should be the fastest path
+    router.push('/script-production');
+
+    // Show success message after navigation starts (non-blocking)
+    setTimeout(() => {
+      toast.success('Script approved! Navigating to production pipeline...');
+    }, 100);
   };
 
   const handleScriptRejection = () => {

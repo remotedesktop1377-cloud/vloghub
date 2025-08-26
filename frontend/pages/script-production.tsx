@@ -29,12 +29,11 @@ import {
     AccessTime as TimeIcon,
     Edit as EditIcon
 } from '@mui/icons-material';
-import { getDirectionSx, isRTLLanguage } from '../src/utils/languageUtils';
+import { HelperFunctions } from '../src/utils/helperFunctions';
 import { toast } from 'react-toastify';
 import { apiService } from '../src/utils/apiService';
 import { Chapter } from '../src/types/chapters';
 import ChaptersSection from '../src/components/TrendingTopics/ChaptersSection';
-import { HelperFunctions } from '../src/utils/helperFunctions';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '../src/data/mockImages';
 
@@ -124,7 +123,7 @@ const ScriptProductionPage: React.FC = () => {
         // Load only from localStorage
         const stored = localStorage.getItem('approvedScript');
         const storedMeta = localStorage.getItem('scriptMetadata');
-        debugger;
+        
         if (stored) {
             try {
                 const storedData = JSON.parse(stored);
@@ -148,7 +147,12 @@ const ScriptProductionPage: React.FC = () => {
         if (scriptData?.script) {
             setOriginalDuration(scriptData.duration);
             setEstimatedDuration(calculateDuration(scriptData.script));
-            updateParagraphs(scriptData.script);
+            
+            // Defer heavy paragraph processing to avoid blocking initial render
+            setTimeout(() => {
+                updateParagraphs(scriptData.script);
+            }, 0);
+            
             setScriptModified(false); // Reset to false on initial load
         }
     }, [scriptData, scriptData?.duration]);
@@ -614,8 +618,8 @@ const ScriptProductionPage: React.FC = () => {
     }
 
     return (
-        <Container maxWidth="xl" sx={{ py: 4 }}>
-            <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Container maxWidth="xl" >
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Button
                     variant="outlined"
                     startIcon={<BackIcon />}
@@ -643,10 +647,8 @@ const ScriptProductionPage: React.FC = () => {
                                     fontWeight: 700,
                                     color: 'primary.main',
                                     mb: 2,
-                                    fontFamily: isRTLLanguage(scriptData.language)
-                                        ? '"Noto Sans Arabic", "Noto Nastaliq Urdu", "Arial Unicode MS", sans-serif'
-                                        : '"Roboto", "Arial", sans-serif',
-                                    ...getDirectionSx(scriptData.language)
+                                    fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language),
+                                    ...HelperFunctions.getDirectionSx(scriptData.language)
                                 }}
                             >
                                 {scriptData.title}
@@ -666,7 +668,7 @@ const ScriptProductionPage: React.FC = () => {
                                 <Box sx={{ mb: 3 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                         <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.main' }}>
-                                            🎯 Hook (First 15 seconds)
+                                            🎯 Hook
                                         </Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             {(() => {
@@ -682,7 +684,7 @@ const ScriptProductionPage: React.FC = () => {
                                         </Box>
                                     </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0f8f0', border: '1px solid #4caf50' }}>
-                                        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                             {scriptData.hook}
                                         </Typography>
                                     </Paper>
@@ -709,7 +711,7 @@ const ScriptProductionPage: React.FC = () => {
                                         </Box>
                                     </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0f8ff', border: '1px solid #2196f3' }}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                             {scriptData.mainContent}
                                         </Typography>
                                     </Paper>
@@ -736,7 +738,7 @@ const ScriptProductionPage: React.FC = () => {
                                         </Box>
                                     </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#fff8f0', border: '1px solid #ff9800' }}>
-                                        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                             {scriptData.conclusion}
                                         </Typography>
                                     </Paper>
@@ -763,7 +765,7 @@ const ScriptProductionPage: React.FC = () => {
                                         </Box>
                                     </Box>
                                     <Paper elevation={0} sx={{ p: 2, bgcolor: '#f8f0ff', border: '1px solid #9c27b0' }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                             {scriptData.callToAction}
                                         </Typography>
                                     </Paper>
@@ -824,6 +826,7 @@ const ScriptProductionPage: React.FC = () => {
                             mediaManagementChapterIndex={mediaManagementChapterIndex}
                             onMediaManagementOpen={setMediaManagementOpen}
                             onMediaManagementChapterIndex={setMediaManagementChapterIndex}
+                            language={scriptData.language}
                         />
                     )}
 
