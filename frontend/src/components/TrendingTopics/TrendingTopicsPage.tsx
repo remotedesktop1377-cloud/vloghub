@@ -44,6 +44,7 @@ import {
   Switch,
   ToggleButtonGroup,
   ToggleButton,
+  useTheme,
 } from '@mui/material';
 import {
   TrendingUp as TrendingIcon,
@@ -74,6 +75,7 @@ import ConfirmationDialog from './ConfirmationDialog';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
+  const theme = useTheme();
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -702,23 +704,24 @@ const TrendingTopics: React.FC = () => {
                   height: '400px', // Fixed height container
                   overflowY: 'auto', // Enable vertical scrolling
                   overflowX: 'hidden', // Hide horizontal scroll
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid',
+                  borderColor: 'divider',
                   borderRadius: 1,
-                  backgroundColor: '#fafafa',
+                  backgroundColor: 'background.paper',
                   p: 1,
                   // Custom scrollbar styling
                   '&::-webkit-scrollbar': {
                     width: '8px',
                   },
                   '&::-webkit-scrollbar-track': {
-                    background: '#f1f1f1',
+                    background: 'transparent',
                     borderRadius: '4px',
                   },
                   '&::-webkit-scrollbar-thumb': {
-                    background: '#c1c1c1',
+                    background: '#6b7280',
                     borderRadius: '4px',
                     '&:hover': {
-                      background: '#a8a8a8',
+                      background: '#9ca3af',
                     },
                   },
                 }}
@@ -747,22 +750,22 @@ const TrendingTopics: React.FC = () => {
                           transition: 'all 0.2s ease',
                           position: 'relative',
                           '&:hover': {
-                            backgroundColor: isSelected ? '#e3f2fd' : '#f5f5f5',
-                            borderLeft: '3px solid #1976d2',
+                            backgroundColor: (theme) => isSelected ? theme.palette.action.selected : theme.palette.action.hover,
+                            borderLeft: (theme) => `3px solid ${theme.palette.primary.main}`,
                             paddingLeft: '15px'
                           },
-                          border: isSelected ? '2px solid #1976d2' : '1px solid #e0e0e0',
-                          borderLeft: isSelected ? '4px solid #1976d2' : '1px solid #e0e0e0',
+                          border: (theme) => isSelected ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`,
+                          borderLeft: (theme) => isSelected ? `4px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`,
                           borderRadius: 1,
                           p: 1.5,
                           paddingLeft: isSelected ? '14px' : '12px',
                           mb: 0.5,
-                          backgroundColor: isSelected ? '#e3f2fd' : '#fff',
+                          backgroundColor: (theme) => isSelected ? theme.palette.action.selected : theme.palette.background.paper,
                           display: 'flex',
                           alignItems: 'center',
                           gap: 2,
                           minHeight: '60px',
-                          boxShadow: isSelected ? '0 2px 8px rgba(25, 118, 210, 0.2)' : 'none'
+                          boxShadow: (theme) => isSelected ? theme.shadows[3] : 'none'
                         }}
                       >
                         {/* Cache indicator */}
@@ -795,7 +798,7 @@ const TrendingTopics: React.FC = () => {
                             variant="subtitle2"
                             sx={{
                               fontWeight: 600,
-                              color: '#1976d2',
+                              color: 'primary.main',
                               fontSize: '0.95rem',
                               minWidth: '200px',
                               flexShrink: 0
@@ -809,7 +812,7 @@ const TrendingTopics: React.FC = () => {
                             sx={{
                               width: '1px',
                               height: '30px',
-                              backgroundColor: '#e0e0e0',
+                              backgroundColor: 'divider',
                               flexShrink: 0
                             }}
                           />
@@ -818,7 +821,7 @@ const TrendingTopics: React.FC = () => {
                           <Typography
                             variant="body2"
                             sx={{
-                              color: '#666',
+                              color: 'text.secondary',
                               fontSize: '0.85rem',
                               lineHeight: 1.3,
                               flex: 1

@@ -1,11 +1,16 @@
 import React from 'react';
-import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip } from '@mui/material';
+import { useContext } from 'react';
+import { ColorModeContext } from '../../../pages/_app';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const colorMode = useContext(ColorModeContext);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
@@ -58,26 +63,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Box>
 
           {/* Right Section - Actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-
-            <Box
-              sx={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                bgcolor: 'rgba(255, 255, 255, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.2)'
-                }
-              }}
-            >
-              <Typography sx={{ fontSize: '1.1rem' }}>⚙️</Typography>
-            </Box>
-
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
+            <Tooltip title={`Switch to ${colorMode.mode === 'dark' ? 'light' : 'dark'} mode`}>
+              <IconButton color="inherit" onClick={colorMode.toggle} size="small">
+                {colorMode.mode === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
           </Box>
         </Toolbar>
       </AppBar>

@@ -170,7 +170,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   };
 
   return (
-    <Paper sx={{ p: 2, border: '2px dashed #e0e0e0', minHeight: '400px' }}>
+    <Paper sx={{ p: 2, border: '2px dashed', borderColor: 'divider', minHeight: '400px' }}>
       {chaptersGenerated && chapters.length > 0 ? (
         <Box sx={{ width: '100%' }}>
           {/* Full Width - Chapters List */}
@@ -273,10 +273,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         ) : (
                                           <>
                                             {/* Content Area - 50% Narration + 50% Media */}
-                                            <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%', minHeight: '120px', bgcolor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+                                            <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%', minHeight: '120px', bgcolor: 'background.paper', justifyContent: 'center', alignItems: 'center' }}>
                                               {/* Narration Content - 50% */}
                                               <Box sx={{
-                                                flex: '1 1 50%',
+                                                flex: '0 0 70%',
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 height: '100%',
@@ -286,8 +286,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               }}>
                                                 <Typography variant="body2" sx={{
                                                   lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.6,
-                                                  color: '#495057',
                                                   fontSize: '1rem',
+                                                  color: 'text.primary',
                                                   px: 1.5,
                                                   py: 1,
                                                   fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
@@ -296,81 +296,22 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   {chapter.text || 'Narration content will be generated here.'}
                                                 </Typography>
 
-                                                {/* Debug Info */}
-                                                {/* <Box sx={{ px: 1.5, pb: 0.5 }}>
-                                                  <Typography variant="caption" sx={{ 
-                                                    fontSize: '0.6rem', 
-                                                    color: '#666',
-                                                    fontFamily: 'monospace',
-                                                    bgcolor: '#f5f5f5',
-                                                    px: 0.5,
-                                                    py: 0.2,
-                                                    borderRadius: 0.5
-                                                  }}>
-                                                    Audio: {chapter.assets?.audio ? 'EXISTS' : 'NULL'} | 
-                                                    Style: {chapter.voiceover_style || 'NONE'} |
-                                                    Generating: {generatingChapters ? 'YES' : 'NO'}
-                                                  </Typography>
-                                                </Box> */}
-
-                                                {/* Audio Player */}
-                                                {/* {chapter.assets?.audio && (
-                                                  <Box sx={{ px: 1.5, pb: 1 }}>
-                                                    <AudioPlayer
-                                                      audioUrl={chapter.assets.audio}
-                                                      title={`Chapter ${index + 1} Audio`}
-                                                      voiceStyle={chapter.voiceover_style}
-                                                    />
-                                                  </Box>
-                                                )} */}
-
-                                                {/* Voice Generation Status */}
-                                                {/* {!chapter.assets?.audio && generatingChapters && (
-                                                  <Box sx={{ px: 1.5, pb: 1 }}>
-                                                    <Box sx={{ 
-                                                      display: 'flex', 
-                                                      alignItems: 'center', 
-                                                      gap: 1,
-                                                      p: 1,
-                                                      bgcolor: '#e3f2fd',
-                                                      borderRadius: 1,
-                                                      border: '1px solid #bbdefb'
-                                                    }}>
-                                                      <CircularProgress size={12} />
-                                                      <Typography variant="caption" sx={{ fontSize: '0.65rem', color: '#1976d2' }}>
-                                                        Generating voice: {chapter.voiceover_style || 'conversational'}
-                                                      </Typography>
-                                                    </Box>
-                                                  </Box>
-                                                )} */}
-
-                                                {/* No Audio Message */}
-                                                {/* {!chapter.assets?.audio && !generatingChapters && (
-                                                  <Box sx={{ px: 1.5, pb: 1 }}>
-                                                    <Typography variant="caption" sx={{ 
-                                                      fontSize: '0.65rem', 
-                                                      color: '#ff9800',
-                                                      fontStyle: 'italic'
-                                                    }}>
-                                                      No audio generated. Style: {chapter.voiceover_style || 'None'}
-                                                    </Typography>
-                                                  </Box>
-                                                )} */}
                                               </Box>
 
                                               {/* Media Section - 50% */}
                                               <Box sx={{
-                                                flex: '1 1 50%',
+                                                flex: '0 0 30%',
                                                 px: 1.5,
                                                 py: 1,
                                                 height: '100%',
                                                 maxHeight: '120px',
                                                 overflow: 'auto',
-                                                bgcolor: '#fafafa',
-                                                borderLeft: '1px solid #f0f0f0'
+                                                bgcolor: 'background.default',
+                                                borderLeft: '1px solid',
+                                                borderLeftColor: 'divider'
                                               }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#999', fontSize: '0.65rem' }}>
+                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.65rem' }}>
                                                     📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.image ? 1 : 0)})
                                                   </Typography>
                                                   <Button
@@ -381,11 +322,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       py: 0.2,
                                                       px: 0.6,
                                                       minHeight: 'auto',
-                                                      borderColor: '#1976d2',
-                                                      color: '#1976d2',
+                                                      borderColor: 'primary.main',
+                                                      color: 'primary.main',
                                                       '&:hover': {
-                                                        borderColor: '#1565c0',
-                                                        bgcolor: 'rgba(25, 118, 210, 0.04)'
+                                                        borderColor: 'primary.dark',
+                                                        bgcolor: 'action.hover'
                                                       }
                                                     }}
                                                     onClick={(e) => {
@@ -441,11 +382,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               position: 'absolute',
                                                               top: 2,
                                                               right: 2,
-                                                              bgcolor: 'rgba(255,255,255,0.9)',
+                                                              bgcolor: 'background.paper',
                                                               width: 14,
                                                               height: 14,
                                                               minWidth: 14,
-                                                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                                                              '&:hover': { bgcolor: 'background.paper' }
                                                             }}
                                                             onClick={(e) => {
                                                               e.stopPropagation();
@@ -529,11 +470,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               position: 'absolute',
                                                               top: 2,
                                                               right: 2,
-                                                              bgcolor: 'rgba(255,255,255,0.9)',
+                                                              bgcolor: 'background.paper',
                                                               width: 14,
                                                               height: 14,
                                                               minWidth: 14,
-                                                              '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                                                              '&:hover': { bgcolor: 'background.paper' }
                                                             }}
                                                             onClick={(e) => {
                                                               e.stopPropagation();
@@ -581,11 +522,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   </>
                                                 ) : (
                                                   <Box sx={{
-                                                    border: '1px dashed #ddd',
+                                                    border: '1px dashed',
+                                                    borderColor: 'divider',
                                                     borderRadius: 1,
                                                     p: 1,
                                                     textAlign: 'center',
-                                                    bgcolor: '#f9f9f9',
+                                                    bgcolor: 'background.default',
                                                     cursor: generatingChapters ? 'default' : 'pointer',
                                                     minHeight: '60px',
                                                     display: 'flex',
@@ -604,12 +546,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     {generatingChapters ? (
                                                       <>
                                                         <CircularProgress size={16} sx={{ mb: 0.5 }} />
-                                                        <Typography variant="caption" sx={{ color: '#666', fontSize: '0.6rem' }}>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
                                                           Generating AI image...
                                                         </Typography>
                                                       </>
                                                     ) : (
-                                                      <Typography variant="caption" sx={{ color: '#999', fontSize: '0.6rem' }}>
+                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
                                                         Click to add media
                                                       </Typography>
                                                     )}
@@ -793,7 +735,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         maxWidth="lg"
         fullWidth
         PaperProps={{
-          sx: { minHeight: '600px' }
+          sx: { minHeight: '600px', bgcolor: 'background.paper' }
         }}
       >
         <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -817,9 +759,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
             {/* Media Management Tabs */}
             <Box sx={{ flex: 1 }}>
-              <Tabs value={rightTabIndex} onChange={(_, v) => onRightTabChange(v)} variant="fullWidth" sx={{ borderBottom: '1px solid #e0e0e0' }}>
-                <Tab label="Stock Media" />
-                <Tab label="AI Generation" />
+              <Tabs value={rightTabIndex} onChange={(_, v) => onRightTabChange(v)} variant="fullWidth" sx={{ borderBottom: '1px solid', borderColor: 'divider', '& .MuiTab-root': { textTransform: 'none' } }}>
+                <Tab label="Google Images" />
+                <Tab label="Envato Images" />
               </Tabs>
 
               <Box sx={{ height: 'calc(100% - 48px)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -871,12 +813,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                           justifyContent: 'center',
                           cursor: 'pointer',
                           textAlign: 'center',
-                          border: '2px dashed #e0e0e0',
+                          border: '2px dashed',
+                          borderColor: 'divider',
                           borderRadius: 2,
-                          backgroundColor: 'rgba(249, 250, 251, 1)',
+                          backgroundColor: 'background.default',
                           '&:hover': {
-                            borderColor: '#5b76ff',
-                            backgroundColor: 'rgba(91,118,255,0.04)'
+                            borderColor: 'primary.main',
+                            backgroundColor: 'action.hover'
                           },
                           transition: 'all 0.2s ease',
                           py: 6
@@ -897,7 +840,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                             <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: '0.9rem', color: '#374151' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: '0.9rem', color: 'text.primary' }}>
                           No Media Added Yet
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, lineHeight: 1.5 }}>
@@ -949,15 +892,16 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                             overflow: 'hidden',
                             width: 80,
                             aspectRatio: '1 / 1',
-                            border: '2px dashed #cbd5e1',
+                            border: '2px dashed',
+                            borderColor: 'divider',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            backgroundColor: 'rgba(249, 250, 251, 1)',
+                            backgroundColor: 'background.default',
                             '&:hover': {
-                              borderColor: '#5b76ff',
-                              backgroundColor: 'rgba(91,118,255,0.04)'
+                              borderColor: 'primary.main',
+                              backgroundColor: 'action.hover'
                             },
                             transition: 'all 0.2s ease'
                           }}
@@ -978,7 +922,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             </Box>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: '#374151', fontSize: '0.6rem' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.6rem' }}>
                               Add
                             </Typography>
                           </Box>
@@ -1003,10 +947,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 position: 'absolute',
                                 top: 2,
                                 right: 2,
-                                bgcolor: 'rgba(255,255,255,0.9)',
+                                bgcolor: 'background.paper',
                                 width: 18,
                                 height: 18,
-                                '&:hover': { bgcolor: 'rgba(255,255,255,1)' },
+                                '&:hover': { bgcolor: 'background.paper' },
                                 transition: 'all 0.2s ease'
                               }}
                               size="small"
@@ -1052,110 +996,16 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                           <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor" />
                         </svg>
                       </Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, fontSize: '1rem', color: '#2d3748' }}>
-                        AI Image Generator
+                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, fontSize: '1rem', color: 'text.primary' }}>
+                        Envato Generator
                       </Typography>
-                      <Typography variant="body2" sx={{ color: '#718096', fontSize: '0.9rem' }}>
-                        Describe your vision and watch AI bring it to life
+                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
+                        Describe your vision and watch Envato Images bring it to life
                       </Typography>
                     </Box>
 
-                    {/* Input Section - Takes available space */}
-                    <Box sx={{ flex: 1, px: 2.5, display: 'flex', flexDirection: 'column' }}>
-                      <TextField
-                        value={aiPrompt}
-                        onChange={(e) => onAIPromptChange(e.target.value)}
-                        multiline
-                        minRows={3}
-                        maxRows={4}
-                        placeholder="E.g., A majestic mountain landscape at sunset with golden clouds..."
-                        variant="outlined"
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: 3,
-                            backgroundColor: '#f7fafc',
-                            '& fieldset': {
-                              border: '2px solid #e2e8f0',
-                            },
-                            '&:hover fieldset': {
-                              border: '2px solid #cbd5e0',
-                            },
-                            '&.Mui-focused fieldset': {
-                              border: '2px solid #667eea',
-                              boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)'
-                            }
-                          },
-                          '& .MuiOutlinedInput-input': {
-                            padding: '14px',
-                            fontSize: '0.9rem',
-                            lineHeight: 1.4
-                          }
-                        }}
-                      />
-                    </Box>
 
-                    {/* Action Buttons - Sticky at absolute bottom */}
-                    <Box sx={{ p: 2.5, pt: 2, mt: 'auto' }}>
-                      <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
-                          variant="outlined"
-                          fullWidth
-                          onClick={() => onAIPromptChange('')}
-                          sx={{
-                            flex: 1,
-                            borderRadius: 3,
-                            py: 1.4,
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
-                            textTransform: 'none',
-                            borderColor: '#e2e8f0',
-                            color: '#4a5568',
-                            '&:hover': {
-                              borderColor: '#cbd5e0',
-                              backgroundColor: '#f7fafc'
-                            }
-                          }}
-                        >
-                          Clear
-                        </Button>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          onClick={onGenerateImages}
-                          disabled={imagesLoading || !aiPrompt.trim()}
-                          sx={{
-                            flex: 2,
-                            borderRadius: 3,
-                            py: 1.4,
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                            textTransform: 'none',
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            boxShadow: '0 3px 12px rgba(102, 126, 234, 0.4)',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.5)',
-                              transform: 'translateY(-1px)'
-                            },
-                            '&:disabled': {
-                              background: '#e2e8f0',
-                              color: '#a0aec0',
-                              boxShadow: 'none'
-                            },
-                            transition: 'all 0.2s ease'
-                          }}
-                          startIcon={imagesLoading ? (
-                            <CircularProgress size={16} sx={{ color: '#fff' }} />
-                          ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z" />
-                            </svg>
-                          )}
-                        >
-                          {imagesLoading ? 'Creating Magic...' : 'Generate Image'}
-                        </Button>
-                      </Box>
-                    </Box>
+                  
                   </Box>
                 )}
 
@@ -1174,7 +1024,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.text]).map((text, idx) => (
-                <Box key={idx} sx={{ p: 1.5, border: '1px solid #e0e0e0', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: '#1DA1F2', backgroundColor: 'rgba(29,161,242,0.02)' } }}
+                <Box key={idx} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' } }}
                   onClick={() => {
                     if (pickerChapterIndex === null) return;
                     const updated = [...chapters];

@@ -382,7 +382,7 @@ export class HelperFunctions {
    */
   static getFontFamilyForLanguage(language: string): string {
     const lang = (language || '').toLowerCase();
-    if (lang.includes('urdu')) {
+    if (lang.includes('urdu') || lang.includes('balochi') || lang.includes('punjabi')) {
       return `'Noto Nastaliq Urdu', 'Arial Unicode MS', sans-serif`;
     }
     if (lang.includes('arabic')) {

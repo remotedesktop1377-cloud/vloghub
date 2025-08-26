@@ -4,35 +4,54 @@ import CssBaseline from '@mui/material/CssBaseline'
 import Layout from '../src/components/Layout/Layout'
 import Head from 'next/head'
 import { fontVariablesClass, fontStacks } from '../src/styles/fonts'
+import React, { useEffect, useMemo, useState, createContext } from 'react'
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-  typography: {
-    fontSize: 15,
-    fontFamily: fontStacks.inter,
-    h1: { fontFamily: fontStacks.poppins },
-    h2: { fontFamily: fontStacks.poppins },
-    h3: { fontFamily: fontStacks.poppins },
-    h4: { fontFamily: fontStacks.montserrat },
-    h5: { fontFamily: fontStacks.montserrat },
-    h6: { fontFamily: fontStacks.montserrat },
-    subtitle1: { fontFamily: fontStacks.manrope },
-    subtitle2: { fontFamily: fontStacks.manrope },
-    button: { fontFamily: fontStacks.inter },
-    caption: { fontFamily: fontStacks.manrope },
-    overline: { fontFamily: fontStacks.manrope },
-  },
-})
+export const ColorModeContext = createContext<{ mode: 'light' | 'dark'; toggle: () => void }>({ mode: 'dark', toggle: () => {} })
 
 export default function App({ Component, pageProps }: AppProps) {
+  const [mode, setMode] = useState<'light' | 'dark'>('dark')
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('color-mode') as 'light' | 'dark' | null
+      if (saved === 'light' || saved === 'dark') setMode(saved)
+    } catch {}
+  }, [])
+
+  const colorMode = useMemo(() => ({
+    mode,
+    toggle: () => {
+      setMode(prev => {
+        const next = prev === 'light' ? 'dark' : 'light'
+        try { localStorage.setItem('color-mode', next) } catch {}
+        return next
+      })
+    }
+  }), [mode])
+
+  const theme = useMemo(() => createTheme({
+    palette: {
+      mode,
+      primary: { main: '#1976d2' },
+      secondary: { main: '#dc004e' },
+      ...(mode === 'dark' ? { background: { default: '#000C21', paper: '#000C21' } } : {})
+    },
+    typography: {
+      fontSize: 15,
+      fontFamily: fontStacks.inter,
+      h1: { fontFamily: fontStacks.poppins },
+      h2: { fontFamily: fontStacks.poppins },
+      h3: { fontFamily: fontStacks.poppins },
+      h4: { fontFamily: fontStacks.montserrat },
+      h5: { fontFamily: fontStacks.montserrat },
+      h6: { fontFamily: fontStacks.montserrat },
+      subtitle1: { fontFamily: fontStacks.manrope },
+      subtitle2: { fontFamily: fontStacks.manrope },
+      button: { fontFamily: fontStacks.inter },
+      caption: { fontFamily: fontStacks.manrope },
+      overline: { fontFamily: fontStacks.manrope },
+    },
+  }), [mode])
   return (
     <div className={fontVariablesClass}>
       <Head>
@@ -56,7 +75,7 @@ export default function App({ Component, pageProps }: AppProps) {
           
           /* Urdu and Arabic font support */
           .rtl-text {
-            font-family: 'Noto Nastaliq Urdu', 'Noto Sans Arabic', 'Arial Unicode MS', sans-serif;
+            font-family: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic', 'Arial Unicode MS', sans-serif;
             direction: rtl;
             text-align: right;
             unicode-bidi: bidi-override;
@@ -74,12 +93,14 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         `}</style>
       </Head>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
-      </ThemeProvider>
+      <ColorModeContext.Provider value={colorMode}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Layout>
+            <Component {...pageProps} />
+          </Layout>
+        </ThemeProvider>
+      </ColorModeContext.Provider>
     </div>
   )
 }

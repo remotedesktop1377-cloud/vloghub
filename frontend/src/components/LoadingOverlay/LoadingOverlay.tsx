@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import styles from './LoadingOverlay.module.css';
 
 interface LoadingOverlayProps {
@@ -50,6 +51,10 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
       onTouchStart={(e) => e.preventDefault()} // Prevent touch events
       onTouchMove={(e) => e.preventDefault()} // Prevent touch events
       onTouchEnd={(e) => e.preventDefault()} // Prevent touch events
+      sx={(theme: Theme) => ({
+        '--overlay-bg': theme.palette.mode === 'dark' ? theme.palette.background.paper : '#ffffff',
+        '--overlay-fg': theme.palette.mode === 'dark' ? theme.palette.text.primary : '#111111',
+      }) as any}
     >
       <Box className={styles.loadingCard}>
         <CircularProgress
@@ -60,6 +65,7 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
           variant="h6"
           gutterBottom
           className={styles.loadingTitle}
+          color="text.primary"
         >
           {getLoadingTitle()}
         </Typography>

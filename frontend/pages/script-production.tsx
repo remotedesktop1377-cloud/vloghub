@@ -123,7 +123,7 @@ const ScriptProductionPage: React.FC = () => {
         // Load only from localStorage
         const stored = localStorage.getItem('approvedScript');
         const storedMeta = localStorage.getItem('scriptMetadata');
-        
+
         if (stored) {
             try {
                 const storedData = JSON.parse(stored);
@@ -147,12 +147,12 @@ const ScriptProductionPage: React.FC = () => {
         if (scriptData?.script) {
             setOriginalDuration(scriptData.duration);
             setEstimatedDuration(calculateDuration(scriptData.script));
-            
+
             // Defer heavy paragraph processing to avoid blocking initial render
             setTimeout(() => {
                 updateParagraphs(scriptData.script);
             }, 0);
-            
+
             setScriptModified(false); // Reset to false on initial load
         }
     }, [scriptData, scriptData?.duration]);
@@ -640,13 +640,14 @@ const ScriptProductionPage: React.FC = () => {
 
                     {/* Script Title in Bold */}
                     {scriptData.title && (
-                        <Box sx={{ mb: 3, textAlign: 'center' }}>
+                        <Box sx={{ mb: 2, textAlign: 'center' }}>
                             <Typography
-                                variant="h4"
+                                variant="h5"
                                 sx={{
                                     fontWeight: 700,
                                     color: 'primary.main',
                                     mb: 2,
+                                    lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7,
                                     fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language),
                                     ...HelperFunctions.getDirectionSx(scriptData.language)
                                 }}
@@ -658,121 +659,119 @@ const ScriptProductionPage: React.FC = () => {
                     )}
 
                     {/* Script Components Breakdown */}
-                    {(scriptData.hook || scriptData.mainContent || scriptData.conclusion || scriptData.callToAction) && (
-                        <Paper sx={{ p: 3, mb: 3 }}>
-                            <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                                📋 Script Chapters Breakdown
-                            </Typography>
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
+                            📋 Script Chapters Breakdown
+                        </Typography>
 
-                            {scriptData.hook && (
-                                <Box sx={{ mb: 3 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.main' }}>
-                                            🎯 Hook
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {(() => {
-                                                const words = scriptData.hook.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                                const duration = calculateParagraphDuration(words);
-                                                return (
-                                                    <>
-                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                    </>
-                                                );
-                                            })()}
-                                        </Box>
+                        {scriptData.hook && (
+                            <Box sx={{ mb: 3 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.main' }}>
+                                        🎯 Hook
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, }}>
+                                        {(() => {
+                                            const words = scriptData.hook.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                            const duration = calculateParagraphDuration(words);
+                                            return (
+                                                <>
+                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                </>
+                                            );
+                                        })()}
                                     </Box>
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0f8f0', border: '1px solid #4caf50' }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                            {scriptData.hook}
-                                        </Typography>
-                                    </Paper>
                                 </Box>
-                            )}
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #4caf50' }}>
+                                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
+                                        {scriptData.hook}
+                                    </Typography>
+                                </Paper>
+                            </Box>
+                        )}
 
-                            {scriptData.mainContent && (
-                                <Box sx={{ mb: 3 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'info.main' }}>
-                                            📝 Main Content
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {(() => {
-                                                const words = scriptData.mainContent.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                                const duration = calculateParagraphDuration(words);
-                                                return (
-                                                    <>
-                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                    </>
-                                                );
-                                            })()}
-                                        </Box>
+                        {scriptData.mainContent && (
+                            <Box sx={{ mb: 3 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'info.main' }}>
+                                        📝 Main Content
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {(() => {
+                                            const words = scriptData.mainContent.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                            const duration = calculateParagraphDuration(words);
+                                            return (
+                                                <>
+                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                </>
+                                            );
+                                        })()}
                                     </Box>
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: '#f0f8ff', border: '1px solid #2196f3' }}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                            {scriptData.mainContent}
-                                        </Typography>
-                                    </Paper>
                                 </Box>
-                            )}
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #2196f3' }}>
+                                    <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
+                                        {scriptData.mainContent}
+                                    </Typography>
+                                </Paper>
+                            </Box>
+                        )}
 
-                            {scriptData.conclusion && (
-                                <Box sx={{ mb: 3 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'warning.main' }}>
-                                            🎬 Conclusion
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {(() => {
-                                                const words = scriptData.conclusion.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                                const duration = calculateParagraphDuration(words);
-                                                return (
-                                                    <>
-                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                    </>
-                                                );
-                                            })()}
-                                        </Box>
+                        {scriptData.conclusion && (
+                            <Box sx={{ mb: 3 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'warning.main' }}>
+                                        🎬 Conclusion
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {(() => {
+                                            const words = scriptData.conclusion.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                            const duration = calculateParagraphDuration(words);
+                                            return (
+                                                <>
+                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                </>
+                                            );
+                                        })()}
                                     </Box>
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: '#fff8f0', border: '1px solid #ff9800' }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                            {scriptData.conclusion}
-                                        </Typography>
-                                    </Paper>
                                 </Box>
-                            )}
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #ff9800' }}>
+                                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
+                                        {scriptData.conclusion}
+                                    </Typography>
+                                </Paper>
+                            </Box>
+                        )}
 
-                            {scriptData.callToAction && (
-                                <Box sx={{ mb: 3 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'secondary.main' }}>
-                                            📢 Call to Action
-                                        </Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            {(() => {
-                                                const words = scriptData.callToAction.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                                const duration = calculateParagraphDuration(words);
-                                                return (
-                                                    <>
-                                                        <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                        <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                    </>
-                                                );
-                                            })()}
-                                        </Box>
+                        {scriptData.callToAction && (
+                            <Box sx={{ mb: 3 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'secondary.main' }}>
+                                        📢 Call to Action
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {(() => {
+                                            const words = scriptData.callToAction.trim().split(/\s+/).filter(w => w.length > 0).length;
+                                            const duration = calculateParagraphDuration(words);
+                                            return (
+                                                <>
+                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
+                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
+                                                </>
+                                            );
+                                        })()}
                                     </Box>
-                                    <Paper elevation={0} sx={{ p: 2, bgcolor: '#f8f0ff', border: '1px solid #9c27b0' }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                            {scriptData.callToAction}
-                                        </Typography>
-                                    </Paper>
                                 </Box>
-                            )}
-                        </Paper>
-                    )}
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #9c27b0' }}>
+                                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
+                                        {scriptData.callToAction}
+                                    </Typography>
+                                </Paper>
+                            </Box>
+                        )}
+                    </Paper>
 
                     {/* Chapters Section */}
                     {chapters.length > 0 && (

@@ -229,7 +229,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
       PaperProps={{
         sx: {
           height: '95vh',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          bgcolor: 'background.paper'
         }
       }}
     >
@@ -278,8 +279,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
             {isEditingScript ? (
               <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {/* Hook Section */}
-                <Paper elevation={2} sx={{ p: 1, bgcolor: '#e3f2fd', border: '1px solid #2196f3', borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#1976d2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Paper elevation={2} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: 'primary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                     🎯 HOOK
                   </Typography>
                   <TextField
@@ -302,8 +303,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
                 </Paper>
 
                 {/* Main Content Section */}
-                <Paper elevation={2} sx={{ p: 1, bgcolor: '#f3e5f5', border: '1px solid #9c27b0', borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#7b1fa2', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Paper elevation={2} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: 'secondary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                     📝 MAIN CONTENT
                   </Typography>
                   <TextField
@@ -326,8 +327,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
                 </Paper>
 
                 {/* Conclusion Section */}
-                <Paper elevation={2} sx={{ p: 1, bgcolor: '#e8f5e8', border: '1px solid #4caf50', borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#388e3c', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Paper elevation={2} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: 'success.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                     🏁 CONCLUSION
                   </Typography>
                   <TextField
@@ -350,8 +351,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
                 </Paper>
 
                 {/* Call to Action Section */}
-                <Paper elevation={2} sx={{ p: 1, bgcolor: '#fff8e1', border: '1px solid #ff9800', borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ mb: 1, color: '#f57c00', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Paper elevation={2} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: 'warning.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
                     🚀 CALL TO ACTION
                   </Typography>
                   <TextField
@@ -383,8 +384,9 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
                 elevation={2}
                 sx={{
                   p: 1,
-                  bgcolor: '#f8f9fa',
-                  border: '1px solid #e9ecef',
+                  bgcolor: 'background.default',
+                  border: '1px solid',
+                  borderColor: 'divider',
                   borderRadius: 2,
                   flex: 1,
                   overflow: 'auto',
@@ -410,7 +412,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
 
       </DialogContent>
 
-      <DialogActions sx={{ p: 1, bgcolor: '#f8f9fa', gap: 4, justifyContent: 'space-between' }}>
+      <DialogActions sx={{ p: 1, bgcolor: 'background.default', gap: 4, justifyContent: 'space-between' }}>
         {/* Left side - Edit Script button when not editing, Save/Cancel buttons when editing */}
         <Box sx={{ display: 'flex', gap: 1 }}>
           {!isEditingScript ? (
@@ -473,8 +475,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
               py: 1,
               px: 2,
               fontSize: '1.05rem',
-              bgcolor: '#4caf50',
-              '&:hover': { bgcolor: '#388e3c' }
+              bgcolor: 'success.main',
+              '&:hover': { bgcolor: 'success.dark' }
             }}
             startIcon={<CheckIcon />}
           >

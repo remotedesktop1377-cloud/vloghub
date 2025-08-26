@@ -68,9 +68,9 @@ const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
         <Typography id="confirm-dialog-description">
           Select one of the enhanced options below:
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        {/* <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Original: "{originalText}"
-        </Typography>
+        </Typography> */}
         <Box sx={{ mt: 2 }}>
           {enhancedOptions.map((option, index) => (
             <Box
