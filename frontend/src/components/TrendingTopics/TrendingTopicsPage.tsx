@@ -256,10 +256,7 @@ const TrendingTopics: React.FC = () => {
           : (Array.isArray(result.data?.suggestions) ? result.data.suggestions : []);
         setTopicSuggestions(suggestions || []);
 
-        // Automatically fetch hypothesis suggestions when topic suggestions are updated
-        if (suggestions && suggestions.length > 0 && selectedTopic) {
-          autoFetchHypothesisSuggestions();
-        }
+        // Do not auto-fetch hypothesis here; wait until user selects at least one topic suggestion
 
       } else {
         console.error('Failed to fetch topic suggestions:', result.error);
@@ -267,10 +264,7 @@ const TrendingTopics: React.FC = () => {
         const fallback = HelperFunctions.generateFallbackTopicSuggestions(topicName, selectedRegion);
         setTopicSuggestions(fallback);
 
-        // Automatically fetch hypothesis suggestions when fallback suggestions are set
-        if (fallback && fallback.length > 0 && selectedTopic) {
-          autoFetchHypothesisSuggestions();
-        }
+        // Do not auto-fetch hypothesis here; wait until user selects at least one topic suggestion
 
       }
     } catch (err) {
@@ -279,31 +273,30 @@ const TrendingTopics: React.FC = () => {
       const fallback = HelperFunctions.generateFallbackTopicSuggestions(topicName, selectedRegion);
       setTopicSuggestions(fallback);
 
-      // Automatically fetch hypothesis suggestions when fallback suggestions are set
-      if (fallback && fallback.length > 0 && selectedTopic) {
-        autoFetchHypothesisSuggestions();
-      }
+      // Do not auto-fetch hypothesis here; wait until user selects at least one topic suggestion
 
     } finally {
       setLoadingTopicSuggestions(false);
     }
   };
 
-  const fetchHypothesisSuggestions = async () => {
+  const fetchHypothesisSuggestions = async (currentSelected?: string[]) => {
     if (USE_HARDCODED) return;
     if (!selectedTopic) return;
     if (loadingTopicSuggestions) return;
+    const selectedCount = (currentSelected ?? selectedTopicSuggestions).length;
+    if (selectedCount === 0) return; // require at least one selected topic suggestion
     try {
 
       setLoadingHypothesisSuggestions(true);
 
       // Create enhanced details that include selected topic suggestions
       let enhancedDetails = selectedTopicDetails;
-      if (selectedTopicSuggestions.length > 0) {
-        enhancedDetails = `${selectedTopicDetails}\n\nSelected Topic Suggestions:\n${selectedTopicSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).join('\n')}`;
+      if (selectedCount > 0) {
+        enhancedDetails = `${selectedTopicDetails}\n\nSelected Topic Suggestions:\n${(currentSelected ?? selectedTopicSuggestions).map((suggestion, index) => `${index + 1}. ${suggestion}`).join('\n')}`;
 
         // Show toast notification that hypothesis is being generated based on topic suggestions
-        toast.info(`🔄 Generating hypothesis suggestions based on ${selectedTopicSuggestions.length} selected topic suggestion${selectedTopicSuggestions.length !== 1 ? 's' : ''}...`);
+        toast.info(`🔄 Generating hypothesis suggestions based on ${selectedCount} selected topic suggestion${selectedCount !== 1 ? 's' : ''}...`);
       }
 
       const result = await apiService.getHypothesisSuggestions({
@@ -335,24 +328,13 @@ const TrendingTopics: React.FC = () => {
 
   // useEffect for fetching hypothesis suggestions when topic suggestions are updated
   useEffect(() => {
-    // Fetch hypothesis suggestions when topic suggestions change and we have a selected topic
-    if (!USE_HARDCODED && selectedTopic && !loadingTopicSuggestions && topicSuggestions.length > 0) {
-      autoFetchHypothesisSuggestions();
-    }
+    // Do not auto-fetch on topic suggestions fetch; wait for user selection
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicSuggestions, selectedTopic, selectedRegion]);
 
   // useEffect for fetching hypothesis suggestions when topic details are manually changed
   useEffect(() => {
-    // Fetch hypothesis suggestions when topic details are manually typed or changed
-    if (!USE_HARDCODED && selectedTopic && selectedTopicDetails.trim().length > 0 && !loadingTopicSuggestions) {
-      // Debounce the hypothesis suggestions fetch to avoid too many API calls
-      const timeoutId = setTimeout(() => {
-        autoFetchHypothesisSuggestions();
-      }, 500); // 500ms delay
-
-      return () => clearTimeout(timeoutId);
-    }
+    // Do not auto-fetch on topic details change; require explicit topic suggestion selection
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopicDetails, selectedTopic, selectedRegion]);
 
@@ -455,8 +437,7 @@ const TrendingTopics: React.FC = () => {
         }
       }
 
-      // Automatically fetch hypothesis suggestions when topic details are updated
-      autoFetchHypothesisSuggestions();
+      // Do not auto-fetch; wait for topic suggestion selection
     } else if (pendingField === 'hypothesis') {
       // Don't populate the hypothesis field - only update the suggestions list
       // The user should manually type in the hypothesis field if they want to
@@ -496,15 +477,15 @@ const TrendingTopics: React.FC = () => {
     setSelectedTopicSuggestions(suggestions);
     // Always fetch hypothesis suggestions when topic suggestions selection changes
     if (suggestions.length > 0 && selectedTopic) {
-      // If topic details are empty, use the first selected suggestion as topic details
-      // Fetch hypothesis suggestions when topic suggestions selection changes
-      autoFetchHypothesisSuggestions();
+      // If topic details are empty, use the first selected suggestion as topic details (optional behavior kept as comment)
+      // Immediately fetch hypothesis suggestions using current selection to avoid waiting for state batching
+      fetchHypothesisSuggestions(suggestions);
     }
   };
 
   // Function to automatically fetch hypothesis suggestions when topic suggestions are updated
   const autoFetchHypothesisSuggestions = () => {
-    if (!USE_HARDCODED && selectedTopic && topicSuggestions.length > 0) {
+    if (!USE_HARDCODED && selectedTopic && selectedTopicSuggestions.length > 0) {
       setTimeout(() => {
         fetchHypothesisSuggestions();
       }, 200); // Small delay to ensure state is updated
