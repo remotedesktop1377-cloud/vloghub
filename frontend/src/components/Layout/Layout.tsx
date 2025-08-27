@@ -4,12 +4,14 @@ import { useContext } from 'react';
 import { ColorModeContext } from '../../../pages/_app';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import { useRouter } from 'next/navigation';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const router = useRouter();
   const colorMode = useContext(ColorModeContext);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -103,6 +105,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     color: '#FFFFFF'
                   }
                 }}
+                onClick={() => {
+                  router.push('/trending-topics');
+                }}
               >
                 ✨ Generate Now
               </Button>
@@ -124,7 +129,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
         }}
       >
         {children}

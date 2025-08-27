@@ -17,7 +17,7 @@ const features: Feature[] = [
         id: "text-to-video",
         title: "Text-to-Video",
         description:
-            "Transform simple text into stunning videos effortlessly. Whether it's marketing, education, or storytelling, just describe your vision, and let Codecraft bring it to life",
+            "Transform simple text into stunning videos effortlessly. Whether it's marketing, education, or storytelling, just describe your vision, and let Vloghub bring it to life",
         isHighlighted: true,
         hasCta: true,
     },
@@ -49,88 +49,192 @@ const FeatureHighlights: React.FC = () => {
     };
 
     return (
-        <Box component="section" sx={{ width: "100%", py: { xs: 8, md: 12 }, bgcolor: "#060606" }}>
-            <Grid container spacing={{ xs: 4, md: 6 }} px={{ xs: 2, md: 8 }}>
-                <Grid item xs={12} md={5}>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                        <Typography
-                            sx={{
-                                fontSize: { xs: 36, md: 56 },
-                                lineHeight: 1.05,
-                                color: "#FFFFFF",
-                                letterSpacing: "-0.04em",
-                            }}
-                        >
-                            Why Choose VlogHub?
-                        </Typography>
-                        <Typography sx={{ color: "#7C7C7C", fontSize: { xs: 16, md: 18 } }}>
-                            Empowering creators with speed, flexibility, and creative precision.
-                        </Typography>
-                        <Box sx={{
-                            display: "inline-flex", alignItems: "center", gap: 1, p: 0.5, borderRadius: 50,
-                        }}>
-
-                            <Button
-                                variant="outlined"
+        <Box
+            component="section"
+            sx={{
+                width: "100%",
+                py: { xs: 8, md: 12 },
+                bgcolor: "#060606"
+            }}
+        >
+            <Grid
+                container
+                spacing={{ xs: 4, md: 6 }}
+                sx={{ px: { xs: 2, md: 8 } }}
+            >
+                <Grid item xs={12} md={6}>
+                    {/* Left Column */}
+                    <Box
+                        sx={{
+                            width: "420px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            gap: 10,
+                            transform: "translateY(-1rem)",
+                            ml: 5,
+                            // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
+                        }}
+                    >
+                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 5, width: "100%" }}>
+                            <Typography
+                                variant="h2"
                                 sx={{
-                                    marginTop: 2,
-                                    fontSize: { xs: '14px', md: '16px' },
-                                    fontWeight: 400,
-                                    borderRadius: '50px',
-                                    height: 'auto',
-                                    bgcolor: '#ffffff',
-                                    color: '#6C38F3',
-                                    textTransform: 'none',
-                                    '&:hover': {
-                                        bgcolor: 'rgba(255,255,255,0.8)'
-                                    }
+                                    fontFamily: "Plus Jakarta Sans, Helvetica",
+                                    fontWeight: 500,
+                                    color: "white",
+                                    fontSize: "56px",
+                                    letterSpacing: "-1.68px",
+                                    lineHeight: "56px",
                                 }}
                             >
-                                Learn about VlogHub
-                            </Button>
+                                Why Choose Vloghub?
+                            </Typography>
 
+                            <Typography
+                                sx={{
+                                    fontFamily: "Plus Jakarta Sans, Helvetica",
+                                    fontWeight: 400,
+                                    color: "#7c7c7c",
+                                    fontSize: "18px",
+                                    letterSpacing: 0,
+                                    lineHeight: "21.6px",
+                                }}
+                            >
+                                Empowering creators with speed, flexibility, and creative precision.
+                            </Typography>
+                        </Box>
+
+                        <Box
+                            sx={{
+                                display: "inline-flex",
+                                flexDirection: "column",
+                                alignItems: "flex-start",
+                                gap: 2.5,
+                                p: 1,
+                                borderRadius: "300px",
+                                boxShadow: "0px 1px 3px #6c39f41a, 0px 5px 5px #6c39f417, 0px 12px 7px #6c39f40d, 0px 20px 8px #6c39f403, 0px 32px 9px transparent",
+                                background: "radial-gradient(50% 50% at 50% 50%, rgba(198,172,253,0.3) 0%, rgba(108,56,243,0.3) 100%)",
+                            }}
+                        >
+                            <Button
+                                sx={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                    px: 4,
+                                    py: 2,
+                                    bgcolor: "white",
+                                    borderRadius: "300px",
+                                    height: "auto",
+                                    "&:hover": { bgcolor: "#f9fafb" },
+                                    transition: "background-color 0.2s ease",
+                                    textTransform: "none",
+                                }}
+                            >
+                                <Typography
+                                    sx={{
+                                        background: "radial-gradient(50% 50% at 50% 50%, rgba(198,172,253,1) 0%, rgba(108,56,243,1) 100%)",
+                                        WebkitBackgroundClip: "text",
+                                        backgroundClip: "text",
+                                        WebkitTextFillColor: "transparent",
+                                        fontFamily: "Plus Jakarta Sans, Helvetica",
+                                        fontWeight: 500,
+                                        fontSize: "20px",
+                                        letterSpacing: "-0.60px",
+                                        lineHeight: "28px",
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
+                                    Learn about Vloghub
+                                </Typography>
+                            </Button>
                         </Box>
                     </Box>
                 </Grid>
-                <Grid item xs={12} md={7}>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 3, position: "relative", pl: "44px" }}>
+                <Grid item xs={12} md={6}>
+                    <Box sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 3,
+                        position: "relative",
+                    }}>
                         {/* Separated vertical rail 44px to the left of cards */}
-                        <Box sx={{ position: "absolute", left: 12, top: 0, bottom: 0, width: 2, background: "linear-gradient(180deg, rgba(139,92,246,0.35) 0%, rgba(59,130,246,0.35) 100%)" }} />
+                        <Box sx={{
+                            position: "absolute",
+                            left: -100,
+                            top: 0,
+                            bottom: 0,
+                            width: 2,
+                            background: "linear-gradient(180deg, rgba(139,92,246,0.35) 0%, rgba(59,130,246,0.35) 100%)"
+                        }} />
                         {features.map((feature, index) => {
                             const isActive = activeId === feature.id;
                             return (
                                 <Box key={feature.id} sx={{ position: "relative" }}>
                                     {/* Icon on the external rail */}
                                     <Box sx={{
-                                        position: "absolute", left: -48, top: 0, width: 32, height: 32, borderRadius: "60%",
+                                        position: "absolute",
+                                        left: -115,
+                                        top: 0,
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: "60%",
                                         background: isActive
                                             ? "radial-gradient(circle at 50% 50%, #C6ACFD 0%, #6C38F3 60%, #6C38F3 100%)"
                                             : "linear-gradient(180deg, #1c1c1c 0%, #111 100%)",
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                        boxShadow: isActive ? "0 0 20px rgba(124,58,237,0.6)" : "inset 0 0 0 1px rgba(139,92,246,0.25)", zIndex: 1
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        boxShadow: isActive ? "0 0 20px rgba(124,58,237,0.6)" : "inset 0 0 0 1px rgba(139,92,246,0.25)",
+                                        zIndex: 1
                                     }}>
-                                        <AutoAwesomeIcon fontSize="small" sx={{ color: isActive ? "#fff" : "#9E7BFF" }} />
+                                        <AutoAwesomeIcon
+                                            fontSize="small"
+                                            sx={{ color: isActive ? "#fff" : "#9E7BFF" }}
+                                        />
                                     </Box>
                                     {/* Connector to next icon */}
                                     {index < features.length - 1 && (
-                                        <Box sx={{ position: "absolute", left: -33, top: 52, bottom: -24, width: 2, background: "#252525" }} />
+                                        <Box sx={{
+                                            position: "absolute",
+                                            left: -100,
+                                            top: 52,
+                                            bottom: -24,
+                                            width: 2,
+                                            background: "#252525"
+                                        }} />
                                     )}
 
                                     <Card
                                         elevation={0}
                                         onClick={() => handleToggle(feature.id)}
                                         sx={{
-                                            position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 3,
+                                            position: "relative",
+                                            overflow: "hidden",
+                                            cursor: "pointer",
+                                            borderRadius: 3,
                                             border: isActive ? "none" : "1px solid rgba(255,255,255,0.08)",
                                             background: isActive
                                                 ? "radial-gradient(circle at 50% 50%, #C6ACFD 0%, #6C38F3 60%, #6C38F3 100%)"
                                                 : "#121212",
                                             transition: "transform 200ms ease, box-shadow 200ms ease, background 200ms ease",
-                                            '&:hover': { boxShadow: isActive ? "0 10px 30px rgba(124,58,237,0.35)" : "0 8px 24px rgba(0,0,0,0.4)" }
-                                        }}>
+                                            '&:hover': {
+                                                boxShadow: isActive ? "0 10px 30px rgba(124,58,237,0.35)" : "0 8px 24px rgba(0,0,0,0.4)"
+                                            }
+                                        }}
+                                    >
                                         <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                                <Typography sx={{ color: "#FFFFFF", fontSize: { xs: 22, md: 28 }, fontWeight: 600 }}>
+                                            <Box sx={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between"
+                                            }}>
+                                                <Typography sx={{
+                                                    color: "#FFFFFF",
+                                                    fontSize: { xs: 22, md: 28 },
+                                                    fontWeight: 600
+                                                }}>
                                                     {feature.title}
                                                 </Typography>
                                                 <IconButton size="small" sx={{ color: "#FFFFFF" }}>
@@ -149,7 +253,10 @@ const FeatureHighlights: React.FC = () => {
                                             {isActive && (
                                                 <>
                                                     <Box sx={{
-                                                        mt: 2, px: { xs: 2, md: 6 }, py: { xs: 3, md: 5 }, borderRadius: 3.5,
+                                                        mt: 2,
+                                                        px: { xs: 2, md: 6 },
+                                                        py: { xs: 3, md: 5 },
+                                                        borderRadius: 3.5,
                                                         background: "linear-gradient(180deg, rgba(37,37,37,1) 0%, rgba(18,18,18,1) 100%)",
                                                         boxShadow: "0 8px 24px rgba(0,0,0,0.35)"
                                                     }}>
@@ -179,28 +286,54 @@ const FeatureHighlights: React.FC = () => {
                                                                 <AutoAwesomeIcon sx={{ color: "#fff" }} />
                                                             </Box>
                                                         </Box>
-
-
                                                     </Box>
 
-                                                    <Button
-                                                        variant="outlined"
+                                                    <Box
                                                         sx={{
-                                                            marginTop: 3,
-                                                            fontSize: { xs: '14px', md: '16px' },
-                                                            fontWeight: 400,
-                                                            borderRadius: '50px',
-                                                            height: 'auto',
-                                                            bgcolor: '#ffffff',
-                                                            color: '#6C38F3',
-                                                            textTransform: 'none',
-                                                            '&:hover': {
-                                                                bgcolor: 'rgba(255,255,255,0.8)'
-                                                            }
+                                                            display: "inline-flex",
+                                                            flexDirection: "column",
+                                                            alignItems: "flex-start",
+                                                            gap: 2.5,
+                                                            p: 0.5,
+                                                            mt: 2,
+                                                            borderRadius: "300px",
+                                                            boxShadow: "0px 1px 3px #6c39f41a, 0px 5px 5px #6c39f417, 0px 12px 7px #6c39f40d, 0px 20px 8px #6c39f403, 0px 32px 9px transparent",
+                                                            background: "radial-gradient(50% 50% at 50% 50%, rgba(198,172,253,0.12) 0%, rgba(108,56,243,0.12) 100%)",
                                                         }}
                                                     >
-                                                        Learn More
-                                                    </Button>
+                                                        <Button
+                                                            sx={{
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                gap: 1,
+                                                                px: 4,
+                                                                py: 2,
+                                                                bgcolor: "white",
+                                                                borderRadius: "300px",
+                                                                height: "auto",
+                                                                "&:hover": { bgcolor: "#f9fafb" },
+                                                                transition: "background-color 0.2s ease",
+                                                                textTransform: "none",
+                                                            }}
+                                                        >
+                                                            <Typography
+                                                                sx={{
+                                                                    background: "radial-gradient(50% 50% at 50% 50%, rgba(198,172,253,1) 0%, rgba(108,56,243,1) 100%)",
+                                                                    WebkitBackgroundClip: "text",
+                                                                    backgroundClip: "text",
+                                                                    WebkitTextFillColor: "transparent",
+                                                                    fontFamily: "Plus Jakarta Sans, Helvetica",
+                                                                    fontWeight: 500,
+                                                                    fontSize: "14px",
+                                                                    letterSpacing: "-0.42px",
+                                                                    lineHeight: "24px",
+                                                                    whiteSpace: "nowrap",
+                                                                }}
+                                                            >
+                                                                Learn More
+                                                            </Typography>
+                                                        </Button>
+                                                    </Box>
                                                 </>
                                             )}
                                         </CardContent>

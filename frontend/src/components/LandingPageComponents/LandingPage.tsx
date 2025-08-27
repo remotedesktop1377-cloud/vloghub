@@ -1,14 +1,17 @@
 import React from "react";
 import { Box, Typography, Button, Container } from "@mui/material";
-import { FeaturesHighlightSection } from "../LandingPageComponents/FeaturesHighlightSection";
 import { TestimonialsSection } from "../LandingPageComponents/TestimonialsSection";
 import { CallToActionSection } from "../LandingPageComponents/CallToActionSection";
 import { VideoShowcaseSection } from "../LandingPageComponents/VideoShowcaseSection";
 import { NewsletterSubscriptionSection } from "../LandingPageComponents/NewsletterSubscriptionSection";
+import { HeroSection } from "../LandingPageComponents/HeroSection";
+import { TrustedBySection } from "../LandingPageComponents/TrustedBySection";
 import Image from "next/image";
 import FeatureHighlightsMUI from "./FeatureHighlights";
+import { useRouter } from "next/navigation";
 
 const LandingPage: React.FC = () => {
+    const router = useRouter();
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#060606', }}>
             {/* Hero Section */}
@@ -47,7 +50,7 @@ const LandingPage: React.FC = () => {
                         pt: 5
                     }}
                 >
-                    <Container maxWidth="lg" sx={{ mb: 4 }}>
+                    <Container maxWidth="lg" sx={{ mb: 4, mt: 3 }}>
                         <Typography
                             sx={{
                                 fontSize: { xs: '44px', md: '64px', color: '#fff' },
@@ -70,7 +73,7 @@ const LandingPage: React.FC = () => {
                                 fontWeight: 400
                             }}
                         >
-                            Codecraft: The AI-powered solution for effortless video creation.
+                            Vloghub: The AI-powered solution for effortless video creation.
                         </Typography>
 
                         <Box
@@ -91,6 +94,7 @@ const LandingPage: React.FC = () => {
                                     fontWeight: 600,
                                     borderRadius: '50px',
                                     height: 'auto',
+                                    textTransform: 'none',
                                     background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)',
                                     color: 'white',
                                     boxShadow: '0 0 40px rgba(124,58,237,0.35)',
@@ -98,28 +102,43 @@ const LandingPage: React.FC = () => {
                                         background: 'linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%)',
                                     }
                                 }}
+                                onClick={() => {
+                                    router.push('/trending-topics');
+                                }}
                             >
                                 ✨ Generate AI Video
                             </Button>
                             <Button
-                                variant="outlined"
                                 sx={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 1,
                                     px: 4,
                                     py: 2,
-                                    fontSize: { xs: '14px', md: '16px' },
-                                    fontWeight: 600,
-                                    borderRadius: '50px',
-                                    height: 'auto',
-                                    bgcolor: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    color: 'white',
-                                    textTransform: 'none',
-                                    '&:hover': {
-                                        bgcolor: 'rgba(255,255,255,0.1)'
-                                    }
+                                    bgcolor: "white",
+                                    borderRadius: "300px",
+                                    height: "auto",
+                                    "&:hover": { bgcolor: "#f9fafb" },
+                                    transition: "background-color 0.2s ease",
+                                    textTransform: "none",
                                 }}
                             >
-                                Learn about VlogHub
+                                <Typography
+                                    sx={{
+                                        background: "radial-gradient(50% 50% at 50% 50%, rgba(198,172,253,1) 0%, rgba(108,56,243,1) 100%)",
+                                        WebkitBackgroundClip: "text",
+                                        backgroundClip: "text",
+                                        WebkitTextFillColor: "transparent",
+                                        fontFamily: "Plus Jakarta Sans, Helvetica",
+                                        fontWeight: 500,
+                                        fontSize: "20px",
+                                        letterSpacing: "-0.60px",
+                                        lineHeight: "28px",
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
+                                    Learn about Vloghub
+                                </Typography>
                             </Button>
                         </Box>
 
@@ -168,7 +187,7 @@ const LandingPage: React.FC = () => {
                             pointerEvents: 'none',
                             position: 'absolute',
                             left: -20,
-                            top: '50px',
+                            top: '80px',
                             height: 240,
                             width: 288,
                             borderRadius: 6,
@@ -185,7 +204,7 @@ const LandingPage: React.FC = () => {
                             pointerEvents: 'none',
                             position: 'absolute',
                             right: -20,
-                            top: '150px',
+                            top: '190px',
                             height: 240,
                             width: 288,
                             borderRadius: 6,
@@ -200,20 +219,26 @@ const LandingPage: React.FC = () => {
                 </Box>
             </Box>
 
-            {/* Features Highlight Section */}
-            {/* <FeatureHighlightsMUI /> */}
+            {/* Hero Section */}
+            <HeroSection />
+
+            {/* Trusted By Section */}
+            <TrustedBySection />
 
             {/* Testimonials Section */}
-            {/* <TestimonialsSection /> */}
+            <TestimonialsSection />
 
             {/* Call to Action Section */}
-            {/* <CallToActionSection /> */}
+            <CallToActionSection />
+
+            {/* Features Highlight Section */}
+            <FeatureHighlightsMUI />
 
             {/* Video Showcase Section */}
-            {/* <VideoShowcaseSection /> */}
+            <VideoShowcaseSection />
 
             {/* Newsletter Subscription Section */}
-            {/* <NewsletterSubscriptionSection /> */}
+            <NewsletterSubscriptionSection />
         </Box>
     );
 };

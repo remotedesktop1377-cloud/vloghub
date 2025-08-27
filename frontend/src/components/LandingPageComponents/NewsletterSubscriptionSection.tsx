@@ -1,9 +1,9 @@
 import React from "react";
-import { Separator } from "../../components/ui/separator";
+import { Box, Typography, Divider, Link } from "@mui/material";
 
-export const NewsletterSubscriptionSection: React.FC = () =>  {
+export const NewsletterSubscriptionSection: React.FC = () => {
     const aboutLinks = [
-        "About Codecraft",
+        "About Vloghub",
         "Responsibility",
         "Research",
         "Technology",
@@ -16,79 +16,181 @@ export const NewsletterSubscriptionSection: React.FC = () =>  {
     ];
 
     return (
-        <footer className="flex flex-col items-center gap-10 pt-20 pb-[170px] px-[200px] w-full bg-[#121212] overflow-hidden">
+        <Box
+            component="footer"
+            sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 10,
+                pt: 20,
+                pb: "170px",
+                px: "200px",
+                width: "100%",
+                bgcolor: "#121212",
+                overflow: "hidden",
+                position: "relative",
+            }}
+        >
             {/* Follow Us Section */}
-            <div className="flex items-center justify-center gap-8 w-full translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:0ms]">
-                <div className="[font-family:'Plus_Jakarta_Sans',Helvetica] font-medium text-white text-lg tracking-[-0.36px] leading-[21.6px] whitespace-nowrap">
+            <Box
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                    width: "100%",
+                    transform: "translateY(-1rem)",
+                    // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
+                }}
+            >
+                <Typography
+                    sx={{
+                        fontFamily: "Plus Jakarta Sans, Helvetica",
+                        fontWeight: 500,
+                        color: "white",
+                        fontSize: "18px",
+                        letterSpacing: "-0.36px",
+                        lineHeight: "21.6px",
+                        whiteSpace: "nowrap",
+                    }}
+                >
                     Follow Us
-                </div>
+                </Typography>
 
-                <img
-                    className="flex-[0_0_auto]"
+                <Box
+                    component="img"
+                    sx={{ flex: "0 0 auto" }}
                     alt="Social media icons"
                     src="https://c.animaapp.com/metqtyo3gRfinE/img/frame-1000004725.svg"
                 />
-            </div>
+            </Box>
 
             {/* First Separator */}
-            <div className="w-[520px] translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:200ms]">
-                <Separator className="bg-gray-600" />
-            </div>
+            <Box
+                sx={{
+                    width: "520px",
+                    transform: "translateY(-1rem)",
+                    // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
+                }}
+            >
+                <Divider sx={{ bgcolor: "gray.600" }} />
+            </Box>
 
             {/* About Section */}
-            <section className="inline-flex flex-col items-center gap-4 translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:400ms]">
-                <h3 className="mt-[-1.00px] [font-family:'Plus_Jakarta_Sans',Helvetica] font-semibold text-white text-lg tracking-[-0.36px] leading-[21.6px] whitespace-nowrap">
-                    About
-                </h3>
-
-                <nav className="inline-flex items-start gap-6">
+            <Box
+                component="section"
+                sx={{
+                    display: "inline-flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 4,
+                    transform: "translateY(-1rem)",
+                    // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
+                }}
+            >
+                <Box
+                    component="nav"
+                    sx={{
+                        display: "inline-flex",
+                        alignItems: "flex-start",
+                        gap: 6,
+                    }}
+                >
                     {aboutLinks.map((link, index) => (
-                        <a
+                        <Link
                             key={index}
                             href="#"
-                            className="mt-[-1.00px] [font-family:'Plus_Jakarta_Sans',Helvetica] font-normal text-[#7c7c7c] text-base tracking-[0] leading-[19.2px] whitespace-nowrap hover:text-white transition-colors"
+                            sx={{
+                                fontFamily: "Plus Jakarta Sans, Helvetica",
+                                fontWeight: 400,
+                                color: "#7c7c7c",
+                                fontSize: "16px",
+                                letterSpacing: 0,
+                                lineHeight: "19.2px",
+                                whiteSpace: "nowrap",
+                                "&:hover": { color: "white" },
+                                transition: "color 0.2s ease",
+                                textDecoration: "none",
+                                mt: -0.25,
+                            }}
                         >
                             {link}
-                        </a>
+                        </Link>
                     ))}
-                </nav>
-            </section>
+                </Box>
+            </Box>
 
             {/* Second Separator */}
-            <div className="w-[520px] translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:600ms]">
-                <Separator className="bg-gray-600" />
-            </div>
+            <Box
+                sx={{
+                    width: "520px",
+                    transform: "translateY(-1rem)",
+                    // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
+                }}
+            >
+                <Divider sx={{ bgcolor: "gray.600" }} />
+            </Box>
 
             {/* Footer Links */}
-            <nav className="inline-flex items-center gap-4 translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:800ms]">
+            <Box
+                component="nav"
+                sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    transform: "translateY(-1rem)",
+                    // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
+                }}
+            >
                 {footerLinks.map((link, index) => (
                     <React.Fragment key={index}>
-                        <a
+                        <Link
                             href="#"
-                            className="mt-[-1.00px] [font-family:'Plus_Jakarta_Sans',Helvetica] font-normal text-[#7c7c7c] text-base text-right tracking-[0] leading-6 whitespace-nowrap hover:text-white transition-colors"
+                            sx={{
+                                fontFamily: "Plus Jakarta Sans, Helvetica",
+                                fontWeight: 400,
+                                color: "#7c7c7c",
+                                fontSize: "16px",
+                                textAlign: "right",
+                                letterSpacing: 0,
+                                lineHeight: "24px",
+                                whiteSpace: "nowrap",
+                                "&:hover": { color: "white" },
+                                transition: "color 0.2s ease",
+                                textDecoration: "none",
+                                mt: -0.25,
+                            }}
                         >
                             {link}
-                        </a>
+                        </Link>
                         {index < footerLinks.length - 1 && (
-                            <img
-                                className="w-px h-3"
+                            <Box
+                                component="img"
+                                sx={{
+                                    width: "1px",
+                                    height: "12px",
+                                }}
                                 alt="Separator"
                                 src="https://c.animaapp.com/metqtyo3gRfinE/img/vector-402.svg"
                             />
                         )}
                     </React.Fragment>
                 ))}
-            </nav>
+            </Box>
 
             {/* Background Elements */}
-            <div className="absolute w-[464px] h-[464px] top-[-167px] -left-8 opacity-50" />
-
-            <img
-                className="absolute w-[1140px] h-[214px] top-[317px] left-[150px] translate-y-[-1rem] animate-fade-in opacity-0 [--animation-delay:1000ms]"
-                alt="Codecraft logo"
-                src="https://c.animaapp.com/metqtyo3gRfinE/img/logotext.svg"
+            <Box
+                sx={{
+                    position: "absolute",
+                    width: "464px",
+                    height: "464px",
+                    top: "-167px",
+                    left: "-32px",
+                    opacity: 0.5,
+                }}
             />
-        </footer>
+        </Box>
     );
 };
 

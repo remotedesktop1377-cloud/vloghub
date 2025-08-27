@@ -34,7 +34,7 @@ export default function App({ Component, pageProps }: AppProps) {
       mode,
       primary: { main: '#1976d2' },
       secondary: { main: '#dc004e' },
-      ...(mode === 'dark' ? { background: { default: '#000C21', paper: '#000C21' } } : {})
+      ...(mode === 'dark' ? { background: { default: '#060606', paper: '#060606' } } : {})
     },
     typography: {
       fontSize: 15,
