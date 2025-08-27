@@ -6,6 +6,7 @@ import { CallToActionSection } from "../LandingPageComponents/CallToActionSectio
 import { VideoShowcaseSection } from "../LandingPageComponents/VideoShowcaseSection";
 import { NewsletterSubscriptionSection } from "../LandingPageComponents/NewsletterSubscriptionSection";
 import Image from "next/image";
+import FeatureHighlightsMUI from "./FeatureHighlights";
 
 const LandingPage: React.FC = () => {
     return (
@@ -121,69 +122,86 @@ const LandingPage: React.FC = () => {
                                 Learn about VlogHub
                             </Button>
                         </Box>
+
+                        {/* Preview cards (bottom) */}
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                gap: 5,
+                                mt: 15,
+                                position: 'relative',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 320,
+                                    height: 192,
+                                    borderRadius: 2,
+                                    bgcolor: 'rgba(255,255,255,0.06)',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <Image src="/img9.jpg" alt="Preview 1" fill style={{ objectFit: 'cover' }} />
+                            </Box>
+                            <Box
+                                sx={{
+                                    width: 320,
+                                    height: 192,
+                                    borderRadius: 2,
+                                    bgcolor: 'rgba(255,255,255,0.06)',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    position: 'relative',
+                                    overflow: 'hidden'
+                                }}
+                            >
+                                <Image src="/img6.png" alt="Preview 2" fill style={{ objectFit: 'cover' }} />
+                            </Box>
+                        </Box>
                     </Container>
 
-                    {/* Preview cards (bottom) */}
+                    {/* Floating corner cards like Figma */}
                     <Box
                         sx={{
-                            display: 'flex',
-                            gap: 3,
-                            mt: 15,
-                            position: 'relative'
+                            pointerEvents: 'none',
+                            position: 'absolute',
+                            left: -20,
+                            top: '50px',
+                            height: 240,
+                            width: 288,
+                            borderRadius: 6,
+                            bgcolor: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            overflow: 'hidden'
                         }}
                     >
-                        <Box
-                            sx={{
-                                width: 320,
-                                height: 192,
-                                borderRadius: 2,
-                                bgcolor: 'rgba(255,255,255,0.06)',
-                                border: '1px solid rgba(255,255,255,0.15)'
-                            }}
-                        />
-                        <Box
-                            sx={{
-                                width: 320,
-                                height: 192,
-                                borderRadius: 2,
-                                bgcolor: 'rgba(255,255,255,0.06)',
-                                border: '1px solid rgba(255,255,255,0.15)'
-                            }}
-                        />
+                        <Image src="/img1.png" alt="Preview 1" fill style={{ objectFit: 'cover' }} />
+
+                    </Box>
+                    <Box
+                        sx={{
+                            pointerEvents: 'none',
+                            position: 'absolute',
+                            right: -20,
+                            top: '150px',
+                            height: 240,
+                            width: 288,
+                            borderRadius: 6,
+                            bgcolor: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <Image src="/img7.jpg" alt="Preview 1" fill style={{ objectFit: 'cover' }} />
+
                     </Box>
                 </Box>
             </Box>
 
-            {/* Floating corner cards like Figma */}
-            <Box
-                sx={{
-                    pointerEvents: 'none',
-                    position: 'absolute',
-                    left: -20,
-                    top: '160px',
-                    height: 240,
-                    width: 288,
-                    borderRadius: 6,
-                    bgcolor: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)'
-                }}
-            />
-            <Box
-                sx={{
-                    pointerEvents: 'none',
-                    position: 'absolute',
-                    right: -20,
-                    top: '224px',
-                    height: 240,
-                    width: 288,
-                    borderRadius: 6,
-                    bgcolor: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.1)'
-                }}
-            />
-
             {/* Features Highlight Section */}
-            {/* <FeaturesHighlightSection /> */}
+            {/* <FeatureHighlightsMUI /> */}
 
             {/* Testimonials Section */}
             {/* <TestimonialsSection /> */}
