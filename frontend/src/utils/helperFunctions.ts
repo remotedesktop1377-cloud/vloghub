@@ -1,6 +1,9 @@
 import { TrendingTopic } from '../data/mockTrendingTopics';
 import { Chapter } from '../types/chapters';
 import { DropResult } from 'react-beautiful-dnd';
+export const cn = (...classes: Array<string | false | null | undefined>): string => {
+  return classes.filter(Boolean).join(' ');
+};
 
 export class HelperFunctions {
   /**

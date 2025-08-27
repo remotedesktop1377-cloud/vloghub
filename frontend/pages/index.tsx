@@ -1,12 +1,15 @@
 import React from 'react';
-import TrendingTopics from '../src/components/TrendingTopics/TrendingTopicsPage';
+import LandingPage from '../src/components/LandingPageComponents/LandingPage';
+type Props = {};
 
-const Dashboard: React.FC = () => {
+const IndexPage: React.FC<Props> = () => {
   return (
-    <div>
-      <TrendingTopics />
-    </div>
+    <LandingPage />
   );
 };
 
-export default Dashboard;
+export async function getStaticProps() {
+  return { props: {} };
+}
+
+export default IndexPage;

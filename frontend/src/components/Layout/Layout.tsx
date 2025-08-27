@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@mui/material';
 import { useContext } from 'react';
 import { ColorModeContext } from '../../../pages/_app';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
@@ -14,52 +14,100 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
-        <Toolbar sx={{ px: 3, py: 1 }}>
-          {/* Left Section - Brand */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                background: 'linear-gradient(45deg, #FFFFFF, #FFFFFF)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.5px'
-              }}
-            >
-              Topics Script Generation
-            </Typography>
-          </Box>
+        <Toolbar sx={{ bgcolor: '#060606', paddingTop: '30px', }}>
 
-          {/* Center Section - Search Bar */}
           <Box sx={{
-            flexGrow: 1,
             display: 'flex',
+            width: '100%',
             justifyContent: 'center',
-            mx: 4
+            alignItems: 'center',
+            alignSelf: 'center',
+
           }}>
-            <Box
-              sx={{
-                width: '100%',
-                maxWidth: 500,
-                height: 40,
-                bgcolor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: 20,
+
+            <Box sx={{
+              display: 'flex',
+              width: '50%',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              alignSelf: 'center',
+              bgcolor: '#252525',
+              borderRadius: '50px',
+              paddingLeft: '20px', paddingRight: '10px',
+              py: 1,
+            }}>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, }}>
+                <Box
+                  sx={{
+                    width: 18,
+                    height: 18,
+                    bgcolor: 'white',
+                    borderRadius: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      bgcolor: 'black',
+                      borderRadius: 0.5
+                    }}
+                  />
+                </Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
+                  VlogHub
+                </Typography>
+              </Box>
+
+              <Box sx={{
                 display: 'flex',
                 alignItems: 'center',
-                px: 3,
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.15)',
-                  borderColor: 'rgba(255, 255, 255, 0.3)'
-                }
-              }}
-            >
-              <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>
-                🔍 Search trending topics...
-              </Typography>
+                gap: 5,
+                px: 10,
+                py: 1,
+              }}>
+                {['Home', 'Features', 'Examples', 'Blog'].map((item) => (
+                  <Typography
+                    key={item}
+                    component="a"
+                    href=""
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      textDecoration: 'none',
+                      '&:hover': { color: 'white' },
+                      transition: 'color 0.2s'
+                    }}
+                  >
+                    {item}
+                  </Typography>
+                ))}
+              </Box>
+
+              <Button
+                sx={{
+                  px: 2.5,
+                  py: 1.5,
+                  borderRadius: '50px',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)',
+                  color: '#FFFFFF',
+                  boxShadow: '0 0 30px rgba(124,58,237,0.35)',
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%)',
+                    color: '#FFFFFF'
+                  }
+                }}
+              >
+                ✨ Generate Now
+              </Button>
             </Box>
+
           </Box>
 
           {/* Right Section - Actions */}

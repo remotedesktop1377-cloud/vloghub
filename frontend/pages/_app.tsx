@@ -6,7 +6,7 @@ import Head from 'next/head'
 import { fontVariablesClass, fontStacks } from '../src/styles/fonts'
 import React, { useEffect, useMemo, useState, createContext } from 'react'
 
-export const ColorModeContext = createContext<{ mode: 'light' | 'dark'; toggle: () => void }>({ mode: 'dark', toggle: () => {} })
+export const ColorModeContext = createContext<{ mode: 'light' | 'dark'; toggle: () => void }>({ mode: 'dark', toggle: () => { } })
 
 export default function App({ Component, pageProps }: AppProps) {
   const [mode, setMode] = useState<'light' | 'dark'>('dark')
@@ -15,7 +15,7 @@ export default function App({ Component, pageProps }: AppProps) {
     try {
       const saved = localStorage.getItem('color-mode') as 'light' | 'dark' | null
       if (saved === 'light' || saved === 'dark') setMode(saved)
-    } catch {}
+    } catch { }
   }, [])
 
   const colorMode = useMemo(() => ({
@@ -23,7 +23,7 @@ export default function App({ Component, pageProps }: AppProps) {
     toggle: () => {
       setMode(prev => {
         const next = prev === 'light' ? 'dark' : 'light'
-        try { localStorage.setItem('color-mode', next) } catch {}
+        try { localStorage.setItem('color-mode', next) } catch { }
         return next
       })
     }
@@ -52,12 +52,13 @@ export default function App({ Component, pageProps }: AppProps) {
       overline: { fontFamily: fontStacks.manrope },
     },
   }), [mode])
+
   return (
     <div className={fontVariablesClass}>
       <Head>
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@300;400;500;600;700&display=swap" 
-          rel="stylesheet" 
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
         />
         <style jsx global>{`
           /* Base font across app (non-MUI elements) */
