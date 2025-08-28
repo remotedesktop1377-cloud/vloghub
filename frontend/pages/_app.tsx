@@ -38,18 +38,18 @@ export default function App({ Component, pageProps }: AppProps) {
     },
     typography: {
       fontSize: 15,
-      fontFamily: fontStacks.inter,
-      h1: { fontFamily: fontStacks.poppins },
-      h2: { fontFamily: fontStacks.poppins },
-      h3: { fontFamily: fontStacks.poppins },
-      h4: { fontFamily: fontStacks.montserrat },
-      h5: { fontFamily: fontStacks.montserrat },
-      h6: { fontFamily: fontStacks.montserrat },
-      subtitle1: { fontFamily: fontStacks.manrope },
-      subtitle2: { fontFamily: fontStacks.manrope },
-      button: { fontFamily: fontStacks.inter },
-      caption: { fontFamily: fontStacks.manrope },
-      overline: { fontFamily: fontStacks.manrope },
+      fontFamily: fontStacks.plusJakarta,
+      h1: { fontFamily: fontStacks.plusJakarta },
+      h2: { fontFamily: fontStacks.plusJakarta },
+      h3: { fontFamily: fontStacks.plusJakarta },
+      h4: { fontFamily: fontStacks.plusJakarta },
+      h5: { fontFamily: fontStacks.plusJakarta },
+      h6: { fontFamily: fontStacks.plusJakarta },
+      subtitle1: { fontFamily: fontStacks.plusJakarta },
+      subtitle2: { fontFamily: fontStacks.plusJakarta },
+      button: { fontFamily: fontStacks.plusJakarta },
+      caption: { fontFamily: fontStacks.plusJakarta },
+      overline: { fontFamily: fontStacks.plusJakarta },
     },
   }), [mode])
 
@@ -62,7 +62,7 @@ export default function App({ Component, pageProps }: AppProps) {
         />
         <style jsx global>{`
           /* Base font across app (non-MUI elements) */
-          html, body { font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial; }
+          html, body { font-family: var(--font-plus-jakarta-sans); }
           body { font-size: 15px; }
 
           /* RTL Support Styles */
@@ -76,14 +76,14 @@ export default function App({ Component, pageProps }: AppProps) {
           
           /* Urdu and Arabic font support */
           .rtl-text {
-            font-family: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic', 'Arial Unicode MS', sans-serif;
+            font-family: 'Noto Nastaliq Urdu', 'Noto Naskh Arabic';
             direction: rtl;
             text-align: right;
             unicode-bidi: bidi-override;
           }
           
           .ltr-text {
-            font-family: var(--font-inter), 'Arial', sans-serif;
+            font-family: var(--font-plus-jakarta-sans);
             direction: ltr;
             text-align: left;
           }

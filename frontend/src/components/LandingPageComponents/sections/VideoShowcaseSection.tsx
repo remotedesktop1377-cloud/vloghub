@@ -63,7 +63,6 @@ export const VideoShowcaseSection = (): JSX.Element => {
                     sx={{
                         position: "relative",
                         alignSelf: "stretch",
-                        fontFamily: "Plus Jakarta Sans, Helvetica",
                         fontWeight: 500,
                         color: "white",
                         fontSize: "56px",
@@ -80,8 +79,6 @@ export const VideoShowcaseSection = (): JSX.Element => {
                         position: "relative",
                         width: "100%",
                         maxWidth: "512px",
-                        fontFamily: "Plus Jakarta Sans, Helvetica",
-                        fontWeight: 400,
                         color: "#7c7c7c",
                         fontSize: "18px",
                         textAlign: "center",
@@ -158,8 +155,7 @@ export const VideoShowcaseSection = (): JSX.Element => {
                                     sx={{
                                         position: "relative",
                                         alignSelf: "stretch",
-                                        fontFamily: "Plus Jakarta Sans, Helvetica",
-                                        fontWeight: 500,
+                                        fontWeight: 600,
                                         color: "white",
                                         fontSize: "20px",
                                         letterSpacing: 0,
@@ -174,7 +170,6 @@ export const VideoShowcaseSection = (): JSX.Element => {
                                     sx={{
                                         position: "relative",
                                         alignSelf: "stretch",
-                                        fontFamily: "Plus Jakarta Sans, Helvetica",
                                         fontWeight: 400,
                                         fontSize: "18px",
                                         letterSpacing: 0,

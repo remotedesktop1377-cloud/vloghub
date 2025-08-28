@@ -1,13 +1,13 @@
 import React from "react";
 import { Box, Typography, Button, Container } from "@mui/material";
-import { TestimonialsSection } from "../LandingPageComponents/TestimonialsSection";
-import { CallToActionSection } from "../LandingPageComponents/CallToActionSection";
-import { VideoShowcaseSection } from "../LandingPageComponents/VideoShowcaseSection";
-import { NewsletterSubscriptionSection } from "../LandingPageComponents/NewsletterSubscriptionSection";
-import { HeroSection } from "../LandingPageComponents/HeroSection";
-import { TrustedBySection } from "../LandingPageComponents/TrustedBySection";
+import { TestimonialsSection } from "./sections/TestimonialsSection";
+import { CallToActionSection } from "./sections/CallToActionSection";
+import { VideoShowcaseSection } from "./sections/VideoShowcaseSection";
+import { NewsletterSubscriptionSection } from "./sections/NewsletterSubscriptionSection";
+import { HeroSection } from "./sections/HeroSection";
+import { TrustedBySection } from "./sections/TrustedBySection";
 import Image from "next/image";
-import FeatureHighlightsMUI from "./FeatureHighlights";
+import FeatureHighlightsMUI from "./sections/FeatureHighlights";
 import { useRouter } from "next/navigation";
 
 const LandingPage: React.FC = () => {
@@ -17,7 +17,7 @@ const LandingPage: React.FC = () => {
             {/* Hero Section */}
             <Box sx={{ position: 'relative', overflow: 'hidden' }}>
                 {/* Background Wave Graphics */}
-                <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden', marginTop: '100px' }}>
+                <Box sx={{ position: 'absolute', inset: 0, overflow: 'hidden', marginTop: '180px' }}>
                     {/* Hosted wave background image */}
                     <Box
                         sx={{
@@ -53,7 +53,7 @@ const LandingPage: React.FC = () => {
                     <Container maxWidth="lg" sx={{ mb: 4, mt: 3 }}>
                         <Typography
                             sx={{
-                                fontSize: { xs: '44px', md: '64px', color: '#fff' },
+                                fontSize: { xs: '44px', md: '80px', color: '#fff' },
                                 fontWeight: 500,
                                 lineHeight: 1.1,
                                 letterSpacing: '-0.03em',
@@ -65,7 +65,7 @@ const LandingPage: React.FC = () => {
 
                         <Typography
                             sx={{
-                                fontSize: { xs: '16px', md: '15px' },
+                                fontSize: { xs: '16px', md: '18px' },
                                 color: '#7C7C7C',
                                 maxWidth: '600px',
                                 mx: 'auto',
@@ -90,8 +90,8 @@ const LandingPage: React.FC = () => {
                                 sx={{
                                     px: 4,
                                     py: 2,
-                                    fontSize: { xs: '14px', md: '16px' },
-                                    fontWeight: 600,
+                                    fontSize: { xs: '14px', md: '20px' },
+                                    fontWeight: 500,
                                     borderRadius: '50px',
                                     height: 'auto',
                                     textTransform: 'none',
@@ -129,7 +129,6 @@ const LandingPage: React.FC = () => {
                                         WebkitBackgroundClip: "text",
                                         backgroundClip: "text",
                                         WebkitTextFillColor: "transparent",
-                                        fontFamily: "Plus Jakarta Sans, Helvetica",
                                         fontWeight: 500,
                                         fontSize: "20px",
                                         letterSpacing: "-0.60px",
@@ -147,18 +146,18 @@ const LandingPage: React.FC = () => {
                             sx={{
                                 display: 'flex',
                                 gap: 5,
-                                mt: 15,
+                                mt: 12,
                                 position: 'relative',
                                 justifyContent: 'center'
                             }}
                         >
                             <Box
                                 sx={{
-                                    width: 320,
-                                    height: 192,
-                                    borderRadius: 2,
+                                    width: 358,
+                                    height: 254,
+                                    borderRadius: 10,
                                     bgcolor: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    border: '1px solid rgba(255,255,255,0.06)',
                                     position: 'relative',
                                     overflow: 'hidden'
                                 }}
@@ -167,9 +166,9 @@ const LandingPage: React.FC = () => {
                             </Box>
                             <Box
                                 sx={{
-                                    width: 320,
-                                    height: 192,
-                                    borderRadius: 2,
+                                    width: 358,
+                                    height: 254,
+                                    borderRadius: 10,
                                     bgcolor: 'rgba(255,255,255,0.06)',
                                     border: '1px solid rgba(255,255,255,0.15)',
                                     position: 'relative',
@@ -186,13 +185,13 @@ const LandingPage: React.FC = () => {
                         sx={{
                             pointerEvents: 'none',
                             position: 'absolute',
-                            left: -20,
+                            left: -40,
                             top: '80px',
-                            height: 240,
-                            width: 288,
-                            borderRadius: 6,
+                            width: 318,
+                            height: 226,
+                            borderRadius: 10,
                             bgcolor: 'rgba(255,255,255,0.06)',
-                            border: '1px solid rgba(255,255,255,0.15)',
+                            border: '1px solid rgba(255,255,255,0.06)',
                             overflow: 'hidden'
                         }}
                     >
@@ -205,11 +204,11 @@ const LandingPage: React.FC = () => {
                             position: 'absolute',
                             right: -20,
                             top: '190px',
-                            height: 240,
-                            width: 288,
+                            width: 318,
+                            height: 226,
                             borderRadius: 6,
                             bgcolor: 'rgba(255,255,255,0.06)',
-                            border: '1px solid rgba(255,255,255,0.15)',
+                            border: '1px solid rgba(255,255,255,0.06)',
                             overflow: 'hidden'
                         }}
                     >

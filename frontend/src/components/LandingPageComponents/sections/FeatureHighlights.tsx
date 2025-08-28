@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Box, Typography, Button, Card, CardContent, Grid, IconButton } from "@mui/material";
+import { Box, Typography, Button, Card, CardContent, Grid, IconButton, TextField } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -80,7 +80,6 @@ const FeatureHighlights: React.FC = () => {
                             <Typography
                                 variant="h2"
                                 sx={{
-                                    fontFamily: "Plus Jakarta Sans, Helvetica",
                                     fontWeight: 500,
                                     color: "white",
                                     fontSize: "56px",
@@ -93,7 +92,6 @@ const FeatureHighlights: React.FC = () => {
 
                             <Typography
                                 sx={{
-                                    fontFamily: "Plus Jakarta Sans, Helvetica",
                                     fontWeight: 400,
                                     color: "#7c7c7c",
                                     fontSize: "18px",
@@ -138,7 +136,6 @@ const FeatureHighlights: React.FC = () => {
                                         WebkitBackgroundClip: "text",
                                         backgroundClip: "text",
                                         WebkitTextFillColor: "transparent",
-                                        fontFamily: "Plus Jakarta Sans, Helvetica",
                                         fontWeight: 500,
                                         fontSize: "20px",
                                         letterSpacing: "-0.60px",
@@ -259,7 +256,10 @@ const FeatureHighlights: React.FC = () => {
                                                         borderRadius: 3.5,
                                                         background: "linear-gradient(180deg, rgba(37,37,37,1) 0%, rgba(18,18,18,1) 100%)",
                                                         boxShadow: "0 8px 24px rgba(0,0,0,0.35)"
-                                                    }}>
+                                                    }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onMouseDown={(e) => e.stopPropagation()}
+                                                    >
                                                         <Box sx={{
                                                             height: { xs: 64, md: 60 },
                                                             borderRadius: 30,
@@ -269,14 +269,35 @@ const FeatureHighlights: React.FC = () => {
                                                             px: { xs: 1.5, md: 2 },
                                                             background: "#252525",
                                                             boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.02)",
-                                                        }}>
-                                                            <Typography sx={{ color: "#7C7C7C", pl: 2 }}>
-                                                                What you want to share today?
-                                                            </Typography>
+                                                            gap: 2
+                                                        }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onMouseDown={(e) => e.stopPropagation()}
+                                                        >
+                                                            <TextField
+                                                                fullWidth
+                                                                variant="standard"
+                                                                placeholder="What you want to share today?"
+                                                                InputProps={{
+                                                                    disableUnderline: true,
+                                                                }}
+                                                                sx={{
+                                                                    ml: 1,
+                                                                    mr: 2,
+                                                                    input: {
+                                                                        color: "#FFFFFF",
+                                                                        '::placeholder': { color: "#7C7C7C" },
+                                                                        fontSize: { xs: 14, md: 16 },
+                                                                    },
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onMouseDown={(e) => e.stopPropagation()}
+                                                                onFocus={(e) => e.stopPropagation()}
+                                                            />
                                                             <Box sx={{
-                                                                width: 48,
-                                                                height: 48,
-                                                                borderRadius: 24,
+                                                                width: 80,
+                                                                height: 40,
+                                                                borderRadius: 10,
                                                                 display: "flex",
                                                                 alignItems: "center",
                                                                 justifyContent: "center",
@@ -322,7 +343,6 @@ const FeatureHighlights: React.FC = () => {
                                                                     WebkitBackgroundClip: "text",
                                                                     backgroundClip: "text",
                                                                     WebkitTextFillColor: "transparent",
-                                                                    fontFamily: "Plus Jakarta Sans, Helvetica",
                                                                     fontWeight: 500,
                                                                     fontSize: "14px",
                                                                     letterSpacing: "-0.42px",

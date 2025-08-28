@@ -61,21 +61,21 @@ export const CallToActionSection = (): JSX.Element => {
             <Card
                 sx={{
                     position: "absolute",
-                    top: "430px",
+                    top: "500px",
                     left: "50px",
                     width: "520px",
-                    bgcolor: "black",
+                    bgcolor: "#000000",
                     border: "none",
+                    borderRadius: "15px",
                     transform: "translateY(-1rem)",
                     // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
                 }}
             >
                 <CardContent sx={{ p: 5 }}>
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <Box sx={{ display: "flex", flexDirection: "column", }}>
+                        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                             <Typography
                                 sx={{
-                                    fontFamily: "Inter, Helvetica",
                                     fontWeight: 400,
                                     color: "#7c7c7c",
                                     fontSize: "20px",
@@ -89,7 +89,6 @@ export const CallToActionSection = (): JSX.Element => {
                             <Typography
                                 variant="h3"
                                 sx={{
-                                    fontFamily: "Plus Jakarta Sans, Helvetica",
                                     fontWeight: 500,
                                     color: "white",
                                     fontSize: "28px",
@@ -100,7 +99,7 @@ export const CallToActionSection = (): JSX.Element => {
                                 "3D cartoon kids exploring the moon in space"
                             </Typography>
 
-                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                                 {promptTags.map((tag, index) => (
                                     <Chip
                                         key={index}
@@ -111,20 +110,15 @@ export const CallToActionSection = (): JSX.Element => {
                                             "&:hover": {
                                                 bgcolor: "#1a1a1a",
                                             },
-                                            transition: "background-color 0.2s ease",
-                                            px: 2,
                                             py: 1,
+                                            transition: "background-color 0.2s ease",
                                             borderRadius: "300px",
-                                            fontFamily: "Inter, Helvetica",
                                             fontWeight: 400,
                                             fontSize: "16px",
                                             letterSpacing: 0,
                                             lineHeight: "24px",
                                             height: "auto",
-                                            "& .MuiChip-label": {
-                                                px: 2,
-                                                py: 1,
-                                            },
+
                                         }}
                                     />
                                 ))}

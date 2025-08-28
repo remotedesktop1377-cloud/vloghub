@@ -391,7 +391,7 @@ export class HelperFunctions {
     if (lang.includes('arabic')) {
       return `'Noto Naskh Arabic', 'Arial Unicode MS', sans-serif`;
     }
-    return `var(--font-inter), 'Roboto', 'Arial', sans-serif`;
+    return `var(--font-plus-jakarta-sans)`;
   }
 
   /**

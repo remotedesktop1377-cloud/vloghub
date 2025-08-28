@@ -1,44 +1,20 @@
-import { Inter, Montserrat, Manrope, Poppins } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 
-// Load Google fonts with CSS variables for easy theming and fallback handling
-export const inter = Inter({
+// Load Plus Jakarta Sans with CSS variable for easy theming and fallback handling
+export const plusJakartaSans = Plus_Jakarta_Sans({
+	weight: ['200', '300', '400', '500', '600', '700', '800'],
 	subsets: ['latin'],
-	variable: '--font-inter',
-	display: 'swap',
-})
-
-export const montserrat = Montserrat({
-	subsets: ['latin'],
-	variable: '--font-montserrat',
-	display: 'swap',
-})
-
-export const manrope = Manrope({
-	subsets: ['latin'],
-	variable: '--font-manrope',
-	display: 'swap',
-})
-
-export const poppins = Poppins({
-	weight: ['300', '400', '500', '600', '700'],
-	subsets: ['latin'],
-	variable: '--font-poppins',
+	variable: '--font-plus-jakarta-sans',
 	display: 'swap',
 })
 
 export const fontVariablesClass = [
-	inter.variable,
-	montserrat.variable,
-	manrope.variable,
-	poppins.variable,
+	plusJakartaSans.variable,
 ].join(' ')
 
 export const fontStacks = {
-	// Preferred defaults and fallbacks
-	inter: `var(--font-inter), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"`,
-	montserrat: `var(--font-montserrat), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial`,
-	manrope: `var(--font-manrope), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial`,
-	poppins: `var(--font-poppins), ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial`,
+	// Preferred default and fallbacks
+	plusJakarta: `var(--font-plus-jakarta-sans)`,
 }
 
 

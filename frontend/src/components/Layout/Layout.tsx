@@ -77,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <Typography
                     key={item}
                     component="a"
-                    href=""
+                    href="#"
                     sx={{
                       color: 'rgba(255, 255, 255, 0.7)',
                       textDecoration: 'none',
@@ -91,12 +91,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </Box>
 
               <Button
+                variant="contained"
                 sx={{
                   px: 2.5,
                   py: 1.5,
                   borderRadius: '50px',
-                  fontWeight: 500,
                   fontSize: '14px',
+                  textTransform: 'none',
                   background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)',
                   color: '#FFFFFF',
                   boxShadow: '0 0 30px rgba(124,58,237,0.35)',

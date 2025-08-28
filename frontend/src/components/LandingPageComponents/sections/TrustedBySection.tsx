@@ -27,12 +27,12 @@ export const TrustedBySection = (): JSX.Element => {
                 position: "relative",
             }}
         >
-            <Container maxWidth="lg" sx={{
+            <Container maxWidth="xl" sx={{
                 p: 5,
                 flex: 1,
                 bgcolor: "#121212",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "16px",
+                borderRadius: "30px",
                 overflow: "hidden",
                 backdropFilter: "blur(10px)",
                 transition: "all 0.3s ease",
@@ -47,20 +47,18 @@ export const TrustedBySection = (): JSX.Element => {
                     sx={{
                         mb: 5,
                         textAlign: "left",
+                        pl: 17,
+                        pr: 20,
                     }}
                 >
                     <Typography
                         sx={{
                             fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem", lg: "2.5rem" },
-                            fontWeight: 400,
+                            fontWeight: 500,
                             lineHeight: 1.6,
                             letterSpacing: "-0.01em",
                             color: "white",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
-                            pt: 2,
-                            pb: 2,
-                            pl: 5,
-                            pr: 5,
+
                         }}
                     >
                         Trusted by creators worldwide to deliver{" "}
@@ -100,6 +98,8 @@ export const TrustedBySection = (): JSX.Element => {
                         gap: 4,
                         justifyContent: "center",
                         alignItems: "stretch",
+                        pl: 17,
+                        pr: 17,
                     }}
                 >
                     {statisticsData.map((stat, index) => (
@@ -133,10 +133,9 @@ export const TrustedBySection = (): JSX.Element => {
                                 <Typography
                                     sx={{
                                         fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2rem", lg: "2.5rem" },
-                                        fontWeight: 500,
+                                        fontWeight: 600,
                                         lineHeight: 1,
                                         color: "white",
-                                        fontFamily: "Plus Jakarta Sans, sans-serif",
                                         mb: 2,
                                     }}
                                 >
@@ -145,10 +144,10 @@ export const TrustedBySection = (): JSX.Element => {
                                 <Typography
                                     sx={{
                                         fontSize: { xs: "0.875rem", sm: "1rem", md: "1.125rem" },
-                                        fontWeight: 400,
+                                        fontWeight: 500,
                                         lineHeight: 1.4,
                                         color: "rgba(255, 255, 255, 0.8)",
-                                        fontFamily: "Plus Jakarta Sans, sans-serif",
+
                                     }}
                                 >
                                     {stat.description}

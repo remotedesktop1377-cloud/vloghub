@@ -36,7 +36,6 @@ export const HeroSection = (): JSX.Element => {
                             letterSpacing: "-0.05em",
                             mb: 3,
                             color: "white",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
                         }}
                     >
                         AI technology to{" "}
@@ -63,7 +62,6 @@ export const HeroSection = (): JSX.Element => {
                             letterSpacing: "-0.05em",
                             mb: 3,
                             color: "white",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
                         }}
                     >
                         <Box
@@ -89,7 +87,7 @@ export const HeroSection = (): JSX.Element => {
                             letterSpacing: "-0.05em",
                             mb: 3,
                             color: "white",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
+
                         }}
                     >
                         from text prompts. Making
@@ -104,7 +102,7 @@ export const HeroSection = (): JSX.Element => {
                             letterSpacing: "-0.05em",
                             mb: 6,
                             color: "white",
-                            fontFamily: "Plus Jakarta Sans, sans-serif",
+
                         }}
                     >
                         content creation{" "}

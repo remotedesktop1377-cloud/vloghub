@@ -46,7 +46,6 @@ export const NewsletterSubscriptionSection: React.FC = () => {
             >
                 <Typography
                     sx={{
-                        fontFamily: "Plus Jakarta Sans, Helvetica",
                         fontWeight: 500,
                         color: "white",
                         fontSize: "18px",
@@ -102,7 +101,7 @@ export const NewsletterSubscriptionSection: React.FC = () => {
                             key={index}
                             href="#"
                             sx={{
-                                fontFamily: "Plus Jakarta Sans, Helvetica",
+
                                 fontWeight: 400,
                                 color: "#7c7c7c",
                                 fontSize: "16px",
@@ -121,17 +120,6 @@ export const NewsletterSubscriptionSection: React.FC = () => {
                 </Box>
             </Box>
 
-            {/* Second Separator */}
-            <Box
-                sx={{
-                    width: "520px",
-                    transform: "translateY(-1rem)",
-                    // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
-                }}
-            >
-                <Divider sx={{ bgcolor: "gray.600" }} />
-            </Box>
-
             {/* Footer Links */}
             <Box
                 component="nav"
@@ -148,7 +136,6 @@ export const NewsletterSubscriptionSection: React.FC = () => {
                         <Link
                             href="#"
                             sx={{
-                                fontFamily: "Plus Jakarta Sans, Helvetica",
                                 fontWeight: 400,
                                 color: "#7c7c7c",
                                 fontSize: "16px",
@@ -179,17 +166,6 @@ export const NewsletterSubscriptionSection: React.FC = () => {
                 ))}
             </Box>
 
-            {/* Background Elements */}
-            <Box
-                sx={{
-                    position: "absolute",
-                    width: "464px",
-                    height: "464px",
-                    top: "-167px",
-                    left: "-32px",
-                    opacity: 0.5,
-                }}
-            />
         </Box>
     );
 };

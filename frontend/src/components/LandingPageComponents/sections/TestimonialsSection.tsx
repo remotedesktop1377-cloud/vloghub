@@ -36,7 +36,6 @@ export const TestimonialsSection = (): JSX.Element => {
                     sx={{
                         position: "relative",
                         alignSelf: "stretch",
-                        fontFamily: "Plus Jakarta Sans, Helvetica",
                         fontWeight: 500,
                         color: "white",
                         fontSize: "56px",
@@ -55,7 +54,6 @@ export const TestimonialsSection = (): JSX.Element => {
                     sx={{
                         position: "relative",
                         alignSelf: "stretch",
-                        fontFamily: "Plus Jakarta Sans, Helvetica",
                         fontWeight: 400,
                         color: "#7c7c7c",
                         fontSize: "18px",
