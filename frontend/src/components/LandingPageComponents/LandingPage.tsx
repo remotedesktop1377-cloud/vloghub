@@ -8,10 +8,9 @@ import { HeroSection } from "./sections/HeroSection";
 import { TrustedBySection } from "./sections/TrustedBySection";
 import Image from "next/image";
 import FeatureHighlightsMUI from "./sections/FeatureHighlights";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const LandingPage: React.FC = () => {
-    const router = useRouter();
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: '#060606', }}>
             {/* Hero Section */}
@@ -86,28 +85,27 @@ const LandingPage: React.FC = () => {
                                 pt: 8
                             }}
                         >
-                            <Button
-                                sx={{
-                                    px: 4,
-                                    py: 2,
-                                    fontSize: { xs: '14px', md: '20px' },
-                                    fontWeight: 500,
-                                    borderRadius: '50px',
-                                    height: 'auto',
-                                    textTransform: 'none',
-                                    background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)',
-                                    color: 'white',
-                                    boxShadow: '0 0 40px rgba(124,58,237,0.35)',
-                                    '&:hover': {
-                                        background: 'linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%)',
-                                    }
-                                }}
-                                onClick={() => {
-                                    router.push('/trending-topics');
-                                }}
-                            >
-                                ✨ Generate AI Video
-                            </Button>
+                            <Link href="/trending-topics" prefetch>
+                                <Button
+                                    sx={{
+                                        px: 4,
+                                        py: 2,
+                                        fontSize: { xs: '14px', md: '20px' },
+                                        fontWeight: 500,
+                                        borderRadius: '50px',
+                                        height: 'auto',
+                                        textTransform: 'none',
+                                        background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)',
+                                        color: 'white',
+                                        boxShadow: '0 0 40px rgba(124,58,237,0.35)',
+                                        '&:hover': {
+                                            background: 'linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%)',
+                                        }
+                                    }}
+                                >
+                                    ✨ Generate AI Video
+                                </Button>
+                            </Link>
                             <Button
                                 sx={{
                                     display: "inline-flex",

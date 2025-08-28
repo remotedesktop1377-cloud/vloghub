@@ -183,7 +183,7 @@ const ScriptProductionPage: React.FC = () => {
         // Map to Chapter[] with required fields
         const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
             id: `chapter-${index}-${p.startTime}`,
-            text: p.text,
+            narration: p.text,
             duration: p.duration,
             words: p.words,
             startTime: p.startTime,

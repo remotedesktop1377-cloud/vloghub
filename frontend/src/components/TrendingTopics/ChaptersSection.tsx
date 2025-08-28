@@ -293,7 +293,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
                                                   ...HelperFunctions.getDirectionSx(language)
                                                 }}>
-                                                  {chapter.text || 'Narration content will be generated here.'}
+                                                  {chapter.narration || 'Narration content will be generated here.'}
                                                 </Typography>
 
                                               </Box>
@@ -620,7 +620,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               const res = await fetch('/api/get-narration-variations', {
                                                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
-                                                  narration: chapter.text,
+                                                  narration: chapter.narration,
                                                   noOfNarrations: 5
                                                 })
                                               });
@@ -629,7 +629,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               onPickerNarrations(vars);
                                             } catch (e) {
                                               console.error('picker fetch failed', e);
-                                              onPickerNarrations([chapters[index].text]);
+                                              onPickerNarrations([chapters[index].narration]);
                                             } finally {
                                               onPickerLoading(false);
                                             }
@@ -649,7 +649,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         <IconButton
                                           className="chapter-actions"
                                           size="small"
-                                          onClick={() => onStartEdit(index, chapter.text || '', chapter.text || '')}
+                                          onClick={() => onStartEdit(index, chapter.narration || '', chapter.narration || '')}
                                           sx={{
                                             opacity: selectedChapterIndex === index ? 1 : 0,
                                             transition: 'opacity 0.2s ease',
@@ -1005,7 +1005,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                     </Box>
 
 
-                  
+
                   </Box>
                 )}
 
@@ -1023,7 +1023,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.text]).map((text, idx) => (
+              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.narration]).map((text, idx) => (
                 <Box key={idx} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' } }}
                   onClick={() => {
                     if (pickerChapterIndex === null) return;

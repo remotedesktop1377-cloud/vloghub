@@ -1,5 +1,6 @@
 import React from "react";
 import { Box, Typography, Card, CardContent } from "@mui/material";
+import Image from "next/image";
 
 const videoCards = [
     {
@@ -9,6 +10,7 @@ const videoCards = [
         hasGradientBorder: true,
         hasGradientBackground: false,
         textColor: "#7c7c7c",
+        image: "/images/block3.png",
     },
     {
         title: "How to Use Text-to-Video for Marketing Success",
@@ -17,6 +19,7 @@ const videoCards = [
         hasGradientBorder: false,
         hasGradientBackground: true,
         textColor: "white",
+        image: "/images/block1.png",
     },
     {
         title: "Top 5 Features You'll Love About Vloghub",
@@ -25,6 +28,7 @@ const videoCards = [
         hasGradientBorder: true,
         hasGradientBackground: false,
         textColor: "#7c7c7c",
+        image: "/images/block2.png",
     },
 ];
 
@@ -147,7 +151,9 @@ export const VideoShowcaseSection = (): JSX.Element => {
                                     borderRadius: "12px",
                                     bgcolor: card.hasGradientBackground ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)",
                                 }}
-                            />
+                            >
+                                <Image src={card.image} alt={card.title} fill style={{ objectFit: 'cover', borderRadius: '12px' }} />
+                            </Box>
 
                             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, position: "relative", alignSelf: "stretch", width: "100%" }}>
                                 <Typography

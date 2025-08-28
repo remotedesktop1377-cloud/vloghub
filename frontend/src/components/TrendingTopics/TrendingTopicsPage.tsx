@@ -75,7 +75,6 @@ import ConfirmationDialog from './ConfirmationDialog';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
-  const theme = useTheme();
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(true);

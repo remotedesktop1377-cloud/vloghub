@@ -73,7 +73,7 @@ export class HelperFunctions {
   ): void {
     const newChapter: Chapter = {
       id: Date.now().toString(),
-      text: '',
+      narration: '',
       duration: '',
       words: 0,
       startTime: 0,

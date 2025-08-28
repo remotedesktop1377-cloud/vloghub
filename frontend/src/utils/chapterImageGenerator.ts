@@ -16,8 +16,8 @@ export async function generateChapterImages(chapters: Chapter[]): Promise<Chapte
           const prompt = buildImagePrompt({
             title: "YouTube Video Chapter",
             chapterIdx: index,
-            visual_guidance: chapter.visual_guidance,
-            on_screen_text: chapter.on_screen_text,
+            visual_guidance: chapter.visual_guidance || '',
+            on_screen_text: chapter.on_screen_text || '',
             narration: chapter.narration // Include narration for context-aware prompt generation
           });
 
@@ -34,7 +34,7 @@ export async function generateChapterImages(chapters: Chapter[]): Promise<Chapte
                 seed: index * 3 + 1
               })
             }) : Promise.resolve(null),
-            
+
             !chapter.assets?.image ? fetch('/api/generate-images', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -45,7 +45,7 @@ export async function generateChapterImages(chapters: Chapter[]): Promise<Chapte
                 seed: index * 3 + 2
               })
             }) : Promise.resolve(null),
-            
+
             !chapter.assets?.image ? fetch('/api/generate-images', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -77,7 +77,7 @@ export async function generateChapterImages(chapters: Chapter[]): Promise<Chapte
           // Process image responses and collect all generated images
           const generatedImages: string[] = [];
           let primaryImageUrl = chapter.assets?.image || null;
-          
+
           // Process first image (will be the primary one for the chapter)
           if (image1Response && image1Response.ok) {
             const imageData = await image1Response.json();
@@ -90,7 +90,7 @@ export async function generateChapterImages(chapters: Chapter[]): Promise<Chapte
             const errorText = await image1Response.text();
             console.error(`❌ Failed to generate image 1 for chapter ${chapter.id}:`, image1Response.status, errorText);
           }
-          
+
           // Process second image
           if (image2Response && image2Response.ok) {
             const imageData = await image2Response.json();
@@ -102,7 +102,7 @@ export async function generateChapterImages(chapters: Chapter[]): Promise<Chapte
             const errorText = await image2Response.text();
             console.error(`❌ Failed to generate image 2 for chapter ${chapter.id}:`, image2Response.status, errorText);
           }
-          
+
           // Process third image
           if (image3Response && image3Response.ok) {
             const imageData = await image3Response.json();

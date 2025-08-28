@@ -1,8 +1,66 @@
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Box, Typography, Card, CardContent, Chip, IconButton } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 
 export const CallToActionSection = (): JSX.Element => {
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const sectionRef = useRef<HTMLDivElement | null>(null);
+    const [isInViewport, setIsInViewport] = useState<boolean>(false);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsInViewport(true);
+                    if (videoRef.current) {
+                        videoRef.current.play().catch(() => {
+                            // Handle autoplay restrictions
+                        });
+                    }
+                } else {
+                    setIsInViewport(false);
+                    if (videoRef.current) {
+                        videoRef.current.pause();
+                    }
+                }
+            },
+            { threshold: 0.5 }
+        );
+
+        if (sectionRef.current) {
+            observer.observe(sectionRef.current);
+        }
+
+        return () => {
+            if (sectionRef.current) {
+                observer.unobserve(sectionRef.current);
+            }
+        };
+    }, []);
+
+    const handleOpenPlayer = (): void => {
+        if (videoRef.current) {
+            if (videoRef.current.paused) {
+                videoRef.current.play().catch(() => {
+                    // Handle play restrictions
+                });
+            } else {
+                videoRef.current.pause();
+            }
+        }
+    };
+
+    const handleClosePlayer = (): void => {
+        if (videoRef.current) {
+            try {
+                videoRef.current.pause();
+                videoRef.current.currentTime = 0;
+            } catch {
+                // no-op
+            }
+        }
+    };
+
     const promptTags = [
         { label: "Style : 3D" },
         { label: "Camera : Wide Shot" },
@@ -12,6 +70,7 @@ export const CallToActionSection = (): JSX.Element => {
 
     return (
         <Box
+            ref={sectionRef}
             component="section"
             sx={{
                 position: "relative",
@@ -22,40 +81,40 @@ export const CallToActionSection = (): JSX.Element => {
                 // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
             }}
         >
-            {/* Play Button - Centered */}
+            {/* Full Width Video Background */}
+            <video
+                ref={videoRef}
+                // src="https://storage.googleapis.com/gweb-gemini-cdn/gemini/uploads/71d5640dcf390153b19fdeb9514213f1ea484327.mp4"
+                // src="https://www.kapwing.com/resources/content/media/2025/06/Veo-Generated-Fish-2-1.mp4"
+                src="https://storage.googleapis.com/gweb-gemini-cdn/gemini/uploads/c15d5a7d18b56425f677736ce51e71535f9fd60b.compressed.mp4"
+                controls={false}
+                autoPlay={false}
+                muted={true}
+                playsInline={true}
+                loop={true}
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "820px",
+                    objectFit: "cover",
+                    zIndex: 1
+                }}
+            />
+
+            {/* Overlay for better text readability */}
             <Box
                 sx={{
                     position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%) translateY(-1rem)",
-                    // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    bgcolor: "rgba(0, 0, 0, 0.4)",
+                    zIndex: 2
                 }}
-            >
-                <IconButton
-                    sx={{
-                        width: 80,
-                        height: 80,
-                        bgcolor: "white",
-                        borderRadius: "50%",
-                        cursor: "pointer",
-                        "&:hover": {
-                            transform: "scale(1.05)",
-                            transition: "transform 0.3s ease",
-                        },
-                        transition: "transform 0.3s ease",
-                    }}
-                >
-                    <PlayArrowIcon
-                        sx={{
-                            width: 32,
-                            height: 32,
-                            color: "black",
-                            ml: 0.5,
-                        }}
-                    />
-                </IconButton>
-            </Box>
+            />
 
             {/* Prompt Card */}
             <Card
@@ -68,6 +127,7 @@ export const CallToActionSection = (): JSX.Element => {
                     border: "none",
                     borderRadius: "15px",
                     transform: "translateY(-1rem)",
+                    zIndex: 3,
                     // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
                 }}
             >
