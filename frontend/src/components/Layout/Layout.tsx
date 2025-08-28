@@ -2,128 +2,43 @@ import React from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@mui/material';
 import { useContext } from 'react';
 import { ColorModeContext } from '../../../pages/_app';
-import Brightness4Icon from '@mui/icons-material/Brightness4';
-import Brightness7Icon from '@mui/icons-material/Brightness7';
 import Link from 'next/link';
 
 interface LayoutProps {
   children: React.ReactNode;
+  showToolbar?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC<LayoutProps> = ({ children, showToolbar = true }) => {
   const colorMode = useContext(ColorModeContext);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="static">
-        <Toolbar sx={{ bgcolor: '#060606', paddingTop: '30px', }}>
-
-          <Box sx={{
-            display: 'flex',
-            width: '100%',
-            justifyContent: 'center',
-            alignItems: 'center',
-            alignSelf: 'center',
-
-          }}>
-
-            <Box sx={{
-              display: 'flex',
-              width: '50%',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              alignSelf: 'center',
-              bgcolor: '#252525',
-              borderRadius: '50px',
-              paddingLeft: '20px', paddingRight: '10px',
-              py: 1,
-            }}>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, }}>
-                <Box
-                  sx={{
-                    width: 18,
-                    height: 18,
-                    bgcolor: 'white',
-                    borderRadius: 0.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 12,
-                      height: 12,
-                      bgcolor: 'black',
-                      borderRadius: 0.5
-                    }}
-                  />
+      {showToolbar && (
+      <AppBar position="static" sx={{ display: { xs: 'none', md: 'block' } }}>
+        <Toolbar sx={{ bgcolor: '#060606', py: 2 }}>
+          <Box sx={{ width: '100%', maxWidth: 1000, mx: 'auto', px: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, bgcolor: '#252525', borderRadius: '9999px', px: 3, py: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ width: 18, height: 18, bgcolor: 'white', borderRadius: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Box sx={{ width: 12, height: 12, bgcolor: 'black', borderRadius: 0.5 }} />
                 </Box>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>
-                  VlogHub
-                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'white' }}>VlogHub</Typography>
               </Box>
-
-              <Box sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                px: 10,
-                py: 1,
-              }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 {['Home', 'Features', 'Examples', 'Blog'].map((item) => (
-                  <Typography
-                    key={item}
-                    component="a"
-                    href="#"
-                    sx={{
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      textDecoration: 'none',
-                      '&:hover': { color: 'white' },
-                      transition: 'color 0.2s'
-                    }}
-                  >
-                    {item}
-                  </Typography>
+                  <Typography key={item} component="a" href="#" sx={{ color: 'rgba(255,255,255,0.7)', textDecoration: 'none', '&:hover': { color: 'white' }, transition: 'color 0.2s' }}>{item}</Typography>
                 ))}
               </Box>
-
-              <Link href="/trending-topics" prefetch>
-              <Button
-                variant="contained"
-                sx={{
-                  px: 2.5,
-                  py: 1.5,
-                  borderRadius: '50px',
-                  fontSize: '14px',
-                  textTransform: 'none',
-                  background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)',
-                  color: '#FFFFFF',
-                  boxShadow: '0 0 30px rgba(124,58,237,0.35)',
-                  '&:hover': {
-                    background: 'linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%)',
-                    color: '#FFFFFF'
-                  }
-                }}
-              >
-                ✨ Generate Now
-              </Button>
-              </Link>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Link href="/trending-topics" prefetch>
+                  <Button variant="contained" sx={{ px: 2.5, py: 1.5, borderRadius: '50px', fontSize: '14px', textTransform: 'none', background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)', color: '#FFFFFF', boxShadow: '0 0 30px rgba(124,58,237,0.35)', '&:hover': { background: 'linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%)', color: '#FFFFFF' } }}>✨ Generate Now</Button>
+                </Link>
+              </Box>
             </Box>
-
-          </Box>
-
-          {/* Right Section - Actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
-            <Tooltip title={`Switch to ${colorMode.mode === 'dark' ? 'light' : 'dark'} mode`}>
-              <IconButton color="inherit" onClick={colorMode.toggle} size="small">
-                {colorMode.mode === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
-              </IconButton>
-            </Tooltip>
           </Box>
         </Toolbar>
       </AppBar>
+      )}
       <Box
         component="main"
         sx={{

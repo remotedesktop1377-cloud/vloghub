@@ -28,7 +28,7 @@ export const TrustedBySection = (): JSX.Element => {
             }}
         >
             <Container maxWidth="xl" sx={{
-                p: 5,
+                p: { xs: 2, md: 5 },
                 flex: 1,
                 bgcolor: "#121212",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -46,9 +46,9 @@ export const TrustedBySection = (): JSX.Element => {
                 <Box
                     sx={{
                         mb: 5,
-                        textAlign: "left",
-                        pl: 17,
-                        pr: 20,
+                        textAlign: { xs: "center", md: "left" },
+                        pl: { xs: 0, md: 17 },
+                        pr: { xs: 0, md: 20 },
                     }}
                 >
                     <Typography
@@ -98,8 +98,8 @@ export const TrustedBySection = (): JSX.Element => {
                         gap: 4,
                         justifyContent: "center",
                         alignItems: "stretch",
-                        pl: 17,
-                        pr: 17,
+                        pl: { xs: 0, md: 17 },
+                        pr: { xs: 0, md: 17 },
                     }}
                 >
                     {statisticsData.map((stat, index) => (

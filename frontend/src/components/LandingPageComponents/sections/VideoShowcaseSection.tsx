@@ -42,9 +42,9 @@ export const VideoShowcaseSection = (): JSX.Element => {
                 width: "100%",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 10,
-                px: "200px",
-                py: "120px",
+                gap: { xs: 6, md: 10 },
+                px: { xs: 2, sm: 4, md: 10, lg: 20 },
+                py: { xs: 8, md: 12 },
                 position: "relative",
                 bgcolor: "#060606",
             }}
@@ -52,11 +52,11 @@ export const VideoShowcaseSection = (): JSX.Element => {
             <Box
                 sx={{
                     width: "100%",
-                    maxWidth: "800px",
+                    maxWidth: { xs: "100%", md: "800px" },
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: 4,
+                    gap: { xs: 3, md: 4 },
                     position: "relative",
                     transform: "translateY(-1rem)",
                     // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
@@ -69,10 +69,10 @@ export const VideoShowcaseSection = (): JSX.Element => {
                         alignSelf: "stretch",
                         fontWeight: 500,
                         color: "white",
-                        fontSize: "56px",
+                        fontSize: { xs: "28px", sm: "36px", md: "56px" },
                         textAlign: "center",
-                        letterSpacing: "-1.68px",
-                        lineHeight: "56px",
+                        letterSpacing: { xs: "-0.6px", md: "-1.68px" },
+                        lineHeight: { xs: "36px", sm: "42px", md: "56px" },
                     }}
                 >
                     Stay Updated with Vloghub
@@ -82,12 +82,12 @@ export const VideoShowcaseSection = (): JSX.Element => {
                     sx={{
                         position: "relative",
                         width: "100%",
-                        maxWidth: "512px",
+                        maxWidth: { xs: "90%", sm: "512px" },
                         color: "#7c7c7c",
-                        fontSize: "18px",
+                        fontSize: { xs: "14px", md: "18px" },
                         textAlign: "center",
                         letterSpacing: 0,
-                        lineHeight: "21.6px",
+                        lineHeight: { xs: "20px", md: "21.6px" },
                     }}
                 >
                     Explore the latest trends, updates, and tips for leveraging AI in
@@ -98,11 +98,13 @@ export const VideoShowcaseSection = (): JSX.Element => {
             <Box
                 sx={{
                     display: "flex",
-                    alignItems: "flex-start",
-                    gap: 10,
+                    alignItems: { xs: "stretch", md: "flex-start" },
+                    flexDirection: { xs: "column", md: "row" },
+                    gap: { xs: 3, md: 10 },
                     position: "relative",
                     alignSelf: "stretch",
                     width: "100%",
+                    justifyContent: "center",
                 }}
             >
                 {videoCards.map((card, index) => (
@@ -135,19 +137,19 @@ export const VideoShowcaseSection = (): JSX.Element => {
                             ...(card.hasGradientBackground && {
                                 background: "radial-gradient(50% 50% at 50% 148%, rgba(198,172,253,1) 0%, rgba(108,56,243,1) 100%)",
                             }),
-                            ml: index === 0 ? -0.25 : 0,
-                            mr: index === videoCards.length - 1 ? -0.25 : 0,
-                            mt: card.hasGradientBorder ? -0.25 : 0,
-                            mb: card.hasGradientBorder ? -0.25 : 0,
+                            ml: { xs: 0, md: index === 0 ? -0.25 : 0 },
+                            mr: { xs: 0, md: index === videoCards.length - 1 ? -0.25 : 0 },
+                            mt: { xs: 0, md: card.hasGradientBorder ? -0.25 : 0 },
+                            mb: { xs: 0, md: card.hasGradientBorder ? -0.25 : 0 },
                         }}
                     >
-                        <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, p: 6, position: "relative" }}>
+                        <CardContent sx={{ display: "flex", flexDirection: "column", alignItems: { xs: "center", md: "flex-start" }, gap: { xs: 3, md: 6 }, p: { xs: 3, md: 6 }, position: "relative" }}>
                             <Box
                                 sx={{
                                     position: "relative",
                                     alignSelf: "stretch",
                                     width: "100%",
-                                    height: "160px",
+                                    height: { xs: "140px", md: "160px" },
                                     borderRadius: "12px",
                                     bgcolor: card.hasGradientBackground ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)",
                                 }}
@@ -155,7 +157,7 @@ export const VideoShowcaseSection = (): JSX.Element => {
                                 <Image src={card.image} alt={card.title} fill style={{ objectFit: 'cover', borderRadius: '12px' }} />
                             </Box>
 
-                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, position: "relative", alignSelf: "stretch", width: "100%" }}>
+                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: { xs: "center", md: "flex-start" }, gap: 2, position: "relative", alignSelf: "stretch", width: "100%", textAlign: { xs: 'center', md: 'left' } }}>
                                 <Typography
                                     variant="h3"
                                     sx={{
@@ -163,7 +165,7 @@ export const VideoShowcaseSection = (): JSX.Element => {
                                         alignSelf: "stretch",
                                         fontWeight: 600,
                                         color: "white",
-                                        fontSize: "20px",
+                                        fontSize: { xs: "18px", md: "20px" },
                                         letterSpacing: 0,
                                         lineHeight: "28px",
                                         mt: -0.25,
@@ -177,9 +179,9 @@ export const VideoShowcaseSection = (): JSX.Element => {
                                         position: "relative",
                                         alignSelf: "stretch",
                                         fontWeight: 400,
-                                        fontSize: "18px",
+                                        fontSize: { xs: "14px", md: "18px" },
                                         letterSpacing: 0,
-                                        lineHeight: "21.6px",
+                                        lineHeight: { xs: "20px", md: "21.6px" },
                                         color: card.textColor,
                                     }}
                                 >

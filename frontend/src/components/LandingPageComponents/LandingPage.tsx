@@ -52,11 +52,13 @@ const LandingPage: React.FC = () => {
                     <Container maxWidth="lg" sx={{ mb: 4, mt: 3 }}>
                         <Typography
                             sx={{
-                                fontSize: { xs: '44px', md: '80px', color: '#fff' },
+                                fontSize: { xs: '36px', sm: '44px', md: '80px' },
+                                color: '#fff',
                                 fontWeight: 500,
-                                lineHeight: 1.1,
+                                lineHeight: { xs: 1.15, md: 1.1 },
                                 letterSpacing: '-0.03em',
-                                mb: 3
+                                mb: { xs: 2, md: 3 },
+                                px: { xs: 2, md: 0 }
                             }}
                         >
                             Transform Ideas into <br /> Stunning Videos
@@ -79,10 +81,11 @@ const LandingPage: React.FC = () => {
                             sx={{
                                 display: 'flex',
                                 flexDirection: { xs: 'column', sm: 'row' },
-                                gap: 2,
+                                gap: { xs: 2, md: 3 },
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                pt: 8
+                                pt: { xs: 4, md: 8 },
+                                px: { xs: 2, md: 0 }
                             }}
                         >
                             <Link href="/trending-topics" prefetch>
@@ -111,8 +114,8 @@ const LandingPage: React.FC = () => {
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: 1,
-                                    px: 4,
-                                    py: 2,
+                                    px: { xs: 3, md: 4 },
+                                    py: { xs: 1.5, md: 2 },
                                     bgcolor: "white",
                                     borderRadius: "300px",
                                     height: "auto",
@@ -128,7 +131,7 @@ const LandingPage: React.FC = () => {
                                         backgroundClip: "text",
                                         WebkitTextFillColor: "transparent",
                                         fontWeight: 500,
-                                        fontSize: "20px",
+                                        fontSize: { xs: "16px", md: "20px" },
                                         letterSpacing: "-0.60px",
                                         lineHeight: "28px",
                                         whiteSpace: "nowrap",
@@ -143,16 +146,20 @@ const LandingPage: React.FC = () => {
                         <Box
                             sx={{
                                 display: 'flex',
-                                gap: 5,
-                                mt: 12,
+                                flexDirection: { xs: 'column', sm: 'row' },
+                                gap: { xs: 2, md: 5 },
+                                mt: { xs: 6, md: 12 },
                                 position: 'relative',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                px: { xs: 2, md: 0 }
                             }}
                         >
                             <Box
                                 sx={{
-                                    width: 358,
-                                    height: 254,
+                                    width: { xs: '100%', sm: 320, md: 358 },
+                                    maxWidth: 400,
+                                    height: { xs: 200, sm: 220, md: 254 },
                                     borderRadius: 10,
                                     bgcolor: 'rgba(255,255,255,0.06)',
                                     border: '1px solid rgba(255,255,255,0.06)',
@@ -164,8 +171,9 @@ const LandingPage: React.FC = () => {
                             </Box>
                             <Box
                                 sx={{
-                                    width: 358,
-                                    height: 254,
+                                    width: { xs: '100%', sm: 320, md: 358 },
+                                    maxWidth: 400,
+                                    height: { xs: 200, sm: 220, md: 254 },
                                     borderRadius: 10,
                                     bgcolor: 'rgba(255,255,255,0.06)',
                                     border: '1px solid rgba(255,255,255,0.15)',
@@ -190,7 +198,8 @@ const LandingPage: React.FC = () => {
                             borderRadius: 10,
                             bgcolor: 'rgba(255,255,255,0.06)',
                             border: '1px solid rgba(255,255,255,0.06)',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            display: { xs: 'none', md: 'block' }
                         }}
                     >
                         <Image src="/img1.png" alt="Preview 1" fill style={{ objectFit: 'cover' }} />
@@ -207,7 +216,8 @@ const LandingPage: React.FC = () => {
                             borderRadius: 6,
                             bgcolor: 'rgba(255,255,255,0.06)',
                             border: '1px solid rgba(255,255,255,0.06)',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            display: { xs: 'none', md: 'block' }
                         }}
                     >
                         <Image src="/img7.jpg" alt="Preview 1" fill style={{ objectFit: 'cover' }} />

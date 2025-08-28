@@ -75,7 +75,7 @@ export const CallToActionSection = (): JSX.Element => {
             sx={{
                 position: "relative",
                 width: "100%",
-                height: "820px",
+                height: { xs: '60vh', md: '820px' },
                 bgcolor: "#121212",
                 transform: "translateY(-1rem)",
                 // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
@@ -96,8 +96,8 @@ export const CallToActionSection = (): JSX.Element => {
                     position: "absolute",
                     top: 0,
                     left: 0,
-                    width: "100vw",
-                    height: "820px",
+                    width: "100%",
+                    height: "100%",
                     objectFit: "cover",
                     zIndex: 1
                 }}
@@ -120,14 +120,15 @@ export const CallToActionSection = (): JSX.Element => {
             <Card
                 sx={{
                     position: "absolute",
-                    top: "500px",
-                    left: "50px",
-                    width: "520px",
+                    top: { xs: 0, md: '500px' },
+                    left: { xs: 0, md: '50px' },
+                    width: { xs: '100%', md: '520px' },
                     bgcolor: "#000000",
                     border: "none",
                     borderRadius: "15px",
                     transform: "translateY(-1rem)",
                     zIndex: 3,
+                    display: { xs: 'none', md: 'block' },
                     // Note: animate-fade-in would need to be implemented with MUI transitions or CSS animations
                 }}
             >

@@ -5,11 +5,13 @@ import Layout from '../src/components/Layout/Layout'
 import Head from 'next/head'
 import { fontVariablesClass, fontStacks } from '../src/styles/fonts'
 import React, { useEffect, useMemo, useState, createContext } from 'react'
+import { useRouter } from 'next/router'
 
 export const ColorModeContext = createContext<{ mode: 'light' | 'dark'; toggle: () => void }>({ mode: 'dark', toggle: () => { } })
 
 export default function App({ Component, pageProps }: AppProps) {
   const [mode, setMode] = useState<'light' | 'dark'>('dark')
+  const router = useRouter()
 
   useEffect(() => {
     try {
@@ -97,7 +99,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <ColorModeContext.Provider value={colorMode}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <Layout>
+          <Layout showToolbar={router.pathname === '/'}>
             <Component {...pageProps} />
           </Layout>
         </ThemeProvider>

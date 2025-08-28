@@ -18,7 +18,8 @@ export const HeroSection = (): JSX.Element => {
                     position: "relative",
                     zIndex: 2,
                     textAlign: "center",
-                    px: { xs: 2, md: 4 },
+                    px: { xs: 0, md: 4 },
+                    mx: 'auto'
                 }}
             >
                 <Box
@@ -30,7 +31,7 @@ export const HeroSection = (): JSX.Element => {
                     <Typography
                         variant="h2"
                         sx={{
-                            fontSize: { xs: "1.5rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
+                            fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
                             fontWeight: 500,
                             lineHeight: 0.7,
                             letterSpacing: "-0.05em",
@@ -56,7 +57,7 @@ export const HeroSection = (): JSX.Element => {
                     <Typography
                         variant="h2"
                         sx={{
-                            fontSize: { xs: "1.5rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
+                            fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
                             fontWeight: 500,
                             lineHeight: 0.7,
                             letterSpacing: "-0.05em",
@@ -81,7 +82,7 @@ export const HeroSection = (): JSX.Element => {
                     <Typography
                         variant="h2"
                         sx={{
-                            fontSize: { xs: "1.5rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
+                            fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
                             fontWeight: 500,
                             lineHeight: 0.7,
                             letterSpacing: "-0.05em",
@@ -96,7 +97,7 @@ export const HeroSection = (): JSX.Element => {
                     <Typography
                         variant="h2"
                         sx={{
-                            fontSize: { xs: "1.5rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
+                            fontSize: { xs: "2rem", sm: "2.5rem", md: "3.5rem", lg: "4rem" },
                             fontWeight: 500,
                             lineHeight: 0.7,
                             letterSpacing: "-0.05em",
