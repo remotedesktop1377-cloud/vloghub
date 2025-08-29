@@ -97,22 +97,6 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
             Trending Topics
           </Typography>
 
-          {/* Last Updated Info */}
-          {lastUpdated && (
-            <Box className={styles.lastUpdatedInfo}>
-              <TimeIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Last updated: {formatLastUpdated(lastUpdated)}
-              </Typography>
-
-              {!isDataFresh(lastUpdated) && (
-                <Typography variant="caption" className={styles.cacheExpiryInfo}>
-                  • {getCacheExpiryInfo(lastUpdated)}
-                </Typography>
-              )}
-            </Box>
-
-          )}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* Refresh Button */}
             <Button

@@ -30,15 +30,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     const handleDateRangeChange = (event: SelectChangeEvent<string>) => {
         onDateRangeChange(event.target.value);
     };
-
-    const getSelectedDateRangeLabel = (): string => {
-        if (!selectedDateRange) {
-            return 'Select';
-        }
-        const option = dateRangeOptions.find(opt => opt.value === selectedDateRange);
-        return option ? option.label : 'Select';
-    };
-
+    
     return (
         <Box className={styles.dateRangeSelectorContainer}>
             <FormControl
@@ -61,9 +53,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
                         width: '100%'
                     }}
                 >
-                    <MenuItem value="">
-                        <em>Select</em>
-                    </MenuItem>
                     {dateRangeOptions.map((option) => (
                         <MenuItem key={option.value} value={option.value}>
                             <Box className={styles.dateRangeMenuItem}>

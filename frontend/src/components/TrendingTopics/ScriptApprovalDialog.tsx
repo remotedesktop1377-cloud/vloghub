@@ -377,34 +377,6 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
                   />
                 </Paper>
 
-                {/* Subtitle Section */}
-                <Paper elevation={2} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                  <Typography variant="h6" sx={{ mb: 1, color: 'info.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    🎬 SUBTITLES
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={5}
-                    variant="outlined"
-                    value={scriptData.subtitle || ''}
-                    onChange={(e) => setScriptData(prev => ({ ...prev, subtitle: e.target.value }))}
-                    placeholder="Generated subtitles will appear here..."
-                    sx={{
-                      '& .MuiInputBase-root': {
-                        fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
-                        fontSize: '1.1rem',
-                        lineHeight: 1.8,
-                        ...getDirectionSx(language)
-                      }
-                    }}
-                  />
-                </Paper>
-
-                {/* Word Count and Duration */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, }}>
-                  {/* Optional summary area can be re-enabled if needed */}
-                </Box>
               </Box>
             ) : (
               <Paper

@@ -72,6 +72,7 @@ import ScriptApprovalDialog from './ScriptApprovalDialog';
 import HeaderSection from './HeaderSection';
 
 import ConfirmationDialog from './ConfirmationDialog';
+import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
@@ -81,7 +82,7 @@ const TrendingTopics: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedLocationType, setSelectedLocationType] = useState<'global' | 'region' | 'country'>('global');
-  const [selectedDateRange, setSelectedDateRange] = useState<string>('');
+  const [selectedDateRange, setSelectedDateRange] = useState<string>('24h');
   // Category removed per request
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [lastUpdated, setLastUpdated] = useState<string>('');
@@ -165,28 +166,6 @@ const TrendingTopics: React.FC = () => {
       return; // skip API in hardcoded mode
     }
 
-    // Check cache first (unless forcing refresh)
-    if (forceRefresh) {
-      const cacheKey = `${locationType}_${location}_${dateRange}`;
-      const cachedData = getCachedData<TrendingTopic[]>(cacheKey);
-      if (cachedData) {
-        setTrendingTopics(cachedData);
-        setLoading(false);
-        // Try to get timestamp from cache
-        try {
-          const cacheKey = `trending_topics_${locationType}_${location}_${dateRange}`;
-          const cached = localStorage.getItem(cacheKey);
-          if (cached) {
-            const { timestamp } = JSON.parse(cached);
-            setLastUpdated(timestamp);
-          }
-        } catch (error) {
-          console.warn('Error reading timestamp from cache:', error);
-        }
-        return;
-      }
-    }
-
     try {
       setLoading(true);
       setError(null);
@@ -211,9 +190,6 @@ const TrendingTopics: React.FC = () => {
         setCachedData(cacheKey, sortedGeminiData);
         setLastUpdated(new Date().toISOString());
 
-        if (forceRefresh) {
-          toast.success('Trending topics refreshed successfully!');
-        }
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
         setTrendingTopics(mockTrendingTopics);
@@ -308,7 +284,6 @@ const TrendingTopics: React.FC = () => {
     }
 
     try {
-      debugger;
       setGeneratingChapters(true); // Keep using same loading state for now
       setError(null);
 
@@ -359,7 +334,7 @@ const TrendingTopics: React.FC = () => {
 
   const handleScriptApproval = () => {
     // Navigate to script production page with the approved script data
-    console.log('Script approved, navigating to script production page...');
+    // console.log('Script approved, navigating to script production page...');
 
     // Store script data for the next page
     // Use edited script if it exists, otherwise use generated script
@@ -417,31 +392,34 @@ const TrendingTopics: React.FC = () => {
   };
 
   const wordClickHandler = useCallback(async (w: any) => {
-    // console.log('🔍 Word clicked:', w.text);
-    // console.log('🔍 Available topics:', trendingTopics.map(t => t.topic));
+    // Safety check - ensure we have trending topics data
+    if (!trendingTopics || trendingTopics.length === 0) {
+      console.log('❌ No trending topics available for word click');
+      return;
+    }
 
     // find the topic which matches the clicked word
-    const foundTopic = trendingTopics.find(t => t.topic === w.text);
+    const foundTopic = trendingTopics.find(t => {
+      return t.topic === w.text;
+    });
 
     if (foundTopic) {
-      // console.log('✅ Selecting topic:', foundTopic.topic);
-      // console.log('✅ Found topic object:', foundTopic);
-      await handleTopicSelect(foundTopic);
+      try {
+        await handleTopicSelect(foundTopic);
+      } catch (error) {
+        console.error('❌ Error in handleTopicSelect:', error);
+      }
     } else {
       console.log('❌ No matching topic found for:', w.text);
+      console.log('❌ Available topics:', trendingTopics.map(t => t.topic));
     }
   }, [trendingTopics, handleTopicSelect]);
 
-  if (loading) {
-    return (
-      <Box className={styles.loadingContainer}>
-        <CircularProgress size={60} />
-      </Box>
-    );
-  }
-
   return (
     <Box className={styles.trendingTopicsContainer}>
+      {loading && (
+        <AppLoadingOverlay />
+      )}
       {/* Loading Overlay for AI Operations */}
       <LoadingOverlay
         generatingChapters={generatingChapters}
@@ -467,14 +445,8 @@ const TrendingTopics: React.FC = () => {
         lastUpdated={lastUpdated}
       />
 
-      {error && (
-        <Alert severity="error" className={styles.errorAlert}>
-          {error}
-        </Alert>
-      )}
-
       {/* Show message when not all fields are selected */}
-      {!isAllFieldsSelected() && (
+      {trendingTopics.length === 0 && (
         <Box sx={{
           textAlign: 'center',
           minHeight: '400px',
@@ -500,7 +472,7 @@ const TrendingTopics: React.FC = () => {
 
       {
         /* Cloud View - Centered word cloud with permanent details panel on right */
-        isAllFieldsSelected() && (
+        trendingTopics.length > 0 && (
           <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', gap: 3, height: '400px' }}>
               {/* Centered Word Cloud Container */}
@@ -512,45 +484,6 @@ const TrendingTopics: React.FC = () => {
                 alignItems: 'center',
                 position: 'relative'
               }}>
-                {/* Cache indicator for word cloud view */}
-                {lastUpdated && (() => {
-                  try {
-                    const date = new Date(lastUpdated);
-                    const now = new Date();
-                    const diffMs = now.getTime() - date.getTime();
-                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                    const isDataFresh = diffHours < 1;
-
-                    if (!isDataFresh) {
-                      return (
-                        <Box
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                            borderRadius: '4px',
-                            px: 1,
-                            py: 0.5,
-                            zIndex: 1,
-                          }}
-                          title="Data from cache - click refresh for fresh data"
-                        >
-                          <CachedIcon sx={{ fontSize: '0.8rem', color: 'text.secondary' }} />
-                          <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-                            Cached
-                          </Typography>
-                        </Box>
-                      );
-                    }
-                    return null;
-                  } catch (error) {
-                    return null;
-                  }
-                })()}
 
                 <WordCloudChart
                   width={600}
