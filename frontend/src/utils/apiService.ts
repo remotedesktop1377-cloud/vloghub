@@ -296,24 +296,16 @@ export const apiService = {
   generateChapters: (body: {
     topic: string;
     hypothesis: string;
-    details: string;
     region: string;
     duration: string;
-    selectedTopicSuggestions?: string[];
-    selectedHypothesisSuggestions?: string[];
-    topicDetails?: string;
   }) => ApiService.post(API_ENDPOINTS.GENERATE_CHAPTERS, body),
 
   generateScript: (body: {
     topic: string;
     hypothesis: string;
-    details: string;
     region: string;
     duration: string;
     language?: string;
-    selectedTopicSuggestions?: string[];
-    selectedHypothesisSuggestions?: string[];
-    topicDetails?: string;
   }) => ApiService.post(API_ENDPOINTS.GENERATE_SCRIPT, body),
 
   generateImages: (body: {

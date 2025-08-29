@@ -1,69 +1,20 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { toast } from 'react-toastify';
-import { mockTrendingTopics, TrendingTopic } from '../../data/mockTrendingTopics';
+import { TrendingTopic } from '../../data/mockTrendingTopics';
 
-import { locationData, LocationOption } from '../../data/locationData';
-import { durationOptions, DurationOption } from '../../data/mockDurationOptions';
-import { languageOptions, LanguageOption } from '../../data/mockLanguageOptions';
-import { getDirectionSx } from '../../utils/languageUtils';
-import { USE_HARDCODED, HARDCODED_TOPIC, HARDCODED_HYPOTHESIS, DEFAULT_AI_PROMPT } from '../../data/constants';
+import { durationOptions, } from '../../data/mockDurationOptions';
+import { languageOptions, } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
-import { HelperFunctions } from '../../utils/helperFunctions';
-import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
-import { dateRangeOptions } from './DateRangeSelector';
 
 import styles from './TrendingTopics.module.css';
 import {
   Box,
   Typography,
-  Grid,
-  Card,
-  CardContent,
-  Button,
-  Chip,
-  Avatar,
-  Stack,
-  CircularProgress,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
   Paper,
-  TextField,
-  Container,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Tabs,
-  Tab,
-  Switch,
-  ToggleButtonGroup,
-  ToggleButton,
-  useTheme,
 } from '@mui/material';
-import {
-  TrendingUp as TrendingIcon,
-  Refresh as RefreshIcon,
-  Twitter as TwitterIcon,
-  ContentCut as CutIcon,
-  Create as CreateIcon,
-  Delete as DeleteIcon,
-  Check as CheckIcon,
-  Close as CloseIcon,
-  Add as AddIcon,
-  DragIndicator as DragIcon,
-  Cached as CachedIcon,
-} from '@mui/icons-material';
-import { AutoFixHigh as MagicIcon } from '@mui/icons-material';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { WordCloudChart } from '../WordCloudChart/WordCloudChart';
 import LoadingOverlay from '../LoadingOverlay';
-import TrendingTopicsList from './TrendingTopicsList';
 import TopicDetailsSection from './TopicDetailsSection';
 import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
@@ -71,7 +22,6 @@ import VideoDurationSection from './VideoDurationSection';
 import ScriptApprovalDialog from './ScriptApprovalDialog';
 import HeaderSection from './HeaderSection';
 
-import ConfirmationDialog from './ConfirmationDialog';
 import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 
 const TrendingTopics: React.FC = () => {
@@ -95,31 +45,9 @@ const TrendingTopics: React.FC = () => {
   const [language, setLanguage] = useState('english');
   const [subtitleLanguage, setSubtitleLanguage] = useState('english');
   const [generatingChapters, setGeneratingChapters] = useState(false);
-
-  // Suggestions/Enhance states
-  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
-  const [selectedTopicSuggestions, setSelectedTopicSuggestions] = useState<string[]>([]);
-  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
-  const [enhancingDetails, setEnhancingDetails] = useState(false);
-  const [hypothesisSuggestions, setHypothesisSuggestions] = useState<string[]>([]);
-  const [selectedHypothesisSuggestions, setSelectedHypothesisSuggestions] = useState<string[]>([]);
-  const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
-  const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
-
-  // Script generation states
   const [generatedScript, setGeneratedScript] = useState<string>('');
-  const [showScriptDialog, setShowScriptDialog] = useState(false);
   const [editedScript, setEditedScript] = useState<string>('');
-
-  // Confirm dialog state
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
-  const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
-
-  const [trendView, setTrendView] = useState<'cloud' | 'grid'>('cloud');
-
-  // Cache management functions
-  const { getCachedData, setCachedData } = useTrendingTopicsCache();
+  const [showScriptDialog, setShowScriptDialog] = useState(false);
 
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
@@ -159,47 +87,28 @@ const TrendingTopics: React.FC = () => {
       return; // Don't fetch if not all fields are selected
     }
 
-    if (USE_HARDCODED) {
-      setTrendingTopics(mockTrendingTopics);
-      setLoading(false);
-      setLastUpdated(new Date().toISOString());
-      return; // skip API in hardcoded mode
-    }
-
     try {
       setLoading(true);
       setError(null);
 
       // Fetch from Gemini API with location type and date range
-      const geminiResult = await apiService.getGeminiTrendingTopics(locationType as 'global' | 'region' | 'country' | 'city', location, dateRange);
+      const geminiResult = await apiService.getGeminiTrendingTopics(locationType as 'global' | 'region' | 'country', location, dateRange);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
         const geminiData = geminiResult.data.data || [];
         // console.log('🟢 Gemini API Response Data:', geminiData);
-        // console.log('🟢 Gemini Topics with Values:', geminiData.map((t: any) => ({
-        //   topic: t.topic,
-        //   value: t.value
-        // })));
-        // Sort by value (higher = first)
         const sortedGeminiData = geminiData.sort((a: any, b: any) => b.value - a.value);
         setTrendingTopics(sortedGeminiData);
 
-        // Cache the fresh data
-        const cacheKey = `${locationType}_${location}_${dateRange}`;
-        setCachedData(cacheKey, sortedGeminiData);
-        setLastUpdated(new Date().toISOString());
-
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
-        setTrendingTopics(mockTrendingTopics);
         setLastUpdated(new Date().toISOString());
       }
 
       setError(null);
     } catch (err) {
       console.error('Error fetching trending topics, using mock data:', err);
-      setTrendingTopics(mockTrendingTopics);
       setError(null);
       setLastUpdated(new Date().toISOString());
     } finally {
@@ -208,48 +117,23 @@ const TrendingTopics: React.FC = () => {
   };
 
   useEffect(() => {
-    // Only fetch if all fields are selected
     if (isAllFieldsSelected()) {
-      console.log('🟢 Fetching trending topics for:', selectedLocation, selectedLocationType, selectedDateRange);
       fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange);
     }
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
 
-  // Initialize hardcoded topic/hypothesis if flag enabled
-  useEffect(() => {
-    if (USE_HARDCODED) {
-      setSelectedTopic({ id: 'hardcoded', category: 'Hardcoded', topic: HARDCODED_TOPIC, value: 20, timestamp: new Date().toISOString() });
-      setSelectedTopicDetails(HARDCODED_TOPIC);
-      setHypothesis(HARDCODED_HYPOTHESIS);
-      setTrendingTopics(mockTrendingTopics);
-      setLoading(false);
-    }
-  }, []);
-
   const handleLocationChange = (location: string) => {
     setSelectedLocation(location);
-    // Reset selections when location changes
-    setSelectedTopicSuggestions([]);
-    setSelectedHypothesisSuggestions([]);
   };
 
   const handleLocationTypeChange = (locationType: 'global' | 'region' | 'country') => {
     setSelectedLocationType(locationType);
-    // Reset location selection when type changes
     setSelectedLocation('');
     setSelectedCountry('');
-    // Reset selections when location type changes
-    setSelectedTopicSuggestions([]);
-    setSelectedHypothesisSuggestions([]);
   };
-
-  // Category removed
 
   const handleDateRangeChange = (dateRange: string) => {
     setSelectedDateRange(dateRange);
-    // Reset selections when date range changes
-    setSelectedTopicSuggestions([]);
-    setSelectedHypothesisSuggestions([]);
   };
 
   const handleCountryChange = (country: string) => {
@@ -259,23 +143,16 @@ const TrendingTopics: React.FC = () => {
   const handleRefresh = () => {
     if (isAllFieldsSelected()) {
       console.log('🟢 Refreshing trending topics for1:', selectedLocation, selectedLocationType, selectedDateRange);
-      fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true); // Force refresh
-      // Reset selections when refreshing
-      setSelectedTopicSuggestions([]);
-      setSelectedHypothesisSuggestions([]);
+      fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
     } else {
       toast.info('Please select all options before refreshing');
     }
   };
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
+    console.log('🟢 Handling topic select:', topic);
     setSelectedTopic(topic);
     setHypothesis('');
-    setTopicSuggestions([]); // Reset suggestions
-    setSelectedTopicSuggestions([]); // Reset selected topic suggestions
-    setHypothesisSuggestions([]); // Reset hypothesis suggestions
-    setSelectedHypothesisSuggestions([]); // Reset selected hypothesis suggestions
-    setSelectedTopicDetails(''); // Clear topic details to refresh
   };
 
   const handleGenerateScript = async () => {
@@ -290,18 +167,12 @@ const TrendingTopics: React.FC = () => {
       const result = await apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
-        details: selectedTopicDetails,
         region: selectedLocation, // Keep for backward compatibility
         duration: duration,
         language: language,
-        selectedTopicSuggestions: selectedTopicSuggestions,
-        selectedHypothesisSuggestions: selectedHypothesisSuggestions,
-        topicDetails: selectedTopicDetails
       });
       console.log('🟢 Script generation result:', result);
       if (result.success && result.data?.script) {
-        // Show script approval dialog with structured data
-        setGeneratedScript(result.data.script);
         setEditedScript(result.data.script);
 
         // Store additional script metadata for later use
@@ -355,8 +226,6 @@ const TrendingTopics: React.FC = () => {
       region: selectedLocation, // Keep for backward compatibility
       duration,
       language,
-      selectedTopicSuggestions,
-      selectedHypothesisSuggestions,
       ...(metadata || {})
     };
 
@@ -421,13 +290,12 @@ const TrendingTopics: React.FC = () => {
         <AppLoadingOverlay />
       )}
       {/* Loading Overlay for AI Operations */}
-      <LoadingOverlay
-        generatingChapters={generatingChapters}
-        enhancingDetails={enhancingDetails}
-        enhancingHypothesis={enhancingHypothesis}
-        imagesLoading={false}
-        pickerLoading={false}
-      />
+      {generatedScript && (
+        <LoadingOverlay
+          title={'Generating Script'}
+          desc={'Please wait while AI processes your request'}
+        />
+      )}
 
       {/* Header with Enhanced Location Selection, Date Range, and Refresh */}
       <HeaderSection
@@ -536,7 +404,6 @@ const TrendingTopics: React.FC = () => {
               languageOptions={languageOptions}
               generatingChapters={generatingChapters}
               onGenerateChapters={handleGenerateScript}
-              selectedHypothesisSuggestions={selectedHypothesisSuggestions}
               hasChapters={false}
               onRegenerateAllAssets={() => { }}
               canGenerate={!!selectedTopic}
@@ -554,7 +421,7 @@ const TrendingTopics: React.FC = () => {
         onClose={() => setShowScriptDialog(false)}
         onApprove={handleScriptApproval}
         onReject={handleScriptRejection}
-        script={editedScript || generatedScript}
+        script={editedScript}
         topic={selectedTopic?.topic || ''}
         language={language}
         onScriptChange={handleScriptChange}

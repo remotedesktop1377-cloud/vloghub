@@ -1,6 +1,6 @@
 import React from 'react';
 import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
-import { 
+import {
   ContentCut as CutIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
@@ -16,7 +16,6 @@ interface VideoDurationSectionProps {
   languageOptions: LanguageOption[];
   generatingChapters: boolean;
   onGenerateChapters: () => void;
-  selectedHypothesisSuggestions: string[];
   onRegenerateAllAssets?: () => void;
   hasChapters?: boolean;
   canGenerate?: boolean;
@@ -33,15 +32,12 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   languageOptions,
   generatingChapters,
   onGenerateChapters,
-  selectedHypothesisSuggestions,
   onRegenerateAllAssets,
   hasChapters = false,
   canGenerate = false,
   subtitleLanguage = 'english',
   onSubtitleLanguageChange,
 }) => {
-
-  console.log('hypothesisSuggestions', selectedHypothesisSuggestions.length);
 
   return (
     <Paper sx={{ p: 1.5 }}>
@@ -51,7 +47,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
       <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.8rem', display: 'block' }}>
         Select the desired length for your generated video content and manage your video assets.
       </Typography>
-      
+
       {/* Duration Selection, Language Selection and Generate Chapters */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -119,8 +115,8 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
             height: 36
           }}
         >
-          {generatingChapters 
-            ? (hasChapters ? 'Regenerating Script...' : 'Generating Script...') 
+          {generatingChapters
+            ? (hasChapters ? 'Regenerating Script...' : 'Generating Script...')
             : (hasChapters ? 'Regenerate Script' : 'Generate Script')
           }
         </Button>

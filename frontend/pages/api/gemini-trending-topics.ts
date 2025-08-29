@@ -87,7 +87,7 @@ const fetchGeminiTrendingTopics = async (location: string, locationType: string 
 
     // Transform to match our interface
     const transformedData = parsedData.map((item: any, index: number) => ({
-      id: `gemini-${index + 1}`,
+      id: `topic-${index + 1}`,
       category: item.category || 'Social',
       topic: item.topic || 'Unknown Topic',
       value: item.engagement_count || (2000000 - (index * 100000)), // Use actual engagement count
@@ -106,107 +106,7 @@ const fetchGeminiTrendingTopics = async (location: string, locationType: string 
     // Enhanced fallback data based on location type and date range
     let fallbackTopics: GeminiTrendingTopic[] = [];
     
-    if (locationType === 'city') {
-      fallbackTopics = [
-        {
-          id: 'gemini-1',
-          category: 'Local News',
-          topic: `${location} City Updates`,
-          value: 1850000,
-          timestamp: new Date().toISOString(),
-          description: `Latest local news and developments in ${location}`,
-          source_reference: 'Local News, Social Media',
-          engagement_count: 1850000,
-        },
-        {
-          id: 'gemini-2',
-          category: 'Community',
-          topic: `${location} Community Events`,
-          value: 1650000,
-          timestamp: new Date().toISOString(),
-          description: `Upcoming community events and local gatherings in ${location}`,
-          source_reference: 'Community Forums, Local Media',
-          engagement_count: 1650000,
-        },
-        // Add more city-specific fallback topics...
-      ];
-    } else if (locationType === 'country') {
-      fallbackTopics = [
-        {
-          id: 'gemini-1',
-          category: 'National News',
-          topic: `${location} National Updates`,
-          value: 1850000,
-          timestamp: new Date().toISOString(),
-          description: `Latest national news and developments in ${location}`,
-          source_reference: 'National News, Social Media',
-          engagement_count: 1850000,
-        },
-        {
-          id: 'gemini-2',
-          category: 'Politics',
-          topic: `${location} Government News`,
-          value: 1650000,
-          timestamp: new Date().toISOString(),
-          description: `Government policies and political developments in ${location}`,
-          source_reference: 'Political News, Social Media',
-          engagement_count: 1650000,
-        },
-        // Add more country-specific fallback topics...
-      ];
-    } else if (locationType === 'global') {
-      fallbackTopics = [
-        {
-          id: 'gemini-1',
-          category: 'International News',
-          topic: 'Global Breaking News',
-          value: 1850000,
-          timestamp: new Date().toISOString(),
-          description: 'Latest international breaking news and global developments',
-          source_reference: 'International News, Social Media',
-          engagement_count: 1850000,
-        },
-        {
-          id: 'gemini-2',
-          category: 'Technology',
-          topic: 'Global Tech Trends',
-          value: 1650000,
-          timestamp: new Date().toISOString(),
-          description: 'Latest technology trends and innovations worldwide',
-          source_reference: 'Tech News, Social Media',
-          engagement_count: 1650000,
-        },
-        // Add more global fallback topics...
-      ];
-    } else {
-      // Default region fallback (existing Pakistan data)
-      fallbackTopics = [
-        {
-          id: 'gemini-1',
-          category: 'Politics',
-          topic: 'Imran Khan Cases',
-          value: 1850000,
-          timestamp: new Date().toISOString(),
-          description: 'Legal proceedings and court hearings related to former PM Imran Khan continue to dominate headlines',
-          source_reference: 'News Media, Twitter',
-          engagement_count: 1850000,
-        },
-        {
-          id: 'gemini-2',
-          category: 'Sports',
-          topic: 'T20 World Cup 2024',
-          value: 1650000,
-          timestamp: new Date().toISOString(),
-          description: 'Cricket fans discussing Pakistan team performance and upcoming matches in the T20 World Cup',
-          source_reference: 'Sports Media, Twitter, YouTube',
-          engagement_count: 1650000,
-        },
-        // ... existing fallback topics ...
-      ];
-    }
-    
-    // Sort by value (higher = first)
-    return fallbackTopics.sort((a, b) => b.value - a.value);
+    return fallbackTopics;
   }
 };
 

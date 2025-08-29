@@ -21,7 +21,6 @@ export function WordCloudChart(props: IWordCloudChartProps) {
     const [data, setData] = useState<WordData[]>([]);
     const [selectedWord, setSelectedWord] = useState<string | null>(null);
 
-
     // Use useRef to maintain stable references that never change
     const stableRefs = useRef({
         randomSeed: Math.random(),
@@ -44,7 +43,7 @@ export function WordCloudChart(props: IWordCloudChartProps) {
             // Make biggest word 30px, smallest word 15px (ensuring all words are visible)
             stableRefs.current.fontSize = (word: any) => {
                 const calculatedSize = Math.max(15, (15 * word.value) / newMax + 15);
-                console.log(`🔤 Word "${word.text}" (value: ${word.value}) → fontSize: ${calculatedSize}px`);
+                // console.log(`🔤 Word "${word.text}" (value: ${word.value}) → fontSize: ${calculatedSize}px`);
                 return calculatedSize;
             };
             stableRefs.current.fill = (d: any, i: any) => {
@@ -95,7 +94,6 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                     spiral="archimedean"
                     random={() => 0.5}
                     onWordClick={(e, d) => {
-                        // console.log('Word clicked:', d);
                         stableRefs.current.handleWordClick(d);
                     }}
                     fill={stableRefs.current.fill}
