@@ -418,4 +418,59 @@ export class HelperFunctions {
     } as const;
   }
 
-} 
+  static getTimeRangeDescription(dateRange: string): string {
+    switch (dateRange) {
+      case '24h':
+        return 'past 24 hours';
+      case '7d':
+        return 'past week';
+
+      case '30d':
+        return 'past month';
+      case 'anytime':
+        return 'any time period';
+      default:
+        return 'past 24 hours';
+    }
+  }
+
+  // Function to get localized section headers based on language
+  static getLocalizedSectionHeaders = (lang: string) => {
+    switch (lang.toLowerCase()) {
+      case 'urdu':
+        return {
+          title: '📋 عنوان',
+          hook: '🎯 ہک',
+          mainContent: '📝 اہم مواد',
+          conclusion: '🏁 نتیجہ',
+          callToAction: '🚀 کارروائی کا مطالبہ'
+        };
+      case 'arabic':
+        return {
+          title: '📋 عنوان',
+          hook: '🎯 خطاب',
+          mainContent: '📝 المحتوى الرئيسي',
+          conclusion: '🏁 خاتمة',
+          callToAction: '🚀 دعوة للعمل'
+        };
+      case 'hindi':
+        return {
+          title: '📋 शीर्षक',
+          hook: '🎯 हुक',
+          mainContent: '📝 मुख्य सामग्री',
+          conclusion: '🏁 निष्कर्ष',
+          callToAction: '🚀 कार्रवाई का आह्वान'
+        };
+      default: // english and other languages
+        return {
+          title: '📋 TITLE',
+          hook: '🎯 HOOK',
+          mainContent: '📝 MAIN CONTENT',
+          conclusion: '🏁 CONCLUSION',
+          callToAction: '🚀 CALL TO ACTION'
+        };
+    }
+  };
+
+}
+

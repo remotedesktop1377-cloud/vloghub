@@ -19,6 +19,9 @@ interface VideoDurationSectionProps {
   selectedHypothesisSuggestions: string[];
   onRegenerateAllAssets?: () => void;
   hasChapters?: boolean;
+  canGenerate?: boolean;
+  subtitleLanguage?: string;
+  onSubtitleLanguageChange?: (subtitleLanguage: string) => void;
 }
 
 const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
@@ -33,6 +36,9 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   selectedHypothesisSuggestions,
   onRegenerateAllAssets,
   hasChapters = false,
+  canGenerate = false,
+  subtitleLanguage = 'english',
+  onSubtitleLanguageChange,
 }) => {
 
   console.log('hypothesisSuggestions', selectedHypothesisSuggestions.length);
@@ -80,6 +86,22 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
               ))}
             </Select>
           </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel sx={{ fontSize: '0.85rem' }}>Subtitle Language</InputLabel>
+            <Select
+              value={subtitleLanguage}
+              label="Subtitle Language"
+              onChange={(e) => onSubtitleLanguageChange?.(e.target.value)}
+              sx={{ '& .MuiSelect-select': { fontSize: '0.85rem' } }}
+            >
+              {languageOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.85rem' }}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
         <Button
@@ -87,7 +109,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           size="small"
           startIcon={hasChapters ? <RefreshIcon /> : <CutIcon />}
           onClick={hasChapters ? onRegenerateAllAssets : onGenerateChapters}
-          disabled={selectedHypothesisSuggestions.length === 0 || generatingChapters}
+          disabled={!canGenerate || generatingChapters}
           sx={{
             bgcolor: hasChapters ? '#ff9800' : '#1DA1F2',
             '&:hover': { bgcolor: hasChapters ? '#f57c00' : '#0d8bd9' },

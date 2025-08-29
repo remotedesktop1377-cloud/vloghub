@@ -162,14 +162,6 @@ export default async function handler(
       return res.status(400).json({ error: 'Topic is required' });
     }
 
-    if (selectedTopicSuggestions?.length === 0) {
-      return res.status(400).json({ error: 'Topic selection is required' });
-    }
-
-    if (selectedHypothesisSuggestions?.length === 0) {
-      return res.status(400).json({ error: 'Hypothesis selection is required' });
-    }
-
     // console.log('🎬 Generating script for:', { topic, hypothesis, region, duration, language });
 
     const result = await generateScriptWithGemini({
