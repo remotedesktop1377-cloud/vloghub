@@ -14,7 +14,6 @@ interface VideoDurationSectionProps {
   language: string;
   onLanguageChange: (language: string) => void;
   languageOptions: LanguageOption[];
-  generatingChapters: boolean;
   onGenerateChapters: () => void;
   onRegenerateAllAssets?: () => void;
   hasChapters?: boolean;
@@ -30,7 +29,6 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   language,
   onLanguageChange,
   languageOptions,
-  generatingChapters,
   onGenerateChapters,
   onRegenerateAllAssets,
   hasChapters = false,
@@ -105,7 +103,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           size="small"
           startIcon={hasChapters ? <RefreshIcon /> : <CutIcon />}
           onClick={hasChapters ? onRegenerateAllAssets : onGenerateChapters}
-          disabled={!canGenerate || generatingChapters}
+          disabled={!canGenerate}
           sx={{
             bgcolor: hasChapters ? '#ff9800' : '#1DA1F2',
             '&:hover': { bgcolor: hasChapters ? '#f57c00' : '#0d8bd9' },
@@ -115,10 +113,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
             height: 36
           }}
         >
-          {generatingChapters
-            ? (hasChapters ? 'Regenerating Script...' : 'Generating Script...')
-            : (hasChapters ? 'Regenerate Script' : 'Generate Script')
-          }
+          {'Generating Script...'}
         </Button>
       </Box>
 

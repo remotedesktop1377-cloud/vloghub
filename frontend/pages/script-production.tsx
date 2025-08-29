@@ -277,7 +277,7 @@ const ScriptProductionPage: React.FC = () => {
     };
 
     const handleGoBack = () => {
-        router.push('/');
+        router.push('/trending-topics');
     };
 
     const handleDownloadAllNarrations = () => {

@@ -12,6 +12,7 @@ import {
   Box,
   Typography,
   Paper,
+  CircularProgress,
 } from '@mui/material';
 import { WordCloudChart } from '../WordCloudChart/WordCloudChart';
 import LoadingOverlay from '../LoadingOverlay';
@@ -284,13 +285,19 @@ const TrendingTopics: React.FC = () => {
     }
   }, [trendingTopics, handleTopicSelect]);
 
+  if (loading) {
+    return (
+      <AppLoadingOverlay />
+    );
+  }
+
   return (
     <Box className={styles.trendingTopicsContainer}>
-      {loading && (
+      {/* {loading && (
         <AppLoadingOverlay />
-      )}
+      )} */}
       {/* Loading Overlay for AI Operations */}
-      {generatedScript && (
+      {generatingChapters && (
         <LoadingOverlay
           title={'Generating Script'}
           desc={'Please wait while AI processes your request'}
@@ -402,7 +409,6 @@ const TrendingTopics: React.FC = () => {
               language={language}
               onLanguageChange={setLanguage}
               languageOptions={languageOptions}
-              generatingChapters={generatingChapters}
               onGenerateChapters={handleGenerateScript}
               hasChapters={false}
               onRegenerateAllAssets={() => { }}
