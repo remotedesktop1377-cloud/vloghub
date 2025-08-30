@@ -289,80 +289,23 @@ export class ApiService {
 // Specific API service functions for common operations
 export const apiService = {
   // Trending Topics (Gemini only)
-  getGeminiTrendingTopics: (region: string) =>
-    ApiService.get(API_ENDPOINTS.GEMINI_TRENDING_TOPICS, { region }),
-
-  // Topic Suggestions
-  getTopicSuggestions: (body: { topic: string; region: string; currentSuggestions?: string[] }) =>
-    ApiService.post(API_ENDPOINTS.TOPIC_SUGGESTIONS, body),
-
-  // Hypothesis Suggestions
-  getHypothesisSuggestions: (body: {
-    topic: string;
-    details: string;
-    region: string;
-    num: number;
-    currentSuggestions?: string[];
-  }) => ApiService.post(API_ENDPOINTS.HYPOTHESIS_SUGGESTIONS, body),
-
-  // Content Enhancement
-  enhanceTopicDetails: (body: {
-    topic: string;
-    details: string;
-    region: string;
-    targetWords: number
-  }) => ApiService.post(API_ENDPOINTS.ENHANCE_TOPIC_DETAILS, body),
-
-  enhanceHypothesis: (body: {
-    topic: string;
-    hypothesis: string;
-    details: string;
-    region: string;
-    currentSuggestions?: string[];
-  }) => ApiService.post(API_ENDPOINTS.ENHANCE_HYPOTHESIS, body),
-
-  enhanceTopicSuggestions: (body: {
-    suggestions: string[];
-    topic: string;
-    region: string;
-  }) => 
-    ApiService.post(API_ENDPOINTS.ENHANCE_TOPIC_SUGGESTIONS, body)
-      .then((result: any) => {
-        // Ensure we always return the expected structure
-        return {
-          success: true,
-          data: {
-            enhancedSuggestions: (result?.data?.enhancedSuggestions) ? result.data.enhancedSuggestions : []
-          }
-        };
-      })
-      .catch((error: any) => ({
-        success: false,
-        error: error?.message || 'Failed to enhance suggestions'
-      })),
+  getGeminiTrendingTopics: (locationType: 'region' | 'city' | 'country' | 'global' = 'region', location: string, dateRange: string = '24h') =>
+    ApiService.get(API_ENDPOINTS.GEMINI_TRENDING_TOPICS, { locationType, location, dateRange }),
 
   // Content Generation
   generateChapters: (body: {
     topic: string;
     hypothesis: string;
-    details: string;
     region: string;
     duration: string;
-    selectedTopicSuggestions?: string[];
-    selectedHypothesisSuggestions?: string[];
-    topicDetails?: string;
   }) => ApiService.post(API_ENDPOINTS.GENERATE_CHAPTERS, body),
 
   generateScript: (body: {
     topic: string;
     hypothesis: string;
-    details: string;
     region: string;
     duration: string;
     language?: string;
-    selectedTopicSuggestions?: string[];
-    selectedHypothesisSuggestions?: string[];
-    topicDetails?: string;
   }) => ApiService.post(API_ENDPOINTS.GENERATE_SCRIPT, body),
 
   generateImages: (body: {

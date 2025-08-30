@@ -117,17 +117,6 @@ const {
 // Force refresh (bypass cache)
 fetchTrendingTopics(selectedRegion, true);
 
-// Clear specific region cache
-clearCurrentRegionCache();
-
-// Check cache status
-const isFresh = lastUpdated && (() => {
-  const date = new Date(lastUpdated);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  return diffHours < 1;
-})();
 ```
 
 ## Configuration

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
-import { 
+import {
   ContentCut as CutIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
@@ -14,11 +14,12 @@ interface VideoDurationSectionProps {
   language: string;
   onLanguageChange: (language: string) => void;
   languageOptions: LanguageOption[];
-  generatingChapters: boolean;
   onGenerateChapters: () => void;
-  selectedHypothesisSuggestions: string[];
   onRegenerateAllAssets?: () => void;
   hasChapters?: boolean;
+  canGenerate?: boolean;
+  subtitleLanguage?: string;
+  onSubtitleLanguageChange?: (subtitleLanguage: string) => void;
 }
 
 const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
@@ -28,14 +29,13 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   language,
   onLanguageChange,
   languageOptions,
-  generatingChapters,
   onGenerateChapters,
-  selectedHypothesisSuggestions,
   onRegenerateAllAssets,
   hasChapters = false,
+  canGenerate = false,
+  subtitleLanguage = 'english',
+  onSubtitleLanguageChange,
 }) => {
-
-  console.log('hypothesisSuggestions', selectedHypothesisSuggestions.length);
 
   return (
     <Paper sx={{ p: 1.5 }}>
@@ -45,7 +45,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
       <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.8rem', display: 'block' }}>
         Select the desired length for your generated video content and manage your video assets.
       </Typography>
-      
+
       {/* Duration Selection, Language Selection and Generate Chapters */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -80,6 +80,22 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
               ))}
             </Select>
           </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel sx={{ fontSize: '0.85rem' }}>Subtitle Language</InputLabel>
+            <Select
+              value={subtitleLanguage}
+              label="Subtitle Language"
+              onChange={(e) => onSubtitleLanguageChange?.(e.target.value)}
+              sx={{ '& .MuiSelect-select': { fontSize: '0.85rem' } }}
+            >
+              {languageOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.85rem' }}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
         <Button
@@ -87,7 +103,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           size="small"
           startIcon={hasChapters ? <RefreshIcon /> : <CutIcon />}
           onClick={hasChapters ? onRegenerateAllAssets : onGenerateChapters}
-          disabled={selectedHypothesisSuggestions.length === 0 || generatingChapters}
+          disabled={!canGenerate}
           sx={{
             bgcolor: hasChapters ? '#ff9800' : '#1DA1F2',
             '&:hover': { bgcolor: hasChapters ? '#f57c00' : '#0d8bd9' },
@@ -97,10 +113,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
             height: 36
           }}
         >
-          {generatingChapters 
-            ? (hasChapters ? 'Regenerating Script...' : 'Generating Script...') 
-            : (hasChapters ? 'Regenerate Script' : 'Generate Script')
-          }
+          {'Generating Script...'}
         </Button>
       </Box>
 

@@ -65,22 +65,6 @@ const TrendingTopicsList: React.FC<TrendingTopicsListProps> = ({
             }}
             onClick={() => onTopicSelect(topic)}
           >
-            {/* Cache indicator */}
-            {lastUpdated && !isDataFresh(lastUpdated) && (
-              <Tooltip title="Data from cache - click refresh for fresh data">
-                <CachedIcon
-                  sx={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    fontSize: '0.8rem',
-                    color: 'text.secondary',
-                    opacity: 0.7,
-                  }}
-                />
-              </Tooltip>
-            )}
-            
             <CardContent sx={{ flexGrow: 1, p: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
                 <Avatar

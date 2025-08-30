@@ -95,34 +95,35 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
     // Parse the current script to populate scriptData for editing
     const currentScript = editedScript || script;
     const lines = currentScript.split('\n');
+    const headers = HelperFunctions.getLocalizedSectionHeaders(language);
 
     let currentSection = '';
     let currentContent = '';
     const newScriptData: ScriptData = { ...scriptData };
 
     for (const line of lines) {
-      if (line.includes('📋 TITLE:')) {
+      if (line.includes(headers.title)) {
         currentSection = 'title';
         currentContent = '';
-      } else if (line.includes('🎯 HOOK:')) {
+      } else if (line.includes(headers.hook)) {
         if (currentSection && currentContent.trim()) {
           (newScriptData as any)[currentSection] = currentContent.trim();
         }
         currentSection = 'hook';
         currentContent = '';
-      } else if (line.includes('📝 MAIN CONTENT:')) {
+      } else if (line.includes(headers.mainContent)) {
         if (currentSection && currentContent.trim()) {
           (newScriptData as any)[currentSection] = currentContent.trim();
         }
         currentSection = 'mainContent';
         currentContent = '';
-      } else if (line.includes('🏁 CONCLUSION:')) {
+      } else if (line.includes(headers.conclusion)) {
         if (currentSection && currentContent.trim()) {
           (newScriptData as any)[currentSection] = currentContent.trim();
         }
         currentSection = 'conclusion';
         currentContent = '';
-      } else if (line.includes('🚀 CALL TO ACTION:')) {
+      } else if (line.includes(headers.callToAction)) {
         if (currentSection && currentContent.trim()) {
           (newScriptData as any)[currentSection] = currentContent.trim();
         }
@@ -143,12 +144,13 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
 
   const handleSaveScript = () => {
     // Combine all sections into a single script
+    const headers = HelperFunctions.getLocalizedSectionHeaders(language);
     const combinedScript = [
-      scriptData.title && `📋 TITLE:\n${scriptData.title}`,
-      scriptData.hook && `🎯 HOOK:\n${scriptData.hook}`,
-      scriptData.mainContent && `📝 MAIN CONTENT:\n${scriptData.mainContent}`,
-      scriptData.conclusion && `🏁 CONCLUSION:\n${scriptData.conclusion}`,
-      scriptData.callToAction && `🚀 CALL TO ACTION:\n${scriptData.callToAction}`
+      scriptData.title && `${headers.title}:\n${scriptData.title}`,
+      scriptData.hook && `${headers.hook}:\n${scriptData.hook}`,
+      scriptData.mainContent && `${headers.mainContent}:\n${scriptData.mainContent}`,
+      scriptData.conclusion && `${headers.conclusion}:\n${scriptData.conclusion}`,
+      scriptData.callToAction && `${headers.callToAction}:\n${scriptData.callToAction}`
     ].filter(Boolean).join('\n\n');
 
     // Update the edited script state
@@ -187,29 +189,30 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   // Function to render script with embedded titles
   const renderScriptWithTitles = () => {
     const { title, hook, mainContent, conclusion, callToAction } = scriptData;
+    const headers = HelperFunctions.getLocalizedSectionHeaders(language);
 
     // If we have script metadata, format it with sections
     if (title || hook || mainContent || conclusion || callToAction) {
       let formattedScript = '';
 
       if (title) {
-        formattedScript += `📋 TITLE:\n${title}\n\n`;
+        formattedScript += `${headers.title}:\n${title}\n\n`;
       }
 
       if (hook) {
-        formattedScript += `🎯 HOOK:\n${hook}\n\n`;
+        formattedScript += `${headers.hook}:\n${hook}\n\n`;
       }
 
       if (mainContent) {
-        formattedScript += `📝 MAIN CONTENT:\n${mainContent}\n\n`;
+        formattedScript += `${headers.mainContent}:\n${mainContent}\n\n`;
       }
 
       if (conclusion) {
-        formattedScript += `🏁 CONCLUSION:\n${conclusion}\n\n`;
+        formattedScript += `${headers.conclusion}:\n${conclusion}\n\n`;
       }
 
       if (callToAction) {
-        formattedScript += `🚀 CALL TO ACTION:\n${callToAction}\n\n`;
+        formattedScript += `${headers.callToAction}:\n${callToAction}\n\n`;
       }
 
       return formattedScript.trim();
@@ -374,10 +377,6 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
                   />
                 </Paper>
 
-                {/* Word Count and Duration */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1, }}>
-                  {/* Optional summary area can be re-enabled if needed */}
-                </Box>
               </Box>
             ) : (
               <Paper
