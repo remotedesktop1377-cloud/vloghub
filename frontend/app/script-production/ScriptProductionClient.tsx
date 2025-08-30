@@ -86,11 +86,6 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
 
-    // Duration calculation
-    const [estimatedDuration, setEstimatedDuration] = useState('');
-    const [scriptModified, setScriptModified] = useState(false);
-    const [originalDuration, setOriginalDuration] = useState('');
-
     useEffect(() => {
         // Load only from localStorage
         const stored = localStorage.getItem('approvedScript');
@@ -108,24 +103,10 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
         setInitializing(false);
     }, []);
 
-    // Additional useEffect to handle page refresh when router.query is empty
-    // Removed router-based refresh loader; localStorage-only loader above handles refresh
-
-    // Note: Do not remove approvedScript on unmount; it supports page refresh persistence
-
     // Calculate estimated duration when script data changes
     useEffect(() => {
-        console.log('🟢 Script data:', scriptData);
         if (scriptData?.script) {
-            setOriginalDuration(scriptData.duration);
-            setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
-
-            // Defer heavy paragraph processing to avoid blocking initial render
-            setTimeout(() => {
-                updateParagraphs(scriptData.script);
-            }, 0);
-
-            setScriptModified(false); // Reset to false on initial load
+            updateParagraphs(scriptData.script);
         }
     }, [scriptData, scriptData?.duration]);
 

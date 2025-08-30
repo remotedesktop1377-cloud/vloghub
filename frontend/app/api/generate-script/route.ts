@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const { topic, hypothesis, details, region, duration, language } = body;
 
     // Validate required fields
-    if (!topic || !hypothesis || !region || !duration || !language) {
+    if (!topic || !region || !duration || !language) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }

@@ -1,3 +1,4 @@
+'use client'
 import React, { useRef, useState, useEffect } from "react";
 import { Box, Typography, Card, CardContent, Chip, IconButton } from "@mui/material";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
