@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@mui/material';
-import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../styles/colors';
+import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../../styles/colors';
 import Link from 'next/link';
 
 interface LayoutProps {

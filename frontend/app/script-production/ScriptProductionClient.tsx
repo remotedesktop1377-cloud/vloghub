@@ -26,7 +26,7 @@ import {
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { toast } from 'react-toastify';
 import { Chapter } from '@/types/chapters';
-import ChaptersSection from '@/components/TrendingTopics/ChaptersSection';
+import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
 import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '@/styles/colors';

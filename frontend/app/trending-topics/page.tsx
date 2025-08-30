@@ -1,4 +1,4 @@
-import TrendingTopics from '@/components/TrendingTopics/TrendingTopicsPage'
+import TrendingTopics from '@/components/TrendingTopicsComponent/TrendingTopicsPage'
 
 export const metadata = {
   title: 'Trending Topics - YouTube Clone',

@@ -1,5 +1,5 @@
 import LandingPage from '@/components/LandingPageComponents/LandingPage'
-import LandingToolbar from '@/components/LandingToolbar/LandingToolbar'
+import LandingToolbar from '@/components/LandingPageComponents/landingToolbar/LandingToolbar'
 
 export const metadata = {
   title: 'Vloghub - Transform Ideas into Stunning Videos',
@@ -15,6 +15,14 @@ export const metadata = {
     index: true,
     follow: true,
   },
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  colorScheme: 'dark',
 }
 
 export default function Home() {

@@ -10,7 +10,11 @@ export const metadata: Metadata = {
   description: 'AI-powered content creation platform for YouTube creators',
   keywords: 'YouTube, content creation, AI, video generation, script writing',
   authors: [{ name: 'YouTube Clone Team' }],
-  viewport: 'width=device-width, initial-scale=1',
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#060606',
   colorScheme: 'dark',
 }

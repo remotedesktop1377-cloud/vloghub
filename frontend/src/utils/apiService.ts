@@ -292,14 +292,6 @@ export const apiService = {
   getGeminiTrendingTopics: (region: string, dateRange: string = '24h') =>
     ApiService.get(API_ENDPOINTS.GEMINI_TRENDING_TOPICS, { region, dateRange }),
 
-  // Content Generation
-  generateChapters: (body: {
-    topic: string;
-    hypothesis: string;
-    region: string;
-    duration: string;
-  }) => ApiService.post(API_ENDPOINTS.GENERATE_CHAPTERS, body),
-
   generateScript: (body: {
     topic: string;
     hypothesis: string;
@@ -316,9 +308,4 @@ export const apiService = {
     duration: string
   }) => ApiService.post(API_ENDPOINTS.GENERATE_IMAGES, body),
 
-  // Narration
-  getNarrationVariations: (body: {
-    narration: string;
-    chapterIndex: number
-  }) => ApiService.post(API_ENDPOINTS.NARRATION_VARIATIONS, body),
 }; 

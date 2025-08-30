@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import WordCloud from 'react-d3-cloud';
-import { INFO } from '../../styles/colors';
+import { INFO } from '../../../styles/colors';
 import styles from './WordCloudChart.module.css';
 
 export interface WordData {

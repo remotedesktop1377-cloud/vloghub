@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { TrendingTopic } from '../../data/mockTrendingTopics';
+import { TrendingTopic } from '../../types/TrendingTopics';
 
-import { durationOptions, DurationOption } from '../../data/mockDurationOptions';
-import { languageOptions, LanguageOption } from '../../data/mockLanguageOptions';
+import { durationOptions } from '../../data/mockDurationOptions';
+import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
 
 import styles from './TrendingTopics.module.css';
@@ -14,10 +14,9 @@ import {
   Box,
   Typography,
   Paper,
-  CircularProgress,
 } from '@mui/material';
-import { WordCloudChart } from '../WordCloudChart/WordCloudChart';
-import LoadingOverlay from '../LoadingOverlay';
+import { WordCloudChart } from './WordCloudChart/WordCloudChart';
+import LoadingOverlay from '../ui/LoadingOverlay';
 import TopicDetailsSection from './TopicDetailsSection';
 import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';

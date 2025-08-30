@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { Paper, Typography, TextField, Box, Chip, Button, CircularProgress, Switch, FormControlLabel } from '@mui/material';
-import { TrendingTopic } from '../../data/mockTrendingTopics';
-import { getDirectionSx } from '../../utils/languageUtils';
+import { TrendingTopic } from '../../types/TrendingTopics';      
 
 interface TopicDetailsSectionProps {
   selectedTopic: TrendingTopic;

@@ -6,6 +6,11 @@ export const metadata = {
   keywords: 'script production, video generation, content creation, AI tools',
 }
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+}
+
 // This function runs at build time (SSG) or request time (ISR)
 async function getStaticData() {
   try {

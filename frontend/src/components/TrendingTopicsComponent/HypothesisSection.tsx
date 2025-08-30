@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Paper, Typography, TextField, Box, Chip, Button, CircularProgress } from '@mui/material';
-import { TrendingTopic } from '../../data/mockTrendingTopics';
+import { TrendingTopic } from '../../types/TrendingTopics';
 import { getDirectionSx } from '../../utils/languageUtils';
 
 interface HypothesisSectionProps {
