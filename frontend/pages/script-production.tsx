@@ -36,6 +36,7 @@ import { Chapter } from '../src/types/chapters';
 import ChaptersSection from '../src/components/TrendingTopics/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '../src/data/mockImages';
+import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '../src/styles/colors';
 
 interface ScriptData {
     script: string;
@@ -619,7 +620,7 @@ const ScriptProductionPage: React.FC = () => {
 
     return (
         <Container maxWidth="xl" >
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
                 <Button
                     variant="outlined"
                     startIcon={<BackIcon />}
@@ -683,7 +684,7 @@ const ScriptProductionPage: React.FC = () => {
                                         })()}
                                     </Box>
                                 </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #4caf50' }}>
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${SUCCESS.main}` }}>
                                     <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                         {scriptData.hook}
                                     </Typography>
@@ -710,7 +711,7 @@ const ScriptProductionPage: React.FC = () => {
                                         })()}
                                     </Box>
                                 </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #2196f3' }}>
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${INFO.main}` }}>
                                     <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                         {scriptData.mainContent}
                                     </Typography>
@@ -737,7 +738,7 @@ const ScriptProductionPage: React.FC = () => {
                                         })()}
                                     </Box>
                                 </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #ff9800' }}>
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${WARNING.main}` }}>
                                     <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                         {scriptData.conclusion}
                                     </Typography>
@@ -764,7 +765,7 @@ const ScriptProductionPage: React.FC = () => {
                                         })()}
                                     </Box>
                                 </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: '1px solid #9c27b0' }}>
+                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${SPECIAL.purple}` }}>
                                     <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
                                         {scriptData.callToAction}
                                     </Typography>
@@ -844,7 +845,7 @@ const ScriptProductionPage: React.FC = () => {
                                     startIcon={<DownloadIcon />}
                                     onClick={handleDownloadAllNarrations}
                                     disabled={!chapters.length}
-                                    sx={{ mb: 1 }}
+                                    sx={{ mb: 1, fontSize: '1rem' }}
                                 >
                                     Download Narrations
                                 </Button>
@@ -858,7 +859,7 @@ const ScriptProductionPage: React.FC = () => {
                                         startIcon={<UploadIcon />}
                                         onClick={handleUploadChromaKey}
                                         disabled={!chapters.length || uploadingChromaKey}
-                                        sx={{ mb: 1 }}
+                                        sx={{ mb: 1, fontSize: '1rem' }}
                                     >
                                         {uploadingChromaKey ? 'Uploading...' : (chromaKeyFile ? 'Replace Chroma Key' : 'Upload Chroma Key')}
                                     </Button>
@@ -908,9 +909,10 @@ const ScriptProductionPage: React.FC = () => {
                                     onClick={handleGenerateVideo}
                                     disabled={!chapters.length || !chromaKeyFile || uploadingChromaKey}
                                     sx={{
-                                        bgcolor: '#4caf50',
-                                        '&:hover': { bgcolor: '#388e3c' },
-                                        mb: 1
+                                        bgcolor: SUCCESS.main,
+                                        '&:hover': { bgcolor: SUCCESS.dark },
+                                        mb: 1,
+                                        fontSize: '1rem'
                                     }}
                                     title={!chromaKeyFile ? 'Upload chroma key first' : ''}
                                 >
@@ -926,9 +928,9 @@ const ScriptProductionPage: React.FC = () => {
                                     onClick={handleRegenerateAllAssets}
                                     disabled={!chapters.length || generatingChapters}
                                     sx={{
-                                        borderColor: '#ff9800',
-                                        color: '#ff9800',
-                                        '&:hover': { bgcolor: 'rgba(255, 152, 0, 0.1)' }
+                                                                borderColor: WARNING.main,
+                        color: WARNING.main,
+                        '&:hover': { bgcolor: HOVER.warning }
                                     }}
                                 >
                                     Regenerate Assets

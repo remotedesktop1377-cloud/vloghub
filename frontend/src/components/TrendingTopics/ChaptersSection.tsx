@@ -35,6 +35,7 @@ import { HelperFunctions } from '../../utils/helperFunctions';
 import { AudioPlayer } from '../AudioPlayer/AudioPlayer';
 import { ImageViewModal, ImageViewMode } from '../ImageViewer/ImageViewModal';
 import { useImageViewer, formatChapterImages } from '../../hooks/useImageViewer';
+import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL, TEXT, BORDER, HOVER, SPECIAL } from '../../styles/colors';
 
 interface ChaptersSectionProps {
   chapters: Chapter[];
@@ -199,13 +200,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 cursor: 'pointer',
                                 // transition: 'background-color 0.2s ease',
                                 overflow: 'hidden',
-                                borderColor: selectedChapterIndex === index ? '#1DA1F2' : '#e9ecef',
+                                borderColor: selectedChapterIndex === index ? INFO.main : BORDER.dark,
                                 borderWidth: 1,
                                 borderStyle: 'solid',
                                 borderRadius: 1,
                                 transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
                                 '&:hover': {
-                                  borderColor: '#1DA1F2',
+                                  borderColor: INFO.main,
                                   boxShadow: '0 0 0 3px rgba(29, 161, 242, 0.08)',
                                   backgroundColor: 'rgba(29, 161, 242, 0.02)'
                                 }
@@ -227,7 +228,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      color: '#9c27b0',
+                                      color: SPECIAL.purple,
                                       '&:active': { cursor: 'grabbing' }
                                     }}
                                   >
@@ -243,7 +244,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                     }}>
                                       <Box sx={{
                                         width: 48,
-                                        color: '#1DA1F2',
+                                        color: INFO.main,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -262,7 +263,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                             multiline
                                             minRows={4}
                                             fullWidth
-                                            sx={{ px: 1.5, py: 1.5, width: '100%', height: '100%', bgcolor: '#fff', fontSize: '1rem',
+                                            sx={{
+                                              px: 1.5, py: 1.5, width: '100%', height: '100%', bgcolor: NEUTRAL.white, fontSize: '1rem',
                                               '& .MuiInputBase-input': {
                                                 fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
                                                 lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.6,
@@ -352,7 +354,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             height: '75px',
                                                             borderRadius: 0.5,
                                                             overflow: 'hidden',
-                                                            border: '2px solid #4caf50',
+                                                            border: `2px solid ${SUCCESS.main}`,
                                                             cursor: 'pointer',
                                                             transition: 'transform 0.2s',
                                                             '&:hover': {
@@ -416,7 +418,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               position: 'absolute',
                                                               bottom: 2,
                                                               left: 2,
-                                                              bgcolor: '#4caf50',
+                                                              bgcolor: SUCCESS.main,
                                                               color: 'white',
                                                               fontSize: '0.6rem',
                                                               px: 0.5,
@@ -439,12 +441,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             height: '75px',
                                                             borderRadius: 0.5,
                                                             overflow: 'hidden',
-                                                            border: '1px solid #e0e0e0',
+                                                            border: `1px solid ${BORDER.light}`,
                                                             cursor: 'pointer',
                                                             transition: 'transform 0.2s',
                                                             '&:hover': {
                                                               transform: 'scale(1.02)',
-                                                              borderColor: '#1976d2'
+                                                              borderColor: PRIMARY.main
                                                             }
                                                           }}
                                                           onClick={(e) => {
@@ -487,7 +489,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             }}
                                                           >
                                                             <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                              <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                              <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                             </svg>
                                                           </IconButton>
                                                         </Box>
@@ -498,14 +500,14 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           width: '50px',
                                                           height: '50px',
                                                           borderRadius: 0.5,
-                                                          border: '1px dashed #ccc',
+                                                          border: `1px dashed ${BORDER.medium}`,
                                                           display: 'flex',
                                                           alignItems: 'center',
                                                           justifyContent: 'center',
-                                                          bgcolor: '#f9f9f9',
+                                                          bgcolor: SPECIAL.lightGray,
                                                           cursor: 'pointer',
                                                           fontSize: '0.5rem',
-                                                          color: '#666'
+                                                          color: TEXT.dark
                                                         }}
                                                           onClick={(e) => {
                                                             e.stopPropagation();
@@ -574,10 +576,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           size="small"
                                           onClick={() => onSaveEdit(index)}
                                           sx={{
-                                            color: '#4caf50',
+                                            color: SUCCESS.main,
                                             '&:hover': {
-                                              bgcolor: 'rgba(76, 175, 80, 0.1)',
-                                              color: '#388e3c'
+                                              bgcolor: HOVER.success,
+                                              color: SUCCESS.dark
                                             },
                                             width: 36,
                                             height: 36,
@@ -592,10 +594,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           size="small"
                                           onClick={onCancelEdit}
                                           sx={{
-                                            color: '#ff9800',
+                                            color: WARNING.main,
                                             '&:hover': {
-                                              bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                              color: '#f57c00'
+                                              bgcolor: HOVER.warning,
+                                              color: WARNING.dark
                                             },
                                             width: 36,
                                             height: 36,
@@ -637,8 +639,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           sx={{
                                             opacity: selectedChapterIndex === index ? 1 : 0,
                                             transition: 'opacity 0.2s ease',
-                                            color: '#1DA1F2',
-                                            '&:hover': { bgcolor: 'rgba(29,161,242,0.1)', color: '#0d8bd9' },
+                                            color: INFO.main,
+                                            '&:hover': { bgcolor: HOVER.info, color: INFO.dark },
                                             width: 36, height: 36,
                                           }}
                                           title="Magic variations"
@@ -653,10 +655,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           sx={{
                                             opacity: selectedChapterIndex === index ? 1 : 0,
                                             transition: 'opacity 0.2s ease',
-                                            color: '#ff9800',
+                                            color: WARNING.main,
                                             '&:hover': {
-                                              bgcolor: 'rgba(255, 152, 0, 0.1)',
-                                              color: '#f57c00'
+                                              bgcolor: HOVER.warning,
+                                              color: WARNING.dark
                                             },
                                             width: 36,
                                             height: 36,
@@ -674,10 +676,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           sx={{
                                             opacity: selectedChapterIndex === index ? 1 : 0,
                                             transition: 'opacity 0.2s ease',
-                                            color: '#ff4444',
+                                            color: ERROR.main,
                                             '&:hover': {
-                                              bgcolor: 'rgba(255,68,68,0.1)',
-                                              color: '#cc0000'
+                                              bgcolor: HOVER.error,
+                                              color: ERROR.dark
                                             },
                                             width: 36,
                                             height: 36,
@@ -695,10 +697,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           sx={{
                                             opacity: selectedChapterIndex === index ? 1 : 0,
                                             transition: 'opacity 0.2s ease',
-                                            color: '#1DA1F2',
+                                            color: INFO.main,
                                             '&:hover': {
-                                              bgcolor: 'rgba(29, 161, 242, 0.1)',
-                                              color: '#0d8bd9'
+                                              bgcolor: HOVER.info,
+                                              color: INFO.dark
                                             },
                                             width: 36,
                                             height: 36,
@@ -750,7 +752,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
             }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6l12 12" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M18 6L6 18M6 6l12 12" stroke={TEXT.dark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </IconButton>
         </DialogTitle>
@@ -831,12 +833,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                           borderRadius: 2,
                           mx: 'auto',
                           mb: 2,
-                          background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
+                          background: PURPLE.gradient.blue,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                          <svg width="36" height="36" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                          <svg width="36" height="36" viewBox="0 0 24 24" fill={NEUTRAL.white} xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </Box>
@@ -913,12 +915,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                               borderRadius: '50%',
                               mx: 'auto',
                               mb: 0.5,
-                              background: 'linear-gradient(135deg, #5b76ff, #9b8cff)',
+                              background: PURPLE.gradient.blue,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center'
                             }}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill={NEUTRAL.white} xmlns="http://www.w3.org/2000/svg">
                                 <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             </Box>
@@ -956,7 +958,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                               size="small"
                             >
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             </IconButton>
                           </Box>
@@ -975,7 +977,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                         borderRadius: 3,
                         mx: 'auto',
                         mb: 2,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: PURPLE.gradient.purple,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -986,13 +988,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                           position: 'absolute',
                           inset: 0,
                           borderRadius: 3,
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          background: PURPLE.gradient.purple,
                           filter: 'blur(6px)',
                           opacity: 0.5,
                           zIndex: -1
                         }
                       }}>
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill={NEUTRAL.white} xmlns="http://www.w3.org/2000/svg">
                           <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor" />
                         </svg>
                       </Box>

@@ -6,13 +6,14 @@ import { VideoShowcaseSection } from "./sections/VideoShowcaseSection";
 import { NewsletterSubscriptionSection } from "./sections/NewsletterSubscriptionSection";
 import { HeroSection } from "./sections/HeroSection";
 import { TrustedBySection } from "./sections/TrustedBySection";
+import { BACKGROUND, TEXT, PURPLE, SHADOW, HOVER, NEUTRAL } from "../../styles/colors";
 import Image from "next/image";
 import FeatureHighlightsMUI from "./sections/FeatureHighlights";
 import Link from "next/link";
 
 const LandingPage: React.FC = () => {
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: '#060606', }}>
+        <Box sx={{ minHeight: '100vh', bgcolor: BACKGROUND.default, }}>
             {/* Hero Section */}
             <Box sx={{ position: 'relative', overflow: 'hidden' }}>
                 {/* Background Wave Graphics */}
@@ -53,7 +54,7 @@ const LandingPage: React.FC = () => {
                         <Typography
                             sx={{
                                 fontSize: { xs: '36px', sm: '44px', md: '80px' },
-                                color: '#fff',
+                                color: TEXT.primary,
                                 fontWeight: 500,
                                 lineHeight: { xs: 1.15, md: 1.1 },
                                 letterSpacing: '-0.03em',
@@ -67,7 +68,7 @@ const LandingPage: React.FC = () => {
                         <Typography
                             sx={{
                                 fontSize: { xs: '16px', md: '18px' },
-                                color: '#7C7C7C',
+                                color: TEXT.muted,
                                 maxWidth: '600px',
                                 mx: 'auto',
                                 mb: 4,
@@ -98,11 +99,11 @@ const LandingPage: React.FC = () => {
                                         borderRadius: '50px',
                                         height: 'auto',
                                         textTransform: 'none',
-                                        background: 'linear-gradient(180deg, #6D28D9 0%, #9333EA 100%)',
-                                        color: 'white',
-                                        boxShadow: '0 0 40px rgba(124,58,237,0.35)',
+                                        background: PURPLE.gradient.primary,
+                                        color: TEXT.primary,
+                                        boxShadow: `0 0 40px ${SHADOW.primary}`,
                                         '&:hover': {
-                                            background: 'linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%)',
+                                            background: PURPLE.gradient.secondary,
                                         }
                                     }}
                                 >
@@ -116,10 +117,10 @@ const LandingPage: React.FC = () => {
                                     gap: 1,
                                     px: { xs: 3, md: 4 },
                                     py: { xs: 1.5, md: 2 },
-                                    bgcolor: "white",
+                                    bgcolor: NEUTRAL.white,
                                     borderRadius: "300px",
                                     height: "auto",
-                                    "&:hover": { bgcolor: "#f9fafb" },
+                                    "&:hover": { bgcolor: HOVER.light },
                                     transition: "background-color 0.2s ease",
                                     textTransform: "none",
                                 }}
@@ -161,8 +162,8 @@ const LandingPage: React.FC = () => {
                                     maxWidth: 400,
                                     height: { xs: 200, sm: 220, md: 254 },
                                     borderRadius: 10,
-                                    bgcolor: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.06)',
+                                    bgcolor: BACKGROUND.overlay.light,
+                                    border: `1px solid ${BACKGROUND.overlay.light}`,
                                     position: 'relative',
                                     overflow: 'hidden'
                                 }}
@@ -175,8 +176,8 @@ const LandingPage: React.FC = () => {
                                     maxWidth: 400,
                                     height: { xs: 200, sm: 220, md: 254 },
                                     borderRadius: 10,
-                                    bgcolor: 'rgba(255,255,255,0.06)',
-                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    bgcolor: BACKGROUND.overlay.light,
+                                    border: `1px solid ${BACKGROUND.overlay.medium}`,
                                     position: 'relative',
                                     overflow: 'hidden'
                                 }}

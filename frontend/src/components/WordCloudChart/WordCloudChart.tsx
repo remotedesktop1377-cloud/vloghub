@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import WordCloud from 'react-d3-cloud';
+import { INFO } from '../../styles/colors';
 import styles from './WordCloudChart.module.css';
 
 export interface WordData {
@@ -49,7 +50,7 @@ export function WordCloudChart(props: IWordCloudChartProps) {
             stableRefs.current.fill = (d: any, i: any) => {
                 // Highlight selected word with different color
                 if (selectedWord === d.text) {
-                    return '#1DA1F2'; // Blue for selected
+                    return INFO.main; // Blue for selected
                 }
                 // Default color based on value
                 return `hsl(${200 + (d.value / newMax) * 60}, 70%, 50%)`;

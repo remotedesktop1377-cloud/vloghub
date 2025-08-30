@@ -4,6 +4,9 @@ import CssBaseline from '@mui/material/CssBaseline'
 import Layout from '../src/components/Layout/Layout'
 import Head from 'next/head'
 import { fontVariablesClass, fontStacks } from '../src/styles/fonts'
+import { PRIMARY, SECONDARY, BACKGROUND } from '../src/styles/colors'
+import '../src/styles/cssVariables.css'
+import '../src/styles/fonts.css'
 import React, { useEffect, useMemo, useState, createContext } from 'react'
 import { useRouter } from 'next/router'
 
@@ -34,9 +37,24 @@ export default function App({ Component, pageProps }: AppProps) {
   const theme = useMemo(() => createTheme({
     palette: {
       mode,
-      primary: { main: '#1976d2' },
-      secondary: { main: '#dc004e' },
-      ...(mode === 'dark' ? { background: { default: '#060606', paper: '#060606' } } : {})
+      primary: { 
+        main: PRIMARY.main,
+        light: PRIMARY.light,
+        dark: PRIMARY.dark,
+        contrastText: PRIMARY.contrastText
+      },
+      secondary: { 
+        main: SECONDARY.main,
+        light: SECONDARY.light,
+        dark: SECONDARY.dark,
+        contrastText: SECONDARY.contrastText
+      },
+      ...(mode === 'dark' ? { 
+        background: { 
+          default: BACKGROUND.default, 
+          paper: BACKGROUND.paper
+        } 
+      } : {})
     },
     typography: {
       fontSize: 15,
@@ -58,6 +76,12 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <div className={fontVariablesClass}>
       <Head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"

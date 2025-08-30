@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { IconButton, Box, Typography, LinearProgress } from '@mui/material';
 import { PlayArrow, Pause, VolumeUp } from '@mui/icons-material';
+import { PRIMARY, BORDER, BACKGROUND, TEXT, NEUTRAL } from '../../styles/colors';
 import styles from './AudioPlayer.module.css';
 
 interface AudioPlayerProps {
@@ -96,9 +97,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       alignItems: 'center', 
       gap: 1, 
       p: 1, 
-      border: '1px solid #e0e0e0',
+      border: `1px solid ${BORDER.light}`,
       borderRadius: 1,
-      bgcolor: '#fafafa',
+      bgcolor: BACKGROUND.light,
       minWidth: 200 
     }}>
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
@@ -109,12 +110,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         disabled={isLoading}
         size="small"
         sx={{ 
-          bgcolor: '#1976d2', 
-          color: 'white',
+          bgcolor: PRIMARY.main, 
+          color: PRIMARY.contrastText,
           width: 24,
           height: 24,
-          '&:hover': { bgcolor: '#1565c0' },
-          '&:disabled': { bgcolor: '#ccc' }
+          '&:hover': { bgcolor: PRIMARY.light },
+          '&:disabled': { bgcolor: NEUTRAL.gray[300] }
         }}
       >
         {isLoading ? (
@@ -136,9 +137,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           {voiceStyle && (
             <Typography variant="caption" sx={{ 
               fontSize: '0.6rem', 
-              color: '#666',
+              color: TEXT.dark,
               fontStyle: 'italic',
-              bgcolor: '#e3f2fd',
+              bgcolor: SPECIAL.lightBlue,
               px: 0.5,
               py: 0.1,
               borderRadius: 0.5
@@ -174,7 +175,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
                 sx={{
                   flex: 1,
                   height: `${Math.random() * 80 + 20}%`,
-                  bgcolor: i / 40 <= progress / 100 ? '#1976d2' : '#ddd',
+                  bgcolor: i / 40 <= progress / 100 ? PRIMARY.main : NEUTRAL.gray[300],
                   borderRadius: 0.2,
                   transition: 'background-color 0.1s ease'
                 }}
@@ -185,10 +186,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
         {/* Time Display */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Typography variant="caption" sx={{ fontSize: '0.6rem', color: '#666' }}>
+          <Typography variant="caption" sx={{ fontSize: '0.6rem', color: TEXT.dark }}>
             {formatTime(currentTime)}
           </Typography>
-          <Typography variant="caption" sx={{ fontSize: '0.6rem', color: '#666' }}>
+          <Typography variant="caption" sx={{ fontSize: '0.6rem', color: TEXT.dark }}>
             {formatTime(duration)}
           </Typography>
         </Box>

@@ -1,6 +1,7 @@
 import { TrendingTopic } from '../data/mockTrendingTopics';
 import { Chapter } from '../types/chapters';
 import { DropResult } from 'react-beautiful-dnd';
+import { STATUS } from '../styles/colors';
 export const cn = (...classes: Array<string | false | null | undefined>): string => {
   return classes.filter(Boolean).join(' ');
 };
@@ -23,10 +24,10 @@ export class HelperFunctions {
    * Get trending color based on ranking index
    */
   static getTrendingColor(index: number): string {
-    if (index === 0) return '#FFD700'; // Gold for #1
-    if (index === 1) return '#C0C0C0'; // Silver for #2
-    if (index === 2) return '#CD7F32'; // Bronze for #3
-    return '#4A90E2'; // Blue for others
+    if (index === 0) return STATUS.gold; // Gold for #1
+    if (index === 1) return STATUS.silver; // Silver for #2
+    if (index === 2) return STATUS.bronze; // Bronze for #3
+    return STATUS.blue; // Blue for others
   }
 
   /**
