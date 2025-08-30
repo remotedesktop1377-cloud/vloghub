@@ -1,20 +1,38 @@
+'use client';
+
 import React from 'react';
-import { Paper, Typography, TextField } from '@mui/material';
+import { Paper, Typography, TextField, Box, Chip, Button, CircularProgress, Switch, FormControlLabel } from '@mui/material';
 import { TrendingTopic } from '../../data/mockTrendingTopics';
 import { getDirectionSx } from '../../utils/languageUtils';
 
 interface TopicDetailsSectionProps {
   selectedTopic: TrendingTopic;
   selectedTopicDetails: string;
+  topicSuggestions: string[];
+  selectedTopicSuggestions: string[];
+  loadingTopicSuggestions: boolean;
+  enhancingDetails: boolean;
+  selectedRegion: string;
   language?: string;
   onTopicDetailsChange: (details: string) => void;
+  onEnhanceTopicDetails: (originalText?: string) => void;
+  onTopicSuggestionsChange: (suggestions: string[]) => void;
+  onRestoreTopicSuggestions: (suggestions: string[]) => void;
 }
 
 const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
   selectedTopic,
   selectedTopicDetails,
+  topicSuggestions,
+  selectedTopicSuggestions,
+  loadingTopicSuggestions,
+  enhancingDetails,
+  selectedRegion,
   language = 'english',
   onTopicDetailsChange,
+  onEnhanceTopicDetails,
+  onTopicSuggestionsChange,
+  onRestoreTopicSuggestions,
 }) => {
   return (
     <Paper sx={{ p: 1.5 }} data-section="topic-details">
@@ -31,7 +49,13 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
           {selectedTopic.description}
         </Typography>
       )}
-
+      
+      {/* Simplified topic details section for now */}
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="body2" color="text.secondary">
+          Topic details and suggestions functionality will be added here.
+        </Typography>
+      </Box>
     </Paper>
   );
 };

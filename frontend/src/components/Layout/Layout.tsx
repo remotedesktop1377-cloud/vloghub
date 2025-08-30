@@ -1,7 +1,5 @@
 import React from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@mui/material';
-import { useContext } from 'react';
-import { ColorModeContext } from '../../../pages/_app';
 import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../styles/colors';
 import Link from 'next/link';
 
@@ -11,7 +9,6 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, showToolbar = true }) => {
-  const colorMode = useContext(ColorModeContext);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {showToolbar && (

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState, useRef } from 'react';
 import WordCloud from 'react-d3-cloud';
 import { INFO } from '../../styles/colors';
@@ -59,7 +61,7 @@ export function WordCloudChart(props: IWordCloudChartProps) {
     }, [props.data, selectedWord]);
 
     if (!data || data.length === 0) {
-        return <div 
+        return <div
             className={styles.loadingContainer}
             style={{
                 width: props.width || 500,
@@ -71,14 +73,14 @@ export function WordCloudChart(props: IWordCloudChartProps) {
     }
 
     return (
-        <div 
+        <div
             className={styles.wordCloudContainer}
             style={{
                 width: props.width || 500,
                 height: props.height || 450,
             }}
         >
-            <div 
+            <div
                 className={styles.wordCloudWrapper}
                 style={{
                     width: (props.width || 500) - 20,
@@ -88,7 +90,11 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                 <WordCloud
                     width={(props.width || 500) - 20}
                     height={(props.height || 450) - 20}
-                    data={data}
+                    data={data.map((word) => ({
+                        ...word,
+                        topic: word.text,
+                        value: word.value
+                    }))}
                     fontSize={stableRefs.current.fontSize}
                     rotate={stableRefs.current.rotate}
                     padding={5}

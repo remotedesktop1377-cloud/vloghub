@@ -160,16 +160,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
     }
   };
 
-  const getDirectionSx = (lang: string) => {
-    if (lang === 'ar' || lang === 'he') {
-      return {
-        direction: 'rtl',
-        textAlign: 'right',
-      };
-    }
-    return {};
-  };
-
   return (
     <Paper sx={{ p: 2, border: '2px dashed', borderColor: 'divider', minHeight: '400px' }}>
       {chaptersGenerated && chapters.length > 0 ? (
@@ -177,7 +167,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           {/* Full Width - Chapters List */}
           <Box sx={{ width: '100%' }}>
             <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="chapters">
+              <Droppable droppableId="chapters" isDropDisabled={true} isCombineEnabled={true} ignoreContainerClipping={true}>
                 {(provided) => (
                   <Box
                     {...provided.droppableProps}
@@ -741,7 +731,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         }}
       >
         <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
+          <Typography>
             Manage Media - Chapter {(mediaManagementChapterIndex || 0) + 1}
           </Typography>
           <IconButton

@@ -13,7 +13,8 @@ export const PRIMARY = {
 export const SECONDARY = {
   main: '#dc004e',
   light: '#ff5983',
-  dark: '#9a0036'
+  dark: '#9a0036',
+  contrastText: '#ffffff'
 };
 
 // Success Colors

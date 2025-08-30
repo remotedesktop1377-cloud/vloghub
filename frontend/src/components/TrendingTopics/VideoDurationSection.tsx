@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
 import {

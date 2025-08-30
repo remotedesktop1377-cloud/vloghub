@@ -1,5 +1,6 @@
+'use client'
 import React from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
     Box,
@@ -11,13 +12,6 @@ import {
     Grid,
     LinearProgress,
     Chip,
-    CircularProgress,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    IconButton,
-    TextField
 } from '@mui/material';
 import {
     ArrowBack as BackIcon,
@@ -29,37 +23,36 @@ import {
     AccessTime as TimeIcon,
     Edit as EditIcon
 } from '@mui/icons-material';
-import { HelperFunctions } from '../src/utils/helperFunctions';
+import { HelperFunctions } from '@/utils/helperFunctions';
 import { toast } from 'react-toastify';
-import { apiService } from '../src/utils/apiService';
-import { Chapter } from '../src/types/chapters';
-import ChaptersSection from '../src/components/TrendingTopics/ChaptersSection';
+import { Chapter } from '@/types/chapters';
+import ChaptersSection from '@/components/TrendingTopics/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
-import { fallbackImages } from '../src/data/mockImages';
-import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '../src/styles/colors';
+import { fallbackImages } from '@/data/mockImages';
+import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '@/styles/colors';
+import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 
 interface ScriptData {
     script: string;
     topic: string;
     hypothesis: string;
-    details: string;
     region: string;
     duration: string;
     language: string;
-    selectedTopicSuggestions: string[];
-    selectedHypothesisSuggestions: string[];
-    // Additional script metadata
     title?: string;
     hook?: string;
     mainContent?: string;
     conclusion?: string;
     callToAction?: string;
     estimatedWords?: number;
-    emotionalTone?: string;
-    pacing?: string;
 }
 
-const ScriptProductionPage: React.FC = () => {
+interface ScriptProductionClientProps {
+    staticData: ScriptData;
+}
+
+const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticData }) => {
+
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
     const [initializing, setInitializing] = useState(true);
@@ -98,28 +91,6 @@ const ScriptProductionPage: React.FC = () => {
     const [scriptModified, setScriptModified] = useState(false);
     const [originalDuration, setOriginalDuration] = useState('');
 
-    // Calculate estimated duration based on script content (average reading speed: 150-160 words per minute)
-    const calculateDuration = (script: string): string => {
-        if (!script.trim()) return '0';
-
-        const words = script.trim().split(/\s+/).length;
-        const averageWordsPerMinute = 155; // Average speaking/reading speed
-        const minutes = words / averageWordsPerMinute;
-
-        if (minutes < 1) {
-            const seconds = Math.round(minutes * 60);
-            return `${seconds}s`;
-        } else if (minutes < 60) {
-            const wholeMinutes = Math.floor(minutes);
-            const seconds = Math.round((minutes - wholeMinutes) * 60);
-            return seconds > 0 ? `${wholeMinutes}m ${seconds}s` : `${wholeMinutes}m`;
-        } else {
-            const hours = Math.floor(minutes / 60);
-            const remainingMinutes = Math.round(minutes % 60);
-            return `${hours}h ${remainingMinutes}m`;
-        }
-    };
-
     useEffect(() => {
         // Load only from localStorage
         const stored = localStorage.getItem('approvedScript');
@@ -147,7 +118,7 @@ const ScriptProductionPage: React.FC = () => {
         console.log('🟢 Script data:', scriptData);
         if (scriptData?.script) {
             setOriginalDuration(scriptData.duration);
-            setEstimatedDuration(calculateDuration(scriptData.script));
+            setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
 
             // Defer heavy paragraph processing to avoid blocking initial render
             setTimeout(() => {
@@ -537,67 +508,9 @@ const ScriptProductionPage: React.FC = () => {
         }
     };
 
-    // Update chapter durations when script changes
-    const updateChapterDurations = (newEstimatedDuration: string) => {
-        if (chapters.length === 0 || chapters.length === 0) return;
-
-        // Use the actual paragraph-based timing instead of estimated duration
-        const totalSeconds = chapters[chapters.length - 1].endTime;
-
-        // Calculate duration per chapter (equal distribution)
-        const secondsPerChapter = Math.floor(totalSeconds / chapters.length);
-        const remainingSeconds = totalSeconds % chapters.length;
-
-        const updatedChapters = chapters.map((chapter, index) => {
-            // Give remaining seconds to first few chapters
-            const chapterSeconds = secondsPerChapter + (index < remainingSeconds ? 1 : 0);
-            const formattedDuration = HelperFunctions.formatDurationFromSeconds(chapterSeconds);
-
-            return {
-                ...chapter,
-                duration: formattedDuration
-            };
-        });
-
-        setChapters(updatedChapters);
-        toast.success('Chapter durations updated to match new script length!');
-    };
-
-    // Helper function to parse duration string to seconds
-    const parseDurationToSeconds = (duration: string): number => {
-        if (!duration) return 0;
-
-        // Handle formats like "1m 30s", "2m", "45s", "1h 15m"
-        const timeParts = duration.match(/(\d+)([hms])/g);
-        if (!timeParts) return 0;
-
-        let totalSeconds = 0;
-        timeParts.forEach(part => {
-            const value = parseInt(part.replace(/[hms]/g, ''));
-            const unit = part.slice(-1);
-
-            switch (unit) {
-                case 'h':
-                    totalSeconds += value * 3600;
-                    break;
-                case 'm':
-                    totalSeconds += value * 60;
-                    break;
-                case 's':
-                    totalSeconds += value;
-                    break;
-            }
-        });
-
-        return totalSeconds;
-    };
-
     if (initializing) {
         return (
-            <Container maxWidth="md" sx={{ py: 4 }}>
-                <LinearProgress sx={{ mb: 2 }} />
-                <Typography variant="body2" color="text.secondary">Loading script...</Typography>
-            </Container>
+            <AppLoadingOverlay />
         );
     }
 
@@ -662,7 +575,7 @@ const ScriptProductionPage: React.FC = () => {
                     {/* Script Components Breakdown */}
                     <Paper sx={{ p: 3, mb: 3 }}>
                         <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                            📋 Script Chapters Breakdown
+                            📋 Script Scenes Breakdown
                         </Typography>
 
                         {scriptData.hook && (
@@ -944,4 +857,4 @@ const ScriptProductionPage: React.FC = () => {
     );
 };
 
-export default ScriptProductionPage;
+export default ScriptProductionClient;

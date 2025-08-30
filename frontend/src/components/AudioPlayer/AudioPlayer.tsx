@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { IconButton, Box, Typography, LinearProgress } from '@mui/material';
 import { PlayArrow, Pause, VolumeUp } from '@mui/icons-material';
-import { PRIMARY, BORDER, BACKGROUND, TEXT, NEUTRAL } from '../../styles/colors';
+import { PRIMARY, BORDER, BACKGROUND, TEXT, NEUTRAL, SPECIAL } from '../../styles/colors';
 import styles from './AudioPlayer.module.css';
 
 interface AudioPlayerProps {
