@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ImageViewMode } from '../components/ImageViewer/ImageViewModal';
+import { ImageViewMode } from '../components/ui/ImageViewer/ImageViewModal';
 
 interface ImageData {
   url: string;

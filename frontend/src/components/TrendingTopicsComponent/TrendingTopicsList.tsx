@@ -1,7 +1,7 @@
 import React from 'react';
 import { Grid, Card, CardContent, Box, Typography, Chip, Avatar, Button, Tooltip } from '@mui/material';
 import { TrendingUp as TrendingIcon, Cached as CachedIcon } from '@mui/icons-material';
-import { TrendingTopic } from '../../data/mockTrendingTopics';
+import { TrendingTopic } from '../../types/TrendingTopics';
 import { HelperFunctions } from '../../utils/helperFunctions';
 
 interface TrendingTopicsListProps {

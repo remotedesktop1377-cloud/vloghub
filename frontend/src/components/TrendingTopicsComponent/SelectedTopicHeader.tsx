@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Avatar, Typography, Chip, Paper } from '@mui/material';
-import { TrendingTopic } from '../../data/mockTrendingTopics';
+import { TrendingTopic } from '../../types/TrendingTopics';
 import { HelperFunctions } from '../../utils/helperFunctions';
 
 interface SelectedTopicHeaderProps {

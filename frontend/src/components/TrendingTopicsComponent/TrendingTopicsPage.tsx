@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/router';
-import { toast } from 'react-toastify';
-import { TrendingTopic } from '../../data/mockTrendingTopics';
+'use client';
 
-import { durationOptions, } from '../../data/mockDurationOptions';
-import { languageOptions, } from '../../data/mockLanguageOptions';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
+import { TrendingTopic } from '../../types/TrendingTopics';
+
+import { durationOptions } from '../../data/mockDurationOptions';
+import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
 
 import styles from './TrendingTopics.module.css';
@@ -12,10 +14,9 @@ import {
   Box,
   Typography,
   Paper,
-  CircularProgress,
 } from '@mui/material';
-import { WordCloudChart } from '../WordCloudChart/WordCloudChart';
-import LoadingOverlay from '../LoadingOverlay';
+import { WordCloudChart } from './WordCloudChart/WordCloudChart';
+import LoadingOverlay from '../ui/LoadingOverlay';
 import TopicDetailsSection from './TopicDetailsSection';
 import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
@@ -49,6 +50,24 @@ const TrendingTopics: React.FC = () => {
   const [generatedScript, setGeneratedScript] = useState<string>('');
   const [editedScript, setEditedScript] = useState<string>('');
   const [showScriptDialog, setShowScriptDialog] = useState(false);
+
+  // Suggestions/Enhance states
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
+  const [selectedTopicSuggestions, setSelectedTopicSuggestions] = useState<string[]>([]);
+  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
+  const [enhancingDetails, setEnhancingDetails] = useState(false);
+  const [hypothesisSuggestions, setHypothesisSuggestions] = useState<string[]>([]);
+  const [selectedHypothesisSuggestions, setSelectedHypothesisSuggestions] = useState<string[]>([]);
+  const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
+  const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
+
+  // Confirm dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
+  const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
+  const [originalSuggestionText, setOriginalSuggestionText] = useState<string | null>(null);
+
+  const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
 
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
@@ -93,14 +112,17 @@ const TrendingTopics: React.FC = () => {
       setError(null);
 
       // Fetch from Gemini API with location type and date range
-      const geminiResult = await apiService.getGeminiTrendingTopics(locationType as 'global' | 'region' | 'country', location, dateRange);
+      const geminiResult = await apiService.getGeminiTrendingTopics(selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry, dateRange);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
-        const geminiData = geminiResult.data.data || [];
-        // console.log('🟢 Gemini API Response Data:', geminiData);
-        const sortedGeminiData = geminiData.sort((a: any, b: any) => b.value - a.value);
-        setTrendingTopics(sortedGeminiData);
+        // console.log('🟢 Gemini result:', JSON.stringify(geminiResult));
+
+        // API returns array directly in data field (matching old working structure)
+        const geminiData = Array.isArray(geminiResult.data) ? geminiResult.data : [];
+        geminiData.sort((a: any, b: any) => b.engagement_count - a.engagement_count);
+
+        setTrendingTopics(geminiData);
 
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
@@ -150,10 +172,45 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
+  const fetchHypothesisSuggestions = async () => {
+    // For now, just set empty suggestions to avoid errors
+    setHypothesisSuggestions([]);
+    setSelectedHypothesisSuggestions([]);
+  };
+
   const handleTopicSelect = async (topic: TrendingTopic) => {
     console.log('🟢 Handling topic select:', topic);
     setSelectedTopic(topic);
     setHypothesis('');
+    setTopicSuggestions([]);
+    setSelectedTopicSuggestions([]);
+    setHypothesisSuggestions([]);
+    setSelectedHypothesisSuggestions([]);
+    setSelectedTopicDetails('');
+    // Simplified for now - just set basic topic details
+    setSelectedTopicDetails(topic.description || '');
+  };
+
+  const handleTopicSuggestionsChange = (suggestions: string[]) => {
+    setSelectedTopicSuggestions(suggestions);
+    if (suggestions.length > 0 && selectedTopic) {
+      fetchHypothesisSuggestions();
+    }
+  };
+
+  const handleHypothesisSuggestionsChange = (suggestions: string[]) => {
+    setSelectedHypothesisSuggestions(suggestions);
+  };
+
+  // Simplified enhancement functions for now
+  const handleEnhanceTopicDetails = async (originalText?: string) => {
+    // For now, just show a placeholder message
+    toast.info('Topic enhancement functionality will be added here');
+  };
+
+  const handleEnhanceHypothesis = async (originalText?: string) => {
+    // For now, just show a placeholder message
+    toast.info('Hypothesis enhancement functionality will be added here');
   };
 
   const handleGenerateScript = async () => {
@@ -168,11 +225,11 @@ const TrendingTopics: React.FC = () => {
       const result = await apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
-        region: selectedLocation, // Keep for backward compatibility
+        region: selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry,
         duration: duration,
         language: language,
       });
-      console.log('🟢 Script generation result:', result);
+      // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
         setEditedScript(result.data.script);
 
@@ -321,7 +378,7 @@ const TrendingTopics: React.FC = () => {
       />
 
       {/* Show message when not all fields are selected */}
-      {trendingTopics.length === 0 && (
+      {(!Array.isArray(trendingTopics) || trendingTopics.length === 0) && (
         <Box sx={{
           textAlign: 'center',
           minHeight: '400px',
@@ -347,7 +404,7 @@ const TrendingTopics: React.FC = () => {
 
       {
         /* Cloud View - Centered word cloud with permanent details panel on right */
-        trendingTopics.length > 0 && (
+        Array.isArray(trendingTopics) && trendingTopics.length > 0 && (
           <Paper sx={{ p: 2, mb: 2 }}>
             <Box sx={{ display: 'flex', gap: 3, height: '400px' }}>
               {/* Centered Word Cloud Container */}
@@ -363,16 +420,14 @@ const TrendingTopics: React.FC = () => {
                 <WordCloudChart
                   width={600}
                   height={400}
-                  data={trendingTopics.map(topic => {
-                    return {
-                      text: topic.topic,
-                      value: topic.value || 1,
-                      category: topic.category,
-                      description: topic.description,
-                      source_reference: topic.source_reference,
-                      id: topic.id
-                    };
-                  })}
+                  data={Array.isArray(trendingTopics) ? trendingTopics.map(topic => ({
+                    text: topic.topic,
+                    value: topic.value || 1,
+                    category: topic.category,
+                    description: topic.description,
+                    source_reference: topic.source_reference,
+                    id: topic.id
+                  })) : []}
                   handleWordClick={wordClickHandler}
                 />
               </Box>
@@ -390,16 +445,34 @@ const TrendingTopics: React.FC = () => {
             <TopicDetailsSection
               selectedTopic={selectedTopic}
               selectedTopicDetails={selectedTopicDetails}
+              topicSuggestions={topicSuggestions}
+              selectedTopicSuggestions={selectedTopicSuggestions}
+              loadingTopicSuggestions={loadingTopicSuggestions}
+              enhancingDetails={enhancingDetails}
+              selectedRegion={selectedLocation}
               language={language}
               onTopicDetailsChange={setSelectedTopicDetails}
+              onEnhanceTopicDetails={handleEnhanceTopicDetails}
+              onTopicSuggestionsChange={handleTopicSuggestionsChange}
+              onRestoreTopicSuggestions={(suggestions) => setTopicSuggestions(suggestions)}
             />
 
             <HypothesisSection
               selectedTopic={selectedTopic}
               selectedTopicDetails={selectedTopicDetails}
               hypothesis={hypothesis}
+              hypothesisSuggestions={hypothesisSuggestions}
+              selectedHypothesisSuggestions={selectedHypothesisSuggestions}
+              loadingHypothesisSuggestions={loadingHypothesisSuggestions}
+              enhancingHypothesis={enhancingHypothesis}
+              selectedRegion={selectedLocation}
+              selectedTopicSuggestions={selectedTopicSuggestions}
               language={language}
+              onFetchHypothesisSuggestions={fetchHypothesisSuggestions}
               onHypothesisChange={setHypothesis}
+              onEnhanceHypothesis={handleEnhanceHypothesis}
+              onHypothesisSuggestionsChange={handleHypothesisSuggestionsChange}
+              onRestoreHypothesisSuggestions={(suggestions) => setHypothesisSuggestions(suggestions)}
             />
 
             <VideoDurationSection

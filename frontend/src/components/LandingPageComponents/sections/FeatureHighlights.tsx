@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { Box, Typography, Button, Card, CardContent, Grid, IconButton, TextField } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";

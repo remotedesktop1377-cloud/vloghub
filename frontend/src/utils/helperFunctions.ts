@@ -1,4 +1,4 @@
-import { TrendingTopic } from '../data/mockTrendingTopics';
+import { TrendingTopic } from '../types/TrendingTopics';
 import { Chapter } from '../types/chapters';
 import { DropResult } from 'react-beautiful-dnd';
 import { STATUS } from '../styles/colors';
