@@ -48,8 +48,6 @@ interface ScriptData {
   conclusion?: string;
   callToAction?: string;
   estimatedWords?: number;
-  emotionalTone?: string;
-  pacing?: string;
 }
 
 const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
@@ -72,7 +70,8 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   // Parse script data from localStorage if available
   useEffect(() => {
     try {
-      const storedMetadata = localStorage.getItem('scriptMetadata');
+      const storedMetadata = localStorage.getItem('scriptWithKeys');
+      debugger
       if (storedMetadata) {
         const metadata = JSON.parse(storedMetadata);
         setScriptData(metadata);
@@ -164,7 +163,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
 
     // Save script metadata to localStorage
     try {
-      localStorage.setItem('scriptMetadata', JSON.stringify(combinedScript));
+      localStorage.setItem('scriptWithKeys', JSON.stringify(combinedScript));
     } catch (error) {
       console.warn('Error saving script metadata:', error);
     }

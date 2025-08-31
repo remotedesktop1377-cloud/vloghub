@@ -47,7 +47,6 @@ const TrendingTopics: React.FC = () => {
   const [language, setLanguage] = useState('english');
   const [subtitleLanguage, setSubtitleLanguage] = useState('english');
   const [generatingChapters, setGeneratingChapters] = useState(false);
-  const [generatedScript, setGeneratedScript] = useState<string>('');
   const [editedScript, setEditedScript] = useState<string>('');
   const [showScriptDialog, setShowScriptDialog] = useState(false);
 
@@ -110,9 +109,9 @@ const TrendingTopics: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-
+      const location = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
       // Fetch from Gemini API with location type and date range
-      const geminiResult = await apiService.getGeminiTrendingTopics(selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry, dateRange);
+      const geminiResult = await apiService.getGeminiTrendingTopics(location, dateRange);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
@@ -222,10 +221,12 @@ const TrendingTopics: React.FC = () => {
       setGeneratingChapters(true); // Keep using same loading state for now
       setError(null);
 
+      const location = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
+
       const result = await apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
-        region: selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry,
+        region: location,
         duration: duration,
         language: language,
       });
@@ -234,19 +235,17 @@ const TrendingTopics: React.FC = () => {
         setEditedScript(result.data.script);
 
         // Store additional script metadata for later use
-        const scriptMetadata = {
+        const scriptWithKeys = {
           title: result.data.title || 'Untitled Script',
           hook: result.data.hook || '',
           mainContent: result.data.mainContent || '',
           conclusion: result.data.conclusion || '',
           callToAction: result.data.callToAction || '',
           estimatedWords: result.data.estimatedWords || 0,
-          emotionalTone: result.data.emotionalTone || 'Engaging',
-          pacing: result.data.pacing || 'Dynamic'
         };
 
         // Store metadata in localStorage for the script production page
-        localStorage.setItem('scriptMetadata', JSON.stringify(scriptMetadata));
+        localStorage.setItem('scriptWithKeys', JSON.stringify(scriptWithKeys));
 
         setShowScriptDialog(true);
         setError(null);
@@ -263,49 +262,42 @@ const TrendingTopics: React.FC = () => {
 
   const handleScriptApproval = () => {
     // Navigate to script production page with the approved script data
-    // console.log('Script approved, navigating to script production page...');
 
-    // Store script data for the next page
-    // Use edited script if it exists, otherwise use generated script
-    const finalScript = editedScript || generatedScript;
-
-    // Merge any script metadata if present
+    debugger
     let metadata: any = null;
     try {
-      const storedMeta = localStorage.getItem('scriptMetadata');
-      metadata = storedMeta ? JSON.parse(storedMeta) : null;
+      const scriptWithKeys = localStorage.getItem('scriptWithKeys');
+      metadata = scriptWithKeys ? JSON.parse(scriptWithKeys) : null;
     } catch { }
 
+    const location = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
+
     const scriptData = {
-      script: finalScript,
-      topic: selectedTopic?.topic || '',
-      hypothesis,
-      details: selectedTopicDetails,
-      region: selectedLocation, // Keep for backward compatibility
+      region: location,
       duration,
       language,
+      topic: selectedTopic?.topic || '',
+      description: selectedTopicDetails,
+      hypothesis,
+      script: editedScript,
       ...(metadata || {})
     };
+
+    // console.log('🟢 Script data:', scriptData);
 
     // Store in localStorage as backup
     localStorage.setItem('approvedScript', JSON.stringify(scriptData));
 
-    // Close dialog and clear states immediately for faster UX
-    setShowScriptDialog(false);
-    setGeneratedScript('');
-
     // Navigate immediately - this should be the fastest path
     router.push('/script-production');
 
-    // Show success message after navigation starts (non-blocking)
-    setTimeout(() => {
-      toast.success('Script approved! Navigating to production pipeline...');
-    }, 100);
+    // Close dialog and clear states immediately for faster UX
+    setShowScriptDialog(false);
+
   };
 
   const handleScriptRejection = () => {
     // Clear the script and allow user to try again
-    setGeneratedScript('');
     setEditedScript('');
     setShowScriptDialog(false);
   };

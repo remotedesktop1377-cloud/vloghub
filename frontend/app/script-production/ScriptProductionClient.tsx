@@ -33,6 +33,7 @@ import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '@/styles/colors';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 
 interface ScriptData {
+    description: string;
     script: string;
     topic: string;
     hypothesis: string;
@@ -44,7 +45,7 @@ interface ScriptData {
     mainContent?: string;
     conclusion?: string;
     callToAction?: string;
-    estimatedWords?: number;
+    words?: number;
 }
 
 interface ScriptProductionClientProps {
@@ -86,36 +87,35 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
 
-    useEffect(() => {
-        // Load only from localStorage
-        const stored = localStorage.getItem('approvedScript');
-        const storedMeta = localStorage.getItem('scriptMetadata');
+    const createGoogleDriveJSON = (chapters: Chapter[]) => {
 
-        if (stored) {
-            try {
-                const storedData = JSON.parse(stored);
-                const meta = storedMeta ? JSON.parse(storedMeta) : {};
-                setScriptData({ ...storedData, ...meta });
-            } catch (e) {
-                console.error('Failed to parse stored script data', e);
-            }
-        }
-        setInitializing(false);
-    }, []);
+        // Create comprehensive JSON structure for script production
+        console.log('📋 Available Script Data:', chapters)
 
-    // Calculate estimated duration when script data changes
-    useEffect(() => {
-        if (scriptData?.script) {
-            updateParagraphs(scriptData.script);
+        const scriptProductionJSON = {
+            "project": {
+                "topic": scriptData?.topic || null,
+                "title": scriptData?.title || null,
+                "description": scriptData?.description || null,
+                "duration": parseInt(scriptData?.duration || '1') || null,
+                "resolution": "1920x1080",
+                "region": scriptData?.region || null,
+                "language": scriptData?.language || null
+            },
+            "script": chapters.map(chapter => ({
+                "id": chapter.id,
+                "narration": chapter.narration,
+                "duration": chapter.duration,
+                "durationInSeconds": chapter.durationInSeconds,
+                "words": chapter.words,
+                "startTime": chapter.startTime,
+                "endTime": chapter.endTime,
+            }))
         }
-    }, [scriptData, scriptData?.duration]);
 
-    // Recalculate chapters when duration changes
-    useEffect(() => {
-        if (scriptData?.script && scriptData?.duration) {
-            updateParagraphs(scriptData.script);
-        }
-    }, [scriptData?.duration]);
+        // // Console log the generated JSON for debugging
+        console.log('📊 Complete JSON Structure:', JSON.stringify(scriptProductionJSON))
+    };
 
     // Function to break down script into paragraphs and calculate individual durations
     const updateParagraphs = (script: string) => {
@@ -135,7 +135,7 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
 
         // Map to Chapter[] with required fields
         const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
-            id: `chapter-${index}-${p.startTime}`,
+            id: `chapter-${index + 1}`,
             narration: p.text,
             duration: p.duration,
             words: p.words,
@@ -146,7 +146,30 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
         }));
 
         setChapters(chaptersAsRequired);
+        createGoogleDriveJSON(chaptersAsRequired);
+
     };
+
+    useEffect(() => {
+        // Load only from localStorage
+        const stored = localStorage.getItem('approvedScript');
+        if (stored) {
+            try {
+                const storedData = JSON.parse(stored);
+                setScriptData(storedData);
+            } catch (e) {
+                console.error('Failed to parse stored script data', e);
+            }
+        }
+        setInitializing(false);
+    }, []);
+
+    // Calculate estimated duration when script data changes
+    useEffect(() => {
+        if (scriptData?.script) {
+            updateParagraphs(scriptData.script);
+        }
+    }, [scriptData, scriptData?.duration]);
 
     // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
     const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
