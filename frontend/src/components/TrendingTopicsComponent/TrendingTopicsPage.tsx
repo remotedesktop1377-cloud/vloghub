@@ -9,6 +9,7 @@ import { durationOptions } from '../../data/mockDurationOptions';
 import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
 import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '../../data/constants';
+import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
 
 import styles from './css/TrendingTopics.module.css';
 import {
@@ -29,6 +30,7 @@ import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
+  const { getCachedData, setCachedData, clearCache, isCacheValid } = useTrendingTopicsCache();
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,7 +63,6 @@ const TrendingTopics: React.FC = () => {
   const [selectedHypothesisSuggestions, setSelectedHypothesisSuggestions] = useState<string[]>([]);
   const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
   const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
-  const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
 
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
@@ -71,8 +72,8 @@ const TrendingTopics: React.FC = () => {
     }
 
     try {
-      const cacheKey = `trending_topics_${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
-      localStorage.removeItem(cacheKey);
+      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
+      clearCache(cacheRegion);
       toast.success('Cache cleared for current location and time range');
     } catch (error) {
       console.warn('Error clearing cache:', error);
@@ -104,9 +105,26 @@ const TrendingTopics: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const location = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
-      // Fetch from Gemini API with location type and date range
-      const geminiResult = await apiService.getGeminiTrendingTopics(location, dateRange);
+      
+      const locationKey = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
+      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
+
+      // Check cache first (unless force refresh is requested)
+      if (!forceRefresh) {
+        const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
+        if (cachedData && isCacheValid(cacheRegion)) {
+          console.log('🟡 Using cached data for:', cacheRegion);
+          setTrendingTopics(cachedData);
+          setLastUpdated(new Date().toISOString()); // Update UI timestamp
+          setError(null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fetch fresh data from API
+      console.log('🟢 Fetching fresh data for:', locationKey);
+      const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, dateRange);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
@@ -116,11 +134,20 @@ const TrendingTopics: React.FC = () => {
         const geminiData = Array.isArray(geminiResult.data) ? geminiResult.data : [];
         geminiData.sort((a: any, b: any) => b.engagement_count - a.engagement_count);
 
+        // Cache the fresh data
+        setCachedData(cacheRegion, geminiData);
         setTrendingTopics(geminiData);
+        setLastUpdated(new Date().toISOString());
+
+        // Show success message only on manual refresh
+        if (forceRefresh) {
+          toast.success('Fresh trending topics loaded!');
+        }
 
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
         setLastUpdated(new Date().toISOString());
+        toast.error('Failed to fetch trending topics');
       }
 
       setError(null);
@@ -128,6 +155,7 @@ const TrendingTopics: React.FC = () => {
       console.error('Error fetching trending topics, using mock data:', err);
       setError(null);
       setLastUpdated(new Date().toISOString());
+      toast.error('Error loading trending topics');
     } finally {
       setLoading(false);
     }
@@ -135,7 +163,20 @@ const TrendingTopics: React.FC = () => {
 
   useEffect(() => {
     if (isAllFieldsSelected()) {
-      fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange);
+      // Try to load from cache first
+      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
+      const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
+      
+      if (cachedData && isCacheValid(cacheRegion)) {
+        console.log('🟡 Using cached data - no API call needed');
+        setTrendingTopics(cachedData);
+        setLastUpdated(new Date().toISOString());
+        setError(null);
+      } else {
+        console.log('🟠 No valid cache found - calling API to fetch fresh data');
+        // Call API when no cached data is available
+        fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
+      }
     }
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
 
@@ -173,7 +214,7 @@ const TrendingTopics: React.FC = () => {
   };
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
-    console.log('🟢 Handling topic select:', topic);
+    // console.log('🟢 Handling topic select:', topic);
     setSelectedTopic(topic);
     setHypothesis('');
     setTopicSuggestions([]);

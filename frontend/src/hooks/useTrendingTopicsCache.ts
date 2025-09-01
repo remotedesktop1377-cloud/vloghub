@@ -14,9 +14,9 @@ export const useTrendingTopicsCache = () => {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const { data, timestamp }: CachedData<T> = JSON.parse(cached);
-        // Check if cache is less than 24 hours old
+        // Check if cache is less than 30 minutes old
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const maxAge = 1 * 60 * 60 * 1000; // 1 hours in milliseconds
+        const maxAge = 30 * 60 * 1000; // 30 minutes in milliseconds
 
         if (cacheAge < maxAge) {
           return data;
@@ -70,7 +70,7 @@ export const useTrendingTopicsCache = () => {
       if (cached) {
         const { timestamp }: CachedData<any> = JSON.parse(cached);
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const maxAge = 1 * 60 * 60 * 1000; // 1 hours in milliseconds
+        const maxAge = 30 * 60 * 1000; // 30 minutes in milliseconds
         return cacheAge < maxAge;
       }
     } catch (error) {
