@@ -29,7 +29,7 @@ import { getDirectionSx, isRTLLanguage } from '../../utils/languageUtils';
 import { toast } from 'react-toastify';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { LOCAL_STORAGE_KEYS } from '../../data/constants';
-import secureLocalStorage from 'react-secure-storage';
+import { secure } from '../../utils/helperFunctions';
 
 interface ScriptApprovalDialogProps {
   open: boolean;
@@ -72,7 +72,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   // Parse script data from localStorage if available
   useEffect(() => {
     try {
-      const storedMetadata = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
+              const storedMetadata = secure.j.scriptMetadata.get();
       if (typeof storedMetadata === 'string') {
         try {
           const metadata = JSON.parse(storedMetadata);

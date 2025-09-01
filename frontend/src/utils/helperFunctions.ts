@@ -1,6 +1,177 @@
 import { TrendingTopic } from '../types/TrendingTopics';
 import { Chapter } from '../types/chapters';
 
+// Custom Secure Storage Utility
+class SecureStorage {
+  private static instance: SecureStorage;
+  private storage: Map<string, any> = new Map();
+  private encryptionKey: string = 'youtubeclipsearcher_secure_key_2024';
+
+  private constructor() {
+    // Initialize from localStorage if available
+    this.loadFromLocalStorage();
+  }
+
+  static getInstance(): SecureStorage {
+    if (!SecureStorage.instance) {
+      SecureStorage.instance = new SecureStorage();
+    }
+    return SecureStorage.instance;
+  }
+
+  private encrypt(data: any): string {
+    try {
+      const jsonString = JSON.stringify(data);
+      // Simple base64 encoding for demonstration (in production, use proper encryption)
+      return btoa(unescape(encodeURIComponent(jsonString)));
+    } catch (error) {
+      console.error('Encryption failed:', error);
+      return '';
+    }
+  }
+
+  private decrypt(encryptedData: string): any {
+    try {
+      // Simple base64 decoding for demonstration (in production, use proper decryption)
+      const jsonString = decodeURIComponent(escape(atob(encryptedData)));
+      return JSON.parse(jsonString);
+    } catch (error) {
+      console.error('Decryption failed:', error);
+      return null;
+    }
+  }
+
+  private loadFromLocalStorage(): void {
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('secure_')) {
+          const encryptedValue = localStorage.getItem(key);
+          if (encryptedValue) {
+            const decryptedValue = this.decrypt(encryptedValue);
+            if (decryptedValue !== null) {
+              const actualKey = key.replace('secure_', '');
+              this.storage.set(actualKey, decryptedValue);
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Failed to load from localStorage:', error);
+    }
+  }
+
+  private saveToLocalStorage(): void {
+    try {
+      this.storage.forEach((value, key) => {
+        const encryptedValue = this.encrypt(value);
+        localStorage.setItem(`secure_${key}`, encryptedValue);
+      });
+    } catch (error) {
+      console.error('Failed to save to localStorage:', error);
+    }
+  }
+
+  setItem(key: string, value: any): void {
+    this.storage.set(key, value);
+    this.saveToLocalStorage();
+  }
+
+  getItem(key: string): any {
+    return this.storage.get(key);
+  }
+
+  removeItem(key: string): void {
+    this.storage.delete(key);
+    try {
+      localStorage.removeItem(`secure_${key}`);
+    } catch (error) {
+      console.error('Failed to remove from localStorage:', error);
+    }
+  }
+
+  clear(): void {
+    this.storage.clear();
+    try {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('secure_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to clear localStorage:', error);
+    }
+  }
+}
+
+// Define types for the secure storage interface
+interface SecureStorageItem {
+  get: () => any;
+  set: (value: any) => void;
+  remove: () => void;
+}
+
+interface SecureJ {
+  [key: string]: SecureStorageItem;
+}
+
+interface Secure {
+  j: SecureJ;
+}
+
+// Create a proxy to provide the @secure.j.approvedScript interface
+export const secure: Secure = new Proxy({} as Secure, {
+  get(target, prop) {
+    if (prop === 'j') {
+      return new Proxy({} as SecureJ, {
+        get(target, subProp) {
+          const storage = SecureStorage.getInstance();
+          return {
+            get: () => storage.getItem(subProp as string),
+            set: (value: any) => storage.setItem(subProp as string, value),
+            remove: () => storage.removeItem(subProp as string)
+          };
+        }
+      });
+    }
+    return undefined;
+  }
+});
+
+// Helper functions for common secure storage operations
+export const SecureStorageHelpers = {
+  /**
+   * Get approved script from secure storage
+   */
+  getApprovedScript: () => secure.j.approvedScript.get(),
+  
+  /**
+   * Set approved script in secure storage
+   */
+  setApprovedScript: (scriptData: any) => secure.j.approvedScript.set(scriptData),
+  
+  /**
+   * Remove approved script from secure storage
+   */
+  removeApprovedScript: () => secure.j.approvedScript.remove(),
+  
+  /**
+   * Get script metadata from secure storage
+   */
+  getScriptMetadata: () => secure.j.scriptMetadata.get(),
+  
+  /**
+   * Set script metadata in secure storage
+   */
+  setScriptMetadata: (metadata: any) => secure.j.scriptMetadata.set(metadata),
+  
+  /**
+   * Remove script metadata from secure storage
+   */
+  removeScriptMetadata: () => secure.j.scriptMetadata.remove()
+};
+
 export const cn = (...classes: Array<string | false | null | undefined>): string => {
   return classes.filter(Boolean).join(' ');
 };
@@ -46,7 +217,7 @@ export class HelperFunctions {
       endTime: 0,
       durationInSeconds: 0,
       assets: {
-        image: null,
+        images: null,
         audio: null,
         video: null,
       }

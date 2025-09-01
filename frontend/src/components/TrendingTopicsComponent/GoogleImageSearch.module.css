@@ -1,0 +1,166 @@
+.searchContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.searchHeader {
+  padding: 16px;
+  border-bottom: 1px solid var(--mui-palette-divider);
+}
+
+.chapterContext {
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: var(--mui-palette-background-paper);
+  border-radius: 4px;
+  border: 1px solid var(--mui-palette-divider);
+}
+
+.searchInputContainer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.suggestedQueries {
+  margin-bottom: 16px;
+}
+
+.suggestedQueriesContainer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.suggestedQueryChip {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.suggestedQueryChip:hover {
+  background-color: var(--mui-palette-action-hover);
+  border-color: var(--mui-palette-primary-main);
+}
+
+.selectionActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.imagesGrid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.imageCard {
+  height: 100%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.imageCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.imageCard.selected {
+  border-color: var(--mui-palette-primary-main);
+}
+
+.imageContainer {
+  position: relative;
+}
+
+.selectionOverlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--mui-palette-primary-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.actionButtons {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+.actionButton {
+  background-color: rgba(255, 255, 255, 0.9);
+  transition: background-color 0.2s ease;
+}
+
+.actionButton:hover {
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.imageInfo {
+  padding: 12px;
+}
+
+.imageTitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+  font-size: 0.75rem;
+  color: var(--mui-palette-text-secondary);
+}
+
+.imageMetadata {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metadataChip {
+  font-size: 0.6rem;
+  height: 20px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.emptyStateIcon {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  margin: 0 auto 16px;
+  background: var(--mui-palette-purple-gradient-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.errorAlert {
+  margin: 16px;
+}

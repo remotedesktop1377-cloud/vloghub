@@ -10,7 +10,7 @@ import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
 import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '../../data/constants';
 import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
-import secureLocalStorage from 'react-secure-storage';
+import { secure } from '../../utils/helperFunctions';
 
 import styles from './css/TrendingTopics.module.css';
 import {
@@ -294,7 +294,7 @@ const TrendingTopics: React.FC = () => {
         // console.log('🟢 Script metadata:', scriptMetadata);
 
         // Store metadata in secure storage for the script production page
-        secureLocalStorage.setItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA, scriptMetadata);
+        secure.j.scriptMetadata.set(scriptMetadata);
 
         setShowScriptDialog(true);
         setError(null);
@@ -314,7 +314,7 @@ const TrendingTopics: React.FC = () => {
 
     let metadata: any = null;
     try {
-      const storedMeta = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
+              const storedMeta = secure.j.scriptMetadata.get();
       metadata = storedMeta || null;
     } catch { }
 
@@ -326,7 +326,7 @@ const TrendingTopics: React.FC = () => {
     // console.log('🟢 Script data:', scriptData);
 
     // Store in secure storage as backup
-    secureLocalStorage.setItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT, scriptData);
+            secure.j.approvedScript.set(scriptData);
 
     //Navigate immediately - this should be the fastest path
     router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);

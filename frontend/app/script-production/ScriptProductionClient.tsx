@@ -25,7 +25,7 @@ import {
 } from '@mui/icons-material';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { toast } from 'react-toastify';
-import secureLocalStorage from 'react-secure-storage';
+import { secure } from '@/utils/helperFunctions';
 import { Chapter } from '@/types/chapters';
 import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
@@ -52,11 +52,8 @@ interface ScriptData {
     words?: number;
 }
 
-interface ScriptProductionClientProps {
-    staticData: ScriptData;
-}
 
-const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticData }) => {
+const ScriptProductionClient: React.FC = () => {
 
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
@@ -155,10 +152,10 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
 
     useEffect(() => {
         // Load only from secure storage
-        const stored = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT);
+        const stored = secure.j.approvedScript.get();
         if (stored) {
             try {
-                // secureLocalStorage returns the object directly, no need to parse
+                // secure.j returns the object directly, no need to parse
                 const storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
                 setScriptData(storedData);
             } catch (e) {
@@ -740,6 +737,10 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
                             onMediaManagementOpen={setMediaManagementOpen}
                             onMediaManagementChapterIndex={setMediaManagementChapterIndex}
                             language={scriptData.language}
+                            onGoogleImagePreview={(imageUrl) => {
+                              // Open the image in a new tab for preview
+                              window.open(imageUrl, '_blank');
+                            }}
                         />
                     )}
 
