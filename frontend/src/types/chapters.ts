@@ -6,6 +6,7 @@ export interface Chapter {
     startTime: number;
     endTime: number;
     durationInSeconds: number;
+    narrationType?: 'interview' | 'narration';
     voiceover_style?: string;
     visual_guidance?: string;
     on_screen_text?: string;

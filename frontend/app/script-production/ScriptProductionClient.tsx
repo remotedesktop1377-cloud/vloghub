@@ -31,6 +31,7 @@ import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
 import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '@/styles/colors';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
+import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '@/data/constants';
 
 interface ScriptData {
     description: string;
@@ -40,6 +41,8 @@ interface ScriptData {
     region: string;
     duration: string;
     language: string;
+    subtitleLanguage?: string;
+    narrationType?: 'interview' | 'narration';
     title?: string;
     hook?: string;
     mainContent?: string;
@@ -89,9 +92,9 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
 
     const createGoogleDriveJSON = (chapters: Chapter[]) => {
 
-        // Create comprehensive JSON structure for script production
-        console.log('📋 Available Script Data:', chapters)
 
+        // Create comprehensive JSON structure for script production
+        // console.log('📋 Available Script Data:', chapters)
         const scriptProductionJSON = {
             "project": {
                 "topic": scriptData?.topic || null,
@@ -100,7 +103,9 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
                 "duration": parseInt(scriptData?.duration || '1') || null,
                 "resolution": "1920x1080",
                 "region": scriptData?.region || null,
-                "language": scriptData?.language || null
+                "language": scriptData?.language || null,
+                "subtitleLanguage": scriptData?.subtitleLanguage || null,
+                "narrationType": scriptData?.narrationType || null,
             },
             "script": chapters.map(chapter => ({
                 "id": chapter.id,
@@ -114,18 +119,16 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
         }
 
         // // Console log the generated JSON for debugging
-        console.log('📊 Complete JSON Structure:', JSON.stringify(scriptProductionJSON))
+        // console.log('📊 Complete JSON Structure:', JSON.stringify(scriptProductionJSON))
     };
 
     // Function to break down script into paragraphs and calculate individual durations
-    const updateParagraphs = (script: string) => {
-        if (!script.trim()) {
-            setChapters([]);
-            return;
-        }
-
+    const updateParagraphs = (scriptData: ScriptData) => {
         // Split script into paragraphs (split by double newlines or single newlines)
-        const scriptParagraphs = script
+
+        // console.log('📋 Script Data:', scriptData.script)
+
+        const scriptParagraphs = scriptData.script
             .split(/\n\s*\n/)
             .map(p => p.trim())
             .filter(p => p.length > 0);
@@ -135,7 +138,7 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
 
         // Map to Chapter[] with required fields
         const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
-            id: `chapter-${index + 1}`,
+            id: `scene-${index + 1}`,
             narration: p.text,
             duration: p.duration,
             words: p.words,
@@ -147,12 +150,11 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
 
         setChapters(chaptersAsRequired);
         createGoogleDriveJSON(chaptersAsRequired);
-
     };
 
     useEffect(() => {
         // Load only from localStorage
-        const stored = localStorage.getItem('approvedScript');
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT);
         if (stored) {
             try {
                 const storedData = JSON.parse(stored);
@@ -166,10 +168,10 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
 
     // Calculate estimated duration when script data changes
     useEffect(() => {
-        if (scriptData?.script) {
-            updateParagraphs(scriptData.script);
+        if (scriptData) {
+            updateParagraphs(scriptData);
         }
-    }, [scriptData, scriptData?.duration]);
+    }, [scriptData]);
 
     // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
     const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
@@ -223,14 +225,6 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
         return `${formatTime(startSeconds)} - ${formatTime(endSeconds)}`;
     };
 
-    // Format total duration from seconds
-    const formatTotalDuration = (totalSeconds: number): string => {
-        if (totalSeconds < 60) return `${totalSeconds}s`;
-        const minutes = Math.floor(totalSeconds / 60);
-        const remainingSeconds = totalSeconds % 60;
-        return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-    };
-
     // Calculate duration for a single paragraph
     const calculateParagraphDuration = (words: number): string => {
         if (words === 0) return '0s';
@@ -253,7 +247,7 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
     };
 
     const handleGoBack = () => {
-        router.push('/trending-topics');
+        router.push(ROUTES_KEYS.TRENDING_TOPICS);
     };
 
     const handleDownloadAllNarrations = () => {

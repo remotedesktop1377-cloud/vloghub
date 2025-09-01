@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@mui/material';
 import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../../styles/colors';
+import { ROUTES_KEYS } from '../../../data/constants';
 import Link from 'next/link';
 
 interface LayoutProps {
@@ -28,7 +29,7 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                   ))}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Link href="/trending-topics" prefetch>
+                  <Link href={ROUTES_KEYS.TRENDING_TOPICS} prefetch>
                     <Button variant="contained" sx={{ px: 2.5, py: 1.5, borderRadius: '50px', fontSize: '14px', textTransform: 'none', background: PURPLE.gradient.primary, color: TEXT.primary, boxShadow: `0 0 30px ${SHADOW.primary}`, '&:hover': { background: PURPLE.gradient.secondary, color: TEXT.primary } }}>✨ Generate Now</Button>
                   </Link>
                 </Box>

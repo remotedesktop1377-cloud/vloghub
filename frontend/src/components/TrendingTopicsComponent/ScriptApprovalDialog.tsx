@@ -28,6 +28,7 @@ import {
 import { getDirectionSx, isRTLLanguage } from '../../utils/languageUtils';
 import { toast } from 'react-toastify';
 import { HelperFunctions } from '@/utils/helperFunctions';
+import { LOCAL_STORAGE_KEYS } from '../../data/constants';
 
 interface ScriptApprovalDialogProps {
   open: boolean;
@@ -70,8 +71,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   // Parse script data from localStorage if available
   useEffect(() => {
     try {
-      const storedMetadata = localStorage.getItem('scriptWithKeys');
-      debugger
+      const storedMetadata = localStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
       if (storedMetadata) {
         const metadata = JSON.parse(storedMetadata);
         setScriptData(metadata);
@@ -163,7 +163,7 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
 
     // Save script metadata to localStorage
     try {
-      localStorage.setItem('scriptWithKeys', JSON.stringify(combinedScript));
+      localStorage.setItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA, JSON.stringify(combinedScript));
     } catch (error) {
       console.warn('Error saving script metadata:', error);
     }

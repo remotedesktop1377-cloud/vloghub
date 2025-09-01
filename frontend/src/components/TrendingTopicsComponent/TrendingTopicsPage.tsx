@@ -8,8 +8,9 @@ import { TrendingTopic } from '../../types/TrendingTopics';
 import { durationOptions } from '../../data/mockDurationOptions';
 import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
+import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '../../data/constants';
 
-import styles from './TrendingTopics.module.css';
+import styles from './css/TrendingTopics.module.css';
 import {
   Box,
   Typography,
@@ -46,6 +47,7 @@ const TrendingTopics: React.FC = () => {
   const [duration, setDuration] = useState('5');
   const [language, setLanguage] = useState('english');
   const [subtitleLanguage, setSubtitleLanguage] = useState('english');
+  const [narrationType, setNarrationType] = useState<'interview' | 'narration'>('narration');
   const [generatingChapters, setGeneratingChapters] = useState(false);
   const [editedScript, setEditedScript] = useState<string>('');
   const [showScriptDialog, setShowScriptDialog] = useState(false);
@@ -59,13 +61,6 @@ const TrendingTopics: React.FC = () => {
   const [selectedHypothesisSuggestions, setSelectedHypothesisSuggestions] = useState<string[]>([]);
   const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
   const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
-
-  // Confirm dialog state
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
-  const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
-  const [originalSuggestionText, setOriginalSuggestionText] = useState<string | null>(null);
-
   const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
 
   // Function to clear cache for current location and date range
@@ -229,23 +224,35 @@ const TrendingTopics: React.FC = () => {
         region: location,
         duration: duration,
         language: language,
+        narrationType: narrationType,
       });
       // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
         setEditedScript(result.data.script);
 
         // Store additional script metadata for later use
-        const scriptWithKeys = {
+        const scriptMetadata = {
           title: result.data.title || 'Untitled Script',
+          topic: selectedTopic?.topic || '',
+          description: selectedTopic?.description || '',
+          hypothesis: hypothesis || '',
+          region: location,
+          duration: duration,
+          language: language,
+          subtitleLanguage: subtitleLanguage,
+          narrationType: narrationType,
+          estimatedWords: result.data.estimatedWords || 0,
           hook: result.data.hook || '',
           mainContent: result.data.mainContent || '',
           conclusion: result.data.conclusion || '',
           callToAction: result.data.callToAction || '',
-          estimatedWords: result.data.estimatedWords || 0,
+          script: result.data.script || '',
         };
 
+        // console.log('🟢 Script metadata:', scriptMetadata);
+
         // Store metadata in localStorage for the script production page
-        localStorage.setItem('scriptWithKeys', JSON.stringify(scriptWithKeys));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA, JSON.stringify(scriptMetadata));
 
         setShowScriptDialog(true);
         setError(null);
@@ -263,22 +270,13 @@ const TrendingTopics: React.FC = () => {
   const handleScriptApproval = () => {
     // Navigate to script production page with the approved script data
 
-    debugger
     let metadata: any = null;
     try {
-      const scriptWithKeys = localStorage.getItem('scriptWithKeys');
-      metadata = scriptWithKeys ? JSON.parse(scriptWithKeys) : null;
+      const storedMeta = localStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
+      metadata = storedMeta ? JSON.parse(storedMeta) : null;
     } catch { }
 
-    const location = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
-
     const scriptData = {
-      region: location,
-      duration,
-      language,
-      topic: selectedTopic?.topic || '',
-      description: selectedTopicDetails,
-      hypothesis,
       script: editedScript,
       ...(metadata || {})
     };
@@ -286,12 +284,12 @@ const TrendingTopics: React.FC = () => {
     // console.log('🟢 Script data:', scriptData);
 
     // Store in localStorage as backup
-    localStorage.setItem('approvedScript', JSON.stringify(scriptData));
+    localStorage.setItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT, JSON.stringify(scriptData));
 
-    // Navigate immediately - this should be the fastest path
-    router.push('/script-production');
+    //Navigate immediately - this should be the fastest path
+    router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
 
-    // Close dialog and clear states immediately for faster UX
+    //Close dialog and clear states immediately for faster UX
     setShowScriptDialog(false);
 
   };
@@ -308,6 +306,10 @@ const TrendingTopics: React.FC = () => {
 
   const handleSubtitleLanguageChange = (newSubtitleLanguage: string) => {
     setSubtitleLanguage(newSubtitleLanguage);
+  };
+
+  const handleNarrationTypeChange = (newNarrationType: 'interview' | 'narration') => {
+    setNarrationType(newNarrationType);
   };
 
   const wordClickHandler = useCallback(async (w: any) => {
@@ -480,6 +482,8 @@ const TrendingTopics: React.FC = () => {
               canGenerate={!!selectedTopic}
               subtitleLanguage={subtitleLanguage}
               onSubtitleLanguageChange={handleSubtitleLanguageChange}
+              narrationType={narrationType}
+              onNarrationTypeChange={handleNarrationTypeChange}
             />
 
           </Box>

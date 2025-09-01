@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material';
-import styles from './CategorySelector.module.css';
+import styles from './TrendingTopics.module.css';
 import { locationData } from '../../data/locationData';
 
 interface CategorySelectorProps {

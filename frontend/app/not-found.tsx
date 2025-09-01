@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Box, Typography, Button, Container } from '@mui/material'
+import { ROUTES_KEYS } from '../src/data/constants'
 
 export const metadata = {
   title: 'Page Not Found - Vloghub',
@@ -41,7 +42,7 @@ export default function NotFound() {
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
           <Button
             component={Link}
-            href="/"
+            href={ROUTES_KEYS.HOME}
             variant="contained"
             size="large"
             sx={{ px: 4, py: 1.5 }}
@@ -51,7 +52,7 @@ export default function NotFound() {
           
           <Button
             component={Link}
-            href="/trending-topics"
+            href={ROUTES_KEYS.TRENDING_TOPICS}
             variant="outlined"
             size="large"
             sx={{ px: 4, py: 1.5 }}
