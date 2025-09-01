@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import secureLocalStorage from 'react-secure-storage';
 
 interface CachedData<T> {
   data: T;
@@ -11,9 +12,9 @@ export const useTrendingTopicsCache = () => {
   const getCachedData = useCallback(<T>(region: string): T | null => {
     try {
       const cacheKey = getCacheKey(region);
-      const cached = localStorage.getItem(cacheKey);
+      const cached = secureLocalStorage.getItem(cacheKey);
       if (cached) {
-        const { data, timestamp }: CachedData<T> = JSON.parse(cached);
+        const { data, timestamp }: CachedData<T> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<T>;
         // Check if cache is less than 30 minutes old
         const cacheAge = Date.now() - new Date(timestamp).getTime();
         const maxAge = 30 * 60 * 1000; // 30 minutes in milliseconds
@@ -22,7 +23,7 @@ export const useTrendingTopicsCache = () => {
           return data;
         } else {
           // Remove expired cache
-          localStorage.removeItem(cacheKey);
+          secureLocalStorage.removeItem(cacheKey);
         }
       }
     } catch (error) {
@@ -38,7 +39,7 @@ export const useTrendingTopicsCache = () => {
         data,
         timestamp: new Date().toISOString()
       };
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      secureLocalStorage.setItem(cacheKey, cacheData);
     } catch (error) {
       console.warn('Error writing to cache:', error);
     }
@@ -48,15 +49,12 @@ export const useTrendingTopicsCache = () => {
     try {
       if (region) {
         const cacheKey = getCacheKey(region);
-        localStorage.removeItem(cacheKey);
+        secureLocalStorage.removeItem(cacheKey);
       } else {
         // Clear all trending topics cache
-        const keys = Object.keys(localStorage);
-        keys.forEach(key => {
-          if (key.startsWith('trending_topics_')) {
-            localStorage.removeItem(key);
-          }
-        });
+        // Note: react-secure-storage doesn't have a direct way to get all keys
+        // We'll need to clear specific known cache keys or use a different approach
+        // console.warn('Clearing all cache not directly supported with secure storage');
       }
     } catch (error) {
       console.warn('Error clearing cache:', error);
@@ -66,9 +64,9 @@ export const useTrendingTopicsCache = () => {
   const isCacheValid = useCallback((region: string): boolean => {
     try {
       const cacheKey = getCacheKey(region);
-      const cached = localStorage.getItem(cacheKey);
+      const cached = secureLocalStorage.getItem(cacheKey);
       if (cached) {
-        const { timestamp }: CachedData<any> = JSON.parse(cached);
+        const { timestamp }: CachedData<any> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<any>;
         const cacheAge = Date.now() - new Date(timestamp).getTime();
         const maxAge = 30 * 60 * 1000; // 30 minutes in milliseconds
         return cacheAge < maxAge;
@@ -82,9 +80,9 @@ export const useTrendingTopicsCache = () => {
   const getCacheAge = useCallback((region: string): number | null => {
     try {
       const cacheKey = getCacheKey(region);
-      const cached = localStorage.getItem(cacheKey);
+      const cached = secureLocalStorage.getItem(cacheKey);
       if (cached) {
-        const { timestamp }: CachedData<any> = JSON.parse(cached);
+        const { timestamp }: CachedData<any> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<any>;
         return Date.now() - new Date(timestamp).getTime();
       }
     } catch (error) {

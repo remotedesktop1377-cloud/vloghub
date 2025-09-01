@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { toast } from 'react-toastify';
+import secureLocalStorage from 'react-secure-storage';
 import { Chapter } from '@/types/chapters';
 import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
@@ -153,11 +154,12 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
     };
 
     useEffect(() => {
-        // Load only from localStorage
-        const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT);
+        // Load only from secure storage
+        const stored = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT);
         if (stored) {
             try {
-                const storedData = JSON.parse(stored);
+                // secureLocalStorage returns the object directly, no need to parse
+                const storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
                 setScriptData(storedData);
             } catch (e) {
                 console.error('Failed to parse stored script data', e);

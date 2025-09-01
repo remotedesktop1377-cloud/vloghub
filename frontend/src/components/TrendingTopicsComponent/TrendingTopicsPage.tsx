@@ -10,6 +10,7 @@ import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
 import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '../../data/constants';
 import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
+import secureLocalStorage from 'react-secure-storage';
 
 import styles from './css/TrendingTopics.module.css';
 import {
@@ -292,8 +293,8 @@ const TrendingTopics: React.FC = () => {
 
         // console.log('🟢 Script metadata:', scriptMetadata);
 
-        // Store metadata in localStorage for the script production page
-        localStorage.setItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA, JSON.stringify(scriptMetadata));
+        // Store metadata in secure storage for the script production page
+        secureLocalStorage.setItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA, scriptMetadata);
 
         setShowScriptDialog(true);
         setError(null);
@@ -313,8 +314,8 @@ const TrendingTopics: React.FC = () => {
 
     let metadata: any = null;
     try {
-      const storedMeta = localStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
-      metadata = storedMeta ? JSON.parse(storedMeta) : null;
+      const storedMeta = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
+      metadata = storedMeta || null;
     } catch { }
 
     const scriptData = {
@@ -324,8 +325,8 @@ const TrendingTopics: React.FC = () => {
 
     // console.log('🟢 Script data:', scriptData);
 
-    // Store in localStorage as backup
-    localStorage.setItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT, JSON.stringify(scriptData));
+    // Store in secure storage as backup
+    secureLocalStorage.setItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT, scriptData);
 
     //Navigate immediately - this should be the fastest path
     router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);

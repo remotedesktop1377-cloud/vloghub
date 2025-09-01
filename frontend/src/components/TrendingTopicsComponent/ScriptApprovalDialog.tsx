@@ -29,6 +29,7 @@ import { getDirectionSx, isRTLLanguage } from '../../utils/languageUtils';
 import { toast } from 'react-toastify';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { LOCAL_STORAGE_KEYS } from '../../data/constants';
+import secureLocalStorage from 'react-secure-storage';
 
 interface ScriptApprovalDialogProps {
   open: boolean;
@@ -71,10 +72,17 @@ const ScriptApprovalDialog: React.FC<ScriptApprovalDialogProps> = ({
   // Parse script data from localStorage if available
   useEffect(() => {
     try {
-      const storedMetadata = localStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
-      if (storedMetadata) {
-        const metadata = JSON.parse(storedMetadata);
-        setScriptData(metadata);
+      const storedMetadata = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
+      if (typeof storedMetadata === 'string') {
+        try {
+          const metadata = JSON.parse(storedMetadata);
+          setScriptData(metadata);
+        } catch (err) {
+          console.warn('Error parsing script metadata from localStorage:', err);
+        }
+      } else if (storedMetadata && typeof storedMetadata === 'object') {
+        // If secureLocalStorage returns an object directly
+        setScriptData(storedMetadata as ScriptData);
       }
     } catch (error) {
       console.warn('Error parsing script metadata:', error);
