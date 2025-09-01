@@ -8,8 +8,11 @@ import { TrendingTopic } from '../../types/TrendingTopics';
 import { durationOptions } from '../../data/mockDurationOptions';
 import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
+import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '../../data/constants';
+import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
+import secureLocalStorage from 'react-secure-storage';
 
-import styles from './TrendingTopics.module.css';
+import styles from './css/TrendingTopics.module.css';
 import {
   Box,
   Typography,
@@ -28,6 +31,7 @@ import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
+  const { getCachedData, setCachedData, clearCache, isCacheValid } = useTrendingTopicsCache();
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,8 +50,8 @@ const TrendingTopics: React.FC = () => {
   const [duration, setDuration] = useState('5');
   const [language, setLanguage] = useState('english');
   const [subtitleLanguage, setSubtitleLanguage] = useState('english');
+  const [narrationType, setNarrationType] = useState<'interview' | 'narration'>('narration');
   const [generatingChapters, setGeneratingChapters] = useState(false);
-  const [generatedScript, setGeneratedScript] = useState<string>('');
   const [editedScript, setEditedScript] = useState<string>('');
   const [showScriptDialog, setShowScriptDialog] = useState(false);
 
@@ -61,14 +65,6 @@ const TrendingTopics: React.FC = () => {
   const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
   const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
 
-  // Confirm dialog state
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pendingEnhancedOptions, setPendingEnhancedOptions] = useState<string[]>([]);
-  const [pendingField, setPendingField] = useState<null | 'topicDetails' | 'hypothesis'>(null);
-  const [originalSuggestionText, setOriginalSuggestionText] = useState<string | null>(null);
-
-  const [trendView, setTrendView] = useState<'cloud' | 'grid'>('grid');
-
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
     if (!isAllFieldsSelected()) {
@@ -77,8 +73,8 @@ const TrendingTopics: React.FC = () => {
     }
 
     try {
-      const cacheKey = `trending_topics_${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
-      localStorage.removeItem(cacheKey);
+      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
+      clearCache(cacheRegion);
       toast.success('Cache cleared for current location and time range');
     } catch (error) {
       console.warn('Error clearing cache:', error);
@@ -110,9 +106,26 @@ const TrendingTopics: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      const locationKey = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
+      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
 
-      // Fetch from Gemini API with location type and date range
-      const geminiResult = await apiService.getGeminiTrendingTopics(selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry, dateRange);
+      // Check cache first (unless force refresh is requested)
+      if (!forceRefresh) {
+        const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
+        if (cachedData && isCacheValid(cacheRegion)) {
+          console.log('🟡 Using cached data for:', cacheRegion);
+          setTrendingTopics(cachedData);
+          setLastUpdated(new Date().toISOString()); // Update UI timestamp
+          setError(null);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fetch fresh data from API
+      console.log('🟢 Fetching fresh data for:', locationKey);
+      const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, dateRange);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
@@ -122,11 +135,20 @@ const TrendingTopics: React.FC = () => {
         const geminiData = Array.isArray(geminiResult.data) ? geminiResult.data : [];
         geminiData.sort((a: any, b: any) => b.engagement_count - a.engagement_count);
 
+        // Cache the fresh data
+        setCachedData(cacheRegion, geminiData);
         setTrendingTopics(geminiData);
+        setLastUpdated(new Date().toISOString());
+
+        // Show success message only on manual refresh
+        if (forceRefresh) {
+          toast.success('Fresh trending topics loaded!');
+        }
 
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
         setLastUpdated(new Date().toISOString());
+        toast.error('Failed to fetch trending topics');
       }
 
       setError(null);
@@ -134,6 +156,7 @@ const TrendingTopics: React.FC = () => {
       console.error('Error fetching trending topics, using mock data:', err);
       setError(null);
       setLastUpdated(new Date().toISOString());
+      toast.error('Error loading trending topics');
     } finally {
       setLoading(false);
     }
@@ -141,7 +164,20 @@ const TrendingTopics: React.FC = () => {
 
   useEffect(() => {
     if (isAllFieldsSelected()) {
-      fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange);
+      // Try to load from cache first
+      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
+      const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
+      
+      if (cachedData && isCacheValid(cacheRegion)) {
+        console.log('🟡 Using cached data - no API call needed');
+        setTrendingTopics(cachedData);
+        setLastUpdated(new Date().toISOString());
+        setError(null);
+      } else {
+        console.log('🟠 No valid cache found - calling API to fetch fresh data');
+        // Call API when no cached data is available
+        fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
+      }
     }
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
 
@@ -179,7 +215,7 @@ const TrendingTopics: React.FC = () => {
   };
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
-    console.log('🟢 Handling topic select:', topic);
+    // console.log('🟢 Handling topic select:', topic);
     setSelectedTopic(topic);
     setHypothesis('');
     setTopicSuggestions([]);
@@ -222,12 +258,15 @@ const TrendingTopics: React.FC = () => {
       setGeneratingChapters(true); // Keep using same loading state for now
       setError(null);
 
+      const location = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
+
       const result = await apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
-        region: selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry,
+        region: location,
         duration: duration,
         language: language,
+        narrationType: narrationType,
       });
       // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
@@ -236,17 +275,26 @@ const TrendingTopics: React.FC = () => {
         // Store additional script metadata for later use
         const scriptMetadata = {
           title: result.data.title || 'Untitled Script',
+          topic: selectedTopic?.topic || '',
+          description: selectedTopic?.description || '',
+          hypothesis: hypothesis || '',
+          region: location,
+          duration: duration,
+          language: language,
+          subtitleLanguage: subtitleLanguage,
+          narrationType: narrationType,
+          estimatedWords: result.data.estimatedWords || 0,
           hook: result.data.hook || '',
           mainContent: result.data.mainContent || '',
           conclusion: result.data.conclusion || '',
           callToAction: result.data.callToAction || '',
-          estimatedWords: result.data.estimatedWords || 0,
-          emotionalTone: result.data.emotionalTone || 'Engaging',
-          pacing: result.data.pacing || 'Dynamic'
+          script: result.data.script || '',
         };
 
-        // Store metadata in localStorage for the script production page
-        localStorage.setItem('scriptMetadata', JSON.stringify(scriptMetadata));
+        // console.log('🟢 Script metadata:', scriptMetadata);
+
+        // Store metadata in secure storage for the script production page
+        secureLocalStorage.setItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA, scriptMetadata);
 
         setShowScriptDialog(true);
         setError(null);
@@ -263,49 +311,33 @@ const TrendingTopics: React.FC = () => {
 
   const handleScriptApproval = () => {
     // Navigate to script production page with the approved script data
-    // console.log('Script approved, navigating to script production page...');
 
-    // Store script data for the next page
-    // Use edited script if it exists, otherwise use generated script
-    const finalScript = editedScript || generatedScript;
-
-    // Merge any script metadata if present
     let metadata: any = null;
     try {
-      const storedMeta = localStorage.getItem('scriptMetadata');
-      metadata = storedMeta ? JSON.parse(storedMeta) : null;
+      const storedMeta = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.SCRIPT_METADATA);
+      metadata = storedMeta || null;
     } catch { }
 
     const scriptData = {
-      script: finalScript,
-      topic: selectedTopic?.topic || '',
-      hypothesis,
-      details: selectedTopicDetails,
-      region: selectedLocation, // Keep for backward compatibility
-      duration,
-      language,
+      script: editedScript,
       ...(metadata || {})
     };
 
-    // Store in localStorage as backup
-    localStorage.setItem('approvedScript', JSON.stringify(scriptData));
+    // console.log('🟢 Script data:', scriptData);
 
-    // Close dialog and clear states immediately for faster UX
+    // Store in secure storage as backup
+    secureLocalStorage.setItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT, scriptData);
+
+    //Navigate immediately - this should be the fastest path
+    router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+
+    //Close dialog and clear states immediately for faster UX
     setShowScriptDialog(false);
-    setGeneratedScript('');
 
-    // Navigate immediately - this should be the fastest path
-    router.push('/script-production');
-
-    // Show success message after navigation starts (non-blocking)
-    setTimeout(() => {
-      toast.success('Script approved! Navigating to production pipeline...');
-    }, 100);
   };
 
   const handleScriptRejection = () => {
     // Clear the script and allow user to try again
-    setGeneratedScript('');
     setEditedScript('');
     setShowScriptDialog(false);
   };
@@ -316,6 +348,10 @@ const TrendingTopics: React.FC = () => {
 
   const handleSubtitleLanguageChange = (newSubtitleLanguage: string) => {
     setSubtitleLanguage(newSubtitleLanguage);
+  };
+
+  const handleNarrationTypeChange = (newNarrationType: 'interview' | 'narration') => {
+    setNarrationType(newNarrationType);
   };
 
   const wordClickHandler = useCallback(async (w: any) => {
@@ -488,6 +524,8 @@ const TrendingTopics: React.FC = () => {
               canGenerate={!!selectedTopic}
               subtitleLanguage={subtitleLanguage}
               onSubtitleLanguageChange={handleSubtitleLanguageChange}
+              narrationType={narrationType}
+              onNarrationTypeChange={handleNarrationTypeChange}
             />
 
           </Box>

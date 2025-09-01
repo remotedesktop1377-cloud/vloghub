@@ -26,7 +26,7 @@ The trending topics page now supports multiple location types: **Region**, **Cit
 
 ### LocationSelector
 - **File**: `src/components/TrendingTopics/LocationSelector.tsx`
-- **CSS**: `src/components/TrendingTopics/LocationSelector.module.css`
+- **CSS**: `src/components/TrendingTopics/TrendingTopics.module.css`
 - **Features**: 
   - Two-dropdown system (Type + Location)
   - Visual indicators with flags and emojis

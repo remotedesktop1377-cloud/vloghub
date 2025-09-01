@@ -918,10 +918,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                           </Box>
                         </Box>
 
-                        {/* Chapter-specific Media with Delete Icons */}
+                        {/* scene-specific Media with Delete Icons */}
                         {(chapterImagesMap[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex] || []).map((src, idx) => (
-                          <Box key={`chapter-${idx}`} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: 80, aspectRatio: '1 / 1' }}>
-                            <Box component="img" src={src} alt={`chapter-media-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          <Box key={`scene-${idx}`} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: 80, aspectRatio: '1 / 1' }}>
+                            <Box component="img" src={src} alt={`scene-media-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             {/* Delete Icon */}
                             <IconButton
                               onClick={() => {

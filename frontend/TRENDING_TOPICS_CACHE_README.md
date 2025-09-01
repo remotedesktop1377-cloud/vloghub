@@ -7,7 +7,7 @@ The Trending Topics feature now includes a robust caching system that stores tre
 
 ### 🚀 **Smart Caching**
 - **Automatic Cache**: Trending topics are automatically cached in localStorage
-- **Cache Duration**: Data is cached for 24 hours before expiring
+- **Cache Duration**: Data is cached for 30 minutes before expiring
 - **Region-Specific**: Each region has its own cache (e.g., `trending_topics_pakistan`)
 - **Automatic Cleanup**: Expired cache entries are automatically removed
 
@@ -18,9 +18,9 @@ The Trending Topics feature now includes a robust caching system that stores tre
 - **Manual Control**: Users can manually clear cache or force refresh
 
 ### 🔄 **Refresh Behavior**
-- **Page Load**: Automatically loads from cache (if available and valid)
+- **Page Load/Refresh**: Always fetches fresh data from Gemini API (ignores cache)
+- **Location/Date Change**: Uses cached data if available and valid (within 30 minutes)
 - **Refresh Button**: Fetches fresh data from Gemini API
-- **Region Change**: Automatically loads cached data for new region
 - **Cache Expiry**: Automatically falls back to API when cache expires
 
 ## Implementation Details
@@ -40,8 +40,8 @@ trending_topics_{region}
 Example: `trending_topics_pakistan`, `trending_topics_global`
 
 ### Cache Validation
-- **Fresh Data**: Less than 1 hour old (shows "Fresh" badge)
-- **Cached Data**: 1-24 hours old (shows "Cached" badge)
+- **Fresh Data**: Less than 30 minutes old (shows "Fresh" badge)
+- **Cached Data**: Up to 30 minutes old (shows "Cached" badge)
 - **Expired Data**: Automatically removed and replaced with fresh data
 
 ## User Interface Elements
@@ -108,9 +108,10 @@ const {
 
 ### Basic Usage
 1. **First Visit**: Data fetched from Gemini API and cached
-2. **Page Refresh**: Data loaded instantly from cache
-3. **Manual Refresh**: Click refresh button for fresh data
-4. **Cache Clear**: Use clear cache button to remove stored data
+2. **Page Refresh**: Fresh data fetched from API (cache ignored)
+3. **Location/Date Change**: Cached data used if available and valid
+4. **Manual Refresh**: Click refresh button for fresh data
+5. **Cache Clear**: Use clear cache button to remove stored data
 
 ### Advanced Usage
 ```typescript
@@ -123,12 +124,12 @@ fetchTrendingTopics(selectedRegion, true);
 
 ### Cache Duration
 ```typescript
-const maxAge = 1 * 60 * 60 * 1000; // 1 hours in milliseconds
+const maxAge = 30 * 60 * 1000; // 30 minutes in milliseconds
 ```
 
 ### Fresh Data Threshold
 ```typescript
-const isDataFresh = diffHours < 1; // Consider data fresh if less than 1 hour old
+const isDataFresh = diffMinutes < 30; // Consider data fresh if less than 30 minutes old
 ```
 
 ### Cache Keys

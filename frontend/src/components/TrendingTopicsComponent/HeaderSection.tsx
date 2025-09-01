@@ -3,7 +3,7 @@ import { Box, Button, Typography, Chip, IconButton, Tooltip } from '@mui/materia
 import { Refresh as RefreshIcon, AccessTime as TimeIcon, Clear as ClearIcon } from '@mui/icons-material';
 import LocationSelector from './LocationSelector';
 import DateRangeSelector from './DateRangeSelector';
-import styles from './HeaderSection.module.css';
+import styles from './css/TrendingTopics.module.css';
 
 interface HeaderSectionProps {
   selectedLocation: string;

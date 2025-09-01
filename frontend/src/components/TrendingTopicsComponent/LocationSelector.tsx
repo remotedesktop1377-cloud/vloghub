@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, Typography, useTheme } from '@mui/material';
 import { locationData, LocationOption, getCitiesByCountry } from '../../data/locationData';
-import styles from './LocationSelector.module.css';
+import styles from './css/TrendingTopics.module.css';
 
 interface LocationSelectorProps {
   selectedLocation: string;

@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button } from '@mui/material';
+import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, FormControlLabel, Radio, RadioGroup } from '@mui/material';
 import {
   ContentCut as CutIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { DurationOption } from '../../data/mockDurationOptions';
 import { LanguageOption } from '../../data/mockLanguageOptions';
+import styles from './css/TrendingTopics.module.css';
 
 interface VideoDurationSectionProps {
   duration: string;
@@ -22,6 +23,8 @@ interface VideoDurationSectionProps {
   canGenerate?: boolean;
   subtitleLanguage?: string;
   onSubtitleLanguageChange?: (subtitleLanguage: string) => void;
+  narrationType?: 'interview' | 'narration';
+  onNarrationTypeChange?: (narrationType: 'interview' | 'narration') => void;
 }
 
 const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
@@ -37,6 +40,8 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   canGenerate = false,
   subtitleLanguage = 'english',
   onSubtitleLanguageChange,
+  narrationType = 'narration',
+  onNarrationTypeChange,
 }) => {
 
   return (
@@ -97,6 +102,36 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
                 </MenuItem>
               ))}
             </Select>
+          </FormControl>
+
+          {/* Narration Type Selection */}
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            {/* <InputLabel sx={{ fontSize: '0.85rem' }}>Narration Type</InputLabel> */}
+            <RadioGroup
+              row
+              value={narrationType}
+              onChange={(e) => onNarrationTypeChange?.(e.target.value as 'interview' | 'narration')}
+              className={styles.narrationTypeRadioGroup}
+              sx={{
+                '& .MuiFormControlLabel-label': {
+                  fontSize: '0.8rem',
+                  ml: 0.5
+                }
+              }}
+            >
+              <FormControlLabel
+                value="narration"
+                control={<Radio size="small" className={styles.narrationTypeRadio} />}
+                label="Narration"
+                className={styles.narrationTypeLabel}
+              />
+              <FormControlLabel
+                value="interview"
+                control={<Radio size="small" className={styles.narrationTypeRadio} />}
+                label="Interview"
+                className={styles.narrationTypeLabel}
+              />
+            </RadioGroup>
           </FormControl>
         </Box>
 

@@ -35,6 +35,7 @@ const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
 
     // console.log('📌 Gemini Prompt:', prompt);
     const result = await model.generateContent(prompt);
+    // console.log('🟢 Gemini Prompt result:', result);
     const response = result.response;
     const text = response.text();
     // Extract JSON from the response
@@ -56,7 +57,7 @@ const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
       source_reference: item.source_reference || undefined,
       engagement_count: item.engagement_count || undefined,
     }));
-
+    
     // Sort by value (higher = first)
     return transformedData.sort((a: any, b: any) => b.value - a.value);
   } catch (error) {

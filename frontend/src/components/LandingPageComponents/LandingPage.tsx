@@ -7,6 +7,7 @@ import { NewsletterSubscriptionSection } from "./sections/NewsletterSubscription
 import { HeroSection } from "./sections/HeroSection";
 import { TrustedBySection } from "./sections/TrustedBySection";
 import { BACKGROUND, TEXT, PURPLE, SHADOW, HOVER, NEUTRAL } from "../../styles/colors";
+import { ROUTES_KEYS } from "../../data/constants";
 import Image from "next/image";
 import FeatureHighlightsMUI from "./sections/FeatureHighlights";
 import Link from "next/link";
@@ -89,7 +90,7 @@ const LandingPage: React.FC = () => {
                                 px: { xs: 2, md: 0 }
                             }}
                         >
-                            <Link href="/trending-topics" prefetch>
+                            <Link href={ROUTES_KEYS.TRENDING_TOPICS} prefetch>
                                 <Button
                                     sx={{
                                         px: 4,

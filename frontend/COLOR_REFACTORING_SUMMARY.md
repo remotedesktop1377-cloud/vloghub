@@ -22,7 +22,7 @@ Successfully refactored all hardcoded colors from the YouTube Clone application 
 ### 3. CSS Module Files
 - **`src/components/AudioPlayer/AudioPlayer.module.css`** - Audio player styles
 - **`src/components/TrendingTopics/TrendingTopics.module.css`** - Trending topics styles
-- **`src/components/TrendingTopics/HeaderSection.module.css`** - Header section styles
+- **`src/components/TrendingTopics/TrendingTopics.module.css`** - Header section styles
 - **`src/components/TrendingTopics/DateRangeSelector.module.css`** - Date selector styles
 - **`src/components/WordCloudChart/WordCloudChart.module.css`** - Word cloud styles
 

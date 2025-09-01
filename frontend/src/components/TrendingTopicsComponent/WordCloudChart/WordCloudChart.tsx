@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import WordCloud from 'react-d3-cloud';
 import { INFO } from '../../../styles/colors';
-import styles from './WordCloudChart.module.css';
+import styles from '../css/WordCloudChart.module.css';
 
 export interface WordData {
     text: string;

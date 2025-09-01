@@ -26,8 +26,8 @@ const TrendingTopicsList: React.FC<TrendingTopicsListProps> = ({
       const date = new Date(timestamp);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
-      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-      return diffHours < 1; // Consider data fresh if less than 1 hour old
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      return diffMinutes < 30; // Consider data fresh if less than 30 minutes old
     } catch (error) {
       return false;
     }

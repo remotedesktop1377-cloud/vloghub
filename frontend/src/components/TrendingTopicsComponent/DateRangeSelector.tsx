@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, useTheme, Typography } from '@mui/material';
 import { AccessTime as TimeIcon } from '@mui/icons-material';
-import styles from './DateRangeSelector.module.css';
+import styles from './css/TrendingTopics.module.css';
 
 export interface DateRangeOption {
     value: string;
