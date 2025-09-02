@@ -1,119 +1,189 @@
+// app/api/upload-to-drive/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
 
+// Force Node.js runtime (required for fs/path)
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
     try {
         const { jsonData, fileName } = await request.json();
-        console.log('Private key: ');
 
         if (!jsonData || !fileName) {
             return NextResponse.json(
-                { error: 'JSON data and filename are required' },
+                { error: 'JSON data and fileName are required' },
                 { status: 400 }
             );
         }
 
-        // Read Google Drive credentials from the service account file
-        const credentialsPath = path.join(process.cwd(), 'src', 'config', 'gen-lang-client-0211941879-57f306607431.json');
-        // const credentialsPath = path.join(process.cwd(), 'src', 'config', 'youtubeclipsearching-b0aa61e232e9.json');
-        
-        let credentials;
+        // 1) Load service account credentials from file (your current approach)
+        //    If you later move to env vars, see the alternative block below.
+        const credentialsPath = path.join(
+            process.cwd(),
+            'src',
+            'config',
+            'gen-lang-client-0211941879-57f306607431.json'
+        );
+
+        let credentials: {
+            client_email: string;
+            private_key: string;
+            project_id?: string;
+            private_key_id?: string;
+        };
+
         try {
             const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
             credentials = JSON.parse(credentialsFile);
-            console.log('Successfully loaded service account credentials from file');
-        } catch (error) {
-            console.error('Failed to read service account file:', error);
+        } catch (err) {
+            console.error('Failed to read service account file:', err);
             return NextResponse.json(
-                { error: 'Google Drive service account file not found. Please ensure gen-lang-client-0211941879-57f306607431.json exists in src/config/' },
+                {
+                    error:
+                        'Google Drive service account file not found or invalid at src/config/gen-lang-client-0211941879-57f306607431.json',
+                },
                 { status: 500 }
             );
         }
 
-        // Get folder ID from environment variable (this is the only thing we need from env)
-        // const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-        const folderId = "15atf1g4WlSLlxL0YQjjY2OJumYVHBWtL";
+        // 2) Target folder (must be shared with the service account email)
+        //    Prefer storing this in an env var in production.
+        const TARGET_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-        if (!folderId) {
+        if (!TARGET_FOLDER_ID) {
             return NextResponse.json(
-                { error: 'Google Drive folder ID not configured. Please set GOOGLE_DRIVE_FOLDER_ID in environment variables.' },
+                {
+                    error:
+                        'Google Drive folder ID not configured. Set GOOGLE_DRIVE_FOLDER_ID.',
+                },
                 { status: 500 }
             );
         }
 
-        console.log('Using credentials:', {
-            client_email: credentials.client_email,
-            project_id: credentials.project_id,
-            private_key_id: credentials.private_key_id,
-            folderId: folderId
-        });
-
-        // Create JWT client using credentials from file
+        // 3) Create auth client (use full drive scope for fewer surprises)
         const jwtClient = new google.auth.JWT({
             email: credentials.client_email,
+            // If you later load from env, remember to .replace(/\\n/g, '\n')
             key: credentials.private_key,
-            scopes: ['https://www.googleapis.com/auth/drive.file'],
+            scopes: ['https://www.googleapis.com/auth/drive'],
         });
 
-        // Create Drive API client with JWT
         const drive = google.drive({ version: 'v3', auth: jwtClient });
 
-        // Convert JSON data to string
-        const jsonString = JSON.stringify(jsonData, null, 2);
-        
-        console.log('Uploading to Google Drive:', {
-            fileName,
-            folderId,
-            dataSize: jsonString.length
-        });
+        // 4) Ensure target folder is accessible; include supportsAllDrives for Shared Drives
+        let targetFolderId = TARGET_FOLDER_ID;
+        try {
+            await drive.files.get({
+                fileId: targetFolderId,
+                fields: 'id, name, driveId, parents',
+                supportsAllDrives: true,
+            });
+        } catch (folderError: any) {
+            const status = folderError?.code || folderError?.response?.status;
 
-        // Upload file to Google Drive using multipart upload
-        const response = await drive.files.create({
+            if (status === 404) {
+                return NextResponse.json(
+                    {
+                        error: 'Target folder not found (404).',
+                        hint:
+                            'Verify the folder ID and that the service account has at least Editor access to that folder.',
+                        serviceAccount: credentials.client_email,
+                        folderId: targetFolderId,
+                    },
+                    { status: 404 }
+                );
+            }
+
+            if (status === 403) {
+                return NextResponse.json(
+                    {
+                        error:
+                            'Forbidden (403). The service account likely lacks permission on the target folder.',
+                        hint:
+                            'Share the folder with the service account email as Editor, or switch to domain-wide delegation.',
+                        serviceAccount: credentials.client_email,
+                        folderId: targetFolderId,
+                    },
+                    { status: 403 }
+                );
+            }
+
+            // If unknown, surface message
+            return NextResponse.json(
+                {
+                    error: 'Failed to access target folder.',
+                    details:
+                        folderError?.message ||
+                        folderError?.response?.data ||
+                        'Unknown error',
+                },
+                { status: 500 }
+            );
+        }
+
+        // 5) Upload JSON (multipart). supportsAllDrives must be true for shared drives.
+        const jsonString = JSON.stringify(jsonData, null, 2);
+
+        const createRes = await drive.files.create({
             requestBody: {
                 name: fileName,
-                parents: [folderId],
+                parents: [targetFolderId],
                 mimeType: 'application/json',
             },
             media: {
                 mimeType: 'application/json',
                 body: jsonString,
             },
-            uploadType: 'multipart',
+            supportsAllDrives: true,
+            fields: 'id, name, webViewLink, webContentLink, parents',
         });
-        console.log(response);
 
-        const fileId = response.data.id;
-        const fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
-
-        console.log('Successfully uploaded to Google Drive:', {
-            fileId,
-            fileUrl
-        });
+        const fileId = createRes.data.id!;
+        const webViewLink =
+            createRes.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
 
         return NextResponse.json({
             success: true,
             fileId,
-            fileUrl,
-            fileName,
-            message: 'File uploaded successfully to Google Drive'
+            fileName: createRes.data.name,
+            webViewLink,
+            parents: createRes.data.parents,
+            message: 'File uploaded successfully to Google Drive.',
         });
-
-    } catch (error) {
+    } catch (error: any) {
         console.error('Google Drive upload error:', error);
-        
-        let errorMessage = 'Failed to upload to Google Drive';
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        }
+        const status =
+            error?.code ||
+            error?.response?.status ||
+            (typeof error?.message === 'string' &&
+                /invalid_grant|unauthorized_client/i.test(error.message)
+                ? 401
+                : 500);
 
         return NextResponse.json(
-            { 
+            {
                 error: 'Google Drive upload failed',
-                details: errorMessage
+                details:
+                    error?.response?.data?.error?.message ||
+                    error?.message ||
+                    'Unknown error',
             },
-            { status: 500 }
+            { status }
         );
     }
 }
+
+/* ---------- OPTIONAL: env-based credentials (instead of reading a file) ----------
+   Set:
+     GDRIVE_CLIENT_EMAIL="beehive@gen-lang-client-0211941879.iam.gserviceaccount.com"
+     GDRIVE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+   Then build the JWT like:
+
+   const jwtClient = new google.auth.JWT({
+     email: process.env.GDRIVE_CLIENT_EMAIL,
+     key: (process.env.GDRIVE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+     scopes: ['https://www.googleapis.com/auth/drive'],
+   });
+----------------------------------------------------------------------------- */

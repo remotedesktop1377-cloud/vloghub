@@ -12,6 +12,7 @@ import {
     Grid,
     LinearProgress,
     Chip,
+    CircularProgress,
 } from '@mui/material';
 import {
     ArrowBack as BackIcon,
@@ -89,7 +90,10 @@ const ScriptProductionClient: React.FC = () => {
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
     const [uploadingToDrive, setUploadingToDrive] = useState(false);
-    const [driveUploadResult, setDriveUploadResult] = useState<{ fileUrl?: string; fileName?: string } | null>(null);
+    const [driveUploadResult, setDriveUploadResult] = useState<{ fileUrl?: string; fileName?: string; folderCreated?: boolean; folderId?: string } | null>(null);
+    const [listingFolders, setListingFolders] = useState(false);
+    const [availableFolders, setAvailableFolders] = useState<any[]>([]);
+    const [driveInfo, setDriveInfo] = useState<any>(null);
 
     // Function to upload JSON to Google Drive
     const uploadToGoogleDrive = async (chapters: Chapter[]) => {
@@ -129,8 +133,9 @@ const ScriptProductionClient: React.FC = () => {
             };
 
             // Generate filename with timestamp
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const fileName = `${scriptData.topic?.replace(/[^a-zA-Z0-9]/g, '-') || 'untitled'}-${timestamp}.json`;
+            const timestamp = new Date().toLocaleDateString().replace(/[:.]/g, '-').slice(0, -5);
+            const folderName = `${timestamp}-${scriptData.topic?.replace(/[^a-zA-Z0-9]/g, '-') || 'untitled'}.json`;
+            const fileName = `project-config.json`;
 
             console.log('📤 Uploading to Google Drive:', fileName);
 
@@ -155,10 +160,16 @@ const ScriptProductionClient: React.FC = () => {
 
             setDriveUploadResult({
                 fileUrl: result.fileUrl,
-                fileName: result.fileName
+                fileName: result.fileName,
+                folderCreated: result.folderCreated,
+                folderId: result.folderId
             });
 
-            toast.success(`Successfully uploaded "${result.fileName}" to Google Drive!`);
+            const successMessage = result.folderCreated 
+                ? `Successfully uploaded "${result.fileName}" to Google Drive! Created new project folder.`
+                : `Successfully uploaded "${result.fileName}" to Google Drive!`;
+            
+            toast.success(successMessage);
             console.log('✅ Google Drive upload successful:', result);
 
         } catch (error) {
@@ -166,6 +177,41 @@ const ScriptProductionClient: React.FC = () => {
             toast.error(`Failed to upload to Google Drive: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setUploadingToDrive(false);
+        }
+    };
+
+    // Function to list available Google Drive folders
+    const listGoogleDriveFolders = async () => {
+        setListingFolders(true);
+        
+        try {
+            const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_FOLDERS, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || 'Failed to list Google Drive folders');
+            }
+
+            const result = await response.json();
+            
+            setAvailableFolders(result.folders || []);
+            setDriveInfo(result.driveInfo || null);
+            toast.success(`Found ${result.totalFolders} accessible folders`);
+            console.log('📁 Available Google Drive folders:', result.folders);
+            if (result.driveInfo) {
+                console.log('📁 Google Drive Info:', result.driveInfo);
+            }
+
+        } catch (error) {
+            console.error('❌ Failed to list folders:', error);
+            toast.error(`Failed to list folders: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setListingFolders(false);
         }
     };
 
@@ -870,6 +916,89 @@ const ScriptProductionClient: React.FC = () => {
                                 </Box>
                             </Grid>
 
+                                                        {/* Google Drive Folders List Button */}
+                            <Grid item xs={12}>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    startIcon={listingFolders ? <CircularProgress size={16} /> : <DownloadIcon />}
+                                    onClick={listGoogleDriveFolders}
+                                    disabled={listingFolders}
+                                    sx={{ mb: 1, fontSize: '1rem' }}
+                                >
+                                    {listingFolders ? 'Listing Folders...' : 'List Google Drive Folders'}
+                                </Button>
+                            </Grid>
+
+                            {/* Google Drive Information Display */}
+                            {driveInfo && (
+                                <Grid item xs={12}>
+                                    <Paper sx={{ p: 2, mb: 1, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                            📊 Google Drive Account Info
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                    Account: {driveInfo.user?.displayName || driveInfo.user?.emailAddress}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'primary.contrastText', opacity: 0.8 }}>
+                                                    Service Email: {driveInfo.user?.emailAddress}
+                                                </Typography>
+                                            </Box>
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                    Storage: {driveInfo.storage?.usage} / {driveInfo.storage?.limit}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                                                    <Chip size="small" label={`Drive: ${driveInfo.storage?.usageInDrive}`} sx={{ bgcolor: 'rgba(255,255,255,0.2)' }} />
+                                                    <Chip size="small" label={`Gmail: ${driveInfo.storage?.usageInGmail}`} sx={{ bgcolor: 'rgba(255,255,255,0.2)' }} />
+                                                    <Chip size="small" label={`Photos: ${driveInfo.storage?.usageInPhotos}`} sx={{ bgcolor: 'rgba(255,255,255,0.2)' }} />
+                                                </Box>
+                                            </Box>
+                                        </Box>
+                                    </Paper>
+                                </Grid>
+                            )}
+
+                            {/* Available Folders Display */}
+                            {availableFolders.length > 0 && (
+                                <Grid item xs={12}>
+                                    <Paper sx={{ p: 2, mb: 1, maxHeight: 300, overflowY: 'auto' }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                            📁 Available Folders ({availableFolders.length}):
+                                        </Typography>
+                                        {availableFolders.map((folder, index) => (
+                                            <Box key={folder.id} sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                    {folder.name}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', display: 'block', mt: 0.5 }}>
+                                                    ID: {folder.id}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                                    Modified: {folder.modifiedTime ? new Date(folder.modifiedTime).toLocaleDateString() : 'Unknown'}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                                                    <Chip size="small" label={folder.shared ? 'Shared' : 'Private'} color={folder.shared ? 'success' : 'default'} />
+                                                    {folder.hasParents && <Chip size="small" label="Subfolder" color="info" />}
+                                                    <Chip 
+                                                        size="small" 
+                                                        label="Copy ID" 
+                                                        color="secondary" 
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(folder.id);
+                                                            toast.success('Folder ID copied to clipboard!');
+                                                        }}
+                                                        sx={{ cursor: 'pointer' }}
+                                                    />
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Paper>
+                                </Grid>
+                            )}
+
                             {/* Google Drive Upload Button */}
                             <Grid item xs={12}>
                                 <Box sx={{ position: 'relative' }}>
@@ -879,8 +1008,8 @@ const ScriptProductionClient: React.FC = () => {
                                         startIcon={<UploadIcon />}
                                         onClick={() => uploadToGoogleDrive(chapters)}
                                         disabled={!chapters.length || uploadingToDrive}
-                                        sx={{
-                                            mb: 1,
+                                        sx={{ 
+                                            mb: 1, 
                                             fontSize: '1rem',
                                             background: INFO.main,
                                             '&:hover': {
