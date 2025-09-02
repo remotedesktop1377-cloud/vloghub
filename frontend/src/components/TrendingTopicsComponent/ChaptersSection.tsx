@@ -34,6 +34,7 @@ import { HelperFunctions } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
 import { useImageViewer, formatChapterImages } from '../../hooks/useImageViewer';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL, TEXT, BORDER, HOVER, SPECIAL } from '../../styles/colors';
+import ImageSearch from './ImageSearch';
 
 interface ChaptersSectionProps {
   chapters: Chapter[];
@@ -86,6 +87,7 @@ interface ChaptersSectionProps {
   onMediaManagementChapterIndex: (index: number | null) => void;
   onChaptersUpdate: (chapters: Chapter[]) => void;
   language: string;
+  onGoogleImagePreview?: (imageUrl: string) => void;
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
@@ -139,6 +141,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   onMediaManagementChapterIndex,
   onChaptersUpdate,
   language,
+  onGoogleImagePreview,
 }) => {
   // Image viewer hook for enhanced image viewing
   const imageViewer = useImageViewer();
@@ -150,7 +153,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
     const images = formatChapterImages(
       chapterImages,
-      chapter.assets?.image || undefined,
+      chapter.assets?.images?.[0] || undefined,
     );
 
     if (images.length > 0) {
@@ -302,7 +305,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.65rem' }}>
-                                                    📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.image ? 1 : 0)})
+                                                    📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.images ? 1 : 0)})
                                                   </Typography>
                                                   <Button
                                                     size="small"
@@ -325,16 +328,16 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       onMediaManagementOpen(true);
                                                     }}
                                                   >
-                                                    {((chapterImagesMap[index] || []).length > 0 || chapter.assets?.image) ? 'Manage' : 'Add'}
+                                                    {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? 'Manage' : 'Add'}
                                                   </Button>
                                                 </Box>
 
                                                 {/* Media Display */}
-                                                {((chapterImagesMap[index] || []).length > 0 || chapter.assets?.image) ? (
+                                                {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? (
                                                   <>
                                                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
                                                       {/* Show Generated Chapter Image First */}
-                                                      {chapter.assets?.image && (
+                                                      {chapter.assets && Array.isArray(chapter.assets.images) && chapter.assets.images.length > 0 && (
                                                         <Box
                                                           sx={{
                                                             position: 'relative',
@@ -356,8 +359,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           }}
                                                         >
                                                           <img
-                                                            src={chapter.assets?.image || ''}
-                                                            alt={`Generated Chapter ${index + 1} Image`}
+                                                            src={chapter.assets.images[0] || ''}
+                                                            alt={`Generated chapter ${index + 1} Image`}
                                                             style={{
                                                               position: 'absolute',
                                                               width: '100%',
@@ -385,9 +388,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                 if (chIndex === index) {
                                                                   return {
                                                                     ...ch,
-                                                                    media: {
+                                                                    assets: {
                                                                       ...ch.assets,
-                                                                      image: null
+                                                                      images: ch.assets?.images?.slice(1) || null
                                                                     }
                                                                   };
                                                                 }
@@ -400,27 +403,85 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                             </svg>
                                                           </IconButton>
-                                                          {/* Generated Badge */}
-                                                          <Box
-                                                            sx={{
-                                                              position: 'absolute',
-                                                              bottom: 2,
-                                                              left: 2,
-                                                              bgcolor: SUCCESS.main,
-                                                              color: 'white',
-                                                              fontSize: '0.6rem',
-                                                              px: 0.5,
-                                                              py: 0.1,
-                                                              borderRadius: 0.5,
-                                                              fontWeight: 'bold'
-                                                            }}
-                                                          >
-                                                            AI
-                                                          </Box>
                                                         </Box>
                                                       )}
+
+                                                      {/* Show Selected Images from Google Search */}
+                                                      {chapter.assets && Array.isArray(chapter.assets.images) && chapter.assets.images.slice(1).map((imageUrl, imgIndex) => (
+                                                        <Box
+                                                          key={`selected-${imgIndex}`}
+                                                          sx={{
+                                                            position: 'relative',
+                                                            width: '75px',
+                                                            height: '75px',
+                                                            borderRadius: 0.5,
+                                                            overflow: 'hidden',
+                                                            border: `2px solid ${PRIMARY.main}`,
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.2s',
+                                                            '&:hover': {
+                                                              transform: 'scale(1.02)',
+                                                              borderColor: PRIMARY.dark
+                                                            }
+                                                          }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const imageIndex = 1 + imgIndex; // +1 because index 0 is AI generated
+                                                            handleImageClick(index, imageIndex);
+                                                          }}
+                                                        >
+                                                          <img
+                                                            src={imageUrl}
+                                                            alt={`Selected Image ${imgIndex + 1}`}
+                                                            style={{
+                                                              position: 'absolute',
+                                                              width: '100%',
+                                                              height: '100%',
+                                                              objectFit: 'cover'
+                                                            }}
+                                                          />
+                                                          {/* Delete Button */}
+                                                          <IconButton
+                                                            size="small"
+                                                            sx={{
+                                                              position: 'absolute',
+                                                              top: 2,
+                                                              right: 2,
+                                                              bgcolor: 'background.paper',
+                                                              width: 14,
+                                                              height: 14,
+                                                              minWidth: 14,
+                                                              '&:hover': { bgcolor: 'background.paper' }
+                                                            }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              // Remove the selected image from chapter assets
+                                                              const updatedChapters = chapters.map((ch, chIndex) => {
+                                                                if (chIndex === index) {
+                                                                  const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
+                                                                  const updatedImages = currentImages.filter((_, i) => i !== (imgIndex + 1)); // +1 because we're skipping AI image
+                                                                  return {
+                                                                    ...ch,
+                                                                    assets: {
+                                                                      ...ch.assets,
+                                                                      images: updatedImages.length > 0 ? updatedImages : null
+                                                                    }
+                                                                  };
+                                                                }
+                                                                return ch;
+                                                              });
+                                                              onChaptersUpdate(updatedChapters);
+                                                            }}
+                                                          >
+                                                            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                              <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                          </IconButton>
+                                                        </Box>
+                                                      ))}
+
                                                       {/* Show Additional Images */}
-                                                      {(chapterImagesMap[index] || []).slice(0, chapter.assets?.image ? 3 : 4).map((imageUrl, imgIndex) => (
+                                                      {(chapterImagesMap[index] || []).slice(0, 4).map((imageUrl, imgIndex) => (
                                                         <Box
                                                           key={imgIndex}
                                                           sx={{
@@ -439,13 +500,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           }}
                                                           onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const imageIndex = chapter.assets?.image ? imgIndex + 1 : imgIndex;
+                                                            const imageIndex = chapter.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
                                                             handleImageClick(index, imageIndex);
                                                           }}
                                                         >
                                                           <img
                                                             src={imageUrl}
-                                                            alt={`Chapter ${index + 1} Media ${imgIndex + 1}`}
+                                                            alt={`Scene ${index + 1} Media ${imgIndex + 1}`}
                                                             style={{
                                                               position: 'absolute',
                                                               width: '100%',
@@ -693,7 +754,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                             width: 36,
                                             height: 36,
                                           }}
-                                          title="Add chapter after this one"
+                                          title="Add scene after this one"
                                         >
                                           <AddIcon fontSize="small" />
                                         </IconButton>
@@ -722,7 +783,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
       <Dialog
         open={mediaManagementOpen}
         onClose={() => onMediaManagementOpen(false)}
-        maxWidth="lg"
+        maxWidth="xl"
         fullWidth
         PaperProps={{
           sx: { minHeight: '600px', bgcolor: 'background.paper' }
@@ -745,293 +806,53 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '500px' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '800px' }}>
 
-            {/* Media Management Tabs */}
+            {/* Image Search with integrated tabs */}
             <Box sx={{ flex: 1 }}>
-              <Tabs value={rightTabIndex} onChange={(_, v) => onRightTabChange(v)} variant="fullWidth" sx={{ borderBottom: '1px solid', borderColor: 'divider', '& .MuiTab-root': { textTransform: 'none' } }}>
-                <Tab label="Google Images" />
-                <Tab label="Envato Images" />
-              </Tabs>
-
-              <Box sx={{ height: 'calc(100% - 48px)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                {rightTabIndex === 0 && (
-                  <Box sx={{ p: 1.5, height: '100%' }}>
-                    {/* Check if current chapter has any media */}
-                    {(chapterImagesMap[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex] || []).length === 0 ? (
-                      // No media - Show centered information message
-                      <Box
-                        onClick={() => {
-                          // Create a temporary file input for this specific upload
-                          const tempFileInput = document.createElement('input');
-                          tempFileInput.type = 'file';
-                          tempFileInput.accept = 'image/*';
-                          tempFileInput.multiple = true;
-                          tempFileInput.style.display = 'none';
-                          tempFileInput.onchange = (e) => {
-                            const target = e.target as HTMLInputElement;
-                            if (target.files && target.files.length > 0) {
-                              // Create object URLs for the files
-                              const imgs: string[] = [];
-                              Array.from(target.files).forEach((file) => {
-                                if (file.type.startsWith('image/')) {
-                                  const url = URL.createObjectURL(file);
-                                  imgs.push(url);
-                                }
-                              });
-
-                              if (imgs.length > 0) {
-                                // Add images to the current chapter
-                                const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
-                                onChapterImagesMapChange({
-                                  ...chapterImagesMap,
-                                  [currentIdx]: [...(chapterImagesMap[currentIdx] || []), ...imgs]
-                                });
-                              }
-                            }
-                            // Clean up the temporary input
-                            document.body.removeChild(tempFileInput);
-                          };
-                          document.body.appendChild(tempFileInput);
-                          tempFileInput.click();
-                        }}
-                        sx={{
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          border: '2px dashed',
-                          borderColor: 'divider',
-                          borderRadius: 2,
-                          backgroundColor: 'background.default',
-                          '&:hover': {
-                            borderColor: 'primary.main',
-                            backgroundColor: 'action.hover'
-                          },
-                          transition: 'all 0.2s ease',
-                          py: 6
-                        }}
-                      >
-                        <Box sx={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: 2,
-                          mx: 'auto',
-                          mb: 2,
-                          background: PURPLE.gradient.blue,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <svg width="36" height="36" viewBox="0 0 24 24" fill={NEUTRAL.white} xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, fontSize: '0.9rem', color: 'text.primary' }}>
-                          No Media Added Yet
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, lineHeight: 1.5 }}>
-                          Click here to add images for Chapter {(mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex) + 1}. You can select multiple images at once.
-                        </Typography>
-                      </Box>
-                    ) : (
-                      // Has media - Show grid with Add Media box + uploaded images
-                      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(6, 80px)', justifyContent: 'flex-start', gap: 1 }}>
-                        {/* Add Media Box - First Position */}
-                        <Box
-                          onClick={() => {
-                            // Create a temporary file input for this specific upload
-                            const tempFileInput = document.createElement('input');
-                            tempFileInput.type = 'file';
-                            tempFileInput.accept = 'image/*';
-                            tempFileInput.multiple = true;
-                            tempFileInput.style.display = 'none';
-                            tempFileInput.onchange = (e) => {
-                              const target = e.target as HTMLInputElement;
-                              if (target.files && target.files.length > 0) {
-                                // Create object URLs for the files
-                                const imgs: string[] = [];
-                                Array.from(target.files).forEach((file) => {
-                                  if (file.type.startsWith('image/')) {
-                                    const url = URL.createObjectURL(file);
-                                    imgs.push(url);
-                                  }
-                                });
-
-                                if (imgs.length > 0) {
-                                  // Add images to the current chapter
-                                  const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
-                                  onChapterImagesMapChange({
-                                    ...chapterImagesMap,
-                                    [currentIdx]: [...(chapterImagesMap[currentIdx] || []), ...imgs]
-                                  });
-                                }
-                              }
-                              // Clean up the temporary input
-                              document.body.removeChild(tempFileInput);
-                            };
-                            document.body.appendChild(tempFileInput);
-                            tempFileInput.click();
-                          }}
-                          sx={{
-                            position: 'relative',
-                            borderRadius: 2,
-                            overflow: 'hidden',
-                            width: 80,
-                            aspectRatio: '1 / 1',
-                            border: '2px dashed',
-                            borderColor: 'divider',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            backgroundColor: 'background.default',
-                            '&:hover': {
-                              borderColor: 'primary.main',
-                              backgroundColor: 'action.hover'
-                            },
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Box sx={{
-                              width: 20,
-                              height: 20,
-                              borderRadius: '50%',
-                              mx: 'auto',
-                              mb: 0.5,
-                              background: PURPLE.gradient.blue,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill={NEUTRAL.white} xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 5v14m-7-7h14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </Box>
-                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary', fontSize: '0.6rem' }}>
-                              Add
-                            </Typography>
-                          </Box>
-                        </Box>
-
-                        {/* scene-specific Media with Delete Icons */}
-                        {(chapterImagesMap[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex] || []).map((src, idx) => (
-                          <Box key={`scene-${idx}`} sx={{ position: 'relative', borderRadius: 2, overflow: 'hidden', width: 80, aspectRatio: '1 / 1' }}>
-                            <Box component="img" src={src} alt={`scene-media-${idx}`} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                            {/* Delete Icon */}
-                            <IconButton
-                              onClick={() => {
-                                const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
-                                const currentImages = chapterImagesMap[currentIdx] || [];
-                                const updatedImages = currentImages.filter((_, imgIdx) => imgIdx !== idx);
-                                onChapterImagesMapChange({
-                                  ...chapterImagesMap,
-                                  [currentIdx]: updatedImages
-                                });
-                              }}
-                              sx={{
-                                position: 'absolute',
-                                top: 2,
-                                right: 2,
-                                bgcolor: 'background.paper',
-                                width: 18,
-                                height: 18,
-                                '&:hover': { bgcolor: 'background.paper' },
-                                transition: 'all 0.2s ease'
-                              }}
-                              size="small"
-                            >
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </IconButton>
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-                  </Box>
-                )}
-                {rightTabIndex === 1 && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1 }}>
-                    {/* Header Section */}
-                    <Box sx={{ textAlign: 'center', p: 2.5, pb: 1 }}>
-                      <Box sx={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: 3,
-                        mx: 'auto',
-                        mb: 2,
-                        background: PURPLE.gradient.purple,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 6px 24px rgba(102, 126, 234, 0.3)',
-                        position: 'relative',
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          inset: 0,
-                          borderRadius: 3,
-                          background: PURPLE.gradient.purple,
-                          filter: 'blur(6px)',
-                          opacity: 0.5,
-                          zIndex: -1
+              <ImageSearch
+                chapterNarration={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.narration || ''}
+                onImageSelect={(imageUrl) => {
+                  const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
+                  onChapterImagesMapChange({
+                    ...chapterImagesMap,
+                    [currentIdx]: [...(chapterImagesMap[currentIdx] || []), imageUrl]
+                  });
+                }}
+                onImagePreview={(imageUrl) => {
+                  if (onGoogleImagePreview) {
+                    onGoogleImagePreview(imageUrl);
+                  } else {
+                    // Fallback to existing image viewer
+                    imageViewer.openViewer([{ url: imageUrl }], 0, 'preview');
+                  }
+                }}
+                chapterIndex={mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex}
+                onChapterUpdate={(chapterIndex, updatedChapter) => {
+                  // Update the chapter with new assets
+                  const updatedChapters = chapters.map((chapter, index) => {
+                    if (index === chapterIndex) {
+                      return {
+                        ...chapter,
+                        assets: {
+                          ...chapter.assets,
+                          ...updatedChapter.assets
                         }
-                      }}>
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill={NEUTRAL.white} xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor" />
-                        </svg>
-                      </Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, fontSize: '1rem', color: 'text.primary' }}>
-                        Envato Generator
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
-                        Describe your vision and watch Envato Images bring it to life
-                      </Typography>
-                    </Box>
-
-
-
-                  </Box>
-                )}
-
-              </Box>
+                      };
+                    }
+                    return chapter;
+                  });
+                  onChaptersUpdate(updatedChapters);
+                }}
+                onDone={() => {
+                  onMediaManagementOpen(false);
+                  onMediaManagementChapterIndex(null);
+                }}
+                existingImageUrls={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.images || []}
+              />
             </Box>
           </Box>
         </DialogContent>
-      </Dialog>
-
-      {/* Narration Variations Picker */}
-      <Dialog open={pickerOpen} onClose={() => onPickerOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Select a narration</DialogTitle>
-        <DialogContent>
-          {pickerLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.narration]).map((text, idx) => (
-                <Box key={idx} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' } }}
-                  onClick={() => {
-                    if (pickerChapterIndex === null) return;
-                    const updated = [...chapters];
-                    updated[pickerChapterIndex] = { ...updated[pickerChapterIndex], narration: text } as any;
-                    // Note: This would need to be handled by the parent component
-                    onPickerOpen(false);
-                  }}
-                >
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => onPickerOpen(false)}>Close</Button>
-        </DialogActions>
       </Dialog>
 
       {/* Image View Modal */}
@@ -1047,7 +868,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           const chapterImages = chapterImagesMap[chapters.indexOf(ch)] || [];
           const images = formatChapterImages(
             chapterImages,
-            ch.assets?.image || undefined,
+            ch.assets?.images?.[0] || undefined,
           );
           return images.some(img => img.url === imageViewer.currentImage?.url);
         }) + 1} Images`}
@@ -1059,4 +880,4 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   );
 };
 
-export default ChaptersSection; 
+export default ChaptersSection;

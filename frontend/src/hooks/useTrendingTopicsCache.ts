@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import secureLocalStorage from 'react-secure-storage';
+import { secure } from '../utils/helperFunctions';
 
 interface CachedData<T> {
   data: T;
@@ -12,7 +12,7 @@ export const useTrendingTopicsCache = () => {
   const getCachedData = useCallback(<T>(region: string): T | null => {
     try {
       const cacheKey = getCacheKey(region);
-      const cached = secureLocalStorage.getItem(cacheKey);
+      const cached = secure.j[cacheKey].get();
       if (cached) {
         const { data, timestamp }: CachedData<T> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<T>;
         // Check if cache is less than 30 minutes old
@@ -23,7 +23,7 @@ export const useTrendingTopicsCache = () => {
           return data;
         } else {
           // Remove expired cache
-          secureLocalStorage.removeItem(cacheKey);
+          secure.j[cacheKey].remove();
         }
       }
     } catch (error) {
@@ -39,7 +39,7 @@ export const useTrendingTopicsCache = () => {
         data,
         timestamp: new Date().toISOString()
       };
-      secureLocalStorage.setItem(cacheKey, cacheData);
+      secure.j[cacheKey].set(cacheData);
     } catch (error) {
       console.warn('Error writing to cache:', error);
     }
@@ -49,7 +49,7 @@ export const useTrendingTopicsCache = () => {
     try {
       if (region) {
         const cacheKey = getCacheKey(region);
-        secureLocalStorage.removeItem(cacheKey);
+        secure.j[cacheKey].remove();
       } else {
         // Clear all trending topics cache
         // Note: react-secure-storage doesn't have a direct way to get all keys
@@ -64,7 +64,7 @@ export const useTrendingTopicsCache = () => {
   const isCacheValid = useCallback((region: string): boolean => {
     try {
       const cacheKey = getCacheKey(region);
-      const cached = secureLocalStorage.getItem(cacheKey);
+      const cached = secure.j[cacheKey].get();
       if (cached) {
         const { timestamp }: CachedData<any> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<any>;
         const cacheAge = Date.now() - new Date(timestamp).getTime();
@@ -80,7 +80,7 @@ export const useTrendingTopicsCache = () => {
   const getCacheAge = useCallback((region: string): number | null => {
     try {
       const cacheKey = getCacheKey(region);
-      const cached = secureLocalStorage.getItem(cacheKey);
+      const cached = secure.j[cacheKey].get();
       if (cached) {
         const { timestamp }: CachedData<any> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<any>;
         return Date.now() - new Date(timestamp).getTime();

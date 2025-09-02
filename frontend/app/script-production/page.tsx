@@ -37,10 +37,13 @@ async function getStaticData() {
     return {
       script: 'Script goes here',
       topic: 'Social affairs',
+      description: 'Description goes here',
       hypothesis: 'DHA ',
       region: 'Pakistan',
       duration: '1',
       language: 'English',
+      subtitleLanguage: 'English',
+      narrationType: 'narration',
       title: 'Social affairs',
       hook: 'Hook goes here',
       mainContent: 'Main content goes here',
@@ -57,7 +60,7 @@ export default async function ScriptProductionPage() {
 
   return (
     <ScriptProductionClient
-      staticData={staticData}
+      // staticData={staticData}
     />
   )
 }

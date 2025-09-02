@@ -11,7 +11,7 @@ export interface Chapter {
     visual_guidance?: string;
     on_screen_text?: string;
     assets?: {
-        image?: string | null;
+        images?: string[] | null;
         audio?: string | null;
         video?: string | null;
     };

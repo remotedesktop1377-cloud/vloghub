@@ -12,6 +12,7 @@ import {
     Grid,
     LinearProgress,
     Chip,
+    CircularProgress,
 } from '@mui/material';
 import {
     ArrowBack as BackIcon,
@@ -25,7 +26,8 @@ import {
 } from '@mui/icons-material';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { toast } from 'react-toastify';
-import secureLocalStorage from 'react-secure-storage';
+import { secure } from '@/utils/helperFunctions';
+import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import { Chapter } from '@/types/chapters';
 import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
@@ -52,11 +54,8 @@ interface ScriptData {
     words?: number;
 }
 
-interface ScriptProductionClientProps {
-    staticData: ScriptData;
-}
 
-const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticData }) => {
+const ScriptProductionClient: React.FC = () => {
 
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
@@ -90,37 +89,81 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
     const [isDraggingUpload, setIsDraggingUpload] = useState(false);
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
+    const [driveUploadResult, setDriveUploadResult] = useState<{ fileUrl?: string; fileName?: string; folderCreated?: boolean; folderId?: string } | null>(null);
+    const [loading, setLoading] = useState(false);
 
-    const createGoogleDriveJSON = (chapters: Chapter[]) => {
-
-
-        // Create comprehensive JSON structure for script production
-        // console.log('📋 Available Script Data:', chapters)
-        const scriptProductionJSON = {
-            "project": {
-                "topic": scriptData?.topic || null,
-                "title": scriptData?.title || null,
-                "description": scriptData?.description || null,
-                "duration": parseInt(scriptData?.duration || '1') || null,
-                "resolution": "1920x1080",
-                "region": scriptData?.region || null,
-                "language": scriptData?.language || null,
-                "subtitleLanguage": scriptData?.subtitleLanguage || null,
-                "narrationType": scriptData?.narrationType || null,
-            },
-            "script": chapters.map(chapter => ({
-                "id": chapter.id,
-                "narration": chapter.narration,
-                "duration": chapter.duration,
-                "durationInSeconds": chapter.durationInSeconds,
-                "words": chapter.words,
-                "startTime": chapter.startTime,
-                "endTime": chapter.endTime,
-            }))
+    // Function to upload JSON to Google Drive
+    const uploadToGoogleDrive = async (chapters: Chapter[]) => {
+        if (!scriptData) {
+            toast.error('No script data available to upload');
+            return;
         }
 
-        // // Console log the generated JSON for debugging
-        // console.log('📊 Complete JSON Structure:', JSON.stringify(scriptProductionJSON))
+        setLoading(true);
+        try {
+            const scriptProductionJSON = {
+                project: {
+                    topic: scriptData?.topic || null,
+                    title: scriptData?.title || null,
+                    description: scriptData?.description || null,
+                    duration: parseInt(scriptData?.duration || '1') || null,
+                    resolution: '1920x1080',
+                    region: scriptData?.region || null,
+                    language: scriptData?.language || null,
+                    subtitleLanguage: scriptData?.subtitleLanguage || null,
+                    narrationType: scriptData?.narrationType || null,
+                },
+                script: chapters.map(chapter => ({
+                    id: chapter.id,
+                    narration: chapter.narration,
+                    duration: chapter.duration,
+                    durationInSeconds: chapter.durationInSeconds,
+                    words: chapter.words,
+                    startTime: chapter.startTime,
+                    endTime: chapter.endTime,
+                    assets: { images: chapter.assets?.images || [] },
+                })),
+            };
+
+            // Better timestamp: 2025-09-02_22-15-33
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+
+            const safeTopic = (scriptData.topic || 'untitled').replace(/[^a-zA-Z0-9]+/g, '-');
+            const folderName = `${timestamp}-${safeTopic}`; // <-- folder only, no ".json"
+            const fileName = `project-config.json`;
+
+            const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_UPLOAD, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonData: scriptProductionJSON,
+                    folderName,      // <-- NEW
+                    fileName,        // stays "project-config.json"
+                }),
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.details || err.error || 'Failed to upload to Google Drive');
+            }
+
+            const result = await response.json();
+            setDriveUploadResult({
+                fileUrl: result.webViewLink,
+                fileName: result.fileName,
+                folderCreated: result.folderCreated,
+                folderId: result.inputFolderId || result.projectFolderId,
+            });
+
+            toast.success(`Uploaded "${result.fileName}" to ${result.path}`);
+            console.log('Drive result:', result);
+        } catch (e: any) {
+            console.error(e);
+            toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Function to break down script into paragraphs and calculate individual durations
@@ -150,15 +193,15 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
         }));
 
         setChapters(chaptersAsRequired);
-        createGoogleDriveJSON(chaptersAsRequired);
+        uploadToGoogleDrive(chaptersAsRequired);
     };
 
     useEffect(() => {
         // Load only from secure storage
-        const stored = secureLocalStorage.getItem(LOCAL_STORAGE_KEYS.APPROVED_SCRIPT);
+        const stored = secure.j.approvedScript.get();
         if (stored) {
             try {
-                // secureLocalStorage returns the object directly, no need to parse
+                // secure.j returns the object directly, no need to parse
                 const storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
                 setScriptData(storedData);
             } catch (e) {
@@ -508,7 +551,7 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
         }
     };
 
-    if (initializing) {
+    if (initializing || loading) {
         return (
             <AppLoadingOverlay />
         );
@@ -740,6 +783,10 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
                             onMediaManagementOpen={setMediaManagementOpen}
                             onMediaManagementChapterIndex={setMediaManagementChapterIndex}
                             language={scriptData.language}
+                            onGoogleImagePreview={(imageUrl) => {
+                                // Open the image in a new tab for preview
+                                window.open(imageUrl, '_blank');
+                            }}
                         />
                     )}
 
@@ -833,22 +880,6 @@ const ScriptProductionClient: React.FC<ScriptProductionClientProps> = ({ staticD
                                 </Button>
                             </Grid>
 
-                            {/* <Grid item xs={12}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    startIcon={<RefreshIcon />}
-                                    onClick={handleRegenerateAllAssets}
-                                    disabled={!chapters.length || generatingChapters}
-                                    sx={{
-                                                                borderColor: WARNING.main,
-                        color: WARNING.main,
-                        '&:hover': { bgcolor: HOVER.warning }
-                                    }}
-                                >
-                                    Regenerate Assets
-                                </Button>
-                            </Grid> */}
                         </Grid>
                     </Paper>
                 </Grid>
