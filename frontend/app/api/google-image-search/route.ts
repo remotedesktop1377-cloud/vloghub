@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     searchUrl.searchParams.set('safe', 'active');
 
     console.log('Searching with URL:', searchUrl.toString());
-    console.log('Requested images per page:', requestedImagesPerPage, 'Actual images per page:', imagesPerPage);
+    // console.log('Requested images per page:', requestedImagesPerPage, 'Actual images per page:', imagesPerPage);
 
     const response = await fetch(searchUrl.toString());
     

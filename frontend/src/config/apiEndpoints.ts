@@ -6,8 +6,9 @@ export const API_ENDPOINTS = {
   GENERATE_SCRIPT: '/api/generate-script',
   GENERATE_IMAGES: '/api/generate-images',
   
-  // Google Image Search
+  // Image Search APIs
   GOOGLE_IMAGE_SEARCH: '/api/google-image-search',
+  ENVATO_IMAGE_SEARCH: '/api/envato-image-search',
   
 } as const;
 

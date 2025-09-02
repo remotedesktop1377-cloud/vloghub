@@ -1,0 +1,233 @@
+/* ImageSearch Component Styles */
+
+.imageSearchContainer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.searchHeader {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.searchTabs {
+  padding: 0 16px;
+  padding-top: 8px;
+}
+
+.searchControls {
+  padding: 16px;
+}
+
+.searchInputContainer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.searchInput {
+  flex: 1;
+}
+
+.searchButton {
+  border-radius: 8px;
+  padding: 0 24px;
+}
+
+.searchBothButton {
+  border-radius: 8px;
+  padding: 0 16px;
+}
+
+
+
+.suggestedQueries {
+  margin-bottom: 16px;
+}
+
+.suggestedChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.selectionActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selectionControls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.errorAlert {
+  margin: 16px;
+}
+
+.imagesContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.loadingText {
+  margin-left: 16px;
+}
+
+.imageCard {
+  height: 100%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.imageCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.imageCard.selected {
+  border-color: var(--primary-color);
+}
+
+.imageCard.selectedEnvato {
+  border-color: var(--warning-color);
+}
+
+.imageCard.selectedPrevious {
+  border-color: var(--success-color);
+}
+
+.imageContainer {
+  position: relative;
+}
+
+.imageMedia {
+  object-fit: cover;
+}
+
+.selectionOverlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.sourceBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  color: white;
+  font-size: 0.6rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.sourceBadgeGoogle {
+  background-color: var(--info-color);
+}
+
+.sourceBadgeEnvato {
+  background-color: var(--warning-color);
+}
+
+.actionButtons {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+.actionButton {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.actionButton:hover {
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.imageContent {
+  padding: 12px;
+}
+
+.imageTitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.2;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.imageMetadata {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metadataChip {
+  font-size: 0.6rem;
+  height: 20px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.emptyStateIcon {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emptyStateIconGoogle {
+  background: var(--purple-gradient);
+}
+
+.emptyStateIconEnvato {
+  background-color: var(--success-color);
+}
+
+.emptyStateTitle {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.emptyStateDescription {
+  color: var(--text-secondary);
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.tabBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

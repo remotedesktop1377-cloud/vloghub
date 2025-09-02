@@ -34,7 +34,7 @@ import { HelperFunctions } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
 import { useImageViewer, formatChapterImages } from '../../hooks/useImageViewer';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL, TEXT, BORDER, HOVER, SPECIAL } from '../../styles/colors';
-import GoogleImageSearch from './GoogleImageSearch';
+import ImageSearch from './ImageSearch';
 
 interface ChaptersSectionProps {
   chapters: Chapter[];
@@ -783,7 +783,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
       <Dialog
         open={mediaManagementOpen}
         onClose={() => onMediaManagementOpen(false)}
-        maxWidth="lg"
+        maxWidth="xl"
         fullWidth
         PaperProps={{
           sx: { minHeight: '600px', bgcolor: 'background.paper' }
@@ -806,135 +806,53 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', height: '500px' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '800px' }}>
 
-            {/* Media Management Tabs */}
+            {/* Image Search with integrated tabs */}
             <Box sx={{ flex: 1 }}>
-              <Tabs value={rightTabIndex} onChange={(_, v) => onRightTabChange(v)} variant="fullWidth" sx={{ borderBottom: '1px solid', borderColor: 'divider', '& .MuiTab-root': { textTransform: 'none' } }}>
-                <Tab label="Google Search" />
-                <Tab label="Envato Images" />
-              </Tabs>
-
-              <Box sx={{ height: 'calc(100% - 48px)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                {rightTabIndex === 0 && (
-                  <GoogleImageSearch
-                    chapterNarration={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.narration || ''}
-                    onImageSelect={(imageUrl) => {
-                      const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
-                      onChapterImagesMapChange({
-                        ...chapterImagesMap,
-                        [currentIdx]: [...(chapterImagesMap[currentIdx] || []), imageUrl]
-                      });
-                    }}
-                    onImagePreview={(imageUrl) => {
-                      if (onGoogleImagePreview) {
-                        onGoogleImagePreview(imageUrl);
-                      } else {
-                        // Fallback to existing image viewer
-                        imageViewer.openViewer([{ url: imageUrl }], 0, 'preview');
-                      }
-                    }}
-                    chapterIndex={mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex}
-                    onChapterUpdate={(chapterIndex, updatedChapter) => {
-                      // Update the chapter with new assets
-                      const updatedChapters = chapters.map((chapter, index) => {
-                        if (index === chapterIndex) {
-                          return {
-                            ...chapter,
-                            assets: {
-                              ...chapter.assets,
-                              ...updatedChapter.assets
-                            }
-                          };
+              <ImageSearch
+                chapterNarration={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.narration || ''}
+                onImageSelect={(imageUrl) => {
+                  const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
+                  onChapterImagesMapChange({
+                    ...chapterImagesMap,
+                    [currentIdx]: [...(chapterImagesMap[currentIdx] || []), imageUrl]
+                  });
+                }}
+                onImagePreview={(imageUrl) => {
+                  if (onGoogleImagePreview) {
+                    onGoogleImagePreview(imageUrl);
+                  } else {
+                    // Fallback to existing image viewer
+                    imageViewer.openViewer([{ url: imageUrl }], 0, 'preview');
+                  }
+                }}
+                chapterIndex={mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex}
+                onChapterUpdate={(chapterIndex, updatedChapter) => {
+                  // Update the chapter with new assets
+                  const updatedChapters = chapters.map((chapter, index) => {
+                    if (index === chapterIndex) {
+                      return {
+                        ...chapter,
+                        assets: {
+                          ...chapter.assets,
+                          ...updatedChapter.assets
                         }
-                        return chapter;
-                      });
-                      onChaptersUpdate(updatedChapters);
-                    }}
-                    onDone={() => {
-                      onMediaManagementOpen(false);
-                      onMediaManagementChapterIndex(null);
-                    }}
-                    existingImageUrls={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.images || []}
-                  />
-                )}
-                {rightTabIndex === 1 && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', flex: 1 }}>
-                    {/* Header Section */}
-                    <Box sx={{ textAlign: 'center', p: 2.5, pb: 1 }}>
-                      <Box sx={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: 3,
-                        mx: 'auto',
-                        mb: 2,
-                        background: PURPLE.gradient.purple,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 6px 24px rgba(102, 126, 234, 0.3)',
-                        position: 'relative',
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          inset: 0,
-                          borderRadius: 3,
-                          background: PURPLE.gradient.purple,
-                          filter: 'blur(6px)',
-                          opacity: 0.5,
-                          zIndex: -1
-                        }
-                      }}>
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill={NEUTRAL.white} xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z" fill="currentColor" />
-                        </svg>
-                      </Box>
-                      <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, fontSize: '1rem', color: 'text.primary' }}>
-                        Envato Generator
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
-                        Describe your vision and watch Envato Images bring it to life
-                      </Typography>
-                    </Box>
-
-
-
-                  </Box>
-                )}
-
-              </Box>
+                      };
+                    }
+                    return chapter;
+                  });
+                  onChaptersUpdate(updatedChapters);
+                }}
+                onDone={() => {
+                  onMediaManagementOpen(false);
+                  onMediaManagementChapterIndex(null);
+                }}
+                existingImageUrls={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.images || []}
+              />
             </Box>
           </Box>
         </DialogContent>
-      </Dialog>
-
-      {/* Narration Variations Picker */}
-      <Dialog open={pickerOpen} onClose={() => onPickerOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Select a narration</DialogTitle>
-        <DialogContent>
-          {pickerLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>
-          ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {(pickerNarrations.length ? pickerNarrations : [chapters[pickerChapterIndex ?? 0]?.narration]).map((text, idx) => (
-                <Box key={idx} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' } }}
-                  onClick={() => {
-                    if (pickerChapterIndex === null) return;
-                    const updated = [...chapters];
-                    updated[pickerChapterIndex] = { ...updated[pickerChapterIndex], narration: text } as any;
-                    // Note: This would need to be handled by the parent component
-                    onPickerOpen(false);
-                  }}
-                >
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => onPickerOpen(false)}>Close</Button>
-        </DialogActions>
       </Dialog>
 
       {/* Image View Modal */}
