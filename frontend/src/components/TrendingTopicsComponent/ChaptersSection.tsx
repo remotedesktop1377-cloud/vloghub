@@ -258,7 +258,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               px: 1.5, py: 1.5, width: '100%', height: '100%', bgcolor: NEUTRAL.white, fontSize: '1rem',
                                               '& .MuiInputBase-input': {
                                                 fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
-                                                lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.6,
+                                                lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
+                                                fontSize: '1.2rem'
                                               },
                                               ...HelperFunctions.getDirectionSx(language)
                                             }}
@@ -278,8 +279,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                 alignItems: 'flex-start'
                                               }}>
                                                 <Typography variant="body2" sx={{
-                                                  lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.6,
-                                                  fontSize: '1rem',
+                                                  lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
+                                                  fontSize: '1.2rem',
                                                   color: 'text.primary',
                                                   px: 1.5,
                                                   py: 1,
@@ -297,23 +298,23 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                 px: 1.5,
                                                 py: 1,
                                                 height: '100%',
-                                                maxHeight: '120px',
-                                                overflow: 'auto',
-                                                bgcolor: 'background.default',
+                                                // maxHeight: '120px',
+                                                // overflow: 'auto',
+                                                // bgcolor: 'background.default',
                                                 borderLeft: '1px solid',
                                                 borderLeftColor: 'divider'
                                               }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.65rem' }}>
+                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.05rem' }}>
                                                     📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.images ? 1 : 0)})
                                                   </Typography>
                                                   <Button
                                                     size="small"
                                                     variant="outlined"
                                                     sx={{
-                                                      fontSize: '0.6rem',
-                                                      py: 0.2,
-                                                      px: 0.6,
+                                                      fontSize: '1rem',
+                                                      py: 0.4,
+                                                      px: 0.9,
                                                       minHeight: 'auto',
                                                       borderColor: 'primary.main',
                                                       color: 'primary.main',
@@ -555,7 +556,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           justifyContent: 'center',
                                                           bgcolor: SPECIAL.lightGray,
                                                           cursor: 'pointer',
-                                                          fontSize: '0.5rem',
+                                                          fontSize: '0.8rem',
                                                           color: TEXT.dark
                                                         }}
                                                           onClick={(e) => {
@@ -597,12 +598,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     {generatingChapters ? (
                                                       <>
                                                         <CircularProgress size={16} sx={{ mb: 0.5 }} />
-                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.95rem' }}>
                                                           Generating AI image...
                                                         </Typography>
                                                       </>
                                                     ) : (
-                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem' }}>
+                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.95rem' }}>
                                                         Click to add media
                                                       </Typography>
                                                     )}
@@ -657,7 +658,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         </IconButton>
                                       </>
                                     ) : (
-                                      <>
+                                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, visibility: 'hidden' }}>
                                         {/* Magic variations for this chapter */}
                                         <IconButton
                                           className="chapter-actions"
@@ -758,7 +759,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         >
                                           <AddIcon fontSize="small" />
                                         </IconButton>
-                                      </>
+                                      </Box>
                                     )}
                                   </Box>
 

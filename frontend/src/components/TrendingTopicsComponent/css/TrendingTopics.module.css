@@ -430,3 +430,38 @@
 .categorySelector {
   margin-left: 8px;
 }
+
+/* Global MUI font-size adjustments scoped to Trending Topics page */
+.trendingTopicsContainer :global(.MuiInputLabel-root) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiInputBase-input) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiSelect-select) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiMenuItem-root) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiFormControlLabel-label) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiButton-root) {
+  font-size: 1.05rem;
+  text-transform: none;
+}
+
+.trendingTopicsContainer :global(.MuiChip-label) {
+  font-size: 1.05rem;
+}
+
+/* Slightly larger subtitles within sections for readability */
+.trendingTopicsContainer :global(.MuiTypography-subtitle1) {
+  font-size: 1.25rem;
+}
