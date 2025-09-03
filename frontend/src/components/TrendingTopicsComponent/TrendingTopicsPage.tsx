@@ -106,7 +106,7 @@ const TrendingTopics: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const locationKey = selectedLocationType === 'global'
         ? selectedLocationType
         : selectedLocationType === 'region'
@@ -171,7 +171,7 @@ const TrendingTopics: React.FC = () => {
       // Try to load from cache first
       const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
       const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
-      
+
       if (cachedData && isCacheValid(cacheRegion)) {
         console.log('🟡 Using cached data - no API call needed');
         setTrendingTopics(cachedData);
@@ -313,7 +313,7 @@ const TrendingTopics: React.FC = () => {
 
         // Navigate directly to script production page
         router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
-        
+
         setError(null);
       } else {
         setError(result.error || 'Failed to generate script');
@@ -361,22 +361,12 @@ const TrendingTopics: React.FC = () => {
     }
   }, [trendingTopics, handleTopicSelect]);
 
-  if (loading) {
-    return (
-      <AppLoadingOverlay />
-    );
-  }
-
   return (
     <Box className={styles.trendingTopicsContainer}>
-      {/* {loading && (
-        <AppLoadingOverlay />
-      )} */}
-      {/* Loading Overlay for AI Operations */}
-      {generatingChapters && (
+      {loading || generatingChapters && (
         <LoadingOverlay
-          title={'Generating Script'}
-          desc={'Please wait while AI processes your request'}
+          title={loading ? 'Please wait' : 'Generating Script'}
+          desc={loading ? 'We are finding the trending topics for you' : 'Please wait we are generating the script for you'}
         />
       )}
 

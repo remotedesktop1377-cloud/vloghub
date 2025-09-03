@@ -110,8 +110,6 @@ const ScriptProductionClient: React.FC = () => {
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
 
-    const chaptersRef = useRef<HTMLDivElement | null>(null);
-
     // Function to upload JSON to Google Drive
     const uploadToGoogleDrive = async (chapters: Chapter[]) => {
         if (!scriptData) {
@@ -324,31 +322,6 @@ const ScriptProductionClient: React.FC = () => {
         return `${formatTime(startSeconds)} - ${formatTime(endSeconds)}`;
     };
 
-    // Calculate duration for a single paragraph
-    const calculateParagraphDuration = (words: number): string => {
-        if (words === 0) return '0s';
-
-        const averageWordsPerMinute = 155;
-        const minutes = words / averageWordsPerMinute;
-
-        if (minutes < 1) {
-            const seconds = Math.round(minutes * 60);
-            return `${seconds}s`;
-        } else if (minutes < 60) {
-            const wholeMinutes = Math.floor(minutes);
-            const seconds = Math.round((minutes - wholeMinutes) * 60);
-            return seconds > 0 ? `${wholeMinutes}m ${seconds}s` : `${wholeMinutes}m`;
-        } else {
-            const hours = Math.floor(minutes / 60);
-            const remainingMinutes = Math.round(minutes % 60);
-            return `${hours}h ${remainingMinutes}m`;
-        }
-    };
-
-    const handleGoBack = () => {
-        router.push(ROUTES_KEYS.TRENDING_TOPICS);
-    };
-
     const handleDownloadAllNarrations = () => {
         if (!chapters.length) return;
 
@@ -357,20 +330,21 @@ const ScriptProductionClient: React.FC = () => {
             let content = '';
             if (scriptData) {
                 const parts: string[] = [];
+                const headers = HelperFunctions.getLocalizedSectionHeaders(scriptData.language || 'english');
                 if (scriptData.title && scriptData.title.trim()) {
-                    parts.push(`📋 TITLE:\n${scriptData.title.trim()}`);
+                    parts.push(`📋 ${headers.title}:\n${scriptData.title.trim()}`);
                 }
                 if (scriptData.hook && scriptData.hook.trim()) {
-                    parts.push(`🎯 HOOK:\n${scriptData.hook.trim()} -`);
+                    parts.push(`🎯 ${headers.hook}:\n${scriptData.hook.trim()}`);
                 }
                 if (scriptData.mainContent && scriptData.mainContent.trim()) {
-                    parts.push(`📝 MAIN CONTENT:\n${scriptData.mainContent.trim()}`);
+                    parts.push(`📝 ${headers.mainContent}:\n${scriptData.mainContent.trim()}`);
                 }
                 if (scriptData.conclusion && scriptData.conclusion.trim()) {
-                    parts.push(`🏁 CONCLUSION:\n${scriptData.conclusion.trim()}`);
+                    parts.push(`🏁 ${headers.conclusion}:\n${scriptData.conclusion.trim()}`);
                 }
                 if (scriptData.callToAction && scriptData.callToAction.trim()) {
-                    parts.push(`🚀 CALL TO ACTION:\n${scriptData.callToAction.trim()}`);
+                    parts.push(`🚀 ${headers.callToAction}:\n${scriptData.callToAction.trim()}`);
                 }
                 content = parts.filter(Boolean).join('\n\n');
                 if (!content.trim() && scriptData.script) {
@@ -805,7 +779,7 @@ const ScriptProductionClient: React.FC = () => {
                     >
                         Back
                     </Button>
-                    <Typography variant="h6" color="text.secondary">
+                    <Typography variant="h6" color="text.secondary" sx={{ lineHeight: 2.5 }}>
                         Script Review & Approval
                     </Typography>
                 </Box>
@@ -813,14 +787,14 @@ const ScriptProductionClient: React.FC = () => {
                 {/* Duration Display */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem' }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem', lineHeight: 1.5 }}>
                         Estimated Duration:
                     </Typography>
                     <Chip
                         label={estimatedDuration}
                         size="medium"
                         color="success"
-                        sx={{ fontSize: '1rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1 } }}
+                        sx={{ fontSize: '1rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
                     />
                 </Box>
             </Box>
@@ -836,76 +810,101 @@ const ScriptProductionClient: React.FC = () => {
                 }}>
 
                     {/* Header section - fixed */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, mt: 2.5, mb: 2.5, }}>
-                        <Typography variant="h6" sx={{ color: 'primary.main', flexShrink: 0 }}>
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        mt: 2.5,
+                        mb: 2.5,
+                        ...(getDirectionSx(scriptData?.language || 'english')),
+                        // flexDirection: isRTLLanguage('urdu') ? 'row-reverse' : 'row',
+                        width: '100%'
+                    }}>
+                        <Typography
+                            variant="h5"
+                            sx={{
+                                color: 'primary.main',
+                                flex: 1,
+                                minWidth: 0,
+                                lineHeight: 2.5,
+                                textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left',
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere'
+                            }}
+                        >
                             📋 {scriptData.title}
                         </Typography>
 
-                        {!isScriptApproved && <Box sx={{
-                            bgcolor: 'background.paper',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                        }}>
-                            {/* Left side - Edit Script button when not editing, Save Changes when editing */}
-                            <Box sx={{ display: 'flex', gap: 1, mr: 1 }}>
+                        {!isScriptApproved &&
+                            <Box sx={{
+                                bgcolor: 'background.paper',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexShrink: 0
+                            }}>
+                                <Box sx={{ display: 'flex', gap: 1, mr: 1 }}>
 
-                                {!isEditingScript && !isScriptApproved ? (
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Button
-                                            variant="outlined"
-                                            size="large"
-                                            startIcon={<EditIcon />}
-                                            onClick={handleStartEditingScript}
-                                            sx={{ textTransform: 'none', px: 2, py: 1 }}
-                                        >
-                                            Edit Script
-                                        </Button>
+                                    {!isEditingScript && !isScriptApproved ? (
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Button
+                                                variant="outlined"
+                                                size="large"
+                                                startIcon={<EditIcon />}
+                                                onClick={handleStartEditingScript}
+                                                sx={{ textTransform: 'none', px: 2, py: 1, lineHeight: 1.5, gap: 1 }}
+                                            >
+                                                Edit Script
+                                            </Button>
 
-                                        <Button
-                                            onClick={handleApproveScript}
-                                            variant="contained"
-                                            color="primary"
-                                            size="large"
-                                            sx={{
-                                                py: 1,
-                                                px: 2,
-                                                fontSize: '1.05rem',
-                                                bgcolor: 'success.main',
-                                                textTransform: 'none',
-                                                '&:hover': { bgcolor: 'success.dark' }
-                                            }}
-                                            startIcon={<CheckIcon />}
-                                        >
-                                            Approve
-                                        </Button>
-                                    </Box>
-                                ) : (
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Button
-                                            variant="outlined"
-                                            size="large"
-                                            startIcon={<SaveIcon />}
-                                            onClick={handleSaveScript}
-                                            sx={{ textTransform: 'none', px: 2, py: 1 }}
-                                        >
-                                            Save Changes
-                                        </Button>
+                                            <Button
+                                                onClick={handleApproveScript}
+                                                variant="contained"
+                                                color="primary"
+                                                size="large"
+                                                startIcon={<CheckIcon />}
+                                                sx={{
+                                                    py: 1,
+                                                    px: 2,
+                                                    gap: 1,
+                                                    fontSize: '1.05rem',
+                                                    bgcolor: 'success.main',
+                                                    textTransform: 'none',
+                                                    lineHeight: 1.5,
+                                                    '&:hover': { bgcolor: 'success.dark' }
+                                                }}
+                                            >
+                                                Approve
+                                            </Button>
+                                        </Box>
+                                    ) : (
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Button
+                                                variant="outlined"
+                                                size="large"
+                                                startIcon={<SaveIcon />}
+                                                onClick={handleSaveScript}
+                                                sx={{ textTransform: 'none', px: 2, py: 1, lineHeight: 1.5 }}
+                                            >
+                                                Save Changes
+                                            </Button>
 
-                                        <Button
-                                            variant="outlined"
-                                            size="large"
-                                            color="secondary"
-                                            startIcon={<CancelIcon />}
-                                            onClick={handleCancelEditingScript}
-                                            sx={{ textTransform: 'none', px: 2, py: 1 }}
-                                        >
-                                            Cancel
-                                        </Button>
-                                    </Box>
-                                )}
-                            </Box>
-                        </Box>}
+                                            <Button
+                                                variant="outlined"
+                                                size="large"
+                                                color="secondary"
+                                                startIcon={<CancelIcon />}
+                                                onClick={handleCancelEditingScript}
+                                                sx={{ textTransform: 'none', px: 2, py: 1, lineHeight: 1.5 }}
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Box>}
                     </Box>
 
                     {!isScriptApproved ? (
@@ -924,8 +923,8 @@ const ScriptProductionClient: React.FC = () => {
                                     <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         {/* Hook Section */}
                                         <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
-                                            <Typography variant="h6" sx={{ mb: 1, color: 'primary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                🎯 HOOK
+                                            <Typography variant="h6" sx={{ mb: 1, color: 'primary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1, lineHeight: 2.5, ...(getDirectionSx(scriptData?.language || 'english')), textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left', width: '100%' }}>
+                                                🎯 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').hook}
                                             </Typography>
                                             <TextField
                                                 fullWidth
@@ -939,7 +938,7 @@ const ScriptProductionClient: React.FC = () => {
                                                     '& .MuiInputBase-root': {
                                                         fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
                                                         fontSize: '1.25rem',
-                                                        lineHeight: 2.0,
+                                                        lineHeight: 2.5,
                                                         ...getDirectionSx(scriptData?.language || 'english')
                                                     }
                                                 }}
@@ -948,8 +947,8 @@ const ScriptProductionClient: React.FC = () => {
 
                                         {/* Main Content Section */}
                                         <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
-                                            <Typography variant="h6" sx={{ mb: 1, color: 'secondary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                📝 MAIN CONTENT
+                                            <Typography variant="h6" sx={{ mb: 1, color: 'secondary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1, lineHeight: 2.5, ...(getDirectionSx(scriptData?.language || 'english')), textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left', width: '100%' }}>
+                                                📝 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').mainContent}
                                             </Typography>
                                             <TextField
                                                 fullWidth
@@ -963,7 +962,7 @@ const ScriptProductionClient: React.FC = () => {
                                                     '& .MuiInputBase-root': {
                                                         fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
                                                         fontSize: '1.25rem',
-                                                        lineHeight: 2.0,
+                                                        lineHeight: 2.5,
                                                         ...getDirectionSx(scriptData?.language || 'english')
                                                     }
                                                 }}
@@ -972,8 +971,8 @@ const ScriptProductionClient: React.FC = () => {
 
                                         {/* Conclusion Section */}
                                         <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
-                                            <Typography variant="h6" sx={{ mb: 1, color: 'success.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                🏁 CONCLUSION
+                                            <Typography variant="h6" sx={{ mb: 1, color: 'success.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1, lineHeight: 2.5, ...(getDirectionSx(scriptData?.language || 'english')), textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left', width: '100%' }}>
+                                                🏁 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').conclusion}
                                             </Typography>
                                             <TextField
                                                 fullWidth
@@ -987,7 +986,7 @@ const ScriptProductionClient: React.FC = () => {
                                                     '& .MuiInputBase-root': {
                                                         fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
                                                         fontSize: '1.25rem',
-                                                        lineHeight: 2.0,
+                                                        lineHeight: 2.5,
                                                         ...getDirectionSx(scriptData?.language || 'english')
                                                     }
                                                 }}
@@ -996,8 +995,8 @@ const ScriptProductionClient: React.FC = () => {
 
                                         {/* Call to Action Section */}
                                         <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
-                                            <Typography variant="h6" sx={{ mb: 1, color: 'warning.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                🚀 CALL TO ACTION
+                                            <Typography variant="h6" sx={{ mb: 1, color: 'warning.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1, lineHeight: 2.5, ...(getDirectionSx(scriptData?.language || 'english')), textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left', width: '100%' }}>
+                                                🚀 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').callToAction}
                                             </Typography>
                                             <TextField
                                                 fullWidth
@@ -1011,7 +1010,7 @@ const ScriptProductionClient: React.FC = () => {
                                                     '& .MuiInputBase-root': {
                                                         fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
                                                         fontSize: '1.25rem',
-                                                        lineHeight: 2.0,
+                                                        lineHeight: 2.5,
                                                         ...getDirectionSx(scriptData?.language || 'english')
                                                     }
                                                 }}
@@ -1038,7 +1037,7 @@ const ScriptProductionClient: React.FC = () => {
                                             variant="body1"
                                             sx={{
                                                 whiteSpace: 'pre-wrap',
-                                                lineHeight: 2.05,
+                                                lineHeight: 2.5,
                                                 fontSize: '1.2rem',
                                                 fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
                                                 flex: 1,
@@ -1061,161 +1060,160 @@ const ScriptProductionClient: React.FC = () => {
                             maxHeight: '85vh',
                             overflow: 'auto',
                         }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
 
-                                <Paper sx={{ p: 2, maxHeight: '85vh', overflow: 'auto' }}>
-                                    {chapters.length > 0 && (
-                                        <ChaptersSection
-                                            chaptersGenerated={true}
-                                            generatingChapters={false}
-                                            chapters={chapters}
-                                            editingChapter={editingChapter}
-                                            editHeading={editHeading}
-                                            editNarration={editNarration}
-                                            selectedChapterIndex={selectedChapterIndex}
-                                            rightTabIndex={rightTabIndex}
-                                            aiImagesEnabled={aiImagesEnabled}
-                                            imagesLoading={imagesLoading}
-                                            generatedImages={generatedImages}
-                                            aiPrompt={aiPrompt}
-                                            pickerOpen={pickerOpen}
-                                            pickerChapterIndex={pickerChapterIndex}
-                                            pickerNarrations={pickerNarrations}
-                                            pickerLoading={pickerLoading}
-                                            uploadedImages={uploadedImages}
-                                            isDraggingUpload={isDraggingUpload}
-                                            chapterImagesMap={chapterImagesMap}
-                                            onChaptersUpdate={setChapters}
-                                            onAddChapterAfter={handleAddChapterAfter}
-                                            onDeleteChapter={handleDeleteChapter}
-                                            onSaveEdit={handleSaveEdit}
-                                            onCancelEdit={handleCancelEdit}
-                                            onEditHeadingChange={setEditHeading}
-                                            onEditNarrationChange={setEditNarration}
-                                            onStartEdit={handleEditChapter}
-                                            onDragEnd={handleDragEnd}
-                                            onSelectChapter={selectChapter}
-                                            onRightTabChange={setRightTabIndex}
-                                            onAIPromptChange={setAiPrompt}
-                                            onUseAIChange={setAiImagesEnabled}
-                                            onGenerateImages={handleGenerateImages}
-                                            onImageSelect={handleImageSelect}
-                                            onImageDeselect={handleImageDeselect}
-                                            onDownloadImage={handleDownloadImage}
-                                            onTriggerFileUpload={handleTriggerFileUpload}
-                                            onUploadFiles={handleUploadFiles}
-                                            onPickerOpen={setPickerOpen}
-                                            onPickerChapterIndex={setPickerChapterIndex}
-                                            onPickerLoading={setPickerLoading}
-                                            onPickerNarrations={setPickerNarrations}
-                                            onChapterImagesMapChange={setChapterImagesMap}
-                                            onGeneratedImagesChange={setGeneratedImages}
-                                            onRightTabIndexChange={setRightTabIndex}
-                                            mediaManagementOpen={mediaManagementOpen}
-                                            mediaManagementChapterIndex={mediaManagementChapterIndex}
-                                            onMediaManagementOpen={setMediaManagementOpen}
-                                            onMediaManagementChapterIndex={setMediaManagementChapterIndex}
-                                            language={scriptData.language}
-                                            onGoogleImagePreview={(imageUrl) => {
-                                                // Open the image in a new tab for preview
-                                                window.open(imageUrl, '_blank');
-                                            }}
-                                        />
-                                    )}
+                                {chapters.length > 0 && (
+                                    <ChaptersSection
+                                        chaptersGenerated={true}
+                                        generatingChapters={false}
+                                        chapters={chapters}
+                                        editingChapter={editingChapter}
+                                        editHeading={editHeading}
+                                        editNarration={editNarration}
+                                        selectedChapterIndex={selectedChapterIndex}
+                                        rightTabIndex={rightTabIndex}
+                                        aiImagesEnabled={aiImagesEnabled}
+                                        imagesLoading={imagesLoading}
+                                        generatedImages={generatedImages}
+                                        aiPrompt={aiPrompt}
+                                        pickerOpen={pickerOpen}
+                                        pickerChapterIndex={pickerChapterIndex}
+                                        pickerNarrations={pickerNarrations}
+                                        pickerLoading={pickerLoading}
+                                        uploadedImages={uploadedImages}
+                                        isDraggingUpload={isDraggingUpload}
+                                        chapterImagesMap={chapterImagesMap}
+                                        onChaptersUpdate={setChapters}
+                                        onAddChapterAfter={handleAddChapterAfter}
+                                        onDeleteChapter={handleDeleteChapter}
+                                        onSaveEdit={handleSaveEdit}
+                                        onCancelEdit={handleCancelEdit}
+                                        onEditHeadingChange={setEditHeading}
+                                        onEditNarrationChange={setEditNarration}
+                                        onStartEdit={handleEditChapter}
+                                        onDragEnd={handleDragEnd}
+                                        onSelectChapter={selectChapter}
+                                        onRightTabChange={setRightTabIndex}
+                                        onAIPromptChange={setAiPrompt}
+                                        onUseAIChange={setAiImagesEnabled}
+                                        onGenerateImages={handleGenerateImages}
+                                        onImageSelect={handleImageSelect}
+                                        onImageDeselect={handleImageDeselect}
+                                        onDownloadImage={handleDownloadImage}
+                                        onTriggerFileUpload={handleTriggerFileUpload}
+                                        onUploadFiles={handleUploadFiles}
+                                        onPickerOpen={setPickerOpen}
+                                        onPickerChapterIndex={setPickerChapterIndex}
+                                        onPickerLoading={setPickerLoading}
+                                        onPickerNarrations={setPickerNarrations}
+                                        onChapterImagesMapChange={setChapterImagesMap}
+                                        onGeneratedImagesChange={setGeneratedImages}
+                                        onRightTabIndexChange={setRightTabIndex}
+                                        mediaManagementOpen={mediaManagementOpen}
+                                        mediaManagementChapterIndex={mediaManagementChapterIndex}
+                                        onMediaManagementOpen={setMediaManagementOpen}
+                                        onMediaManagementChapterIndex={setMediaManagementChapterIndex}
+                                        language={scriptData.language}
+                                        onGoogleImagePreview={(imageUrl) => {
+                                            // Open the image in a new tab for preview
+                                            window.open(imageUrl, '_blank');
+                                        }}
+                                    />
+                                )}
 
-                                    {/* Production Actions - Only show when script is approved */}
-                                    <Box sx={{ mt: 2 }}>
-                                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                                            🎬 Production Actions
-                                        </Typography>
+                                {/* Production Actions - Only show when script is approved */}
+                                <Box sx={{ mt: 2 }}>
+                                    <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5 }}>
+                                        🎬 Production Actions
+                                    </Typography>
 
-                                        {/* Other Actions */}
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={12}>
+                                    {/* Other Actions */}
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12}>
+                                            <Button
+                                                variant="outlined"
+                                                fullWidth
+                                                startIcon={<DownloadIcon />}
+                                                onClick={handleDownloadAllNarrations}
+                                                disabled={!chapters.length}
+                                                sx={{ mb: 1, fontSize: '1rem', lineHeight: 1.5 }}
+                                            >
+                                                Download Narrations
+                                            </Button>
+                                        </Grid>
+
+                                        <Grid item xs={12}>
+                                            <Box sx={{ position: 'relative' }}>
                                                 <Button
                                                     variant="outlined"
                                                     fullWidth
-                                                    startIcon={<DownloadIcon />}
-                                                    onClick={handleDownloadAllNarrations}
-                                                    disabled={!chapters.length}
-                                                    sx={{ mb: 1, fontSize: '1rem' }}
+                                                    startIcon={<UploadIcon />}
+                                                    onClick={handleUploadChromaKey}
+                                                    disabled={!chapters.length || uploadingChromaKey}
+                                                    sx={{ mb: 1, fontSize: '1rem', lineHeight: 1.5 }}
                                                 >
-                                                    Download Narrations
+                                                    {uploadingChromaKey ? 'Uploading...' : (chromaKeyFile ? 'Replace Chroma Key' : 'Upload Chroma Key')}
                                                 </Button>
-                                            </Grid>
 
-                                            <Grid item xs={12}>
-                                                <Box sx={{ position: 'relative' }}>
-                                                    <Button
-                                                        variant="outlined"
-                                                        fullWidth
-                                                        startIcon={<UploadIcon />}
-                                                        onClick={handleUploadChromaKey}
-                                                        disabled={!chapters.length || uploadingChromaKey}
-                                                        sx={{ mb: 1, fontSize: '1rem' }}
-                                                    >
-                                                        {uploadingChromaKey ? 'Uploading...' : (chromaKeyFile ? 'Replace Chroma Key' : 'Upload Chroma Key')}
-                                                    </Button>
+                                                {/* Upload Progress */}
+                                                {uploadingChromaKey && (
+                                                    <LinearProgress
+                                                        variant="determinate"
+                                                        value={chromaKeyUploadProgress}
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            bottom: 0,
+                                                            left: 0,
+                                                            right: 0,
+                                                            height: 2,
+                                                            borderRadius: 0
+                                                        }}
+                                                    />
+                                                )}
 
-                                                    {/* Upload Progress */}
-                                                    {uploadingChromaKey && (
-                                                        <LinearProgress
-                                                            variant="determinate"
-                                                            value={chromaKeyUploadProgress}
-                                                            sx={{
-                                                                position: 'absolute',
-                                                                bottom: 0,
-                                                                left: 0,
-                                                                right: 0,
-                                                                height: 2,
-                                                                borderRadius: 0
-                                                            }}
-                                                        />
-                                                    )}
-
-                                                    {/* Chroma Key Status */}
-                                                    {chromaKeyFile && !uploadingChromaKey && (
-                                                        <Chip
-                                                            label={chromaKeyFile.name.length > 20 ? `${chromaKeyFile.name.substring(0, 20)}...` : chromaKeyFile.name}
-                                                            size="small"
-                                                            color="success"
-                                                            sx={{
-                                                                position: 'absolute',
-                                                                top: -8,
-                                                                right: 8,
-                                                                fontSize: '0.6rem',
-                                                                height: 18,
-                                                                '& .MuiChip-label': {
-                                                                    px: 0.5
-                                                                }
-                                                            }}
-                                                        />
-                                                    )}
-                                                </Box>
-                                            </Grid>
-
-                                            <Grid item xs={12}>
-                                                <Button
-                                                    variant="contained"
-                                                    fullWidth
-                                                    startIcon={<VideoIcon />}
-                                                    onClick={handleGenerateVideo}
-                                                    disabled={!chapters.length || !chromaKeyFile || uploadingChromaKey}
-                                                    sx={{
-                                                        bgcolor: SUCCESS.main,
-                                                        '&:hover': { bgcolor: SUCCESS.dark },
-                                                        mb: 1,
-                                                        fontSize: '1rem'
-                                                    }}
-                                                    title={!chromaKeyFile ? 'Upload chroma key first' : ''}
-                                                >
-                                                    Generate Video
-                                                </Button>
-                                            </Grid>
-
+                                                {/* Chroma Key Status */}
+                                                {chromaKeyFile && !uploadingChromaKey && (
+                                                    <Chip
+                                                        label={chromaKeyFile.name.length > 20 ? `${chromaKeyFile.name.substring(0, 20)}...` : chromaKeyFile.name}
+                                                        size="small"
+                                                        color="success"
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: -8,
+                                                            right: 8,
+                                                            fontSize: '0.6rem',
+                                                            height: 18,
+                                                            '& .MuiChip-label': {
+                                                                px: 0.5
+                                                            }
+                                                        }}
+                                                    />
+                                                )}
+                                            </Box>
                                         </Grid>
-                                    </Box>
-                                </Paper>
+
+                                        <Grid item xs={12}>
+                                            <Button
+                                                variant="contained"
+                                                fullWidth
+                                                startIcon={<VideoIcon />}
+                                                onClick={handleGenerateVideo}
+                                                disabled={!chapters.length || !chromaKeyFile || uploadingChromaKey}
+                                                sx={{
+                                                    bgcolor: SUCCESS.main,
+                                                    '&:hover': { bgcolor: SUCCESS.dark },
+                                                    mb: 1,
+                                                    fontSize: '1rem',
+                                                    lineHeight: 1.5
+                                                }}
+                                                title={!chromaKeyFile ? 'Upload chroma key first' : ''}
+                                            >
+                                                Generate Video
+                                            </Button>
+                                        </Grid>
+
+                                    </Grid>
+                                </Box>
                             </Box>
                         </Paper>
                     )}
@@ -1232,14 +1230,11 @@ const ScriptProductionClient: React.FC = () => {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle id="back-confirmation-dialog-title" >
-                    <Typography variant="h5" sx={{ mb: 2, color: 'warning.main' }}>
-                        ⚠️ Are you sure?
-                    </Typography>
-
+                <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
+                    ⚠️ Are you sure?
                 </DialogTitle>
                 <DialogContent>
-                    <Typography variant="h5" sx={{ mb: 2 }}>
+                    <Typography variant="h5" sx={{ mb: 2, lineHeight: 2.5 }}>
                         You haven't approved your script yet. If you go back now, your current progress and script data will be permanently deleted.
                     </Typography>
                 </DialogContent>
@@ -1247,7 +1242,7 @@ const ScriptProductionClient: React.FC = () => {
                     <Button
                         onClick={handleCancelBack}
                         variant="outlined"
-                        sx={{ minWidth: 100, fontSize: '1.05rem' }}
+                        sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
                         Stay Here
                     </Button>
@@ -1255,7 +1250,7 @@ const ScriptProductionClient: React.FC = () => {
                         onClick={handleConfirmBack}
                         variant="contained"
                         color="warning"
-                        sx={{ minWidth: 100, fontSize: '1.05rem' }}
+                        sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
                         Discard Script
                     </Button>

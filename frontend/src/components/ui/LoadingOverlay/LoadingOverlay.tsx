@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import styles from './LoadingOverlay.module.css';
 
@@ -12,31 +12,64 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   desc = '',
 }) => {
 
+  // Lock down all interactions and scrolling while overlay is mounted
+  useEffect(() => {
+    const prevent = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction as string;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    window.addEventListener('wheel', prevent, { passive: false });
+    window.addEventListener('touchmove', prevent, { passive: false });
+    window.addEventListener('keydown', prevent as any, { passive: false });
+    window.addEventListener('mousedown', prevent, { passive: false });
+    window.addEventListener('mouseup', prevent, { passive: false });
+    window.addEventListener('click', prevent, { passive: false });
+
+    return () => {
+      window.removeEventListener('wheel', prevent as any);
+      window.removeEventListener('touchmove', prevent as any);
+      window.removeEventListener('keydown', prevent as any);
+      window.removeEventListener('mousedown', prevent as any);
+      window.removeEventListener('mouseup', prevent as any);
+      window.removeEventListener('click', prevent as any);
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction || '';
+    };
+  }, []);
+
   return (
     <Box
       className={styles.loadingOverlay}
-      onClick={(e) => e.preventDefault()} // Prevent any clicks
-      onTouchStart={(e) => e.preventDefault()} // Prevent touch events
-      onTouchMove={(e) => e.preventDefault()} // Prevent touch events
-      onTouchEnd={(e) => e.preventDefault()} // Prevent touch events
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onTouchMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
       <Box className={styles.loadingCard}>
         <CircularProgress
           size={60}
           color='primary'
           className={styles.loadingSpinner}
+          sx={{ mb: 4, mt: 4 }}
         />
         <Typography
-          variant="h6"
+          variant="h3"
           gutterBottom
           className={styles.loadingTitle}
+          sx={{ mb: 2 }}
         >
           {title}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography variant="h4" color="text.secondary" sx={{ mb: 6 }}>
           {desc}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="h6" color="text.secondary">
           This may take a few moments
         </Typography>
       </Box>

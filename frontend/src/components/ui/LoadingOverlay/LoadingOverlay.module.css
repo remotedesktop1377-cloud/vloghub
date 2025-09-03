@@ -24,9 +24,10 @@
   background-color: var(--overlay-bg, #1e1e1e);
   color: var(--overlay-fg, #fff);
   border-radius: 8px;
-  padding: 32px;
+  padding: 10px;
   text-align: center;
-  max-width: 400px;
+  max-width: 600px;
+  min-height: 400px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 

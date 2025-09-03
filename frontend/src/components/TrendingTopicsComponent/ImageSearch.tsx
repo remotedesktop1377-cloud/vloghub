@@ -542,7 +542,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     {/* Suggested Queries */}
                     {suggestedQueries.length > 0 && (
                         <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ color: 'text.primary', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '1.1rem', fontWeight: 500 }}>
+                            <Typography variant="body2" sx={{ color: 'text.primary', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '1.1rem', fontWeight: 500, lineHeight: 1.6 }}>
                                 <AutoAwesomeIcon sx={{ fontSize: 18 }} />
                                 Suggested searches:
                             </Typography>
@@ -564,7 +564,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 height: 36,
                                                 '& .MuiChip-label': {
                                                     fontSize: '1rem',
-                                                    fontWeight: 500
+                                                    fontWeight: 500,
+                                                    lineHeight: 1.5
                                                 },
                                                 '&:hover': {
                                                     backgroundColor: 'action.hover',
@@ -757,6 +758,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 WebkitBoxOrient: 'vertical',
                                                 overflow: 'hidden',
                                                 fontSize: '1rem',
+                                                lineHeight: 1.4,
                                                 color: 'text.secondary'
                                             }}
                                         >
