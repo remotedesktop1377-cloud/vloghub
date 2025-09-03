@@ -25,6 +25,8 @@ interface VideoDurationSectionProps {
   onSubtitleLanguageChange?: (subtitleLanguage: string) => void;
   narrationType?: 'interview' | 'narration';
   onNarrationTypeChange?: (narrationType: 'interview' | 'narration') => void;
+  generating?: boolean; // NEW: show loading
+  generatedOnce?: boolean; // NEW: disable after generating
 }
 
 const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
@@ -42,62 +44,64 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   onSubtitleLanguageChange,
   narrationType = 'narration',
   onNarrationTypeChange,
+  generating = false,
+  generatedOnce = false,
 }) => {
 
   return (
     <Paper sx={{ p: 1.5 }}>
-      <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.9rem', fontWeight: 600, mb: 1 }}>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 500, mb: 1 }}>
         Video Duration & Actions
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.8rem', display: 'block' }}>
+      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 1.5, fontSize: '1.25rem', display: 'block' }}>
         Select the desired length for your generated video content and manage your video assets.
       </Typography>
 
       {/* Duration Selection, Language Selection and Generate Chapters */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <FormControl size="small" sx={{ minWidth: 100 }}>
-            <InputLabel sx={{ fontSize: '0.85rem' }}>Duration</InputLabel>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel sx={{ fontSize: '1.05rem' }}>Duration</InputLabel>
             <Select
               value={duration}
               label="Duration"
               onChange={(e) => onDurationChange(e.target.value)}
-              sx={{ '& .MuiSelect-select': { fontSize: '0.85rem' } }}
+              sx={{ '& .MuiSelect-select': { fontSize: '1.05rem' } }}
             >
               {durationOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.85rem' }}>
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '1.05rem' }}>
                   {option.label}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel sx={{ fontSize: '0.85rem' }}>Language</InputLabel>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel sx={{ fontSize: '1.05rem' }}>Language</InputLabel>
             <Select
               value={language}
               label="Language"
               onChange={(e) => onLanguageChange(e.target.value)}
-              sx={{ '& .MuiSelect-select': { fontSize: '0.85rem' } }}
+              sx={{ '& .MuiSelect-select': { fontSize: '1.05rem' } }}
             >
               {languageOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.85rem' }}>
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '1.05rem' }}>
                   {option.label}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel sx={{ fontSize: '0.85rem' }}>Subtitle Language</InputLabel>
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel sx={{ fontSize: '1.05rem' }}>Subtitle Language</InputLabel>
             <Select
               value={subtitleLanguage}
               label="Subtitle Language"
               onChange={(e) => onSubtitleLanguageChange?.(e.target.value)}
-              sx={{ '& .MuiSelect-select': { fontSize: '0.85rem' } }}
+              sx={{ '& .MuiSelect-select': { fontSize: '1.05rem' } }}
             >
               {languageOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.85rem' }}>
+                <MenuItem key={option.value} value={option.value} sx={{ fontSize: '1.05rem' }}>
                   {option.label}
                 </MenuItem>
               ))}
@@ -105,8 +109,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           </FormControl>
 
           {/* Narration Type Selection */}
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            {/* <InputLabel sx={{ fontSize: '0.85rem' }}>Narration Type</InputLabel> */}
+          <FormControl size="small" sx={{ minWidth: 220 }}>
             <RadioGroup
               row
               value={narrationType}
@@ -114,7 +117,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
               className={styles.narrationTypeRadioGroup}
               sx={{
                 '& .MuiFormControlLabel-label': {
-                  fontSize: '0.8rem',
+                  fontSize: '1.05rem',
                   ml: 0.5
                 }
               }}
@@ -136,21 +139,22 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
         </Box>
 
         <Button
-          variant="contained"
-          size="small"
-          startIcon={hasChapters ? <RefreshIcon /> : <CutIcon />}
+          variant={generating ? 'outlined' : 'contained'}
+          size="medium"
+          startIcon={generating ? <RefreshIcon /> : (hasChapters ? <RefreshIcon /> : <CutIcon />)}
           onClick={hasChapters ? onRegenerateAllAssets : onGenerateChapters}
-          disabled={!canGenerate}
+          disabled={!canGenerate || generating || generatedOnce}
           sx={{
-            bgcolor: hasChapters ? '#ff9800' : '#1DA1F2',
-            '&:hover': { bgcolor: hasChapters ? '#f57c00' : '#0d8bd9' },
+            bgcolor: generating ? 'action.disabledBackground' : (hasChapters ? '#ff9800' : '#1DA1F2'),
+            color: generating ? 'text.secondary' : 'inherit',
+            '&:hover': { bgcolor: generating ? 'action.disabledBackground' : (hasChapters ? '#f57c00' : '#0d8bd9') },
             px: 3,
-            py: 0.75,
-            fontSize: '0.85rem',
-            height: 36
+            py: 1,
+            fontSize: '1.05rem',
+            height: 40
           }}
         >
-          {'Generating Script...'}
+          {generating ? 'Generating Script...' : (generatedOnce ? 'Script Generated' : (hasChapters ? 'Regenerate Assets' : 'Generate Script'))}
         </Button>
       </Box>
 

@@ -13,6 +13,11 @@ import {
     LinearProgress,
     Chip,
     CircularProgress,
+    TextField,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import {
     ArrowBack as BackIcon,
@@ -22,11 +27,15 @@ import {
     Refresh as RefreshIcon,
     Movie as ChapterIcon,
     AccessTime as TimeIcon,
-    Edit as EditIcon
+    Edit as EditIcon,
+    Check as CheckIcon,
+    Save as SaveIcon,
+    Cancel as CancelIcon
 } from '@mui/icons-material';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { toast } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
+import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import { Chapter } from '@/types/chapters';
 import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
@@ -60,6 +69,22 @@ const ScriptProductionClient: React.FC = () => {
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
     const [initializing, setInitializing] = useState(true);
+
+    // Script approval states
+    const [isScriptApproved, setIsScriptApproved] = useState(false);
+    const [isEditingScript, setIsEditingScript] = useState(false);
+    const [editedScript, setEditedScript] = useState('');
+    const [estimatedDuration, setEstimatedDuration] = useState('');
+    const [scriptSectionData, setScriptSectionData] = useState<{
+        title?: string;
+        hook?: string;
+        mainContent?: string;
+        conclusion?: string;
+        callToAction?: string;
+    }>({});
+
+    // Navigation confirmation states
+    const [showBackConfirmation, setShowBackConfirmation] = useState(false);
 
     // Production states
     const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -204,6 +229,17 @@ const ScriptProductionClient: React.FC = () => {
                 // secure.j returns the object directly, no need to parse
                 const storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
                 setScriptData(storedData);
+                setEditedScript(storedData.script || '');
+
+                // Parse script data from localStorage if available
+                try {
+                    const storedMetadata = secure.j.scriptMetadata.get();
+                    if (storedMetadata && typeof storedMetadata === 'object') {
+                        setScriptSectionData(storedMetadata);
+                    }
+                } catch (error) {
+                    console.warn('Error parsing script metadata:', error);
+                }
             } catch (e) {
                 console.error('Failed to parse stored script data', e);
             }
@@ -213,10 +249,51 @@ const ScriptProductionClient: React.FC = () => {
 
     // Calculate estimated duration when script data changes
     useEffect(() => {
-        if (scriptData) {
+        if (scriptData && isScriptApproved) {
             updateParagraphs(scriptData);
         }
-    }, [scriptData]);
+    }, [scriptData, isScriptApproved]);
+
+    // Update estimated duration when edited script changes
+    useEffect(() => {
+        if (editedScript) {
+            setEstimatedDuration(HelperFunctions.calculateDuration(editedScript));
+        }
+    }, [editedScript]);
+
+    // Handle browser back button
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (!isScriptApproved) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+
+        const handlePopState = (e: PopStateEvent) => {
+            if (!isScriptApproved) {
+                e.preventDefault();
+                window.history.pushState(null, '', window.location.href);
+                setShowBackConfirmation(true);
+            }
+        };
+
+        // Add event listeners
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+
+        // Push current state to history to handle back button
+        if (!isScriptApproved) {
+            window.history.pushState(null, '', window.location.href);
+        }
+
+        // Cleanup
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [isScriptApproved]);
 
     // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
     const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
@@ -291,8 +368,179 @@ const ScriptProductionClient: React.FC = () => {
         }
     };
 
+    // Script approval functions
+    const handleStartEditingScript = () => {
+        setIsEditingScript(true);
+        setEditedScript(scriptData?.script || '');
+
+        // Parse the current script to populate scriptSectionData for editing
+        const currentScript = editedScript || scriptData?.script || '';
+        const lines = currentScript.split('\n');
+        const headers = HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english');
+
+        let currentSection = '';
+        let currentContent = '';
+        const newScriptData: any = { ...scriptSectionData };
+
+        for (const line of lines) {
+            if (line.includes(headers.title)) {
+                currentSection = 'title';
+                currentContent = '';
+            } else if (line.includes(headers.hook)) {
+                if (currentSection && currentContent.trim()) {
+                    newScriptData[currentSection] = currentContent.trim();
+                }
+                currentSection = 'hook';
+                currentContent = '';
+            } else if (line.includes(headers.mainContent)) {
+                if (currentSection && currentContent.trim()) {
+                    newScriptData[currentSection] = currentContent.trim();
+                }
+                currentSection = 'mainContent';
+                currentContent = '';
+            } else if (line.includes(headers.conclusion)) {
+                if (currentSection && currentContent.trim()) {
+                    newScriptData[currentSection] = currentContent.trim();
+                }
+                currentSection = 'conclusion';
+                currentContent = '';
+            } else if (line.includes(headers.callToAction)) {
+                if (currentSection && currentContent.trim()) {
+                    newScriptData[currentSection] = currentContent.trim();
+                }
+                currentSection = 'callToAction';
+                currentContent = '';
+            } else if (line.trim() && currentSection) {
+                currentContent += line + '\n';
+            }
+        }
+
+        // Save the last section
+        if (currentSection && currentContent.trim()) {
+            newScriptData[currentSection] = currentContent.trim();
+        }
+
+        setScriptSectionData(newScriptData);
+    };
+
+    const handleSaveScript = () => {
+        // Combine all sections into a single script
+        const headers = HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english');
+        const combinedScript = [
+            scriptSectionData.title && `${headers.title}:\n${scriptSectionData.title}`,
+            scriptSectionData.hook && `${headers.hook}:\n${scriptSectionData.hook}`,
+            scriptSectionData.mainContent && `${headers.mainContent}:\n${scriptSectionData.mainContent}`,
+            scriptSectionData.conclusion && `${headers.conclusion}:\n${scriptSectionData.conclusion}`,
+            scriptSectionData.callToAction && `${headers.callToAction}:\n${scriptSectionData.callToAction}`
+        ].filter(Boolean).join('\n\n');
+
+        // Update the edited script state
+        setEditedScript(combinedScript);
+
+        // Update script data
+        if (scriptData) {
+            const updatedScriptData = {
+                ...scriptData,
+                script: combinedScript
+            };
+            setScriptData(updatedScriptData);
+            secure.j.approvedScript.set(updatedScriptData);
+        }
+
+        setIsEditingScript(false);
+        toast.success('Script updated successfully!');
+    };
+
+    const handleCancelEditingScript = () => {
+        // Reset edited script to original
+        setEditedScript(scriptData?.script || '');
+
+        // Reset script section data to original values from secure storage
+        try {
+            const storedMetadata = secure.j.scriptMetadata.get();
+            if (storedMetadata && typeof storedMetadata === 'object') {
+                setScriptSectionData(storedMetadata);
+            } else {
+                // If no stored metadata, clear the section data
+                setScriptSectionData({});
+            }
+        } catch (error) {
+            console.warn('Error restoring script metadata:', error);
+            setScriptSectionData({});
+        }
+
+        // Exit editing mode
+        setIsEditingScript(false);
+
+        toast.info('Changes cancelled - script restored to original');
+    };
+
+    const handleApproveScript = () => {
+        setIsScriptApproved(true);
+        toast.success('Script approved! Now generating scenes breakdown...');
+    };
+
+
+
+    // Function to render script with embedded titles
+    const renderScriptWithTitles = () => {
+        const { title, hook, mainContent, conclusion, callToAction } = scriptSectionData;
+        const headers = HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english');
+
+        // If we have script metadata, format it with sections
+        if (title || hook || mainContent || conclusion || callToAction) {
+            let formattedScript = '';
+
+            if (title) {
+                formattedScript += `${headers.title}:\n${title}\n\n`;
+            }
+
+            if (hook) {
+                formattedScript += `${headers.hook}:\n${hook}\n\n`;
+            }
+
+            if (mainContent) {
+                formattedScript += `${headers.mainContent}:\n${mainContent}\n\n`;
+            }
+
+            if (conclusion) {
+                formattedScript += `${headers.conclusion}:\n${conclusion}\n\n`;
+            }
+
+            if (callToAction) {
+                formattedScript += `${headers.callToAction}:\n${callToAction}\n\n`;
+            }
+
+            return formattedScript.trim();
+        }
+
+        // Fallback to original script if no metadata
+        return scriptData?.script || '';
+    };
+
     const handleGoBack = () => {
+        if (!isScriptApproved) {
+            setShowBackConfirmation(true);
+        } else {
+            router.push(ROUTES_KEYS.TRENDING_TOPICS);
+        }
+    };
+
+    const handleConfirmBack = () => {
+        // Clear script data from secure storage when leaving
+        try {
+            secure.j.approvedScript.remove();
+            secure.j.scriptMetadata.remove();
+        } catch (error) {
+            console.warn('Error clearing script cache:', error);
+        }
+
+        setShowBackConfirmation(false);
         router.push(ROUTES_KEYS.TRENDING_TOPICS);
+    };
+
+    const handleCancelBack = () => {
+        setShowBackConfirmation(false);
     };
 
     const handleDownloadAllNarrations = () => {
@@ -575,8 +823,8 @@ const ScriptProductionClient: React.FC = () => {
     }
 
     return (
-        <Container maxWidth="xl" >
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+        <Box sx={{ width: '100vw', height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Button
                     variant="outlined"
                     startIcon={<BackIcon />}
@@ -586,211 +834,348 @@ const ScriptProductionClient: React.FC = () => {
                     Back
                 </Button>
                 <Typography variant="h6" color="text.secondary">
-                    Your script has been approved! Now let's bring it to life.
+                    Script Review & Approval
                 </Typography>
             </Box>
 
-            <Grid container spacing={3}>
+            <Box sx={{ flex: 1, overflow: 'hidden', px: 3 }}>
 
-                {/* Right Column: Script & Chapters */}
-                <Grid item xs={12} lg={12}>
+                {/* Script Components Breakdown */}
+                <Box sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    <Paper sx={{
+                        p: 3,
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        mb: 2,
+                        paddingBottom: isScriptApproved ? 3 : '100px' // Add bottom padding when buttons are fixed
+                    }}>
 
-                    {/* Script Title in Bold */}
-                    {scriptData.title && (
-                        <Box sx={{ mb: 2, textAlign: 'center' }}>
-                            <Typography
-                                variant="h5"
-                                sx={{
-                                    fontWeight: 700,
-                                    color: 'primary.main',
-                                    mb: 2,
-                                    lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7,
-                                    fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language),
-                                    ...HelperFunctions.getDirectionSx(scriptData.language)
-                                }}
-                            >
-                                {scriptData.title}
+                        {/* Header section - fixed */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexShrink: 0 }}>
+                            <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', flexShrink: 0 }}>
+                                📋 {scriptData.title}
                             </Typography>
-                            <Box sx={{ width: '60px', height: '3px', bgcolor: 'primary.main', mx: 'auto', borderRadius: 2 }} />
+
+                            {/* Duration Display */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem' }}>
+                                    Estimated Duration:
+                                </Typography>
+                                <Chip
+                                    label={estimatedDuration}
+                                    size="medium"
+                                    color="success"
+                                    sx={{ fontSize: '1rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1 } }}
+                                />
+                            </Box>
                         </Box>
-                    )}
 
-                    {/* Script Components Breakdown */}
-                    <Paper sx={{ p: 3, mb: 3 }}>
-                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
-                            📋 Script Scenes Breakdown
-                        </Typography>
+                        {!isScriptApproved ? (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
-                        {scriptData.hook && (
-                            <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.main' }}>
-                                        🎯 Hook
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, }}>
-                                        {(() => {
-                                            const words = scriptData.hook.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                            const duration = calculateParagraphDuration(words);
-                                            return (
-                                                <>
-                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                </>
-                                            );
-                                        })()}
-                                    </Box>
+
+                                {/* Script content area - flexible */}
+                                <Box sx={{ flex: 1, overflow: 'hidden', mb: 2, display: 'flex', flexDirection: 'column' }}>
+                                    {isEditingScript ? (
+                                        <Box sx={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                            <Typography variant="body2" sx={{ color: 'info.main', mb: 1, flexShrink: 0 }}>
+                                                📝 Editing mode - modify your script sections below
+                                            </Typography>
+
+                                            {/* Hook Section */}
+                                            <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
+                                                <Typography variant="h6" sx={{ mb: 1, color: 'primary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    🎯 HOOK
+                                                </Typography>
+                                                <TextField
+                                                    fullWidth
+                                                    multiline
+                                                    rows={3}
+                                                    variant="outlined"
+                                                    value={scriptSectionData.hook || ''}
+                                                    onChange={(e) => setScriptSectionData(prev => ({ ...prev, hook: e.target.value }))}
+                                                    placeholder="Enter your hook content..."
+                                                    sx={{
+                                                        '& .MuiInputBase-root': {
+                                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
+                                                            fontSize: '1.1rem',
+                                                            lineHeight: 1.8,
+                                                            ...getDirectionSx(scriptData?.language || 'english')
+                                                        }
+                                                    }}
+                                                />
+                                            </Paper>
+
+                                            {/* Main Content Section */}
+                                            <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
+                                                <Typography variant="h6" sx={{ mb: 1, color: 'secondary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    📝 MAIN CONTENT
+                                                </Typography>
+                                                <TextField
+                                                    fullWidth
+                                                    multiline
+                                                    rows={8}
+                                                    variant="outlined"
+                                                    value={scriptSectionData.mainContent || ''}
+                                                    onChange={(e) => setScriptSectionData(prev => ({ ...prev, mainContent: e.target.value }))}
+                                                    placeholder="Enter your main content..."
+                                                    sx={{
+                                                        '& .MuiInputBase-root': {
+                                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
+                                                            fontSize: '1.1rem',
+                                                            lineHeight: 1.8,
+                                                            ...getDirectionSx(scriptData?.language || 'english')
+                                                        }
+                                                    }}
+                                                />
+                                            </Paper>
+
+                                            {/* Conclusion Section */}
+                                            <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
+                                                <Typography variant="h6" sx={{ mb: 1, color: 'success.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    🏁 CONCLUSION
+                                                </Typography>
+                                                <TextField
+                                                    fullWidth
+                                                    multiline
+                                                    rows={3}
+                                                    variant="outlined"
+                                                    value={scriptSectionData.conclusion || ''}
+                                                    onChange={(e) => setScriptSectionData(prev => ({ ...prev, conclusion: e.target.value }))}
+                                                    placeholder="Enter your conclusion..."
+                                                    sx={{
+                                                        '& .MuiInputBase-root': {
+                                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
+                                                            fontSize: '1.1rem',
+                                                            lineHeight: 1.8,
+                                                            ...getDirectionSx(scriptData?.language || 'english')
+                                                        }
+                                                    }}
+                                                />
+                                            </Paper>
+
+                                            {/* Call to Action Section */}
+                                            <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
+                                                <Typography variant="h6" sx={{ mb: 1, color: 'warning.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    🚀 CALL TO ACTION
+                                                </Typography>
+                                                <TextField
+                                                    fullWidth
+                                                    multiline
+                                                    rows={3}
+                                                    variant="outlined"
+                                                    value={scriptSectionData.callToAction || ''}
+                                                    onChange={(e) => setScriptSectionData(prev => ({ ...prev, callToAction: e.target.value }))}
+                                                    placeholder="Enter your call to action..."
+                                                    sx={{
+                                                        '& .MuiInputBase-root': {
+                                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
+                                                            fontSize: '1.1rem',
+                                                            lineHeight: 1.8,
+                                                            ...getDirectionSx(scriptData?.language || 'english')
+                                                        }
+                                                    }}
+                                                />
+                                            </Paper>
+                                        </Box>
+                                    ) : (
+                                        <Paper
+                                            elevation={2}
+                                            sx={{
+                                                p: 2,
+                                                bgcolor: 'background.default',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 2,
+                                                flex: 1,
+                                                overflow: 'auto',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                ...getDirectionSx(scriptData?.language || 'english')
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="body1"
+                                                sx={{
+                                                    whiteSpace: 'pre-wrap',
+                                                    lineHeight: 2.05,
+                                                    fontSize: '1.2rem',
+                                                    fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
+                                                    flex: 1,
+                                                    ...getDirectionSx(scriptData?.language || 'english')
+                                                }}
+                                            >
+                                                {renderScriptWithTitles()}
+                                            </Typography>
+                                        </Paper>
+                                    )}
                                 </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${SUCCESS.main}` }}>
-                                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                        {scriptData.hook}
-                                    </Typography>
-                                </Paper>
                             </Box>
-                        )}
-
-                        {scriptData.mainContent && (
-                            <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'info.main' }}>
-                                        📝 Main Content
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        {(() => {
-                                            const words = scriptData.mainContent.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                            const duration = calculateParagraphDuration(words);
-                                            return (
-                                                <>
-                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                </>
-                                            );
-                                        })()}
-                                    </Box>
-                                </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${INFO.main}` }}>
-                                    <Typography variant="body2" sx={{ color: 'text.primary', whiteSpace: 'pre-wrap', fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                        {scriptData.mainContent}
-                                    </Typography>
-                                </Paper>
-                            </Box>
-                        )}
-
-                        {scriptData.conclusion && (
-                            <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'warning.main' }}>
-                                        🎬 Conclusion
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        {(() => {
-                                            const words = scriptData.conclusion.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                            const duration = calculateParagraphDuration(words);
-                                            return (
-                                                <>
-                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                </>
-                                            );
-                                        })()}
-                                    </Box>
-                                </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${WARNING.main}` }}>
-                                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                        {scriptData.conclusion}
-                                    </Typography>
-                                </Paper>
-                            </Box>
-                        )}
-
-                        {scriptData.callToAction && (
-                            <Box sx={{ mb: 3 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'secondary.main' }}>
-                                        📢 Call to Action
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        {(() => {
-                                            const words = scriptData.callToAction.trim().split(/\s+/).filter(w => w.length > 0).length;
-                                            const duration = calculateParagraphDuration(words);
-                                            return (
-                                                <>
-                                                    <Chip label={duration} size="small" color="success" sx={{ fontSize: '0.7rem', fontWeight: 600 }} />
-                                                    <Chip label={`${words} words`} size="small" color="info" sx={{ fontSize: '0.65rem', height: 18 }} />
-                                                </>
-                                            );
-                                        })()}
-                                    </Box>
-                                </Box>
-                                <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.default', border: `1px solid ${SPECIAL.purple}` }}>
-                                    <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400, fontSize: '1rem', fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData.language), lineHeight: HelperFunctions.isRTLLanguage(scriptData.language) ? 2.5 : 1.7, ...HelperFunctions.getDirectionSx(scriptData.language) }}>
-                                        {scriptData.callToAction}
-                                    </Typography>
-                                </Paper>
+                        ) : (
+                            <Box>
+                                <Alert severity="success" sx={{ mb: 2 }}>
+                                    ✅ Script approved! Your scenes breakdown is ready below.
+                                </Alert>
+                                <Typography variant="h6" sx={{ color: 'primary.main', mb: 2 }}>
+                                    📋 Script Scenes Breakdown
+                                </Typography>
                             </Box>
                         )}
                     </Paper>
 
-                    {/* Chapters Section */}
-                    {chapters.length > 0 && (
-                        <ChaptersSection
-                            chaptersGenerated={true}
-                            generatingChapters={false}
-                            chapters={chapters}
-                            editingChapter={editingChapter}
-                            editHeading={editHeading}
-                            editNarration={editNarration}
-                            selectedChapterIndex={selectedChapterIndex}
-                            rightTabIndex={rightTabIndex}
-                            aiImagesEnabled={aiImagesEnabled}
-                            imagesLoading={imagesLoading}
-                            generatedImages={generatedImages}
-                            aiPrompt={aiPrompt}
-                            pickerOpen={pickerOpen}
-                            pickerChapterIndex={pickerChapterIndex}
-                            pickerNarrations={pickerNarrations}
-                            pickerLoading={pickerLoading}
-                            uploadedImages={uploadedImages}
-                            isDraggingUpload={isDraggingUpload}
-                            chapterImagesMap={chapterImagesMap}
-                            onChaptersUpdate={setChapters}
-                            onAddChapterAfter={handleAddChapterAfter}
-                            onDeleteChapter={handleDeleteChapter}
-                            onSaveEdit={handleSaveEdit}
-                            onCancelEdit={handleCancelEdit}
-                            onEditHeadingChange={setEditHeading}
-                            onEditNarrationChange={setEditNarration}
-                            onStartEdit={handleEditChapter}
-                            onDragEnd={handleDragEnd}
-                            onSelectChapter={selectChapter}
-                            onRightTabChange={setRightTabIndex}
-                            onAIPromptChange={setAiPrompt}
-                            onUseAIChange={setAiImagesEnabled}
-                            onGenerateImages={handleGenerateImages}
-                            onImageSelect={handleImageSelect}
-                            onImageDeselect={handleImageDeselect}
-                            onDownloadImage={handleDownloadImage}
-                            onTriggerFileUpload={handleTriggerFileUpload}
-                            onUploadFiles={handleUploadFiles}
-                            onPickerOpen={setPickerOpen}
-                            onPickerChapterIndex={setPickerChapterIndex}
-                            onPickerLoading={setPickerLoading}
-                            onPickerNarrations={setPickerNarrations}
-                            onChapterImagesMapChange={setChapterImagesMap}
-                            onGeneratedImagesChange={setGeneratedImages}
-                            onRightTabIndexChange={setRightTabIndex}
-                            mediaManagementOpen={mediaManagementOpen}
-                            mediaManagementChapterIndex={mediaManagementChapterIndex}
-                            onMediaManagementOpen={setMediaManagementOpen}
-                            onMediaManagementChapterIndex={setMediaManagementChapterIndex}
-                            language={scriptData.language}
-                            onGoogleImagePreview={(imageUrl) => {
-                                // Open the image in a new tab for preview
-                                window.open(imageUrl, '_blank');
-                            }}
-                        />
-                    )}
+                    {/* Fixed Action Buttons at Screen Bottom - Only show when script is not approved */}
+                    {!isScriptApproved && (
+                        <Box sx={{
+                            position: 'fixed',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            bgcolor: 'background.paper',
+                            borderTop: '1px solid',
+                            borderColor: 'divider',
+                            p: 3,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            zIndex: 1000,
+                            boxShadow: '0 -2px 8px rgba(0,0,0,0.1)'
+                        }}>
+                            {/* Left side - Edit Script button when not editing, Save Changes when editing */}
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                {!isEditingScript ? (
+                                    <Button
+                                        variant="outlined"
+                                        size="large"
+                                        startIcon={<EditIcon />}
+                                        onClick={handleStartEditingScript}
+                                        sx={{ textTransform: 'none', px: 2, py: 1 }}
+                                    >
+                                        Edit Script
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        variant="contained"
+                                        size="large"
+                                        startIcon={<SaveIcon />}
+                                        onClick={handleSaveScript}
+                                        sx={{ textTransform: 'none', px: 2, py: 1 }}
+                                    >
+                                        Save Changes
+                                    </Button>
+                                )}
+                            </Box>
 
-                    {/* Production Actions */}
+                            {/* Right side - Main action buttons */}
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                {isEditingScript && (
+                                    <Button
+                                        onClick={handleCancelEditingScript}
+                                        variant="outlined"
+                                        color="secondary"
+                                        size="large"
+                                        startIcon={<CancelIcon />}
+                                        sx={{
+                                            minWidth: 160,
+                                            py: 1,
+                                            px: 2,
+                                            fontSize: '1.05rem'
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                )}
+                                <Button
+                                    onClick={handleApproveScript}
+                                    variant="contained"
+                                    color="primary"
+                                    size="large"
+                                    sx={{
+                                        minWidth: 160,
+                                        py: 1,
+                                        px: 2,
+                                        fontSize: '1.05rem',
+                                        bgcolor: 'success.main',
+                                        '&:hover': { bgcolor: 'success.dark' }
+                                    }}
+                                    startIcon={<CheckIcon />}
+                                >
+                                    Approve & Continue
+                                </Button>
+                            </Box>
+                        </Box>
+                    )}
+                </Box>
+
+                {/* Chapters Section - Only show when script is approved */}
+                {isScriptApproved && chapters.length > 0 && (
+                    <ChaptersSection
+                        chaptersGenerated={true}
+                        generatingChapters={false}
+                        chapters={chapters}
+                        editingChapter={editingChapter}
+                        editHeading={editHeading}
+                        editNarration={editNarration}
+                        selectedChapterIndex={selectedChapterIndex}
+                        rightTabIndex={rightTabIndex}
+                        aiImagesEnabled={aiImagesEnabled}
+                        imagesLoading={imagesLoading}
+                        generatedImages={generatedImages}
+                        aiPrompt={aiPrompt}
+                        pickerOpen={pickerOpen}
+                        pickerChapterIndex={pickerChapterIndex}
+                        pickerNarrations={pickerNarrations}
+                        pickerLoading={pickerLoading}
+                        uploadedImages={uploadedImages}
+                        isDraggingUpload={isDraggingUpload}
+                        chapterImagesMap={chapterImagesMap}
+                        onChaptersUpdate={setChapters}
+                        onAddChapterAfter={handleAddChapterAfter}
+                        onDeleteChapter={handleDeleteChapter}
+                        onSaveEdit={handleSaveEdit}
+                        onCancelEdit={handleCancelEdit}
+                        onEditHeadingChange={setEditHeading}
+                        onEditNarrationChange={setEditNarration}
+                        onStartEdit={handleEditChapter}
+                        onDragEnd={handleDragEnd}
+                        onSelectChapter={selectChapter}
+                        onRightTabChange={setRightTabIndex}
+                        onAIPromptChange={setAiPrompt}
+                        onUseAIChange={setAiImagesEnabled}
+                        onGenerateImages={handleGenerateImages}
+                        onImageSelect={handleImageSelect}
+                        onImageDeselect={handleImageDeselect}
+                        onDownloadImage={handleDownloadImage}
+                        onTriggerFileUpload={handleTriggerFileUpload}
+                        onUploadFiles={handleUploadFiles}
+                        onPickerOpen={setPickerOpen}
+                        onPickerChapterIndex={setPickerChapterIndex}
+                        onPickerLoading={setPickerLoading}
+                        onPickerNarrations={setPickerNarrations}
+                        onChapterImagesMapChange={setChapterImagesMap}
+                        onGeneratedImagesChange={setGeneratedImages}
+                        onRightTabIndexChange={setRightTabIndex}
+                        mediaManagementOpen={mediaManagementOpen}
+                        mediaManagementChapterIndex={mediaManagementChapterIndex}
+                        onMediaManagementOpen={setMediaManagementOpen}
+                        onMediaManagementChapterIndex={setMediaManagementChapterIndex}
+                        language={scriptData.language}
+                        onGoogleImagePreview={(imageUrl) => {
+                            // Open the image in a new tab for preview
+                            window.open(imageUrl, '_blank');
+                        }}
+                    />
+                )}
+
+                {/* Production Actions - Only show when script is approved */}
+                {isScriptApproved && (
                     <Paper sx={{ p: 3 }}>
                         <Typography variant="h6" sx={{ mb: 3, color: 'primary.main' }}>
                             🎬 Production Actions
@@ -882,9 +1267,47 @@ const ScriptProductionClient: React.FC = () => {
 
                         </Grid>
                     </Paper>
-                </Grid>
-            </Grid>
-        </Container>
+                )}
+            </Box>
+
+            {/* Back Confirmation Dialog */}
+            <Dialog
+                open={showBackConfirmation}
+                onClose={handleCancelBack}
+                aria-labelledby="back-confirmation-dialog-title"
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle id="back-confirmation-dialog-title" >
+                    <Typography variant="h5" sx={{ mb: 2, color: 'warning.main' }}>
+                        ⚠️ Are you sure?
+                    </Typography>
+
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="h5" sx={{ mb: 2 }}>
+                        You haven't approved your script yet. If you go back now, your current progress and script data will be permanently deleted.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1 }}>
+                    <Button
+                        onClick={handleCancelBack}
+                        variant="outlined"
+                        sx={{ minWidth: 100, fontSize: '1.05rem' }}
+                    >
+                        Stay Here
+                    </Button>
+                    <Button
+                        onClick={handleConfirmBack}
+                        variant="contained"
+                        color="warning"
+                        sx={{ minWidth: 100, fontSize: '1.05rem' }}
+                    >
+                        Discard Script
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
     );
 };
 

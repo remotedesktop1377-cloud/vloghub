@@ -68,24 +68,28 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   return (
     <Box className={styles.locationSelectorContainer}>
       {/* Location Type Selector */}
-      <FormControl 
-        className={`${styles.locationTypeSelector}`} 
-        size="small" 
-        sx={{ 
+      <FormControl
+        className={`${styles.locationTypeSelector}`}
+        size="small"
+        sx={{
           height: '40px',
           width: '160px',
-          minWidth: '160px'
+          minWidth: '160px',
+
         }}
       >
-        <InputLabel id="location-type-label">Type</InputLabel>
+        <InputLabel id="location-type-label" sx={{ fontSize: '1.05rem', fontWeight: '500', textTransform: 'none' }}>Type</InputLabel>
         <Select
           labelId="location-type-label"
           value={selectedLocationType}
           label="Type"
           onChange={handleLocationTypeChange}
-          sx={{ 
+          sx={{
             height: '40px',
-            width: '100%'
+            width: '100%',
+            fontSize: '1.05rem',
+            fontWeight: '500',
+            textTransform: 'none'
           }}
         >
           <MenuItem value="global">Global</MenuItem>
@@ -96,13 +100,16 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 
       {/* Country Selector (only when Type is Country) */}
       {selectedLocationType === 'country' && (
-        <FormControl 
-          className={`${styles.locationSelector}`} 
-          size="small" 
-          sx={{ 
+        <FormControl
+          className={`${styles.locationSelector}`}
+          size="small"
+          sx={{
             height: '40px',
             width: '160px',
-            minWidth: '160px'
+            minWidth: '160px',
+            fontSize: '1.05rem',
+            fontWeight: '500',
+            textTransform: 'none'
           }}
         >
           <InputLabel id="country-label">Country</InputLabel>
@@ -116,19 +123,19 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
               // Reset city when country changes
               onLocationChange('');
             }}
-            sx={{ 
+            sx={{
               height: '40px',
-              width: '100%'
+              width: '100%',
+              fontSize: '1.05rem',
+              fontWeight: '500',
+              textTransform: 'none'
             }}
           >
-            <MenuItem value="">
-              <em>Select</em>
-            </MenuItem>
             {locationData.countries.map((country) => (
-              <MenuItem key={country.value} value={country.value}>
+              <MenuItem key={country.value} value={country.value} sx={{ '& .MuiTypography-root': { fontSize: '1.05rem' } }}>
                 <Box className={styles.locationMenuItem}>
                   {country.flag && <span>{country.flag}</span>}
-                  <Typography variant="body2" className={styles.locationLabel}>
+                  <Typography variant="body2" className={styles.locationLabel} sx={{ fontSize: '1.05rem' }}>
                     {country.label}
                   </Typography>
                 </Box>
@@ -140,10 +147,10 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
 
       {/* Region or City Selector depending on type (hidden for Global) */}
       {selectedLocationType !== 'global' && (
-        <FormControl 
-          className={`${styles.locationSelector}`} 
-          size="small" 
-          sx={{ 
+        <FormControl
+          className={`${styles.locationSelector}`}
+          size="small"
+          sx={{
             height: '40px',
             width: '160px',
             minWidth: '160px'
@@ -156,19 +163,31 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
             label={getLocationTypeLabel()}
             onChange={handleLocationChange}
             disabled={selectedLocationType === 'country' && !selectedCountry}
-            sx={{ 
+            sx={{
               height: '40px',
-              width: '100%'
+              width: '100%',
+              fontSize: '1.05rem',
+              fontWeight: '500',
+              textTransform: 'none'
             }}
           >
             <MenuItem value="">
               <em>Select</em>
             </MenuItem>
+            {selectedLocationType === 'country' && (
+              <MenuItem value="all" sx={{ '& .MuiTypography-root': { fontSize: '1.05rem' } }}>
+                <Box className={styles.locationMenuItem}>
+                  <Typography variant="body2" className={styles.locationLabel} sx={{ fontSize: '1.05rem' }}>
+                    All
+                  </Typography>
+                </Box>
+              </MenuItem>
+            )}
             {getLocationOptions().map((location) => (
-              <MenuItem key={location.value} value={location.value}>
+              <MenuItem key={location.value} value={location.value} sx={{ '& .MuiTypography-root': { fontSize: '1.05rem' } }}>
                 <Box className={styles.locationMenuItem}>
                   {location.flag && <span>{location.flag}</span>}
-                  <Typography variant="body2" className={styles.locationLabel}>
+                  <Typography variant="body2" className={styles.locationLabel} sx={{ fontSize: '1.05rem' }}>
                     {location.label}
                   </Typography>
                 </Box>

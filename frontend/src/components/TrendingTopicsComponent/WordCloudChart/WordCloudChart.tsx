@@ -43,10 +43,12 @@ export function WordCloudChart(props: IWordCloudChartProps) {
             setData(props.data);
 
             // Update the stable references with new max value
-            // Make biggest word 30px, smallest word 15px (ensuring all words are visible)
+            // Make biggest word ~42px, smallest word ~18px (ensuring readability for 20 items)
             stableRefs.current.fontSize = (word: any) => {
-                const calculatedSize = Math.max(15, (15 * word.value) / newMax + 15);
-                // console.log(`🔤 Word "${word.text}" (value: ${word.value}) → fontSize: ${calculatedSize}px`);
+                const minSize = 18;
+                const maxSize = 42;
+                const ratio = newMax > 0 ? word.value / newMax : 0;
+                const calculatedSize = Math.round(minSize + ratio * (maxSize - minSize));
                 return calculatedSize;
             };
             stableRefs.current.fill = (d: any, i: any) => {
@@ -64,8 +66,8 @@ export function WordCloudChart(props: IWordCloudChartProps) {
         return <div
             className={styles.loadingContainer}
             style={{
-                width: props.width || 500,
-                height: props.height || 450,
+                width: props.width || 800,
+                height: props.height || 600,
             }}
         >
             Loading word cloud...
@@ -76,20 +78,20 @@ export function WordCloudChart(props: IWordCloudChartProps) {
         <div
             className={styles.wordCloudContainer}
             style={{
-                width: props.width || 500,
-                height: props.height || 450,
+                width: props.width || 800,
+                height: props.height || 600,
             }}
         >
             <div
                 className={styles.wordCloudWrapper}
                 style={{
-                    width: (props.width || 500) - 20,
-                    height: (props.height || 450) - 20,
+                    width: (props.width || 800) - 20,
+                    height: (props.height || 600) - 20,
                 }}
             >
                 <WordCloud
-                    width={(props.width || 500) - 20}
-                    height={(props.height || 450) - 20}
+                    width={(props.width || 800) - 20}
+                    height={(props.height || 600) - 20}
                     data={data.map((word) => ({
                         ...word,
                         topic: word.text,
@@ -97,7 +99,7 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                     }))}
                     fontSize={stableRefs.current.fontSize}
                     rotate={stableRefs.current.rotate}
-                    padding={5}
+                    padding={3}
                     spiral="archimedean"
                     random={() => 0.5}
                     onWordClick={(e, d) => {
@@ -106,7 +108,6 @@ export function WordCloudChart(props: IWordCloudChartProps) {
                     fill={stableRefs.current.fill}
                     fontWeight="bold"
                 />
-
             </div>
         </div>
     );

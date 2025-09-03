@@ -209,7 +209,9 @@
   border: none;
   border-radius: 4px;
   padding: 8px 16px;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-transform: none;
   cursor: pointer;
   margin-top: 16px;
   transition: background-color 0.2s ease;
@@ -223,24 +225,24 @@
   .trendingTopicsContainer {
     padding: 16px;
   }
-  
+
   .headerSection {
     padding: 20px;
   }
-  
+
   .title {
     font-size: 2rem;
   }
-  
+
   .subtitle {
     font-size: 1rem;
   }
-  
+
   .chaptersSection,
   .wordCloudSection {
     padding: 20px;
   }
-} 
+}
 
 .narrationTypeRadioGroup {
   display: flex;
@@ -291,6 +293,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-transform: none;
 }
 
 .locationIcon {
@@ -298,8 +303,9 @@
 }
 
 .locationLabel {
-  font-size: 0.875rem;
+  font-size: 1.05rem;
   font-weight: 500;
+  text-transform: none;
 }
 
 /* Responsive adjustments */
@@ -309,12 +315,15 @@
     align-items: stretch;
     gap: 0.75rem;
   }
-  
+
   .locationTypeSelector,
   .locationSelector {
     min-width: 100%;
     width: 100%;
     height: 40px;
+    font-size: 1.05rem;
+    font-weight: 500;
+    text-transform: none;
   }
 }
 
@@ -322,7 +331,7 @@
   .locationSelectorContainer {
     gap: 0.5rem;
   }
-  
+
   .locationChip {
     font-size: 0.7rem;
     padding: 0.2rem 0.4rem;
@@ -359,7 +368,7 @@
 }
 
 /* Ensure consistent dropdown sizing */
-.dropdownGroup > * {
+.dropdownGroup>* {
   flex-shrink: 0;
 }
 
@@ -386,7 +395,7 @@
     align-items: stretch;
     gap: 1rem;
   }
-  
+
   .headerRight {
     justify-content: center;
   }
@@ -398,7 +407,7 @@
     align-items: stretch;
     gap: 0.75rem;
   }
-  
+
   .headerRight {
     flex-direction: column;
     gap: 0.75rem;
@@ -421,5 +430,3 @@
 .categorySelector {
   margin-left: 8px;
 }
-
-

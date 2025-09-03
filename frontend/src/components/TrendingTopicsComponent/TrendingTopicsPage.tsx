@@ -24,7 +24,7 @@ import TopicDetailsSection from './TopicDetailsSection';
 import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
 
-import ScriptApprovalDialog from './ScriptApprovalDialog';
+
 import HeaderSection from './HeaderSection';
 
 import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
@@ -53,7 +53,7 @@ const TrendingTopics: React.FC = () => {
   const [narrationType, setNarrationType] = useState<'interview' | 'narration'>('narration');
   const [generatingChapters, setGeneratingChapters] = useState(false);
   const [editedScript, setEditedScript] = useState<string>('');
-  const [showScriptDialog, setShowScriptDialog] = useState(false);
+  const [scriptGeneratedOnce, setScriptGeneratedOnce] = useState(false);
 
   // Suggestions/Enhance states
   const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
@@ -107,7 +107,11 @@ const TrendingTopics: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const locationKey = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
+      const locationKey = selectedLocationType === 'global'
+        ? selectedLocationType
+        : selectedLocationType === 'region'
+          ? selectedLocation
+          : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
       const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
 
       // Check cache first (unless force refresh is requested)
@@ -258,7 +262,11 @@ const TrendingTopics: React.FC = () => {
       setGeneratingChapters(true); // Keep using same loading state for now
       setError(null);
 
-      const location = selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry;
+      const location = selectedLocationType === 'global'
+        ? selectedLocationType
+        : selectedLocationType === 'region'
+          ? selectedLocation
+          : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
 
       const result = await apiService.generateScript({
         topic: selectedTopic.topic,
@@ -271,6 +279,7 @@ const TrendingTopics: React.FC = () => {
       // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
         setEditedScript(result.data.script);
+        setScriptGeneratedOnce(true);
 
         // Store additional script metadata for later use
         const scriptMetadata = {
@@ -291,12 +300,20 @@ const TrendingTopics: React.FC = () => {
           script: result.data.script || '',
         };
 
-        // console.log('🟢 Script metadata:', scriptMetadata);
-
         // Store metadata in secure storage for the script production page
         secure.j.scriptMetadata.set(scriptMetadata);
 
-        setShowScriptDialog(true);
+        // Store the script data for the production page
+        const scriptData = {
+          ...scriptMetadata
+        };
+
+        // Store in secure storage as backup
+        secure.j.approvedScript.set(scriptData);
+
+        // Navigate directly to script production page
+        router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+        
         setError(null);
       } else {
         setError(result.error || 'Failed to generate script');
@@ -305,46 +322,12 @@ const TrendingTopics: React.FC = () => {
       console.error('Error generating script:', err);
       setError('Failed to generate script. Please try again.');
     } finally {
-      setGeneratingChapters(false);
+      // keep overlay until route change completes; do not unset generatingChapters here
+      setTimeout(() => setGeneratingChapters(false), 3000);
     }
   };
 
-  const handleScriptApproval = () => {
-    // Navigate to script production page with the approved script data
 
-    let metadata: any = null;
-    try {
-              const storedMeta = secure.j.scriptMetadata.get();
-      metadata = storedMeta || null;
-    } catch { }
-
-    const scriptData = {
-      script: editedScript,
-      ...(metadata || {})
-    };
-
-    // console.log('🟢 Script data:', scriptData);
-
-    // Store in secure storage as backup
-            secure.j.approvedScript.set(scriptData);
-
-    //Navigate immediately - this should be the fastest path
-    router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
-
-    //Close dialog and clear states immediately for faster UX
-    setShowScriptDialog(false);
-
-  };
-
-  const handleScriptRejection = () => {
-    // Clear the script and allow user to try again
-    setEditedScript('');
-    setShowScriptDialog(false);
-  };
-
-  const handleScriptChange = (newScript: string) => {
-    setEditedScript(newScript);
-  };
 
   const handleSubtitleLanguageChange = (newSubtitleLanguage: string) => {
     setSubtitleLanguage(newSubtitleLanguage);
@@ -429,10 +412,10 @@ const TrendingTopics: React.FC = () => {
           border: '1px dashed',
           borderColor: 'divider'
         }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
             Please select all options to view trending topics
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
             Choose a location type, location, and time range to get started
           </Typography>
         </Box>
@@ -441,8 +424,8 @@ const TrendingTopics: React.FC = () => {
       {
         /* Cloud View - Centered word cloud with permanent details panel on right */
         Array.isArray(trendingTopics) && trendingTopics.length > 0 && (
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', gap: 3, height: '400px' }}>
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 3 }}>
               {/* Centered Word Cloud Container */}
               <Box sx={{
                 flex: 1,
@@ -454,8 +437,8 @@ const TrendingTopics: React.FC = () => {
               }}>
 
                 <WordCloudChart
-                  width={600}
-                  height={400}
+                  width={900}
+                  height={600}
                   data={Array.isArray(trendingTopics) ? trendingTopics.map(topic => ({
                     text: topic.topic,
                     value: topic.value || 1,
@@ -469,7 +452,7 @@ const TrendingTopics: React.FC = () => {
               </Box>
 
             </Box>
-          </Paper>
+          </Box>
         )
       }
 
@@ -526,24 +509,15 @@ const TrendingTopics: React.FC = () => {
               onSubtitleLanguageChange={handleSubtitleLanguageChange}
               narrationType={narrationType}
               onNarrationTypeChange={handleNarrationTypeChange}
+              generating={generatingChapters}
+              generatedOnce={scriptGeneratedOnce}
             />
 
           </Box>
         </Box>
       )}
 
-      {/* Script Approval Dialog */}
-      <ScriptApprovalDialog
-        open={showScriptDialog}
-        onClose={() => setShowScriptDialog(false)}
-        onApprove={handleScriptApproval}
-        onReject={handleScriptRejection}
-        script={editedScript}
-        topic={selectedTopic?.topic || ''}
-        language={language}
-        onScriptChange={handleScriptChange}
-        intendedDuration={duration}
-      />
+
 
     </Box>
   );

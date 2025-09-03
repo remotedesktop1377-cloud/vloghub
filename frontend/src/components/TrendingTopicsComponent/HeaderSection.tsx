@@ -93,11 +93,14 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
     <Box className={styles.headerContainer}>
       <Box className={styles.headerContent}>
         <Box className={styles.headerLeft}>
-          <Typography variant="h5" sx={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
+          <Typography variant="h4" sx={{ fontWeight: '500' }}>
             Trending Topics
           </Typography>
+        </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box className={styles.headerRight}>
+          {/* Dropdown Group */}
+          <Box className={styles.dropdownGroup}>
             {/* Refresh Button */}
             <Button
               variant="outlined"
@@ -105,17 +108,20 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
               onClick={onRefresh}
               disabled={loading}
               size="small"
-              sx={{ height: '40px' }}
+              sx={{
+                height: '40px',
+                minWidth: '160px',
+                mr: 1,
+                color: 'text.primary',
+                fontSize: '1.05rem',
+                fontWeight: '500',
+                textTransform: 'none'
+              }}
               title="Click to fetch fresh trending topics from Gemini API"
             >
               Refresh
             </Button>
-          </Box>
-        </Box>
 
-        <Box className={styles.headerRight}>
-          {/* Dropdown Group */}
-          <Box className={styles.dropdownGroup}>
             {/* Enhanced Location Selector */}
             <LocationSelector
               selectedLocation={selectedLocation}

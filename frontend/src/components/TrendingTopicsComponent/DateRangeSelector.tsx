@@ -42,7 +42,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
                     minWidth: '160px'
                 }}
             >
-                <InputLabel id="date-range-label">Time Range</InputLabel>
+                <InputLabel id="date-range-label" sx={{ fontSize: '1.05rem', fontWeight: 500 }}>Time Range</InputLabel>
                 <Select
                     labelId="date-range-label"
                     value={selectedDateRange}
@@ -50,13 +50,15 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
                     onChange={handleDateRangeChange}
                     sx={{
                         height: '40px',
-                        width: '100%'
+                        width: '100%',
+                        fontSize: '1.05rem',
+                        fontWeight: 500
                     }}
                 >
                     {dateRangeOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
+                        <MenuItem key={option.value} value={option.value} sx={{ '& .MuiTypography-root': { fontSize: '1.05rem' } }}>
                             <Box className={styles.dateRangeMenuItem}>
-                                <Typography variant="body2" className={styles.dateRangeLabel}>
+                                <Typography variant="body2" className={styles.dateRangeLabel} sx={{ fontSize: '1.05rem' }}>
                                     {option.label}
                                 </Typography>
                             </Box>

@@ -42,30 +42,25 @@ const HypothesisSection: React.FC<HypothesisSectionProps> = ({
 }) => {
   return (
     <Paper sx={{ p: 1.5, opacity: selectedTopic ? 1 : 0.6 }} data-section="hypothesis">
-      <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '1.5rem', fontWeight: 500, mb: 1 }}>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 500, mb: 1 }}>
         What’s your unique perspective on this topic?
       </Typography>
       <TextField
         fullWidth
         multiline
-        rows={3}
+        rows={4}
         variant="outlined"
         placeholder="Please share your personal angle, insight, or viewpoint here..."
         value={hypothesis}
         disabled={!selectedTopic}
         onChange={(e) => onHypothesisChange(e.target.value)}
         sx={{
-          fontSize: '0.9rem'
+          '& .MuiInputBase-root': {
+            fontSize: '1.25rem'
+          }
         }}
         size="small"
       />
-      
-      {/* Simplified hypothesis section for now */}
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Hypothesis suggestions functionality will be added here.
-        </Typography>
-      </Box>
     </Paper>
   );
 };

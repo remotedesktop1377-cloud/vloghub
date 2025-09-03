@@ -35,13 +35,13 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
 }) => {
   return (
     <Paper sx={{ p: 1.5 }} data-section="topic-details">
-      <Typography variant="h5" gutterBottom >
-        {selectedTopic.topic}
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 500, mb: 1 }}>
+      {selectedTopic.topic}
       </Typography>
       {selectedTopic.description && (
-        <Typography variant="subtitle2" gutterBottom sx={{
-          fontSize: '0.9rem',
-          color: 'gray',
+        <Typography variant="subtitle1" gutterBottom sx={{
+          fontSize: '1.25rem',
+          color: 'text.secondary',
           fontWeight: 400,
           fontStretch: 'normal',
         }}>
@@ -49,12 +49,6 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
         </Typography>
       )}
       
-      {/* Simplified topic details section for now */}
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Topic details and suggestions functionality will be added here.
-        </Typography>
-      </Box>
     </Paper>
   );
 };
