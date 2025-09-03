@@ -67,10 +67,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
     // Ref to prevent duplicate API calls when useEffect runs multiple times
     const hasInitialSearch = useRef(false);
 
-
-
     // Search all suggestions by combining them into a single query
-    // Note: Google API limit is 10 images per request, so we'll get max 10 images
     const searchAllSuggestions = async (suggestions: string[]) => {
         if (suggestions.length === 0) return;
 
@@ -83,8 +80,6 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
             // Create a single comprehensive search query from all suggestions
             const combinedQuery = createCombinedSearchQuery(suggestions);
 
-
-
             // Make a single API call with the combined query
             const response = await fetch(API_ENDPOINTS.GOOGLE_IMAGE_SEARCH, {
                 method: 'POST',
@@ -94,7 +89,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                 body: JSON.stringify({
                     query: combinedQuery,
                     page: 1,
-                    imagesPerPage: 10 // Google API limit is 10 images per request
+                    imagesPerPage: 15
                 }),
             });
 
@@ -106,6 +101,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
             }
 
             const data = await response.json();
+            // console.log('Combined search results:', data);
 
             // Add source suggestion info to each image (distribute across suggestions)
             const imagesWithSource = (data.images || []).map((img: any, index: number) => {
@@ -175,49 +171,30 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
     };
 
     // Function to check if existing image URLs match API response images and auto-select them
-    // Also adds missing existing images to the beginning of the images array
     const checkAndSelectExistingImages = (apiImages: GoogleImage[]) => {
         if (existingImageUrls.length === 0) {
+            console.log('ℹ️ No existing images to check against');
             return;
         }
-        
+
+        console.log('🔍 Checking', existingImageUrls.length, 'existing images against', apiImages.length, 'API images');
+
         const matchingUrls = new Set<string>();
-        const missingExistingImages: GoogleImage[] = [];
-        
-        // Check each existing image URL
-        existingImageUrls.forEach((existingUrl, index) => {
-            const foundInApi = apiImages.some(apiImage => apiImage.url === existingUrl);
-            
-            if (foundInApi) {
-                // Image exists in API response - mark as matching
-                matchingUrls.add(existingUrl);
-            } else {
-                // Image doesn't exist in API response - add to missing list
-                missingExistingImages.push({
-                    id: `existing-${existingUrl.slice(-10)}`, // Generate unique ID
-                    url: existingUrl,
-                    thumbnail: existingUrl, // Use full URL as thumbnail
-                    title: 'Previously Selected Image',
-                    context: 'This image was previously selected for this chapter',
-                    width: 800, // Default dimensions
-                    height: 600,
-                    size: 'Unknown',
-                    mime: 'image/jpeg',
-                    sourceSuggestion: 'Previously Selected',
-                    suggestionIndex: -1 // Special index for existing images
-                });
+
+        // Check each API image against existing image URLs
+        apiImages.forEach(apiImage => {
+            if (existingImageUrls.includes(apiImage.url)) {
+                matchingUrls.add(apiImage.url);
+                console.log('✅ Found matching image:', apiImage.url);
             }
         });
-        
-        // Combine missing existing images with API images (existing images first)
-        if (missingExistingImages.length > 0) {
-            const combinedImages = [...missingExistingImages, ...apiImages];
-            setImages(combinedImages);
-        }
-        
-        // Auto-select all existing images (both matching and missing)
-        if (existingImageUrls.length > 0) {
-            setSelectedImages(new Set(existingImageUrls));
+
+        // Auto-select matching images
+        if (matchingUrls.size > 0) {
+            setSelectedImages(matchingUrls);
+            console.log('🎯 Auto-selected', matchingUrls.size, 'existing images:', Array.from(matchingUrls));
+        } else {
+            console.log('ℹ️ No matching images found');
         }
     };
 
@@ -417,17 +394,18 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
             // Convert Set to Array for the chapter assets
             const selectedImageUrls = Array.from(selectedImages);
 
-            // Create updated chapter with selected images in assets.images array
+            // Create updated chapter with selected images in assets.image array
             const updatedChapter = {
                 assets: {
-                    images: selectedImageUrls
+                    image: selectedImageUrls
                 }
             };
 
             // Update the chapter
             onChapterUpdate(chapterIndex, updatedChapter);
 
-
+        } else {
+            console.log('ℹ️ No images selected, closing dialog without updates');
         }
 
         // Call the onDone callback to close the dialog
@@ -574,9 +552,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                                         sx={{
                                             height: '100%',
                                             cursor: 'pointer',
-                                            border: selectedImages.has(image.url) 
-                                                ? `2px solid ${image.suggestionIndex === -1 ? SUCCESS.main : PRIMARY.main}` 
-                                                : '2px solid transparent',
+                                            border: selectedImages.has(image.url) ? `2px solid ${PRIMARY.main}` : '2px solid transparent',
                                             transition: 'all 0.2s ease',
                                             '&:hover': {
                                                 transform: 'translateY(-2px)',
@@ -604,7 +580,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                                                         width: 24,
                                                         height: 24,
                                                         borderRadius: '50%',
-                                                        backgroundColor: image.suggestionIndex === -1 ? SUCCESS.main : PRIMARY.main,
+                                                        backgroundColor: PRIMARY.main,
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
@@ -612,26 +588,6 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                                                     }}
                                                 >
                                                     <CheckIcon sx={{ fontSize: 16 }} />
-                                                </Box>
-                                            )}
-                                            
-                                            {/* Previously Selected Badge */}
-                                            {image.suggestionIndex === -1 && (
-                                                <Box
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        top: 8,
-                                                        left: 8,
-                                                        bgcolor: SUCCESS.main,
-                                                        color: 'white',
-                                                        fontSize: '0.6rem',
-                                                        px: 0.5,
-                                                        py: 0.1,
-                                                        borderRadius: 0.5,
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                >
-                                                    PREV
                                                 </Box>
                                             )}
 
@@ -705,7 +661,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                                                         label={image.sourceSuggestion}
                                                         size="small"
                                                         variant="filled"
-                                                        color={image.suggestionIndex === -1 ? "secondary" : "primary"}
+                                                        color="primary"
                                                         sx={{ fontSize: '0.6rem', height: 20 }}
                                                     />
                                                 )}

@@ -454,9 +454,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     <Tab
                         value="google"
                         label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
                                 <GoogleIcon sx={{ fontSize: 18 }} />
-                                <Badge badgeContent={googleImages.length} color="primary" showZero={false}>
+                                <Badge badgeContent={googleImages.length} color="primary" sx={{ fontSize: '16px' }} showZero={false}>
                                     Google Images
                                 </Badge>
                             </Box>
@@ -473,7 +473,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     <Tab
                         value="envato"
                         label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
                                 <Box
                                     sx={{
                                         width: { xs: 14, sm: 18, md: 20 },
@@ -485,7 +485,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                     <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
                                 </Box>
                                 {/* <EnvatoIcon sx={{ fontSize: 18 }} /> */}
-                                <Badge badgeContent={envatoImages.length} color="secondary" showZero={false}>
+                                <Badge badgeContent={envatoImages.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
                                     Envato Elements
                                 </Badge>
                             </Box>
@@ -524,7 +524,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
                             onClick={handleSearch}
                             disabled={currentLoading || !searchQuery.trim()}
-                            sx={{ width: '25%', height: '56px', fontSize: '1rem' }}
+                            sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
                         >
                             Search {activeTab === 'google' ? 'Google' : 'Envato'}
                         </Button>
@@ -533,7 +533,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             onClick={handleSearchBoth}
                             disabled={googleLoading || envatoLoading || !searchQuery.trim()}
                             startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
-                            sx={{ width: '25%', height: '56px', fontSize: '1rem' }}
+                            sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
                         >
                             Search Both
                         </Button>
@@ -542,76 +542,92 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     {/* Suggested Queries */}
                     {suggestedQueries.length > 0 && (
                         <Box sx={{ mb: 2 }}>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+                            <Typography variant="body2" sx={{ color: 'text.primary', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '1.1rem', fontWeight: 500 }}>
+                                <AutoAwesomeIcon sx={{ fontSize: 18 }} />
                                 Suggested searches:
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                {suggestedQueries.map((suggestion, index) => (
-                                    <Chip
-                                        key={index}
-                                        label={suggestion}
-                                        size="small"
-                                        variant="outlined"
-                                        color="default"
-                                        onClick={() => setSearchQuery(suggestion)}
-                                        sx={{
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                backgroundColor: 'action.hover',
-                                                borderColor: PRIMARY.main
-                                            }
-                                        }}
-                                    />
-                                ))}
+                            <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    {suggestedQueries.map((suggestion, index) => (
+                                        <Chip
+                                            key={index}
+                                            label={suggestion}
+                                            size="small"
+                                            variant="outlined"
+                                            color="default"
+                                            onClick={() => setSearchQuery(suggestion)}
+                                            sx={{
+                                                mr: 1,
+                                                cursor: 'pointer',
+                                                fontSize: '1rem',
+                                                color: 'text.secondary',
+                                                height: 36,
+                                                '& .MuiChip-label': {
+                                                    fontSize: '1rem',
+                                                    fontWeight: 500
+                                                },
+                                                '&:hover': {
+                                                    backgroundColor: 'action.hover',
+                                                    borderColor: PRIMARY.main,
+                                                    color: 'text.primary',
+                                                }
+                                            }}
+                                        />
+                                    ))}
+                                </Box>
+
+                                {/* Selection Actions */}
+                                {currentImages.length > 0 && (
+                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                            <Button
+                                                size="large"
+                                                variant="outlined"
+                                                onClick={toggleSelectAll}
+                                                sx={{ borderRadius: 1, textTransform: 'none', }}
+                                            >
+                                                {selectedImages.size === currentImages.length ? 'Deselect All' : 'Select All'}
+                                            </Button>
+
+                                            <Button
+                                                size="large"
+                                                variant="outlined"
+                                                sx={{ borderRadius: 1, textTransform: 'none', }}
+                                            >
+                                                {`${selectedImages.size} of ${currentImages.length} selected`}
+                                            </Button>
+
+                                        </Box>
+
+                                        <Button
+                                            size="large"
+                                            variant="contained"
+                                            onClick={handleDone}
+                                            sx={{
+                                                borderRadius: 1,
+                                                background: PRIMARY.main,
+                                                '&:hover': { background: PRIMARY.dark }
+                                            }}
+                                        >
+                                            Done
+                                        </Button>
+                                    </Box>
+                                )}
                             </Box>
                         </Box>
                     )}
 
-                    {/* Selection Actions */}
-                    {currentImages.length > 0 && (
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={toggleSelectAll}
-                                    sx={{ borderRadius: 1 }}
-                                >
-                                    {selectedImages.size === currentImages.length ? 'Deselect All' : 'Select All'}
-                                </Button>
-
-                                <Chip
-                                    label={`${selectedImages.size} of ${currentImages.length} selected`}
-                                    size="small"
-                                    color="primary"
-                                    variant="outlined"
-                                />
-                            </Box>
-
-                            <Button
-                                size="small"
-                                variant="contained"
-                                onClick={handleDone}
-                                sx={{
-                                    borderRadius: 1,
-                                    background: PRIMARY.main,
-                                    '&:hover': { background: PRIMARY.dark }
-                                }}
-                            >
-                                Done
-                            </Button>
-                        </Box>
-                    )}
                 </Box>
             </Box>
 
             {/* Error Display */}
-            {currentError && (
-                <Alert severity="error" sx={{ m: 2 }}>
-                    {currentError}
-                </Alert>
-            )}
+            {
+                currentError && (
+                    <Alert severity="error" sx={{ m: 2 }}>
+                        {currentError}
+                    </Alert>
+                )
+            }
 
             {/* Images Grid */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
@@ -701,7 +717,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         >
                                             <Tooltip title="Preview">
                                                 <IconButton
-                                                    size="small"
+                                                    size="medium"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleImagePreview(image.url);
@@ -716,7 +732,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                             </Tooltip>
                                             <Tooltip title="Download">
                                                 <IconButton
-                                                    size="small"
+                                                    size="medium"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleDownloadImage(image.url, `${image.source}-image-${index + 1}.jpg`);
@@ -732,47 +748,21 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         </Box>
                                     </Box>
 
-                                    <CardContent sx={{ p: 1.5 }}>
+                                    <CardContent sx={{ p: 1 }}>
                                         <Typography
-                                            variant="caption"
+                                            variant="subtitle2"
                                             sx={{
                                                 display: '-webkit-box',
                                                 WebkitLineClamp: 2,
                                                 WebkitBoxOrient: 'vertical',
                                                 overflow: 'hidden',
-                                                lineHeight: 1.2,
-                                                fontSize: '0.75rem',
+                                                fontSize: '1rem',
                                                 color: 'text.secondary'
                                             }}
                                         >
                                             {image.title}
                                         </Typography>
-                                        <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                            <Chip
-                                                label={`${image.width}×${image.height}`}
-                                                size="small"
-                                                variant="outlined"
-                                                sx={{ fontSize: '0.6rem', height: 20 }}
-                                            />
-                                            {image.author && (
-                                                <Chip
-                                                    label={`By ${image.author}`}
-                                                    size="small"
-                                                    variant="filled"
-                                                    color="secondary"
-                                                    sx={{ fontSize: '0.6rem', height: 20 }}
-                                                />
-                                            )}
-                                            {image.price && image.source === 'envato' && (
-                                                <Chip
-                                                    label={image.price}
-                                                    size="small"
-                                                    variant="filled"
-                                                    color="warning"
-                                                    sx={{ fontSize: '0.6rem', height: 20 }}
-                                                />
-                                            )}
-                                        </Box>
+
                                     </CardContent>
                                 </Card>
                             </Grid>
@@ -818,7 +808,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     </Box>
                 )}
             </Box>
-        </Box>
+        </Box >
     );
 };
 

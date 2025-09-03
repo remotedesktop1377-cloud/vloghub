@@ -791,7 +791,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         }}
       >
         <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography>
+          <Typography variant="h5" sx={{ fontSize: '1.5rem', fontWeight: 600 }}>
             Manage Media - Chapter {(mediaManagementChapterIndex || 0) + 1}
           </Typography>
           <IconButton
@@ -801,8 +801,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
               '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 6L6 18M6 6l12 12" stroke={TEXT.dark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6l12 12" stroke={TEXT.dark} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </IconButton>
         </DialogTitle>
