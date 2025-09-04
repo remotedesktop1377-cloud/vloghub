@@ -8,7 +8,7 @@ import { TrendingTopic } from '../../types/TrendingTopics';
 import { durationOptions } from '../../data/mockDurationOptions';
 import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
-import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '../../data/constants';
+import { ROUTES_KEYS } from '../../data/constants';
 import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
 import { secure } from '../../utils/helperFunctions';
 
@@ -23,11 +23,7 @@ import LoadingOverlay from '../ui/LoadingOverlay';
 import TopicDetailsSection from './TopicDetailsSection';
 import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
-
-
 import HeaderSection from './HeaderSection';
-
-import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
@@ -45,25 +41,13 @@ const TrendingTopics: React.FC = () => {
 
   // Topic Details State
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
-  const [selectedTopicDetails, setSelectedTopicDetails] = useState<string>('');
   const [hypothesis, setHypothesis] = useState('');
   const [duration, setDuration] = useState('5');
   const [language, setLanguage] = useState('english');
   const [subtitleLanguage, setSubtitleLanguage] = useState('english');
   const [narrationType, setNarrationType] = useState<'interview' | 'narration'>('narration');
   const [generatingChapters, setGeneratingChapters] = useState(false);
-  const [editedScript, setEditedScript] = useState<string>('');
   const [scriptGeneratedOnce, setScriptGeneratedOnce] = useState(false);
-
-  // Suggestions/Enhance states
-  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([]);
-  const [selectedTopicSuggestions, setSelectedTopicSuggestions] = useState<string[]>([]);
-  const [loadingTopicSuggestions, setLoadingTopicSuggestions] = useState(false);
-  const [enhancingDetails, setEnhancingDetails] = useState(false);
-  const [hypothesisSuggestions, setHypothesisSuggestions] = useState<string[]>([]);
-  const [selectedHypothesisSuggestions, setSelectedHypothesisSuggestions] = useState<string[]>([]);
-  const [loadingHypothesisSuggestions, setLoadingHypothesisSuggestions] = useState(false);
-  const [enhancingHypothesis, setEnhancingHypothesis] = useState(false);
 
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
@@ -212,45 +196,10 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-  const fetchHypothesisSuggestions = async () => {
-    // For now, just set empty suggestions to avoid errors
-    setHypothesisSuggestions([]);
-    setSelectedHypothesisSuggestions([]);
-  };
-
   const handleTopicSelect = async (topic: TrendingTopic) => {
     // console.log('🟢 Handling topic select:', topic);
     setSelectedTopic(topic);
     setHypothesis('');
-    setTopicSuggestions([]);
-    setSelectedTopicSuggestions([]);
-    setHypothesisSuggestions([]);
-    setSelectedHypothesisSuggestions([]);
-    setSelectedTopicDetails('');
-    // Simplified for now - just set basic topic details
-    setSelectedTopicDetails(topic.description || '');
-  };
-
-  const handleTopicSuggestionsChange = (suggestions: string[]) => {
-    setSelectedTopicSuggestions(suggestions);
-    if (suggestions.length > 0 && selectedTopic) {
-      fetchHypothesisSuggestions();
-    }
-  };
-
-  const handleHypothesisSuggestionsChange = (suggestions: string[]) => {
-    setSelectedHypothesisSuggestions(suggestions);
-  };
-
-  // Simplified enhancement functions for now
-  const handleEnhanceTopicDetails = async (originalText?: string) => {
-    // For now, just show a placeholder message
-    toast.info('Topic enhancement functionality will be added here');
-  };
-
-  const handleEnhanceHypothesis = async (originalText?: string) => {
-    // For now, just show a placeholder message
-    toast.info('Hypothesis enhancement functionality will be added here');
   };
 
   const handleGenerateScript = async () => {
@@ -259,7 +208,7 @@ const TrendingTopics: React.FC = () => {
     }
 
     try {
-      setGeneratingChapters(true); // Keep using same loading state for now
+      setGeneratingChapters(true);
       setError(null);
 
       const location = selectedLocationType === 'global'
@@ -278,7 +227,6 @@ const TrendingTopics: React.FC = () => {
       });
       // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
-        setEditedScript(result.data.script);
         setScriptGeneratedOnce(true);
 
         // Store additional script metadata for later use
@@ -327,8 +275,6 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-
-
   const handleSubtitleLanguageChange = (newSubtitleLanguage: string) => {
     setSubtitleLanguage(newSubtitleLanguage);
   };
@@ -363,10 +309,10 @@ const TrendingTopics: React.FC = () => {
 
   return (
     <Box className={styles.trendingTopicsContainer}>
-      {loading || generatingChapters && (
+      {(loading || generatingChapters) && (
         <LoadingOverlay
           title={loading ? 'Please wait' : 'Generating Script'}
-          desc={loading ? 'We are finding the trending topics for you' : 'Please wait we are generating the script for you'}
+          desc={loading ? 'We are finding the trending topics for you...' : 'Please wait we are generating the script for you...'}
         />
       )}
 
@@ -453,35 +399,12 @@ const TrendingTopics: React.FC = () => {
 
             <TopicDetailsSection
               selectedTopic={selectedTopic}
-              selectedTopicDetails={selectedTopicDetails}
-              topicSuggestions={topicSuggestions}
-              selectedTopicSuggestions={selectedTopicSuggestions}
-              loadingTopicSuggestions={loadingTopicSuggestions}
-              enhancingDetails={enhancingDetails}
-              selectedRegion={selectedLocation}
-              language={language}
-              onTopicDetailsChange={setSelectedTopicDetails}
-              onEnhanceTopicDetails={handleEnhanceTopicDetails}
-              onTopicSuggestionsChange={handleTopicSuggestionsChange}
-              onRestoreTopicSuggestions={(suggestions) => setTopicSuggestions(suggestions)}
             />
 
             <HypothesisSection
               selectedTopic={selectedTopic}
-              selectedTopicDetails={selectedTopicDetails}
               hypothesis={hypothesis}
-              hypothesisSuggestions={hypothesisSuggestions}
-              selectedHypothesisSuggestions={selectedHypothesisSuggestions}
-              loadingHypothesisSuggestions={loadingHypothesisSuggestions}
-              enhancingHypothesis={enhancingHypothesis}
-              selectedRegion={selectedLocation}
-              selectedTopicSuggestions={selectedTopicSuggestions}
-              language={language}
-              onFetchHypothesisSuggestions={fetchHypothesisSuggestions}
               onHypothesisChange={setHypothesis}
-              onEnhanceHypothesis={handleEnhanceHypothesis}
-              onHypothesisSuggestionsChange={handleHypothesisSuggestionsChange}
-              onRestoreHypothesisSuggestions={(suggestions) => setHypothesisSuggestions(suggestions)}
             />
 
             <VideoDurationSection

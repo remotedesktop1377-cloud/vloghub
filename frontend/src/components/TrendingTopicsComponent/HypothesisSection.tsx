@@ -3,42 +3,17 @@
 import React from 'react';
 import { Paper, Typography, TextField, Box, Chip, Button, CircularProgress } from '@mui/material';
 import { TrendingTopic } from '../../types/TrendingTopics';
-import { getDirectionSx } from '../../utils/languageUtils';
 
 interface HypothesisSectionProps {
   selectedTopic: TrendingTopic | null;
-  selectedTopicDetails: string;
   hypothesis: string;
-  hypothesisSuggestions: string[];
-  selectedHypothesisSuggestions: string[];
-  loadingHypothesisSuggestions: boolean;
-  enhancingHypothesis: boolean;
-  selectedRegion: string;
-  selectedTopicSuggestions: string[];
-  language?: string;
-  onFetchHypothesisSuggestions: () => void;
   onHypothesisChange: (hypothesis: string) => void;
-  onEnhanceHypothesis: (originalText?: string) => void;
-  onHypothesisSuggestionsChange: (suggestions: string[]) => void;
-  onRestoreHypothesisSuggestions: (suggestions: string[]) => void;
 }
 
 const HypothesisSection: React.FC<HypothesisSectionProps> = ({
   selectedTopic,
-  selectedTopicDetails,
   hypothesis,
-  hypothesisSuggestions,
-  selectedHypothesisSuggestions,
-  loadingHypothesisSuggestions,
-  enhancingHypothesis,
-  selectedRegion,
-  selectedTopicSuggestions,
-  language = 'english',
-  onFetchHypothesisSuggestions,
   onHypothesisChange,
-  onEnhanceHypothesis,
-  onHypothesisSuggestionsChange,
-  onRestoreHypothesisSuggestions,
 }) => {
   return (
     <Paper sx={{ p: 1.5, opacity: selectedTopic ? 1 : 0.6 }} data-section="hypothesis">

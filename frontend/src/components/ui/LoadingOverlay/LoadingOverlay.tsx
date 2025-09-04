@@ -59,17 +59,17 @@ const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
           sx={{ mb: 4, mt: 4 }}
         />
         <Typography
-          variant="h3"
+          variant="h4"
           gutterBottom
           className={styles.loadingTitle}
           sx={{ mb: 2 }}
         >
           {title}
         </Typography>
-        <Typography variant="h4" color="text.secondary" sx={{ mb: 6 }}>
+        <Typography variant="h5" color="text.secondary" sx={{ mb: 10 }}>
           {desc}
         </Typography>
-        <Typography variant="h6" color="text.secondary">
+        <Typography variant="subtitle1" color="text.secondary">
           This may take a few moments
         </Typography>
       </Box>

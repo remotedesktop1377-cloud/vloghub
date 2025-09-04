@@ -6,32 +6,10 @@ import { TrendingTopic } from '../../types/TrendingTopics';
 
 interface TopicDetailsSectionProps {
   selectedTopic: TrendingTopic;
-  selectedTopicDetails: string;
-  topicSuggestions: string[];
-  selectedTopicSuggestions: string[];
-  loadingTopicSuggestions: boolean;
-  enhancingDetails: boolean;
-  selectedRegion: string;
-  language?: string;
-  onTopicDetailsChange: (details: string) => void;
-  onEnhanceTopicDetails: (originalText?: string) => void;
-  onTopicSuggestionsChange: (suggestions: string[]) => void;
-  onRestoreTopicSuggestions: (suggestions: string[]) => void;
 }
 
 const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
   selectedTopic,
-  selectedTopicDetails,
-  topicSuggestions,
-  selectedTopicSuggestions,
-  loadingTopicSuggestions,
-  enhancingDetails,
-  selectedRegion,
-  language = 'english',
-  onTopicDetailsChange,
-  onEnhanceTopicDetails,
-  onTopicSuggestionsChange,
-  onRestoreTopicSuggestions,
 }) => {
   return (
     <Paper sx={{ p: 1.5 }} data-section="topic-details">

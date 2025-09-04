@@ -45,6 +45,7 @@ import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '@/styles/colors';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '@/data/constants';
 import { script } from 'googleapis/build/src/apis/script';
+import LoadingOverlay from '@/components/ui/LoadingOverlay';
 
 interface ScriptData {
     description: string;
@@ -69,7 +70,6 @@ const ScriptProductionClient: React.FC = () => {
 
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
-    const [initializing, setInitializing] = useState(true);
 
     // Script approval states
     const [isScriptApproved, setIsScriptApproved] = useState(false);
@@ -108,7 +108,7 @@ const ScriptProductionClient: React.FC = () => {
     const [isDraggingUpload, setIsDraggingUpload] = useState(false);
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     // Function to upload JSON to Google Drive
     const uploadToGoogleDrive = async (chapters: Chapter[]) => {
@@ -139,11 +139,16 @@ const ScriptProductionClient: React.FC = () => {
                     words: chapter.words,
                     startTime: chapter.startTime,
                     endTime: chapter.endTime,
-                    assets: { images: chapter.assets?.images || [] },
+                    assets: {
+                        images: chapter.assets?.images || [],
+                        imagesGoogle: chapter.assets?.imagesGoogle || [],
+                        imagesEnvato: chapter.assets?.imagesEnvato || []
+                    },
                 })),
             };
 
-            // Better timestamp: 2025-09-02_22-15-33
+            // console.log('scriptProductionJSON', scriptProductionJSON);
+
             const now = new Date();
             const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
 
@@ -181,8 +186,6 @@ const ScriptProductionClient: React.FC = () => {
     const updateParagraphs = (scriptData: ScriptData) => {
         // Split script into paragraphs (split by double newlines or single newlines)
 
-        // console.log('📋 Script Data:', scriptData.script)
-
         const scriptParagraphs = scriptData.script
             .split(/\n\s*\n/)
             .map(p => p.trim())
@@ -190,6 +193,33 @@ const ScriptProductionClient: React.FC = () => {
 
         // Calculate sequential time allocation for paragraphs
         const paragraphsWithTimeRanges = calculateSequentialTimeRanges(scriptParagraphs);
+
+        // If chapters with images already exist in approvedScript, reuse them
+        try {
+            const stored = secure.j.approvedScript.get();
+            const storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
+            if (storedData && Array.isArray(storedData.chapters) && storedData.chapters.length === paragraphsWithTimeRanges.length) {
+                const normalizedFromStorage: Chapter[] = storedData.chapters.map((ch: any, index: number) => ({
+                    id: ch.id || `scene-${index + 1}`,
+                    narration: ch.narration || paragraphsWithTimeRanges[index].text,
+                    duration: ch.duration || paragraphsWithTimeRanges[index].duration,
+                    words: ch.words ?? paragraphsWithTimeRanges[index].words,
+                    startTime: ch.startTime ?? paragraphsWithTimeRanges[index].startTime,
+                    endTime: ch.endTime ?? paragraphsWithTimeRanges[index].endTime,
+                    durationInSeconds: ch.durationInSeconds ?? paragraphsWithTimeRanges[index].durationInSeconds,
+                    assets: {
+                        image: ch.assets?.image || (Array.isArray(ch.assets?.images) && ch.assets.images.length > 0 ? ch.assets.images[0] : null),
+                        audio: ch.assets?.audio || null,
+                        video: ch.assets?.video || null,
+                        images: ch.assets?.images || [],
+                        imagesGoogle: ch.assets?.imagesGoogle || [],
+                        imagesEnvato: ch.assets?.imagesEnvato || [],
+                    }
+                }));
+                setChapters(normalizedFromStorage);
+                return;
+            }
+        } catch { }
 
         // Map to Chapter[] with required fields
         const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
@@ -200,41 +230,67 @@ const ScriptProductionClient: React.FC = () => {
             startTime: p.startTime,
             endTime: p.endTime,
             durationInSeconds: p.durationInSeconds,
-            assets: { image: null, audio: null, video: null }
+            assets: { image: null, audio: null, video: null, images: [], imagesGoogle: [], imagesEnvato: [] }
         }));
 
         setChapters(chaptersAsRequired);
-        // uploadToGoogleDrive(chaptersAsRequired);
     };
 
     useEffect(() => {
-        // Load only from secure storage
-        const stored = secure.j.approvedScript.get();
-        if (stored) {
+        // Load from secure storage - check metadata first, then approved script
+        let storedData = null;
+        let isApproved = false;
+
+        // First try to load from metadata (for unapproved scripts)
+        try {
+            const storedMetadata = secure.j.scriptMetadata.get();
+            if (storedMetadata && typeof storedMetadata === 'object') {
+                storedData = storedMetadata;
+                // setScriptSectionData(storedMetadata);
+                isApproved = false; // Has metadata, so not approved yet
+            }
+        } catch (error) {
+            console.warn('Error parsing script metadata:', error);
+        }
+
+        // If no metadata, try to load from approved script
+        if (!storedData) {
             try {
-                // secure.j returns the object directly, no need to parse
-                const storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
-                setScriptData(storedData);
+                const stored = secure.j.approvedScript.get();
+                if (stored) {
+                    storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
+                    isApproved = true; // No metadata but has approved script, so it's approved
+                }
             } catch (e) {
-                console.error('Failed to parse stored script data', e);
+                console.error('Failed to parse stored approved script data', e);
             }
         }
-        setInitializing(false);
+        // console.log('storedData', JSON.stringify(storedData));
+        if (storedData) {
+            setScriptData(storedData);
+            setEditedScript(storedData.script || '');
+            setIsScriptApproved(isApproved);
+        }
+
+        setLoading(false);
     }, []);
 
     // Calculate estimated duration when script data changes
     useEffect(() => {
         if (scriptData) {
+            setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
             updateParagraphs(scriptData);
         }
     }, [scriptData]);
 
-    // Update estimated duration when edited script changes
+    // Calculate estimated duration when script data changes
     useEffect(() => {
-        if (editedScript) {
-            setEstimatedDuration(HelperFunctions.calculateDuration(editedScript));
+        if (chapters && chapters.length > 0) {
+            // save updated chapters
+            secure.j.approvedScript.set({ ...scriptData, chapters });
+            // console.log('chapters saved to approvedScript');
         }
-    }, [editedScript]);
+    }, [chapters]);
 
     // Handle browser back button
     useEffect(() => {
@@ -298,7 +354,6 @@ const ScriptProductionClient: React.FC = () => {
 
             // Update current time for next paragraph
             currentTime = endTime;
-
             return {
                 text: paragraph,
                 duration: formatTimeRange(startTime, endTime),
@@ -430,9 +485,8 @@ const ScriptProductionClient: React.FC = () => {
             toast.error('Please upload a chroma key before generating video');
             return;
         }
-
+        uploadToGoogleDrive(chapters);
         toast.success('Video generation started! This may take a while...');
-        // TODO: Implement actual video generation
     };
 
     // Chapter Management Functions
@@ -724,6 +778,7 @@ const ScriptProductionClient: React.FC = () => {
 
     const handleApproveScript = () => {
         setIsScriptApproved(true);
+        secure.j.scriptMetadata.remove();
         toast.success('Script approved! Now generating scenes breakdown...');
     };
 
@@ -744,9 +799,12 @@ const ScriptProductionClient: React.FC = () => {
         router.push(ROUTES_KEYS.TRENDING_TOPICS);
     };
 
-    if (initializing || loading) {
+    if (loading) {
         return (
-            <AppLoadingOverlay />
+            <LoadingOverlay
+                title={'Please wait'}
+                desc={'Please wait we are working on it...'}
+            />
         );
     }
 

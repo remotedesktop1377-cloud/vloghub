@@ -44,7 +44,6 @@ interface ImageResult {
     mime: string;
     sourceSuggestion?: string;
     suggestionIndex?: number;
-    // Envato-specific fields
     author?: string;
     authorUrl?: string;
     tags?: string[];
@@ -83,8 +82,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [envatoLoading, setEnvatoLoading] = useState(false);
     const [googleError, setGoogleError] = useState<string | null>(null);
     const [envatoError, setEnvatoError] = useState<string | null>(null);
-    const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
-    const [suggestedQueries, setSuggestedQueries] = useState<string[]>([]);
+    const [selectedBySource, setSelectedBySource] = useState<{ google: Set<string>; envato: Set<string> }>({ google: new Set(), envato: new Set() });
+    const [googleSuggestions, setGoogleSuggestions] = useState<string[]>([]);
+    const [envatoKeywords, setEnvatoKeywords] = useState<string[]>([]);
 
 
     // Ref to prevent duplicate API calls when useEffect runs multiple times
@@ -227,48 +227,22 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const checkAndSelectExistingImages = (apiImages: ImageResult[], source: 'google' | 'envato') => {
         if (existingImageUrls.length === 0) return;
 
+        // Only mark as selected the URLs that actually exist in this source's results
         const matchingUrls = new Set<string>();
-        const missingExistingImages: ImageResult[] = [];
-
         existingImageUrls.forEach((existingUrl) => {
-            const foundInApi = apiImages.some(apiImage => apiImage.url === existingUrl);
-
-            if (foundInApi) {
+            if (apiImages.some(apiImage => apiImage.url === existingUrl)) {
                 matchingUrls.add(existingUrl);
-            } else {
-                missingExistingImages.push({
-                    id: `existing-${existingUrl.slice(-10)}`,
-                    url: existingUrl,
-                    thumbnail: existingUrl,
-                    title: 'Previously Selected Image',
-                    context: 'This image was previously selected for this chapter',
-                    width: 800,
-                    height: 600,
-                    size: 'Unknown',
-                    mime: 'image/jpeg',
-                    sourceSuggestion: 'Previously Selected',
-                    suggestionIndex: -1,
-                    source: source
-                });
             }
         });
 
-        if (missingExistingImages.length > 0) {
-            const combinedImages = [...missingExistingImages, ...apiImages];
-            if (source === 'google') {
-                setGoogleImages(combinedImages);
-            } else {
-                setEnvatoImages(combinedImages);
-            }
-        }
-
-        if (existingImageUrls.length > 0) {
-            setSelectedImages(new Set(existingImageUrls));
-        }
+        setSelectedBySource(prev => ({
+            ...prev,
+            [source]: matchingUrls
+        }));
     };
 
-    // Generate suggested search queries
-    const generateSuggestedQueries = (narration: string): string[] => {
+    // Generate meaningful queries for Google (phrases)
+    const generateGoogleQueries = (narration: string): string[] => {
         if (!narration) return [];
 
         const suggestions: string[] = [];
@@ -324,17 +298,35 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         return Array.from(new Set(suggestions)).slice(0, 5);
     };
 
-    // Auto-generate search query from chapter narration and auto-search
+    // Generate meaningful keywords for Envato (single words)
+    const generateEnvatoWords = (narration: string): string[] => {
+        if (!narration) return [];
+        const stopWordsSet = new Set([
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+            'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+            'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those'
+        ]);
+        const tokens = narration
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter(t => t.length > 2 && !stopWordsSet.has(t) && !/^\d+$/.test(t));
+        return Array.from(new Set(tokens)).slice(0, 10);
+    };
+
+    // Auto-generate suggestions from chapter narration and auto-search
     useEffect(() => {
         if (chapterNarration && !hasInitialSearch.current) {
-            const suggestions = generateSuggestedQueries(chapterNarration);
-            setSuggestedQueries(suggestions);
+            const gSuggestions = generateGoogleQueries(chapterNarration);
+            const eKeywords = generateEnvatoWords(chapterNarration);
+            setGoogleSuggestions(gSuggestions);
+            setEnvatoKeywords(eKeywords);
 
-            if (suggestions.length > 0) {
+            if (gSuggestions.length > 0 || eKeywords.length > 0) {
                 hasInitialSearch.current = true;
-                // Search both APIs with suggestions
-                searchGoogleImages('', suggestions);
-                searchEnvatoImages(suggestions[0]); // Use first suggestion for Envato
+                // Search both APIs using their respective suggestions/keywords
+                searchGoogleImages('', gSuggestions);
+                searchEnvatoImages(eKeywords.join(' '));
             }
         }
     }, [chapterNarration]);
@@ -352,33 +344,34 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const handleSearchBoth = () => {
         if (searchQuery.trim()) {
             const query = searchQuery.trim();
-            const suggestions = generateSuggestedQueries(query);
-            searchGoogleImages(query, suggestions);
-            searchEnvatoImages(query);
+            const gSuggestions = generateGoogleQueries(query);
+            const eKeywords = generateEnvatoWords(query);
+            searchGoogleImages(query, gSuggestions);
+            searchEnvatoImages(eKeywords.join(' '));
             toast.info('Searching both Google and Envato...');
         }
     };
 
     const handleSearchQueryChange = (newQuery: string) => {
         setSearchQuery(newQuery);
-
         if (newQuery.trim()) {
-            const suggestions = generateSuggestedQueries(newQuery);
-            setSuggestedQueries(suggestions);
+            setGoogleSuggestions(generateGoogleQueries(newQuery));
+            setEnvatoKeywords(generateEnvatoWords(newQuery));
         } else if (chapterNarration) {
-            const suggestions = generateSuggestedQueries(chapterNarration);
-            setSuggestedQueries(suggestions);
+            setGoogleSuggestions(generateGoogleQueries(chapterNarration));
+            setEnvatoKeywords(generateEnvatoWords(chapterNarration));
         }
     };
 
     const handleImageSelect = (imageUrl: string) => {
-        const newSelected = new Set(selectedImages);
-        if (newSelected.has(imageUrl)) {
-            newSelected.delete(imageUrl);
+        const sourceKey = activeTab;
+        const newSet = new Set(selectedBySource[sourceKey]);
+        if (newSet.has(imageUrl)) {
+            newSet.delete(imageUrl);
         } else {
-            newSelected.add(imageUrl);
+            newSet.add(imageUrl);
         }
-        setSelectedImages(newSelected);
+        setSelectedBySource(prev => ({ ...prev, [sourceKey]: newSet }));
     };
 
     const handleImagePreview = (imageUrl: string) => {
@@ -405,25 +398,34 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     };
 
     const toggleSelectAll = () => {
+        const sourceKey = activeTab;
+        const currentSelected = selectedBySource[sourceKey];
         let newSelected: Set<string>;
-        if (selectedImages.size === currentImages.length) {
+        if (currentSelected.size === currentImages.length) {
             newSelected = new Set();
         } else {
             newSelected = new Set(currentImages.map(img => img.url));
         }
-        setSelectedImages(newSelected);
+        setSelectedBySource(prev => ({ ...prev, [sourceKey]: newSelected }));
     };
 
     const handleDone = () => {
-        if (selectedImages.size > 0) {
-            const selectedImageUrls = Array.from(selectedImages);
+        const combined = new Set<string>();
+        selectedBySource.google.forEach((u) => combined.add(u));
+        selectedBySource.envato.forEach((u) => combined.add(u));
+        if (combined.size > 0) {
+            const selectedImageUrls = Array.from(combined);
+            const googleUrls = Array.from(selectedBySource.google);
+            const envatoUrls = Array.from(selectedBySource.envato);
             const updatedChapter = {
                 assets: {
-                    images: selectedImageUrls
+                    images: selectedImageUrls,
+                    imagesGoogle: googleUrls,
+                    imagesEnvato: envatoUrls
                 }
             };
             onChapterUpdate(chapterIndex, updatedChapter);
-            toast.success(`${selectedImages.size} images selected for chapter`);
+            toast.success(`${combined.size} images selected for chapter`);
         }
         onDone();
     };
@@ -523,10 +525,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             fullWidth
                             startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
                             onClick={handleSearch}
-                            disabled={currentLoading || !searchQuery.trim()}
+                            disabled={currentLoading || !searchQuery.trim() || activeTab !== 'envato'}
                             sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
                         >
-                            Search {activeTab === 'google' ? 'Google' : 'Envato'}
+                            Search Envato
                         </Button>
                         <Button
                             variant="outlined"
@@ -539,23 +541,30 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                         </Button>
                     </Box>
 
-                    {/* Suggested Queries */}
-                    {suggestedQueries.length > 0 && (
+                    {/* Suggested Queries (Google) or Keywords (Envato) */}
+                    {(activeTab === 'google' ? googleSuggestions.length > 0 : envatoKeywords.length > 0) && (
                         <Box sx={{ mb: 2 }}>
                             <Typography variant="body2" sx={{ color: 'text.primary', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '1.1rem', fontWeight: 500, lineHeight: 1.6 }}>
                                 <AutoAwesomeIcon sx={{ fontSize: 18 }} />
-                                Suggested searches:
+                                {activeTab === 'google' ? 'Meaningful queries:' : 'Meaningful words:'}
                             </Typography>
                             <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    {suggestedQueries.map((suggestion, index) => (
+                                    {(activeTab === 'google' ? googleSuggestions : envatoKeywords).map((suggestion, index) => (
                                         <Chip
                                             key={index}
                                             label={suggestion}
                                             size="small"
                                             variant="outlined"
                                             color="default"
-                                            onClick={() => setSearchQuery(suggestion)}
+                                            onClick={() => {
+                                                setSearchQuery(suggestion);
+                                                if (activeTab === 'google') {
+                                                    searchGoogleImages(suggestion);
+                                                } else {
+                                                    searchEnvatoImages(suggestion);
+                                                }
+                                            }}
                                             sx={{
                                                 mr: 1,
                                                 cursor: 'pointer',
@@ -587,7 +596,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 onClick={toggleSelectAll}
                                                 sx={{ borderRadius: 1, textTransform: 'none', }}
                                             >
-                                                {selectedImages.size === currentImages.length ? 'Deselect All' : 'Select All'}
+                                                {selectedBySource[activeTab].size === currentImages.length ? 'Deselect All' : 'Select All'}
                                             </Button>
 
                                             <Button
@@ -595,7 +604,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 variant="outlined"
                                                 sx={{ borderRadius: 1, textTransform: 'none', }}
                                             >
-                                                {`${selectedImages.size} of ${currentImages.length} selected`}
+                                                {`${selectedBySource[activeTab].size} of ${currentImages.length} selected`}
                                             </Button>
 
                                         </Box>
@@ -647,7 +656,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                     sx={{
                                         height: '100%',
                                         cursor: 'pointer',
-                                        border: selectedImages.has(image.url)
+                                        border: (selectedBySource[image.source || 'google']?.has(image.url))
                                             ? `2px solid ${image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' ? WARNING.main : PRIMARY.main)}`
                                             : '2px solid transparent',
                                         transition: 'all 0.2s ease',
@@ -668,7 +677,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         />
 
                                         {/* Selection Overlay */}
-                                        {selectedImages.has(image.url) && (
+                                        {(selectedBySource[image.source || 'google']?.has(image.url)) && (
                                             <Box
                                                 sx={{
                                                     position: 'absolute',

@@ -95,46 +95,22 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   chaptersGenerated,
   generatingChapters,
   editingChapter,
-  editHeading,
   editNarration,
   selectedChapterIndex,
-  rightTabIndex,
-  aiImagesEnabled,
-  imagesLoading,
-  generatedImages,
-  aiPrompt,
-  pickerOpen,
-  pickerChapterIndex,
-  pickerNarrations,
-  pickerLoading,
-  uploadedImages,
-  isDraggingUpload,
   chapterImagesMap,
   onAddChapterAfter,
   onDeleteChapter,
   onSaveEdit,
   onCancelEdit,
-  onEditHeadingChange,
   onEditNarrationChange,
   onStartEdit,
   onDragEnd,
   onSelectChapter,
-  onRightTabChange,
-  onAIPromptChange,
-  onUseAIChange,
-  onGenerateImages,
-  onImageSelect,
-  onImageDeselect,
-  onDownloadImage,
-  onTriggerFileUpload,
-  onUploadFiles,
   onPickerOpen,
   onPickerChapterIndex,
   onPickerLoading,
   onPickerNarrations,
   onChapterImagesMapChange,
-  onGeneratedImagesChange,
-  onRightTabIndexChange,
   mediaManagementOpen,
   mediaManagementChapterIndex,
   onMediaManagementOpen,
@@ -788,7 +764,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         }}
       >
         <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h5" sx={{ fontSize: '1.5rem', fontWeight: 600 }}>
+          <Typography variant="h5" component="div" sx={{ fontSize: '1.5rem', fontWeight: 600 }}>
             Manage Media - Chapter {(mediaManagementChapterIndex || 0) + 1}
           </Typography>
           <IconButton
@@ -846,7 +822,17 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                   onMediaManagementOpen(false);
                   onMediaManagementChapterIndex(null);
                 }}
-                existingImageUrls={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.images || []}
+                existingImageUrls={[
+                  ...(
+                    chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.imagesGoogle || []
+                  ),
+                  ...(
+                    chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.imagesEnvato || []
+                  ),
+                  ...(
+                    chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.images || []
+                  )
+                ]}
               />
             </Box>
           </Box>

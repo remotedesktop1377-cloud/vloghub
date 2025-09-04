@@ -346,8 +346,6 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
         }
     };
 
-
-
     const handleImageSelect = (imageUrl: string) => {
         const newSelected = new Set(selectedImages);
         if (newSelected.has(imageUrl)) {

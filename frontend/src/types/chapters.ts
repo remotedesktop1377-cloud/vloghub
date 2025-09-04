@@ -12,6 +12,8 @@ export interface Chapter {
     on_screen_text?: string;
     assets?: {
         images?: string[] | null;
+        imagesGoogle?: string[] | null;
+        imagesEnvato?: string[] | null;
         audio?: string | null;
         video?: string | null;
     };

@@ -25,8 +25,8 @@ interface VideoDurationSectionProps {
   onSubtitleLanguageChange?: (subtitleLanguage: string) => void;
   narrationType?: 'interview' | 'narration';
   onNarrationTypeChange?: (narrationType: 'interview' | 'narration') => void;
-  generating?: boolean; // NEW: show loading
-  generatedOnce?: boolean; // NEW: disable after generating
+  generating?: boolean;
+  generatedOnce?: boolean;
 }
 
 const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({

@@ -145,27 +145,27 @@ export const SecureStorageHelpers = {
    * Get approved script from secure storage
    */
   getApprovedScript: () => secure.j.approvedScript.get(),
-  
+
   /**
    * Set approved script in secure storage
    */
   setApprovedScript: (scriptData: any) => secure.j.approvedScript.set(scriptData),
-  
+
   /**
    * Remove approved script from secure storage
    */
   removeApprovedScript: () => secure.j.approvedScript.remove(),
-  
+
   /**
    * Get script metadata from secure storage
    */
   getScriptMetadata: () => secure.j.scriptMetadata.get(),
-  
+
   /**
    * Set script metadata in secure storage
    */
   setScriptMetadata: (metadata: any) => secure.j.scriptMetadata.set(metadata),
-  
+
   /**
    * Remove script metadata from secure storage
    */
@@ -380,35 +380,35 @@ export class HelperFunctions {
     switch (lang.toLowerCase()) {
       case 'urdu':
         return {
-          title: '📋 عنوان',
-          hook: '🎯 ہک',
-          mainContent: '📝 اہم مواد',
-          conclusion: '🏁 نتیجہ',
-          callToAction: '🚀 کارروائی کا مطالبہ'
+          title: 'عنوان',
+          hook: 'ہک',
+          mainContent: 'اہم مواد',
+          conclusion: 'نتیجہ',
+          callToAction: 'کارروائی کا مطالبہ'
         };
       case 'arabic':
         return {
-          title: '📋 عنوان',
-          hook: '🎯 خطاب',
-          mainContent: '📝 المحتوى الرئيسي',
-          conclusion: '🏁 خاتمة',
-          callToAction: '🚀 دعوة للعمل'
+          title: 'عنوان',
+          hook: 'خطاب',
+          mainContent: 'المحتوى الرئيسي',
+          conclusion: 'خاتمة',
+          callToAction: 'دعوة للعمل'
         };
       case 'hindi':
         return {
-          title: '📋 शीर्षक',
-          hook: '🎯 हुक',
-          mainContent: '📝 मुख्य सामग्री',
-          conclusion: '🏁 निष्कर्ष',
-          callToAction: '🚀 कार्रवाई का आह्वान'
+          title: 'शीर्षक',
+          hook: 'हुक',
+          mainContent: 'मुख्य सामग्री',
+          conclusion: 'निष्कर्ष',
+          callToAction: 'कार्रवाई का आह्वान'
         };
       default: // english and other languages
         return {
-          title: '📋 TITLE',
-          hook: '🎯 HOOK',
-          mainContent: '📝 MAIN CONTENT',
-          conclusion: '🏁 CONCLUSION',
-          callToAction: '🚀 CALL TO ACTION'
+          title: 'TITLE',
+          hook: 'HOOK',
+          mainContent: 'MAIN CONTENT',
+          conclusion: 'CONCLUSION',
+          callToAction: 'CALL TO ACTION'
         };
     }
   };
