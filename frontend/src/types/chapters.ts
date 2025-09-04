@@ -10,6 +10,7 @@ export interface Chapter {
     voiceover_style?: string;
     visual_guidance?: string;
     on_screen_text?: string;
+    highlightedKeywords?: string[];
     assets?: {
         images?: string[] | null;
         imagesGoogle?: string[] | null;

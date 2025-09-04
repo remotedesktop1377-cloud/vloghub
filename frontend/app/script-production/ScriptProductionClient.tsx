@@ -108,6 +108,8 @@ const ScriptProductionClient: React.FC = () => {
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [uploadingCompleted, setUploadingCompleted] = useState(false);
+    const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
+    const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
 
     // Function to upload JSON to Google Drive
     const uploadToGoogleDrive = async (chapters: Chapter[]) => {
@@ -138,6 +140,7 @@ const ScriptProductionClient: React.FC = () => {
                     words: chapter.words,
                     startTime: chapter.startTime,
                     endTime: chapter.endTime,
+                    highlightedKeywords: chapter.highlightedKeywords || [],
                     assets: {
                         images: chapter.assets?.images || [],
                         imagesGoogle: chapter.assets?.imagesGoogle || [],
@@ -149,10 +152,10 @@ const ScriptProductionClient: React.FC = () => {
             // console.log('scriptProductionJSON', scriptProductionJSON);
 
             const now = new Date();
-            const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+            const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
 
             const jobId = HelperFunctions.generateRandomId();
-            const folderName = `${jobId}-${timestamp}`; // <-- folder only, no ".json"
+            const folderName = `job-${jobId}-${timestamp}`; // <-- folder only, no ".json"
             const fileName = `project-config.json`;
 
             const form = new FormData();
@@ -176,13 +179,10 @@ const ScriptProductionClient: React.FC = () => {
             }
 
             const result = await response.json();
-            const totalScenesUploaded = Array.isArray(result?.images?.scenes) ? result.images.scenes.reduce((n: number, s: any) => n + (s?.uploaded || 0), 0) : 0;
-            const hasChromaKey = result.chromaKey && result.chromaKey.name;
-            toast.success(`Uploaded JSON + ${totalScenesUploaded} scene images${hasChromaKey ? ' + chroma key video' : ''} to Google Drive`);
-            console.log('Drive result:', result);
+            // console.log('Drive result:', result);
+
             setShowBackConfirmation(true);
             setUploadingCompleted(true);
-            console.log('Drive result:', result);
         } catch (e: any) {
             console.error(e);
             toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
@@ -797,6 +797,266 @@ const ScriptProductionClient: React.FC = () => {
         }
     };
 
+    // Handle text selection for highlighting keywords
+    const handleTextSelection = (chapterIndex: number, event: React.MouseEvent) => {
+        // console.log('handleTextSelection called for chapter:', chapterIndex);
+        
+        // Use a shorter delay to capture the selection more accurately
+        setTimeout(() => {
+            const selection = window.getSelection();
+            // console.log('Selection object:', selection);
+            // console.log('Selection text:', selection?.toString());
+            
+            if (!selection || selection.toString().trim() === '') {
+                console.log('No selection or empty selection');
+                return;
+            }
+
+            const selectedText = selection.toString().trim();
+            // console.log('Selected text:', selectedText);
+            
+            if (selectedText.length === 0) {
+                console.log('Selected text is empty after trim');
+                return;
+            }
+
+            // Get the exact range of the selection
+            const range = selection.getRangeAt(0);
+            const startContainer = range.startContainer;
+            const endContainer = range.endContainer;
+            
+            // console.log('Start container type:', startContainer.nodeType);
+            // console.log('End container type:', endContainer.nodeType);
+            // console.log('Range start:', range.startOffset, 'Range end:', range.endOffset);
+            
+            // Handle text selection that might span multiple nodes
+            if (startContainer.nodeType === Node.TEXT_NODE && endContainer.nodeType === Node.TEXT_NODE) {
+                // Same text node - simple case
+                if (startContainer === endContainer) {
+                    const textContent = startContainer.textContent || startContainer.nodeValue || '';
+                    const startIndex = range.startOffset;
+                    const endIndex = range.endOffset;
+                    const actualSelectedText = textContent.substring(startIndex, endIndex).trim();
+                    
+                    // console.log('Same text node - Full text:', textContent);
+                    // console.log('Same text node - Selected range:', startIndex, 'to', endIndex);
+                    // console.log('Same text node - Actual selected text:', actualSelectedText);
+                    
+                    if (actualSelectedText.length > 0) {
+                        setSelectedText({
+                            chapterIndex,
+                            text: actualSelectedText,
+                            startIndex,
+                            endIndex
+                        });
+                    }
+                } else {
+                    // Different text nodes - use the selection text directly
+                    // console.log('Different text nodes - using selection text directly');
+                    setSelectedText({
+                        chapterIndex,
+                        text: selectedText,
+                        startIndex: 0,
+                        endIndex: selectedText.length
+                    });
+                }
+            } else if (startContainer.nodeType === Node.ELEMENT_NODE || endContainer.nodeType === Node.ELEMENT_NODE) {
+                // Selection spans across elements - use the selection text directly
+                // console.log('Selection spans elements - using selection text directly');
+                setSelectedText({
+                    chapterIndex,
+                    text: selectedText,
+                    startIndex: 0,
+                    endIndex: selectedText.length
+                });
+            } else {
+                console.log('Unsupported node types for selection');
+                console.log('Start node type:', startContainer.nodeType, 'End node type:', endContainer.nodeType);
+            }
+        }, 50); // Even shorter delay for more accurate capture
+    };
+
+    // Save highlighted keywords to chapter
+    const saveHighlightedKeywords = (chapterIndex: number, keywords: string[]) => {
+        const updatedChapters = chapters.map((chapter, index) => {
+            if (index === chapterIndex) {
+                return {
+                    ...chapter,
+                    highlightedKeywords: keywords
+                };
+            }
+            return chapter;
+        });
+        setChapters(updatedChapters);
+        setSelectedText(null);
+    };
+
+    // Add keyword to highlighted list
+    const addKeyword = () => {
+        if (!selectedText) return;
+        
+        const chapter = chapters[selectedText.chapterIndex];
+        const currentKeywords = chapter.highlightedKeywords || [];
+        const selectedTextLower = selectedText.text.toLowerCase().trim();
+        
+        // Check if the exact text is already a keyword
+        if (currentKeywords.some(keyword => keyword.toLowerCase().trim() === selectedTextLower)) {
+            toast.info(`"${selectedText.text}" is already in keywords`);
+            setSelectedText(null);
+            window.getSelection()?.removeAllRanges();
+            return;
+        }
+        
+        // Check if the selected text contains any existing keywords
+        const containsExistingKeywords = currentKeywords.some(keyword => 
+            selectedTextLower.includes(keyword.toLowerCase().trim()) ||
+            keyword.toLowerCase().trim().includes(selectedTextLower)
+        );
+        
+        if (containsExistingKeywords) {
+            // Find which keywords are contained in the selection
+            const containedKeywords = currentKeywords.filter(keyword => 
+                selectedTextLower.includes(keyword.toLowerCase().trim())
+            );
+            
+            if (containedKeywords.length > 0) {
+                toast.warning(`Selection contains existing keywords: ${containedKeywords.join(', ')}. Please select only new text.`);
+                setSelectedText(null);
+                window.getSelection()?.removeAllRanges();
+                return;
+            }
+        }
+        
+        // Check if any existing keyword contains the selected text
+        const isContainedInExisting = currentKeywords.some(keyword => 
+            keyword.toLowerCase().trim().includes(selectedTextLower)
+        );
+        
+        if (isContainedInExisting) {
+            toast.warning(`"${selectedText.text}" is already part of an existing keyword. Please select different text.`);
+            setSelectedText(null);
+            window.getSelection()?.removeAllRanges();
+            return;
+        }
+        
+        // Add the new keyword
+        const newKeywords = [...currentKeywords, selectedText.text];
+        saveHighlightedKeywords(selectedText.chapterIndex, newKeywords);
+        toast.success(`Added "${selectedText.text}" to keywords`);
+        
+        // Clear selection after adding
+        setSelectedText(null);
+        window.getSelection()?.removeAllRanges();
+    };
+
+    // Clear selection when clicking outside
+    const handleClearSelection = (event?: React.MouseEvent) => {
+        if (event) {
+            // Only clear if not clicking on the toolbar or text selection area
+            const target = event.target as HTMLElement;
+            const isToolbar = target.closest('[data-toolbar="keyword-toolbar"]');
+            const isTextArea = target.closest('[data-chapter-index]');
+            const isKeywordBadge = target.closest('[data-keyword-badge]');
+            
+            if (!isToolbar && !isTextArea && !isKeywordBadge) {
+                console.log('Clearing selection - clicked outside toolbar, text area, and keyword badges');
+                setSelectedText(null);
+                window.getSelection()?.removeAllRanges();
+            }
+        } else {
+            // Direct clear (from Cancel button)
+            console.log('Clearing selection directly');
+            setSelectedText(null);
+            window.getSelection()?.removeAllRanges();
+        }
+    };
+
+    // Debug selectedText state changes
+    React.useEffect(() => {
+        console.log('selectedText state changed:', selectedText);
+        
+        // Auto-clear selection after 10 seconds if user doesn't interact
+        if (selectedText) {
+            const timeout = setTimeout(() => {
+                console.log('Auto-clearing selection after timeout');
+                setSelectedText(null);
+                window.getSelection()?.removeAllRanges();
+            }, 10000);
+            
+            return () => clearTimeout(timeout);
+        }
+    }, [selectedText]);
+
+    // Global selection listener
+    React.useEffect(() => {
+        let selectionTimeout: NodeJS.Timeout;
+        
+        const handleGlobalSelection = () => {
+            // Clear any existing timeout
+            if (selectionTimeout) {
+                clearTimeout(selectionTimeout);
+            }
+            
+            const selection = window.getSelection();
+            if (selection && selection.toString().trim()) {
+                console.log('Global selection detected:', selection.toString());
+                // Find which chapter this selection belongs to
+                const range = selection.getRangeAt(0);
+                const textNode = range.startContainer;
+                
+                if (textNode.nodeType === Node.TEXT_NODE) {
+                    // Try to find the chapter by traversing up the DOM
+                    let element = textNode.parentElement;
+                    while (element && !element.getAttribute('data-chapter-index')) {
+                        element = element.parentElement;
+                    }
+                    
+                    if (element) {
+                        const chapterIndex = parseInt(element.getAttribute('data-chapter-index') || '0');
+                        const textContent = textNode.textContent || '';
+                        const startIndex = range.startOffset;
+                        const endIndex = range.endOffset;
+                        
+                        // Extract only the selected portion of the text
+                        const actualSelectedText = textContent.substring(startIndex, endIndex).trim();
+                        
+                        console.log('Global listener - Full text:', textContent);
+                        console.log('Global listener - Selected range:', startIndex, 'to', endIndex);
+                        console.log('Global listener - Actual selected text:', actualSelectedText);
+                        
+                        if (actualSelectedText.length > 0) {
+                            setSelectedText({
+                                chapterIndex,
+                                text: actualSelectedText,
+                                startIndex,
+                                endIndex
+                            });
+                        }
+                    }
+                }
+            } else {
+                // Only clear selection after a delay to allow for button clicks
+                console.log('Selection cleared or empty - scheduling clear');
+                selectionTimeout = setTimeout(() => {
+                    if (!isInteractingWithToolbar) {
+                        console.log('Clearing selection after timeout');
+                        setSelectedText(null);
+                    } else {
+                        console.log('Not clearing selection - user is interacting with toolbar');
+                    }
+                }, 3000); // 3 second delay before clearing
+            }
+        };
+
+        document.addEventListener('selectionchange', handleGlobalSelection);
+        return () => {
+            document.removeEventListener('selectionchange', handleGlobalSelection);
+            if (selectionTimeout) {
+                clearTimeout(selectionTimeout);
+            }
+        };
+    }, []);
+
     const handleConfirmBack = () => {
         // Clear script data from secure storage when leaving
         try {
@@ -837,7 +1097,10 @@ const ScriptProductionClient: React.FC = () => {
     }
 
     return (
-        <Box sx={{ width: '100vw', height: '100vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <Box 
+            sx={{ width: '100vw', height: '100vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}
+            onClick={handleClearSelection}
+        >
             <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexShrink: 0, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Button
@@ -1152,6 +1415,7 @@ const ScriptProductionClient: React.FC = () => {
                                         uploadedImages={uploadedImages}
                                         isDraggingUpload={isDraggingUpload}
                                         chapterImagesMap={chapterImagesMap}
+                                        selectedText={selectedText}
                                         onChaptersUpdate={setChapters}
                                         onAddChapterAfter={handleAddChapterAfter}
                                         onDeleteChapter={handleDeleteChapter}
@@ -1182,6 +1446,10 @@ const ScriptProductionClient: React.FC = () => {
                                         mediaManagementChapterIndex={mediaManagementChapterIndex}
                                         onMediaManagementOpen={setMediaManagementOpen}
                                         onMediaManagementChapterIndex={setMediaManagementChapterIndex}
+                                        onTextSelection={handleTextSelection}
+                                        onAddKeyword={addKeyword}
+                                        onClearSelection={() => handleClearSelection()}
+                                        onToolbarInteraction={setIsInteractingWithToolbar}
                                         language={scriptData.language}
                                         onGoogleImagePreview={(imageUrl) => {
                                             // Open the image in a new tab for preview
@@ -1303,8 +1571,8 @@ const ScriptProductionClient: React.FC = () => {
                     {uploadingCompleted ? 'Uploading Completed' : '⚠️ Are you sure?'}
                 </DialogTitle>
                 <DialogContent>
-                    <Typography variant="h5" sx={{ mb: 2, lineHeight: 2.5 }}>
-                        {uploadingCompleted ? 'Your video is being generating, We will notify you when it is complete.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
+                    <Typography variant="h5" sx={{ mb: 2, lineHeight: 1.5 }}>
+                        {uploadingCompleted ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
