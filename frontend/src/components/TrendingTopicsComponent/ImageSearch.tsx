@@ -202,7 +202,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         const uniqueSuggestions = Array.from(new Set(cleanSuggestions))
             .filter(suggestion => suggestion.length > 2);
 
-        if (uniqueSuggestions.length === 0) return '';
+        if (uniqueSuggestions.length === 0) return suggestions[0];
         if (uniqueSuggestions.length === 1) return uniqueSuggestions[0];
 
         const relevantSuggestions = uniqueSuggestions.slice(0, Math.min(4, uniqueSuggestions.length));
@@ -520,20 +520,22 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                 }
                             }}
                         />
+
                         <Button
                             variant="outlined"
                             fullWidth
                             startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
                             onClick={handleSearch}
-                            disabled={currentLoading || !searchQuery.trim() || activeTab !== 'envato'}
+                            disabled={currentLoading || !searchQuery.trim()}
                             sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
                         >
-                            Search Envato
+                            Search {activeTab === 'google' ? 'Google' : 'Envato'}
                         </Button>
+
                         <Button
                             variant="outlined"
                             onClick={handleSearchBoth}
-                            disabled={googleLoading || envatoLoading || !searchQuery.trim()}
+                            disabled={currentLoading || !searchQuery.trim()}
                             startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
                             sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
                         >

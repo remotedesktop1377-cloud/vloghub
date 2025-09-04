@@ -375,6 +375,10 @@ export class HelperFunctions {
     }
   }
 
+  static generateRandomId(length = 10) {
+    return Math.random().toString(36).substring(2, length + 2);
+  }
+  
   // Function to get localized section headers based on language
   static getLocalizedSectionHeaders = (lang: string) => {
     switch (lang.toLowerCase()) {

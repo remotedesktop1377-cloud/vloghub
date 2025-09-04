@@ -41,10 +41,8 @@ import { Chapter } from '@/types/chapters';
 import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
-import { SUCCESS, INFO, WARNING, SPECIAL, HOVER } from '@/styles/colors';
-import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
-import { LOCAL_STORAGE_KEYS, ROUTES_KEYS } from '@/data/constants';
-import { script } from 'googleapis/build/src/apis/script';
+import { SUCCESS } from '@/styles/colors';
+import { ROUTES_KEYS } from '@/data/constants';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 
 interface ScriptData {
@@ -109,6 +107,7 @@ const ScriptProductionClient: React.FC = () => {
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+    const [uploadingCompleted, setUploadingCompleted] = useState(false);
 
     // Function to upload JSON to Google Drive
     const uploadToGoogleDrive = async (chapters: Chapter[]) => {
@@ -152,18 +151,23 @@ const ScriptProductionClient: React.FC = () => {
             const now = new Date();
             const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
 
-            const safeTopic = (scriptData.topic || 'untitled').replace(/[^a-zA-Z0-9]+/g, '-');
-            const folderName = `${timestamp}-${safeTopic}`; // <-- folder only, no ".json"
+            const jobId = HelperFunctions.generateRandomId();
+            const folderName = `${jobId}-${timestamp}`; // <-- folder only, no ".json"
             const fileName = `project-config.json`;
+
+            const form = new FormData();
+            form.append('folderName', folderName);
+            form.append('fileName', fileName);
+            form.append('jsonData', JSON.stringify(scriptProductionJSON));
+
+            // Add chroma key file if available
+            if (chromaKeyFile) {
+                form.append('file', chromaKeyFile);
+            }
 
             const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_UPLOAD, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    jsonData: scriptProductionJSON,
-                    folderName,      // <-- NEW
-                    fileName,        // stays "project-config.json"
-                }),
+                body: form,
             });
 
             if (!response.ok) {
@@ -172,7 +176,12 @@ const ScriptProductionClient: React.FC = () => {
             }
 
             const result = await response.json();
-            toast.success(`Uploaded "${result.fileName}" to ${result.path}`);
+            const totalScenesUploaded = Array.isArray(result?.images?.scenes) ? result.images.scenes.reduce((n: number, s: any) => n + (s?.uploaded || 0), 0) : 0;
+            const hasChromaKey = result.chromaKey && result.chromaKey.name;
+            toast.success(`Uploaded JSON + ${totalScenesUploaded} scene images${hasChromaKey ? ' + chroma key video' : ''} to Google Drive`);
+            console.log('Drive result:', result);
+            setShowBackConfirmation(true);
+            setUploadingCompleted(true);
             console.log('Drive result:', result);
         } catch (e: any) {
             console.error(e);
@@ -486,7 +495,6 @@ const ScriptProductionClient: React.FC = () => {
             return;
         }
         uploadToGoogleDrive(chapters);
-        toast.success('Video generation started! This may take a while...');
     };
 
     // Chapter Management Functions
@@ -784,6 +792,9 @@ const ScriptProductionClient: React.FC = () => {
 
     const handleCancelBack = () => {
         setShowBackConfirmation(false);
+        if (uploadingCompleted) {
+            router.replace(ROUTES_KEYS.TRENDING_TOPICS);
+        }
     };
 
     const handleConfirmBack = () => {
@@ -803,7 +814,7 @@ const ScriptProductionClient: React.FC = () => {
         return (
             <LoadingOverlay
                 title={'Please wait'}
-                desc={'Please wait we are working on it...'}
+                desc={'We are uploading your script to process it...'}
             />
         );
     }
@@ -1289,11 +1300,11 @@ const ScriptProductionClient: React.FC = () => {
                 fullWidth
             >
                 <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
-                    ⚠️ Are you sure?
+                    {uploadingCompleted ? 'Uploading Completed' : '⚠️ Are you sure?'}
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="h5" sx={{ mb: 2, lineHeight: 2.5 }}>
-                        You haven't approved your script yet. If you go back now, your current progress and script data will be permanently deleted.
+                        {uploadingCompleted ? 'Your video is being generating, We will notify you when it is complete.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
@@ -1302,16 +1313,16 @@ const ScriptProductionClient: React.FC = () => {
                         variant="outlined"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
-                        Stay Here
+                        {uploadingCompleted ? 'Close' : 'Stay Here'}
                     </Button>
-                    <Button
+                    {!uploadingCompleted && <Button
                         onClick={handleConfirmBack}
                         variant="contained"
                         color="warning"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
                         Discard Script
-                    </Button>
+                    </Button>}
                 </DialogActions>
             </Dialog>
         </Box>
