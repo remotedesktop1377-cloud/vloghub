@@ -97,13 +97,53 @@ interface ChaptersSectionProps {
 
 // Component to render text with highlighted keywords that preserves text selection
 const TextWithHighlights: React.FC<{ text: string; keywords: string[] }> = ({ text, keywords }) => {
-  if (!keywords || keywords.length === 0) {
+  if (!text || !keywords || keywords.length === 0) {
     return <>{text}</>;
   }
 
-  // Simple approach: just render the text normally for now to fix selection issues
-  // We'll add highlighting back later with a better approach
-  return <>{text}</>;
+  const nonEmptyKeywords = keywords
+    .map(k => k.trim())
+    .filter(k => k.length > 0);
+
+  if (nonEmptyKeywords.length === 0) {
+    return <>{text}</>;
+  }
+
+  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Sort by length to prioritize longer phrases and reduce partial overlaps
+  const pattern = nonEmptyKeywords
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join('|');
+
+  const regex = new RegExp(`(${pattern})`, 'gi');
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, idx) => {
+        // If part matches any keyword (case-insensitive), highlight it
+        const isMatch = nonEmptyKeywords.some(k => k.toLowerCase() === part.toLowerCase());
+        if (isMatch) {
+          return (
+            <span
+              key={idx}
+              style={{
+                backgroundColor: 'rgba(255, 220, 40, 0.6)',
+                borderRadius: 3,
+                padding: '0 2px'
+              }}
+              data-highlighted="true"
+            >
+              {part}
+            </span>
+          );
+        }
+        return <span key={idx}>{part}</span>;
+      })}
+    </>
+  );
 };
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
