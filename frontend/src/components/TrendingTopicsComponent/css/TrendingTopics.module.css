@@ -1,0 +1,467 @@
+/* TrendingTopics Component Styles */
+.trendingTopicsContainer {
+  min-height: 100vh;
+  background: var(--background-default, #060606);
+  color: var(--text-primary, #ffffff);
+  padding: 20px;
+}
+
+.headerSection {
+  background: var(--background-secondary, #252525);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px var(--shadow-dark, rgba(0, 0, 0, 0.3));
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  background: var(--purple-gradient-primary, linear-gradient(135deg, #6D28D9 0%, #9333EA 100%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: var(--text-muted, #7C7C7C);
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.dateRangeSelector {
+  background: var(--background-overlay-light, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-overlay-medium, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.dateRangeSelector:hover {
+  border-color: var(--primary-main, #1976d2);
+  transition: border-color 0.2s ease;
+}
+
+.chaptersSection {
+  background: var(--background-overlay-light, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-overlay-light, rgba(255, 255, 255, 0.06));
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.chapterCard {
+  background: var(--background-paper, #ffffff);
+  border: 1px solid var(--border-light, #e0e0e0);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.chapterCard:hover {
+  border-color: var(--info-main, #1DA1F2);
+  box-shadow: 0 0 0 3px var(--shadow-info, rgba(29, 161, 242, 0.08));
+  background-color: var(--hover-info, rgba(29, 161, 242, 0.02));
+}
+
+.chapterCard.selected {
+  border-color: var(--info-main, #1DA1F2);
+  box-shadow: 0 0 0 3px var(--shadow-info, rgba(29, 161, 242, 0.08));
+}
+
+.chapterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.chapterTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, #333333);
+}
+
+.chapterActions {
+  display: flex;
+  gap: 8px;
+}
+
+.actionButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.editButton {
+  color: var(--success-main, #4caf50);
+  background: transparent;
+}
+
+.editButton:hover {
+  background-color: var(--hover-success, rgba(76, 175, 80, 0.1));
+  color: var(--success-dark, #388e3c);
+}
+
+.deleteButton {
+  color: var(--error-main, #ff4444);
+  background: transparent;
+}
+
+.deleteButton:hover {
+  background-color: var(--hover-error, rgba(255, 68, 68, 0.1));
+  color: var(--error-dark, #cc0000);
+}
+
+.chapterContent {
+  color: var(--text-secondary, #666666);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.chapterImages {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.imageThumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.imageThumbnail:hover {
+  transform: scale(1.05);
+}
+
+.addChapterButton {
+  background: var(--primary-main, #1976d2);
+  color: var(--primary-contrast-text, #ffffff);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.addChapterButton:hover {
+  background: var(--primary-light, #1565c0);
+}
+
+.addChapterButton:active {
+  background: var(--primary-dark, #0d47a1);
+}
+
+.wordCloudSection {
+  background: var(--background-overlay-light, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border-overlay-light, rgba(255, 255, 255, 0.06));
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.wordCloudTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary, #ffffff);
+}
+
+.noDataMessage {
+  text-align: center;
+  color: var(--text-muted, #7C7C7C);
+  font-size: 1.1rem;
+  padding: 40px 20px;
+}
+
+.loadingSpinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: var(--primary-main, #1976d2);
+}
+
+.errorMessage {
+  text-align: center;
+  color: var(--error-main, #f44336);
+  font-size: 1.1rem;
+  padding: 40px 20px;
+}
+
+.retryButton {
+  background: var(--error-main, #f44336);
+  color: var(--error-contrast-text, #ffffff);
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-transform: none;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background-color 0.2s ease;
+}
+
+.retryButton:hover {
+  background: var(--error-dark, #d32f2f);
+}
+
+@media (max-width: 768px) {
+  .trendingTopicsContainer {
+    padding: 16px;
+  }
+
+  .headerSection {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .chaptersSection,
+  .wordCloudSection {
+    padding: 20px;
+  }
+}
+
+.narrationTypeRadioGroup {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.narrationTypeLabel {
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+.narrationTypeRadio {
+  padding: 4px;
+}
+
+.locationSelectorContainer {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.locationTypeSelector {
+  min-width: 160px;
+  width: 160px;
+  height: 40px;
+}
+
+.locationSelector {
+  min-width: 160px;
+  width: 160px;
+  height: 40px;
+}
+
+.locationChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.locationMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-transform: none;
+}
+
+.locationIcon {
+  font-size: 1.2rem;
+}
+
+.locationLabel {
+  font-size: 1.05rem;
+  font-weight: 500;
+  text-transform: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .locationSelectorContainer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .locationTypeSelector,
+  .locationSelector {
+    min-width: 100%;
+    width: 100%;
+    height: 40px;
+    font-size: 1.05rem;
+    font-weight: 500;
+    text-transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .locationSelectorContainer {
+    gap: 0.5rem;
+  }
+
+  .locationChip {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+.headerContainer {
+  margin-bottom: 1.5rem;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.dropdownGroup {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Ensure consistent dropdown sizing */
+.dropdownGroup>* {
+  flex-shrink: 0;
+}
+
+.lastUpdatedInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cacheChip {
+  height: 20px;
+  font-size: 0.7rem;
+}
+
+.cacheExpiryInfo {
+  color: #757575;
+  font-size: 0.7rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .headerContent {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .headerRight {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .dropdownGroup {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .headerRight {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .headerLeft {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+}
+
+.categorySelectorContainer {
+  display: flex;
+  align-items: center;
+}
+
+.categorySelector {
+  margin-left: 8px;
+}
+
+/* Global MUI font-size adjustments scoped to Trending Topics page */
+.trendingTopicsContainer :global(.MuiInputLabel-root) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiInputBase-input) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiSelect-select) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiMenuItem-root) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiFormControlLabel-label) {
+  font-size: 1.05rem;
+}
+
+.trendingTopicsContainer :global(.MuiButton-root) {
+  font-size: 1.05rem;
+  text-transform: none;
+}
+
+.trendingTopicsContainer :global(.MuiChip-label) {
+  font-size: 1.05rem;
+}
+
+/* Slightly larger subtitles within sections for readability */
+.trendingTopicsContainer :global(.MuiTypography-subtitle1) {
+  font-size: 1.25rem;
+}

@@ -1,0 +1,125 @@
+/* Image View Modal Styles */
+
+.imageContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.imageContainer img {
+  transition: transform 0.3s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.navigationButton {
+  position: absolute;
+  z-index: 2;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  color: white !important;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+}
+
+.navigationButton:hover {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  transform: scale(1.1);
+}
+
+.navigationButton:disabled {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.zoomableImage {
+  cursor: zoom-in;
+}
+
+.zoomableImage.zoomed {
+  cursor: zoom-out;
+}
+
+.fullscreenOverlay {
+  position: absolute;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.8) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.imageInfo {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+  backdrop-filter: blur(8px);
+}
+
+.viewModeButton {
+  transition: all 0.2s ease;
+}
+
+.viewModeButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navigationButton {
+    padding: 8px;
+  }
+  
+  .imageInfo {
+    max-height: 40%;
+    font-size: 0.75rem;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.modalEnter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.imageEnterLeft {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.imageEnterRight {
+  animation: slideInRight 0.3s ease-out;
+}
+

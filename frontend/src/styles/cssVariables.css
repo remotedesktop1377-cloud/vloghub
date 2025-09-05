@@ -1,0 +1,135 @@
+/* CSS Custom Properties for the YouTube Clone application */
+/* This file provides all color variables that can be used across CSS modules */
+
+:root {
+  /* Font Variables */
+  --font-plus-jakarta-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  
+  /* Primary Colors */
+  --primary-main: #1976d2;
+  --primary-light: #1565c0;
+  --primary-dark: #0d47a1;
+  --primary-contrast-text: #ffffff;
+  
+  /* Secondary Colors */
+  --secondary-main: #dc004e;
+  --secondary-light: #ff5983;
+  --secondary-dark: #9a0036;
+  --secondary-contrast-text: #ffffff;
+  
+  /* Success Colors */
+  --success-main: #4caf50;
+  --success-light: #81c784;
+  --success-dark: #388e3c;
+  --success-contrast-text: #ffffff;
+  
+  /* Warning Colors */
+  --warning-main: #ff9800;
+  --warning-light: #ffb74d;
+  --warning-dark: #f57c00;
+  --warning-contrast-text: #ffffff;
+  
+  /* Error Colors */
+  --error-main: #f44336;
+  --error-light: #e57373;
+  --error-dark: #d32f2f;
+  --error-contrast-text: #ffffff;
+  
+  /* Info Colors */
+  --info-main: #2196f3;
+  --info-light: #64b5f6;
+  --info-dark: #1976d2;
+  --info-contrast-text: #ffffff;
+  
+  /* Purple Colors */
+  --purple-main: #6D28D9;
+  --purple-light: #8B5CF6;
+  --purple-dark: #4C1D95;
+  --purple-gradient-primary: linear-gradient(135deg, #6D28D9 0%, #9333EA 100%);
+  --purple-gradient-secondary: linear-gradient(90deg, #6D28D9 0%, #6D28D9 100%);
+  --purple-gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --purple-gradient-blue: linear-gradient(135deg, #5b76ff, #9b8cff);
+  
+  /* Neutral Colors */
+  --neutral-white: #ffffff;
+  --neutral-black: #000000;
+  --neutral-gray-50: #f9fafb;
+  --neutral-gray-100: #f3f4f6;
+  --neutral-gray-200: #e5e7eb;
+  --neutral-gray-300: #d1d5db;
+  --neutral-gray-400: #9ca3af;
+  --neutral-gray-500: #6b7280;
+  --neutral-gray-600: #4b5563;
+  --neutral-gray-700: #374151;
+  --neutral-gray-800: #1f2937;
+  --neutral-gray-900: #111827;
+  
+  /* Background Colors */
+  --background-default: #060606;
+  --background-paper: #ffffff;
+  --background-secondary: #252525;
+  --background-light: #fafafa;
+  --background-overlay-light: rgba(255, 255, 255, 0.06);
+  --background-overlay-medium: rgba(255, 255, 255, 0.15);
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: #7C7C7C;
+  --text-dark: #333333;
+  
+  /* Border Colors */
+  --border-light: #e0e0e0;
+  --border-medium: #bdbdbd;
+  --border-dark: #9e9e9e;
+  --border-overlay-light: rgba(255, 255, 255, 0.06);
+  --border-overlay-medium: rgba(255, 255, 255, 0.15);
+  
+  /* Status Colors */
+  --status-gold: #FFD700;
+  --status-silver: #C0C0C0;
+  --status-bronze: #CD7F32;
+  --status-blue: #4A90E2;
+  
+  /* Shadow Colors */
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-medium: rgba(0, 0, 0, 0.15);
+  --shadow-dark: rgba(0, 0, 0, 0.3);
+  --shadow-primary: rgba(124, 58, 237, 0.35);
+  --shadow-info: rgba(29, 161, 242, 0.08);
+  --shadow-black: rgba(0, 0, 0, 0.1);
+  
+  /* Hover Colors */
+  --hover-light: #f9fafb;
+  --hover-success: rgba(76, 175, 80, 0.1);
+  --hover-warning: rgba(255, 152, 0, 0.1);
+  --hover-error: rgba(255, 68, 68, 0.1);
+  --hover-info: rgba(29, 161, 242, 0.1);
+  
+  /* Special Colors */
+  --special-purple: #9c27b0;
+  --special-light-blue: #e3f2fd;
+  --special-light-gray: #f9f9f9;
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] {
+  --background-paper: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-dark: #ffffff;
+  --border-light: #333333;
+  --border-medium: #555555;
+  --border-dark: #777777;
+}
+
+/* Light mode overrides */
+[data-theme="light"] {
+  --background-paper: #ffffff;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-dark: #333333;
+  --border-light: #e0e0e0;
+  --border-medium: #bdbdbd;
+  --border-dark: #9e9e9e;
+}
