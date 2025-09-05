@@ -26,7 +26,8 @@ import {
   Close as CloseIcon,
   DragIndicator as DragIcon,
   AutoFixHigh as MagicIcon,
-  Visibility as PreviewIcon
+  Visibility as PreviewIcon,
+  AccessTime as TimeIcon
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Chapter } from '../../types/chapters';
@@ -198,10 +199,76 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
     }
   };
 
+  // Calculate total duration
+  const calculateTotalDuration = () => {
+    const totalSeconds = chapters.reduce((total, chapter) => {
+      const duration = chapter.duration || '0s';
+      const seconds = parseDurationToSeconds(duration);
+      return total + seconds;
+    }, 0);
+    return formatSecondsToDuration(totalSeconds);
+  };
+
+  const parseDurationToSeconds = (duration: string): number => {
+    if (!duration) return 0;
+
+    // Handle formats like "30s", "1m 30s", "2m", "1h 30m", etc.
+    const timeRegex = /(?:(\d+)h\s*)?(?:(\d+)m\s*)?(?:(\d+)s)?/;
+    const match = duration.match(timeRegex);
+
+    if (!match) return 0;
+
+    const hours = parseInt(match[1] || '0');
+    const minutes = parseInt(match[2] || '0');
+    const seconds = parseInt(match[3] || '0');
+
+    return hours * 3600 + minutes * 60 + seconds;
+  };
+
+  const formatSecondsToDuration = (totalSeconds: number): string => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
   return (
     <Paper sx={{ minHeight: '400px' }}>
       {chaptersGenerated && chapters.length > 0 ? (
         <Box sx={{ width: '100%' }}>
+          {/* Total Duration Header */}
+          <Box sx={{
+            px: 2,
+            py: 1.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <TimeIcon sx={{ fontSize: 20, color: INFO.main }} />
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                Scenes ({chapters.length})
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                Total Duration:
+              </Typography>
+              <Typography variant="h6" sx={{ color: INFO.main, fontWeight: 700 }}>
+                {calculateTotalDuration()}
+              </Typography>
+            </Box>
+          </Box>
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="chapters" isDropDisabled={true} isCombineEnabled={true} ignoreContainerClipping={true}>
               {(provided) => (
@@ -271,36 +338,78 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       bgcolor: 'rgba(29,161,242,0.08)',
                                     }}>
                                     <Box sx={{
-                                      width: 48,
+                                      width: 100,
                                       color: INFO.main,
                                       display: 'flex',
+                                      flexDirection: 'column',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      fontWeight: 'bold',
+                                      alignSelf: 'center',
+                                      fontWeight: '500',
                                       flexShrink: 0
                                     }}>
-                                      {index + 1}
+                                      <Box sx={{ fontSize: '1.2rem', fontWeight: '500' }}>
+                                        {index + 1}
+                                      </Box>
+                                      <Box sx={{
+                                        fontSize: '1rem',
+                                        color: 'text.secondary',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        alignSelf: 'center',
+                                        textAlign: 'center',
+                                        // gap: 0.25,
+                                        mt: 0.25
+                                      }}>
+                                        {/* <TimeIcon sx={{ fontSize: 10 }} /> */}
+                                        {chapter.duration || '0s'}
+                                      </Box>
                                     </Box>
                                     <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%' }}>
                                       {editingChapter === index ? (
-                                        <TextField
-                                          value={editNarration}
-                                          onChange={(e) => onEditNarrationChange(e.target.value)}
-                                          variant="standard"
-                                          InputProps={{ disableUnderline: true }}
-                                          multiline
-                                          minRows={4}
-                                          fullWidth
-                                          sx={{
-                                            px: 1.5, py: 1.5, width: '100%', height: '100%', bgcolor: NEUTRAL.white, fontSize: '1rem',
-                                            '& .MuiInputBase-input': {
-                                              fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
-                                              lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
-                                              fontSize: '1.2rem'
-                                            },
-                                            ...HelperFunctions.getDirectionSx(language)
-                                          }}
-                                        />
+                                        <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                          <TextField
+                                            value={editNarration}
+                                            onChange={(e) => onEditNarrationChange(e.target.value)}
+                                            variant="standard"
+                                            InputProps={{ disableUnderline: true }}
+                                            multiline
+                                            minRows={4}
+                                            fullWidth
+                                            sx={{
+                                              px: 1.5, py: 1.5, width: '100%', flex: 1, bgcolor: NEUTRAL.white, fontSize: '1.2rem',
+                                              '& .MuiInputBase-input': {
+                                                fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                                                lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
+                                                fontSize: '1.2rem'
+                                              },
+                                              ...HelperFunctions.getDirectionSx(language)
+                                            }}
+                                          />
+                                          <Box sx={{ px: 1.5, py: 1, display: 'flex', alignItems: 'center', gap: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                              <TimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                              <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                                                Duration:
+                                              </Typography>
+                                              <TextField
+                                                size="small"
+                                                value={chapter.duration || ''}
+                                                onChange={(e) => {
+                                                  const updatedChapters = chapters.map((ch, idx) =>
+                                                    idx === index ? { ...ch, duration: e.target.value } : ch
+                                                  );
+                                                  onChaptersUpdate(updatedChapters);
+                                                }}
+                                                placeholder="e.g., 30s, 1m 30s, 2m"
+                                                sx={{
+                                                  width: 120,
+                                                  '& .MuiInputBase-input': { fontSize: '0.9rem' }
+                                                }}
+                                              />
+                                            </Box>
+                                          </Box>
+                                        </Box>
                                       ) : (
                                         <>
                                           {/* Content Area - 50% Narration + 50% Media */}
@@ -318,7 +427,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               <Box
                                                 sx={{
                                                   lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
-                                                  fontSize: '1.2rem',
+                                                  fontSize: '1.3rem',
                                                   color: 'text.primary',
                                                   px: 1.5,
                                                   py: 1,
@@ -356,7 +465,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{
                                                       color: 'text.secondary',
-                                                      fontSize: '1rem',
+                                                      fontSize: '1.3rem',
                                                       fontWeight: 500,
                                                       display: 'block'
                                                     }}>
@@ -383,7 +492,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                         fontSize: '1rem',
                                                         height: '20px',
                                                         textTransform: 'none'
-                                                      }}  
+                                                      }}
                                                     >
                                                       Clear All
                                                     </Button>
@@ -399,7 +508,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           px: 1,
                                                           py: 0.25,
                                                           borderRadius: 0.5,
-                                                          fontSize: '1rem',
+                                                          fontSize: '1.3rem',
                                                           fontWeight: 500,
                                                           border: `1px solid ${SUCCESS.main}`,
                                                           display: 'flex',
@@ -1048,7 +1157,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         }}
       >
         <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h5" component="div" sx={{ fontSize: '1.5rem', fontWeight: 600 }}>
+          <Typography variant="h5" component="div" sx={{ fontSize: '1.3rem', fontWeight: 600 }}>
             Manage Media - Chapter {(mediaManagementChapterIndex || 0) + 1}
           </Typography>
           <IconButton

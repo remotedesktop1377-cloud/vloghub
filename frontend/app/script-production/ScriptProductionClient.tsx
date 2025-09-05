@@ -106,7 +106,7 @@ const ScriptProductionClient: React.FC = () => {
     const [isDraggingUpload, setIsDraggingUpload] = useState(false);
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [uploadingCompleted, setUploadingCompleted] = useState(false);
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
@@ -216,6 +216,7 @@ const ScriptProductionClient: React.FC = () => {
                     startTime: ch.startTime ?? paragraphsWithTimeRanges[index].startTime,
                     endTime: ch.endTime ?? paragraphsWithTimeRanges[index].endTime,
                     durationInSeconds: ch.durationInSeconds ?? paragraphsWithTimeRanges[index].durationInSeconds,
+                    highlightedKeywords: ch.highlightedKeywords ?? paragraphsWithTimeRanges[index].highlightedKeywords,
                     assets: {
                         image: ch.assets?.image || (Array.isArray(ch.assets?.images) && ch.assets.images.length > 0 ? ch.assets.images[0] : null),
                         audio: ch.assets?.audio || null,
@@ -281,7 +282,6 @@ const ScriptProductionClient: React.FC = () => {
             setIsScriptApproved(isApproved);
         }
 
-        setLoading(false);
     }, []);
 
     // Calculate estimated duration when script data changes
@@ -369,7 +369,8 @@ const ScriptProductionClient: React.FC = () => {
                 words,
                 startTime,
                 endTime,
-                durationInSeconds
+                durationInSeconds,
+                highlightedKeywords: []
             };
         });
     };
@@ -1072,7 +1073,7 @@ const ScriptProductionClient: React.FC = () => {
                 <Button
                     variant="outlined"
                     startIcon={<BackIcon />}
-                    onClick={() => setShowBackConfirmation(true)}
+                    onClick={handleConfirmBack}
                 >
                     Back to Script Generation
                 </Button>
@@ -1149,7 +1150,7 @@ const ScriptProductionClient: React.FC = () => {
                                 overflowWrap: 'anywhere'
                             }}
                         >
-                            📋 {scriptData.title}
+                            📋 {scriptData?.title}
                         </Typography>
 
                         {!isScriptApproved &&
@@ -1270,7 +1271,7 @@ const ScriptProductionClient: React.FC = () => {
                                                 multiline
                                                 rows={8}
                                                 variant="outlined"
-                                                value={scriptData.mainContent || ''}
+                                                value={scriptData?.mainContent || ''}
                                                 onChange={(e) => setScriptData(prev => prev ? { ...prev, mainContent: e.target.value } : prev)}
                                                 placeholder="Enter your main content..."
                                                 sx={{
@@ -1294,7 +1295,7 @@ const ScriptProductionClient: React.FC = () => {
                                                 multiline
                                                 rows={3}
                                                 variant="outlined"
-                                                value={scriptData.conclusion || ''}
+                                                value={scriptData?.conclusion || ''}
                                                 onChange={(e) => setScriptData(prev => prev ? { ...prev, conclusion: e.target.value } : prev)}
                                                 placeholder="Enter your conclusion..."
                                                 sx={{
@@ -1318,7 +1319,7 @@ const ScriptProductionClient: React.FC = () => {
                                                 multiline
                                                 rows={3}
                                                 variant="outlined"
-                                                value={scriptData.conclusion || ''}
+                                                value={scriptData?.conclusion || ''}
                                                 onChange={(e) => setScriptData(prev => prev ? { ...prev, callToAction: e.target.value } : prev)}
                                                 placeholder="Enter your call to action..."
                                                 sx={{
@@ -1433,7 +1434,7 @@ const ScriptProductionClient: React.FC = () => {
                                         onAddKeyword={addKeyword}
                                         onClearSelection={() => handleClearSelection()}
                                         onToolbarInteraction={setIsInteractingWithToolbar}
-                                        language={scriptData.language}
+                                        language={scriptData?.language || 'english'}
                                         onGoogleImagePreview={(imageUrl) => {
                                             // Open the image in a new tab for preview
                                             window.open(imageUrl, '_blank');
