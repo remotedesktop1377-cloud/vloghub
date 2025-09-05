@@ -800,13 +800,13 @@ const ScriptProductionClient: React.FC = () => {
     // Handle text selection for highlighting keywords
     const handleTextSelection = (chapterIndex: number, event: React.MouseEvent) => {
         // console.log('handleTextSelection called for chapter:', chapterIndex);
-        
+
         // Use a shorter delay to capture the selection more accurately
         setTimeout(() => {
             const selection = window.getSelection();
             // console.log('Selection object:', selection);
             // console.log('Selection text:', selection?.toString());
-            
+
             if (!selection || selection.toString().trim() === '') {
                 console.log('No selection or empty selection');
                 return;
@@ -814,7 +814,7 @@ const ScriptProductionClient: React.FC = () => {
 
             const selectedText = selection.toString().trim();
             // console.log('Selected text:', selectedText);
-            
+
             if (selectedText.length === 0) {
                 console.log('Selected text is empty after trim');
                 return;
@@ -824,11 +824,11 @@ const ScriptProductionClient: React.FC = () => {
             const range = selection.getRangeAt(0);
             const startContainer = range.startContainer;
             const endContainer = range.endContainer;
-            
+
             // console.log('Start container type:', startContainer.nodeType);
             // console.log('End container type:', endContainer.nodeType);
             // console.log('Range start:', range.startOffset, 'Range end:', range.endOffset);
-            
+
             // Handle text selection that might span multiple nodes
             if (startContainer.nodeType === Node.TEXT_NODE && endContainer.nodeType === Node.TEXT_NODE) {
                 // Same text node - simple case
@@ -837,11 +837,11 @@ const ScriptProductionClient: React.FC = () => {
                     const startIndex = range.startOffset;
                     const endIndex = range.endOffset;
                     const actualSelectedText = textContent.substring(startIndex, endIndex).trim();
-                    
+
                     // console.log('Same text node - Full text:', textContent);
                     // console.log('Same text node - Selected range:', startIndex, 'to', endIndex);
                     // console.log('Same text node - Actual selected text:', actualSelectedText);
-                    
+
                     if (actualSelectedText.length > 0) {
                         setSelectedText({
                             chapterIndex,
@@ -894,11 +894,11 @@ const ScriptProductionClient: React.FC = () => {
     // Add keyword to highlighted list
     const addKeyword = () => {
         if (!selectedText) return;
-        
+
         const chapter = chapters[selectedText.chapterIndex];
         const currentKeywords = chapter.highlightedKeywords || [];
         const selectedTextLower = selectedText.text.toLowerCase().trim();
-        
+
         // Check if the exact text is already a keyword
         if (currentKeywords.some(keyword => keyword.toLowerCase().trim() === selectedTextLower)) {
             toast.info(`"${selectedText.text}" is already in keywords`);
@@ -906,19 +906,19 @@ const ScriptProductionClient: React.FC = () => {
             window.getSelection()?.removeAllRanges();
             return;
         }
-        
+
         // Check if the selected text contains any existing keywords
-        const containsExistingKeywords = currentKeywords.some(keyword => 
+        const containsExistingKeywords = currentKeywords.some(keyword =>
             selectedTextLower.includes(keyword.toLowerCase().trim()) ||
             keyword.toLowerCase().trim().includes(selectedTextLower)
         );
-        
+
         if (containsExistingKeywords) {
             // Find which keywords are contained in the selection
-            const containedKeywords = currentKeywords.filter(keyword => 
+            const containedKeywords = currentKeywords.filter(keyword =>
                 selectedTextLower.includes(keyword.toLowerCase().trim())
             );
-            
+
             if (containedKeywords.length > 0) {
                 toast.warning(`Selection contains existing keywords: ${containedKeywords.join(', ')}. Please select only new text.`);
                 setSelectedText(null);
@@ -926,24 +926,24 @@ const ScriptProductionClient: React.FC = () => {
                 return;
             }
         }
-        
+
         // Check if any existing keyword contains the selected text
-        const isContainedInExisting = currentKeywords.some(keyword => 
+        const isContainedInExisting = currentKeywords.some(keyword =>
             keyword.toLowerCase().trim().includes(selectedTextLower)
         );
-        
+
         if (isContainedInExisting) {
             toast.warning(`"${selectedText.text}" is already part of an existing keyword. Please select different text.`);
             setSelectedText(null);
             window.getSelection()?.removeAllRanges();
             return;
         }
-        
+
         // Add the new keyword
         const newKeywords = [...currentKeywords, selectedText.text];
         saveHighlightedKeywords(selectedText.chapterIndex, newKeywords);
         toast.success(`Added "${selectedText.text}" to keywords`);
-        
+
         // Clear selection after adding
         setSelectedText(null);
         window.getSelection()?.removeAllRanges();
@@ -957,7 +957,7 @@ const ScriptProductionClient: React.FC = () => {
             const isToolbar = target.closest('[data-toolbar="keyword-toolbar"]');
             const isTextArea = target.closest('[data-chapter-index]');
             const isKeywordBadge = target.closest('[data-keyword-badge]');
-            
+
             if (!isToolbar && !isTextArea && !isKeywordBadge) {
                 console.log('Clearing selection - clicked outside toolbar, text area, and keyword badges');
                 setSelectedText(null);
@@ -971,59 +971,43 @@ const ScriptProductionClient: React.FC = () => {
         }
     };
 
-    // Debug selectedText state changes
-    React.useEffect(() => {
-        console.log('selectedText state changed:', selectedText);
-        
-        // Auto-clear selection after 10 seconds if user doesn't interact
-        if (selectedText) {
-            const timeout = setTimeout(() => {
-                console.log('Auto-clearing selection after timeout');
-                setSelectedText(null);
-                window.getSelection()?.removeAllRanges();
-            }, 10000);
-            
-            return () => clearTimeout(timeout);
-        }
-    }, [selectedText]);
-
     // Global selection listener
     React.useEffect(() => {
         let selectionTimeout: NodeJS.Timeout;
-        
+
         const handleGlobalSelection = () => {
             // Clear any existing timeout
             if (selectionTimeout) {
                 clearTimeout(selectionTimeout);
             }
-            
+
             const selection = window.getSelection();
             if (selection && selection.toString().trim()) {
                 console.log('Global selection detected:', selection.toString());
                 // Find which chapter this selection belongs to
                 const range = selection.getRangeAt(0);
                 const textNode = range.startContainer;
-                
+
                 if (textNode.nodeType === Node.TEXT_NODE) {
                     // Try to find the chapter by traversing up the DOM
                     let element = textNode.parentElement;
                     while (element && !element.getAttribute('data-chapter-index')) {
                         element = element.parentElement;
                     }
-                    
+
                     if (element) {
                         const chapterIndex = parseInt(element.getAttribute('data-chapter-index') || '0');
                         const textContent = textNode.textContent || '';
                         const startIndex = range.startOffset;
                         const endIndex = range.endOffset;
-                        
+
                         // Extract only the selected portion of the text
                         const actualSelectedText = textContent.substring(startIndex, endIndex).trim();
-                        
+
                         console.log('Global listener - Full text:', textContent);
                         console.log('Global listener - Selected range:', startIndex, 'to', endIndex);
                         console.log('Global listener - Actual selected text:', actualSelectedText);
-                        
+
                         if (actualSelectedText.length > 0) {
                             setSelectedText({
                                 chapterIndex,
@@ -1097,9 +1081,8 @@ const ScriptProductionClient: React.FC = () => {
     }
 
     return (
-        <Box 
+        <Box
             sx={{ width: '100vw', height: '100vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}
-            onClick={handleClearSelection}
         >
             <Box sx={{ px: 3, py: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexShrink: 0, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

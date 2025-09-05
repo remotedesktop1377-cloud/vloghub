@@ -15,7 +15,8 @@ import {
     Tooltip,
     Tabs,
     Tab,
-    Badge
+    Badge,
+    InputAdornment
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -61,6 +62,7 @@ interface ImageSearchProps {
     onChapterUpdate: (chapterIndex: number, updatedChapter: any) => void;
     onDone: () => void;
     existingImageUrls?: string[];
+    onClearSelection?: () => void;
 }
 
 type TabValue = 'google' | 'envato';
@@ -72,7 +74,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     chapterIndex,
     onChapterUpdate,
     onDone,
-    existingImageUrls = []
+    existingImageUrls = [],
+    onClearSelection
 }) => {
     const [activeTab, setActiveTab] = useState<TabValue>('google');
     const [searchQuery, setSearchQuery] = useState('');
@@ -513,6 +516,26 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             value={searchQuery}
                             onChange={(e) => handleSearchQueryChange(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                            InputProps={{
+                                endAdornment: searchQuery ? (
+                                    <InputAdornment position="end">
+                                        <IconButton
+                                            aria-label="clear search"
+                                            edge="end"
+                                            onClick={() => {
+                                                // Reset query and regenerate suggestions from narration
+                                                handleSearchQueryChange('');
+                                                // notify parent to clear any text selection overlays
+                                                onClearSelection && onClearSelection();
+                                            }}
+                                            size="small"
+                                        >
+                                            {/* Using Close icon already in bundle */}
+                                            <span style={{ fontSize: 18, lineHeight: 1 }}>✕</span>
+                                        </IconButton>
+                                    </InputAdornment>
+                                ) : undefined
+                            }}
                             sx={{
                                 fontSize: '1rem',
                                 '& .MuiOutlinedInput-root': {

@@ -223,13 +223,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
                                 {/* Narration Content - centered with integrated left strip number */}
                                 <Box sx={{ width: '100%', height: '100%', minHeight: '120px', }}>
-                                                                              <Box 
-                                              data-chapter-index={index}
-                                              sx={{
-                                                display: 'flex',
-                                                height: '100%',
-                                                bgcolor: 'rgba(29,161,242,0.08)',
-                                              }}>
+                                  <Box
+                                    data-chapter-index={index}
+                                    sx={{
+                                      display: 'flex',
+                                      height: '100%',
+                                      bgcolor: 'rgba(29,161,242,0.08)',
+                                    }}>
                                     <Box sx={{
                                       width: 48,
                                       color: INFO.main,
@@ -275,7 +275,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               justifyContent: 'flex-start',
                                               alignItems: 'flex-start'
                                             }}>
-                                                                                            <Box
+                                              <Box
                                                 sx={{
                                                   lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
                                                   fontSize: '1.2rem',
@@ -301,9 +301,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                 }}
                                               >
                                                 {chapter.narration ? (
-                                                  <TextWithHighlights 
-                                                    text={chapter.narration} 
-                                                    keywords={chapter.highlightedKeywords || []} 
+                                                  <TextWithHighlights
+                                                    text={chapter.narration}
+                                                    keywords={chapter.highlightedKeywords || []}
                                                   />
                                                 ) : (
                                                   'Narration content will be generated here.'
@@ -316,18 +316,19 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{
                                                       color: 'text.secondary',
-                                                      fontWeight: 600,
+                                                      fontSize: '1rem',
+                                                      fontWeight: 500,
                                                       display: 'block'
                                                     }}>
                                                       Keywords ({chapter.highlightedKeywords.length}):
                                                     </Typography>
                                                     <Button
-                                                      size="small"
+                                                      size="large"
                                                       variant="text"
                                                       color="error"
                                                       onClick={() => {
-                                                        onChaptersUpdate(chapters.map((ch, idx) => 
-                                                          idx === index 
+                                                        onChaptersUpdate(chapters.map((ch, idx) =>
+                                                          idx === index
                                                             ? { ...ch, highlightedKeywords: [] }
                                                             : ch
                                                         ));
@@ -339,10 +340,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                         minWidth: 'auto',
                                                         px: 1,
                                                         py: 0.25,
-                                                        fontSize: '0.7rem',
+                                                        fontSize: '1rem',
                                                         height: '20px',
                                                         textTransform: 'none'
-                                                      }}
+                                                      }}  
                                                     >
                                                       Clear All
                                                     </Button>
@@ -354,11 +355,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                         data-keyword-badge="true"
                                                         sx={{
                                                           bgcolor: SUCCESS.light,
-                                                          color: SUCCESS.dark,
+                                                          color: 'text.white',
                                                           px: 1,
                                                           py: 0.25,
                                                           borderRadius: 0.5,
-                                                          fontSize: '0.75rem',
+                                                          fontSize: '1rem',
                                                           fontWeight: 500,
                                                           border: `1px solid ${SUCCESS.main}`,
                                                           display: 'flex',
@@ -372,8 +373,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                         }}
                                                         onClick={() => {
                                                           const updatedKeywords = chapter.highlightedKeywords?.filter((_, idx) => idx !== keywordIndex) || [];
-                                                          onChaptersUpdate(chapters.map((ch, idx) => 
-                                                            idx === index 
+                                                          onChaptersUpdate(chapters.map((ch, idx) =>
+                                                            idx === index
                                                               ? { ...ch, highlightedKeywords: updatedKeywords }
                                                               : ch
                                                           ));
@@ -416,61 +417,82 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                 const chapter = chapters[index];
                                                 const currentKeywords = chapter.highlightedKeywords || [];
                                                 const selectedTextLower = selectedText?.text.toLowerCase().trim() || '';
-                                                
+
                                                 // Check for conflicts
                                                 const exactMatch = currentKeywords.some(keyword => keyword.toLowerCase().trim() === selectedTextLower);
                                                 const containsExisting = currentKeywords.some(keyword => selectedTextLower.includes(keyword.toLowerCase().trim()));
                                                 const isContainedInExisting = currentKeywords.some(keyword => keyword.toLowerCase().trim().includes(selectedTextLower));
-                                                
+
                                                 return (
-                                                <Box 
-                                                  data-toolbar="keyword-toolbar"
-                                                  sx={{
-                                                    position: 'fixed',
-                                                    top: '50%',
-                                                    left: '50%',
-                                                    transform: 'translate(-50%, -50%)',
-                                                    bgcolor: 'background.paper',
-                                                    border: `2px solid ${exactMatch || containsExisting || isContainedInExisting ? '#f44336' : SUCCESS.main}`,
-                                                    borderRadius: 2,
-                                                    p: 1.5,
-                                                    boxShadow: 4,
-                                                    zIndex: 10000,
-                                                    display: 'flex',
-                                                    gap: 1,
-                                                    alignItems: 'center',
-                                                    minWidth: '200px',
-                                                    justifyContent: 'center'
-                                                  }}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  onMouseEnter={() => onToolbarInteraction(true)}
-                                                  onMouseLeave={() => onToolbarInteraction(false)}
-                                                >
-                                                  <Typography variant="body2" sx={{ 
-                                                    color: exactMatch || containsExisting || isContainedInExisting ? 'error.main' : 'text.primary', 
-                                                    fontWeight: 500 
-                                                  }}>
-                                                    "{selectedText?.text}"
-                                                  </Typography>
-                                                  
-                                                  {exactMatch ? (
-                                                    <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                      Already exists
+                                                  <Box
+                                                    data-toolbar="keyword-toolbar"
+                                                    sx={{
+                                                      position: 'fixed',
+                                                      top: '50%',
+                                                      left: '50%',
+                                                      transform: 'translate(-50%, -50%)',
+                                                      bgcolor: 'background.paper',
+                                                      border: `2px solid ${exactMatch || containsExisting || isContainedInExisting ? '#f44336' : SUCCESS.main}`,
+                                                      borderRadius: 2,
+                                                      p: 1.5,
+                                                      boxShadow: 4,
+                                                      zIndex: 10000,
+                                                      display: 'flex',
+                                                      gap: 1,
+                                                      alignItems: 'center',
+                                                      minWidth: '200px',
+                                                      justifyContent: 'center'
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onMouseEnter={() => onToolbarInteraction(true)}
+                                                    onMouseLeave={() => onToolbarInteraction(false)}
+                                                  >
+                                                    <Typography variant="body2" sx={{
+                                                      color: exactMatch || containsExisting || isContainedInExisting ? 'error.main' : 'text.primary',
+                                                      fontWeight: 500
+                                                    }}>
+                                                      "{selectedText?.text}"
                                                     </Typography>
-                                                  ) : containsExisting ? (
-                                                    <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                      Contains existing keywords
-                                                    </Typography>
-                                                  ) : isContainedInExisting ? (
-                                                    <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                      Part of existing keyword
-                                                    </Typography>
-                                                  ) : (
+
+                                                    {exactMatch ? (
+                                                      <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
+                                                        Already exists
+                                                      </Typography>
+                                                    ) : containsExisting ? (
+                                                      <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
+                                                        Contains existing keywords
+                                                      </Typography>
+                                                    ) : isContainedInExisting ? (
+                                                      <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
+                                                        Part of existing keyword
+                                                      </Typography>
+                                                    ) : (
+                                                      <Button
+                                                        size="small"
+                                                        variant="contained"
+                                                        color="success"
+                                                        onClick={onAddKeyword}
+                                                        sx={{
+                                                          minWidth: 'auto',
+                                                          px: 2,
+                                                          py: 0.5,
+                                                          fontSize: '0.8rem',
+                                                          height: '32px',
+                                                          fontWeight: 600
+                                                        }}
+                                                      >
+                                                        Add Keyword
+                                                      </Button>
+                                                    )}
+
                                                     <Button
                                                       size="small"
-                                                      variant="contained"
-                                                      color="success"
-                                                      onClick={onAddKeyword}
+                                                      variant="outlined"
+                                                      color="error"
+                                                      onClick={() => {
+                                                        onClearSelection();
+                                                        window.getSelection()?.removeAllRanges();
+                                                      }}
                                                       sx={{
                                                         minWidth: 'auto',
                                                         px: 2,
@@ -480,30 +502,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                         fontWeight: 600
                                                       }}
                                                     >
-                                                      Add Keyword
+                                                      Cancel
                                                     </Button>
-                                                  )}
-                                                  
-                                                  <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="error"
-                                                    onClick={() => {
-                                                      onClearSelection();
-                                                      window.getSelection()?.removeAllRanges();
-                                                    }}
-                                                    sx={{
-                                                      minWidth: 'auto',
-                                                      px: 2,
-                                                      py: 0.5,
-                                                      fontSize: '0.8rem',
-                                                      height: '32px',
-                                                      fontWeight: 600
-                                                    }}
-                                                  >
-                                                    Cancel
-                                                  </Button>
-                                                </Box>
+                                                  </Box>
                                                 );
                                               })()}
 
@@ -1029,6 +1030,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
             <Box sx={{ flex: 1 }}>
               <ImageSearch
                 chapterNarration={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.narration || ''}
+                onClearSelection={() => onClearSelection()}
                 onImageSelect={(imageUrl) => {
                   const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
                   onChapterImagesMapChange({
