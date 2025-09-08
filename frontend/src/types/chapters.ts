@@ -11,6 +11,8 @@ export interface Chapter {
     visual_guidance?: string;
     on_screen_text?: string;
     highlightedKeywords?: string[];
+    // Map from keyword (key) to selected media URLs (value array)
+    keywordsSelected?: Record<string, string[]>;
     assets?: {
         images?: string[] | null;
         imagesGoogle?: string[] | null;

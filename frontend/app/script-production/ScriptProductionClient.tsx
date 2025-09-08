@@ -68,6 +68,7 @@ const ScriptProductionClient: React.FC = () => {
 
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
+    const [noScriptFound, setNoScriptFound] = useState<boolean>(false);
 
     // Script approval states
     const [isScriptApproved, setIsScriptApproved] = useState(false);
@@ -141,6 +142,7 @@ const ScriptProductionClient: React.FC = () => {
                     startTime: chapter.startTime,
                     endTime: chapter.endTime,
                     highlightedKeywords: chapter.highlightedKeywords || [],
+                    keywordsSelected: chapter.keywordsSelected || {},
                     assets: {
                         images: chapter.assets?.images || [],
                         imagesGoogle: chapter.assets?.imagesGoogle || [],
@@ -217,6 +219,7 @@ const ScriptProductionClient: React.FC = () => {
                     endTime: ch.endTime ?? paragraphsWithTimeRanges[index].endTime,
                     durationInSeconds: ch.durationInSeconds ?? paragraphsWithTimeRanges[index].durationInSeconds,
                     highlightedKeywords: ch.highlightedKeywords ?? paragraphsWithTimeRanges[index].highlightedKeywords,
+                    keywordsSelected: ch.keywordsSelected ?? {},
                     assets: {
                         image: ch.assets?.image || (Array.isArray(ch.assets?.images) && ch.assets.images.length > 0 ? ch.assets.images[0] : null),
                         audio: ch.assets?.audio || null,
@@ -240,6 +243,7 @@ const ScriptProductionClient: React.FC = () => {
             startTime: p.startTime,
             endTime: p.endTime,
             durationInSeconds: p.durationInSeconds,
+            keywordsSelected: {},
             assets: { image: null, audio: null, video: null, images: [], imagesGoogle: [], imagesEnvato: [] }
         }));
 
@@ -250,6 +254,7 @@ const ScriptProductionClient: React.FC = () => {
         // Load from secure storage - check metadata first, then approved script
         let storedData = null;
         let isApproved = false;
+        setLoading(true);
 
         // First try to load from metadata (for unapproved scripts)
         try {
@@ -276,10 +281,15 @@ const ScriptProductionClient: React.FC = () => {
             }
         }
         // console.log('storedData', JSON.stringify(storedData));
+        debugger;
         if (storedData) {
+            setLoading(false);
             setScriptData(storedData);
             setEditedScript(storedData.script || '');
             setIsScriptApproved(isApproved);
+        } else {
+            setNoScriptFound(true);
+            setLoading(false);
         }
 
     }, []);
@@ -1055,30 +1065,28 @@ const ScriptProductionClient: React.FC = () => {
         router.push(ROUTES_KEYS.TRENDING_TOPICS);
     };
 
-    if (loading) {
+    if (loading || (loading && !noScriptFound)) {
         return (
             <LoadingOverlay
                 title={'Please wait'}
-                desc={'We are uploading your script to process it...'}
+                desc={`${!noScriptFound ? 'We are preparing your script to process it...' : 'We are uploading your script to process it...'}`}
             />
         );
     }
 
-    if (!scriptData) {
-        return (
-            <Container maxWidth="md" sx={{ py: 4 }}>
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    No script data found. Please go back and generate a script first.
-                </Alert>
-                <Button
-                    variant="outlined"
-                    startIcon={<BackIcon />}
-                    onClick={handleConfirmBack}
-                >
-                    Back to Script Generation
-                </Button>
-            </Container>
-        );
+    if (noScriptFound) {
+        return <Container maxWidth="md" sx={{ py: 4 }}>
+            <Alert severity="error" sx={{ mb: 2 }}>
+                No script data found. Please go back and generate a script first.
+            </Alert>
+            <Button
+                variant="outlined"
+                startIcon={<BackIcon />}
+                onClick={handleConfirmBack}
+            >
+                Back to Script Generation
+            </Button>
+        </Container>
     }
 
     return (
