@@ -63,6 +63,13 @@ interface ImageSearchProps {
     onDone: () => void;
     existingImageUrls?: string[];
     onClearSelection?: () => void;
+    // Optional: pre-populate suggestions (e.g., selected keywords) and auto-search
+    suggestionKeywords?: string[];
+    autoSearchOnMount?: boolean;
+    // Report selected URLs to parent when Done is clicked
+    onDoneWithSelected?: (selectedUrls: string[]) => void;
+    // If provided, also attach keywordsSelected merge payload on update
+    currentKeywordForMapping?: string;
 }
 
 type TabValue = 'google' | 'envato';
@@ -75,7 +82,11 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     onChapterUpdate,
     onDone,
     existingImageUrls = [],
-    onClearSelection
+    onClearSelection,
+    suggestionKeywords = [],
+    autoSearchOnMount = false,
+    onDoneWithSelected,
+    currentKeywordForMapping
 }) => {
     const [activeTab, setActiveTab] = useState<TabValue>('google');
     const [searchQuery, setSearchQuery] = useState('');
@@ -319,6 +330,18 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
     // Auto-generate suggestions from chapter narration and auto-search
     useEffect(() => {
+        // If explicit suggestion keywords provided, use them first
+        if (autoSearchOnMount && suggestionKeywords && suggestionKeywords.length > 0 && !hasInitialSearch.current) {
+            hasInitialSearch.current = true;
+            // Apply suggestions to both Google and Envato
+            setGoogleSuggestions(suggestionKeywords);
+            setEnvatoKeywords(suggestionKeywords);
+            // Trigger both searches using provided suggestions
+            searchGoogleImages('', suggestionKeywords);
+            searchEnvatoImages(suggestionKeywords.join(' '));
+            return;
+        }
+
         if (chapterNarration && !hasInitialSearch.current) {
             const gSuggestions = generateGoogleQueries(chapterNarration);
             const eKeywords = generateEnvatoWords(chapterNarration);
@@ -420,15 +443,23 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             const selectedImageUrls = Array.from(combined);
             const googleUrls = Array.from(selectedBySource.google);
             const envatoUrls = Array.from(selectedBySource.envato);
-            const updatedChapter = {
+            const updatedChapter: any = {
                 assets: {
                     images: selectedImageUrls,
                     imagesGoogle: googleUrls,
                     imagesEnvato: envatoUrls
                 }
             };
+            if (currentKeywordForMapping) {
+                updatedChapter.keywordsSelectedMerge = {
+                    [currentKeywordForMapping]: selectedImageUrls
+                };
+            }
             onChapterUpdate(chapterIndex, updatedChapter);
             toast.success(`${combined.size} images selected for chapter`);
+            if (onDoneWithSelected) {
+                onDoneWithSelected(selectedImageUrls);
+            }
         }
         onDone();
     };
