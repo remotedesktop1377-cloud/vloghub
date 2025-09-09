@@ -218,13 +218,20 @@ const ScriptProductionClient: React.FC = () => {
     };
 
     // Function to break down script into paragraphs and calculate individual durations
-    const updateParagraphs = (scriptData: ScriptData) => {
+    const updateParagraphs = (narrationType: "interview" | "narration", scriptData: ScriptData) => {
         // Split script into paragraphs (split by double newlines or single newlines)
-
-        const scriptParagraphs = scriptData.script
+        let scriptParagraphs = [];
+        if (narrationType === "interview") {
+            scriptParagraphs = scriptData.script
+                .split('\n')
+                .map(p => p.trim())
+                .filter(p => p.length > 0);
+        } else {    
+            scriptParagraphs = scriptData.script
             .split(/\n\s*\n/)
             .map(p => p.trim())
             .filter(p => p.length > 0);
+        }
 
         // Calculate sequential time allocation for paragraphs
         const paragraphsWithTimeRanges = calculateSequentialTimeRanges(scriptParagraphs);
@@ -321,7 +328,7 @@ const ScriptProductionClient: React.FC = () => {
     useEffect(() => {
         if (scriptData) {
             setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
-            updateParagraphs(scriptData);
+            updateParagraphs(scriptData.narrationType || "narration", scriptData);
         }
     }, [scriptData]);
 
@@ -1178,13 +1185,14 @@ const ScriptProductionClient: React.FC = () => {
                         width: '100%'
                     }}>
                         <Typography
-                            variant="h5"
+                            variant="h4"
                             sx={{
                                 color: 'primary.main',
                                 flex: 1,
                                 minWidth: 0,
                                 lineHeight: 2.5,
                                 textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left',
+                                fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
                                 whiteSpace: 'normal',
                                 wordBreak: 'break-word',
                                 overflowWrap: 'anywhere'
@@ -1394,7 +1402,7 @@ const ScriptProductionClient: React.FC = () => {
                                             sx={{
                                                 whiteSpace: 'pre-wrap',
                                                 lineHeight: 2.5,
-                                                fontSize: '1.2rem',
+                                                fontSize: '1.6rem',
                                                 fontFamily: HelperFunctions.getFontFamilyForLanguage(scriptData?.language || 'english'),
                                                 flex: 1,
                                                 ...getDirectionSx(scriptData?.language || 'english')
