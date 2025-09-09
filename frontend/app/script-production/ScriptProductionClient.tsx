@@ -121,6 +121,29 @@ const ScriptProductionClient: React.FC = () => {
 
         setLoading(true);
         try {
+            // Ensure each chapter has assets.images populated with all selected sources
+            const chaptersForUpload: Chapter[] = chapters.map((ch) => {
+                const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
+                const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
+                const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
+                const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
+                const combined = Array.from(new Set([
+                    ...existingImages,
+                    ...googleImages,
+                    ...envatoImages,
+                    ...keywordImages,
+                ].filter(Boolean)));
+                return {
+                    ...ch,
+                    assets: {
+                        ...ch.assets,
+                        images: combined,
+                        imagesGoogle: googleImages,
+                        imagesEnvato: envatoImages,
+                    }
+                } as Chapter;
+            });
+
             const scriptProductionJSON = {
                 project: {
                     topic: scriptData?.topic || null,
@@ -133,7 +156,8 @@ const ScriptProductionClient: React.FC = () => {
                     subtitleLanguage: scriptData?.subtitleLanguage || null,
                     narrationType: scriptData?.narrationType || null,
                 },
-                script: chapters.map(chapter => ({
+                // Use chaptersForUpload to ensure merged images are included
+                script: chaptersForUpload.map(chapter => ({
                     id: chapter.id,
                     narration: chapter.narration,
                     duration: chapter.duration,
@@ -281,7 +305,6 @@ const ScriptProductionClient: React.FC = () => {
             }
         }
         // console.log('storedData', JSON.stringify(storedData));
-        debugger;
         if (storedData) {
             setLoading(false);
             setScriptData(storedData);
@@ -955,6 +978,15 @@ const ScriptProductionClient: React.FC = () => {
         saveHighlightedKeywords(selectedText.chapterIndex, newKeywords);
         toast.success(`Added "${selectedText.text}" to keywords`);
 
+        // Open media selector with this keyword as suggestion
+        try {
+            if (typeof window !== 'undefined') {
+                (window as any).__keywordSuggestions = { keyword: selectedText.text, keywords: [selectedText.text] };
+            }
+            setMediaManagementChapterIndex(selectedText.chapterIndex);
+            setMediaManagementOpen(true);
+        } catch {}
+
         // Clear selection after adding
         setSelectedText(null);
         window.getSelection()?.removeAllRanges();
@@ -1065,11 +1097,11 @@ const ScriptProductionClient: React.FC = () => {
         router.push(ROUTES_KEYS.TRENDING_TOPICS);
     };
 
-    if (loading || (loading && !noScriptFound)) {
+    if (loading) {
         return (
             <LoadingOverlay
                 title={'Please wait'}
-                desc={`${!noScriptFound ? 'We are preparing your script to process it...' : 'We are uploading your script to process it...'}`}
+                desc={`We are uploading your script to process it...`}
             />
         );
     }

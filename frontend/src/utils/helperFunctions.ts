@@ -378,6 +378,37 @@ export class HelperFunctions {
   static generateRandomId(length = 10) {
     return Math.random().toString(36).substring(2, length + 2);
   }
+
+  /**
+   * Extract image URLs from a chapter's keywordsSelected map.
+   * Accepts shapes like: { keyword: ["https://...", "..."], other: "https://..." }
+   */
+  static extractImageUrlsFromKeywordsSelected(keywordsSelected: Record<string, unknown> | undefined | null): string[] {
+    if (!keywordsSelected || typeof keywordsSelected !== 'object') return [];
+
+    const urls: string[] = [];
+    for (const value of Object.values(keywordsSelected)) {
+      if (Array.isArray(value)) {
+        for (const v of value) {
+          if (typeof v === 'string' && /^https?:\/\//i.test(v)) {
+            urls.push(v);
+          }
+        }
+      } else if (typeof value === 'string' && /^https?:\/\//i.test(value)) {
+        urls.push(value);
+      }
+    }
+    // de-duplicate while preserving order
+    const seen = new Set<string>();
+    const deduped: string[] = [];
+    for (const u of urls) {
+      if (!seen.has(u)) {
+        seen.add(u);
+        deduped.push(u);
+      }
+    }
+    return deduped;
+  }
   
   // Function to get localized section headers based on language
   static getLocalizedSectionHeaders = (lang: string) => {
