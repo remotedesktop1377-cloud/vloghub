@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
         });
         const drive = google.drive({ version: 'v3', auth: jwtClient });
 
-        // root from env
-        const ROOT_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+        // root from env (support both var names)
+        const ROOT_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || process.env.GOOGLE_PARENT_FOLDER_ID;
         if (!ROOT_ID) {
-            return NextResponse.json({ error: 'GOOGLE_DRIVE_FOLDER_ID not set' }, { status: 500 });
+            return NextResponse.json({ error: 'Google Drive root folder env not set (GOOGLE_DRIVE_FOLDER_ID or GOOGLE_PARENT_FOLDER_ID)' }, { status: 500 });
         }
 
         if (isMultipart) {
@@ -100,13 +100,15 @@ export async function POST(request: NextRequest) {
                 const sceneFolder = await findOrCreateFolder(drive, sceneFolderName, project.id);
 
                 const assets = chapter?.assets || {};
+                const images: string[] = Array.isArray(assets.images) ? assets.images : [];
                 const imagesGoogle: string[] = Array.isArray(assets.imagesGoogle) ? assets.imagesGoogle : [];
                 const imagesEnvato: string[] = Array.isArray(assets.imagesEnvato) ? assets.imagesEnvato : [];
 
                 let uploadedCount = 0;
                 const folders: Record<string, { id: string } | null> = {
-                    'google-images': imagesGoogle.length ? await findOrCreateFolder(drive, 'google-images', sceneFolder.id) : null,
-                    'envato-images': imagesEnvato.length ? await findOrCreateFolder(drive, 'envato-images', sceneFolder.id) : null,
+                    'images': images.length ? await findOrCreateFolder(drive, 'images', sceneFolder.id) : null,
+                    // 'google-images': imagesGoogle.length ? await findOrCreateFolder(drive, 'google-images', sceneFolder.id) : null,
+                    // 'envato-images': imagesEnvato.length ? await findOrCreateFolder(drive, 'envato-images', sceneFolder.id) : null,
                 };
 
                 const uploadBatch = async (urls: string[], parentId: string, prefix: string) => {
@@ -140,12 +142,16 @@ export async function POST(request: NextRequest) {
                     }
                 };
 
-                if (folders['google-images']) {
-                    await uploadBatch(imagesGoogle, folders['google-images'].id, `${sceneId}-google`);
+                if (folders['images']) {
+                    // Upload the combined scene images (chapter.assets.images)
+                    await uploadBatch(images, folders['images'].id, `${sceneId}-images`);
                 }
-                if (folders['envato-images']) {
-                    await uploadBatch(imagesEnvato, folders['envato-images'].id, `${sceneId}-envato`);
-                }
+                // if (folders['google-images']) {
+                //     await uploadBatch(imagesGoogle, folders['google-images'].id, `${sceneId}-google`);
+                // }
+                // if (folders['envato-images']) {
+                //     await uploadBatch(imagesEnvato, folders['envato-images'].id, `${sceneId}-envato`);
+                // }
 
                 scenesSummary.push({ sceneId, uploaded: uploadedCount, folderId: sceneFolder.id });
             }

@@ -246,7 +246,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
       {chaptersGenerated && chapters.length > 0 ? (
         <Box sx={{ width: '100%' }}>
           {/* Total Duration Header */}
-          <Box sx={{
+          {/* <Box sx={{
             px: 2,
             py: 1.5,
             borderBottom: '1px solid',
@@ -270,7 +270,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                 {calculateTotalDuration()}
               </Typography>
             </Box>
-          </Box>
+          </Box> */}
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="chapters" isDropDisabled={true} isCombineEnabled={true} ignoreContainerClipping={true}>
               {(provided) => (
@@ -354,7 +354,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         {index + 1}
                                       </Box>
                                       <Box sx={{
-                                        fontSize: '1rem',
+                                        fontSize: '1.2rem',
                                         color: 'text.secondary',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -383,7 +383,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               '& .MuiInputBase-input': {
                                                 fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
                                                 lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
-                                                fontSize: '1.2rem'
+                                                fontSize: '1.2rem',
+                                                textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
                                               },
                                               ...HelperFunctions.getDirectionSx(language)
                                             }}
@@ -429,21 +430,20 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               <Box
                                                 sx={{
                                                   lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
-                                                  fontSize: '1.3rem',
+                                                  fontSize: '1.5rem',
                                                   color: 'text.primary',
                                                   px: 1.5,
                                                   py: 1,
                                                   fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
                                                   userSelect: 'text',
                                                   cursor: 'text',
-                                                  ...HelperFunctions.getDirectionSx(language)
+                                                  ...HelperFunctions.getDirectionSx(language),
+                                                  textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
                                                 }}
                                                 onMouseUp={(e) => {
-                                                  console.log('Mouse up event triggered on chapter', index);
                                                   onTextSelection(index, e);
                                                 }}
                                                 onSelect={(e) => {
-                                                  console.log('Select event triggered on chapter', index);
                                                   onTextSelection(index, e as any);
                                                 }}
                                                 onMouseDown={(e) => {

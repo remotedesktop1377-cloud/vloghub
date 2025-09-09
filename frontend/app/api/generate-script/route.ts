@@ -11,7 +11,7 @@ const model = genAI.getGenerativeModel({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { topic, hypothesis, details, region, duration, language } = body;
+    const { topic, hypothesis, details, region, duration, language, narrationType } = body;
 
     // Validate required fields
     if (!topic || !region || !duration || !language) {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const languageInstructions = `Write the entire script in in fluent, natural ${language}. Make sure all content, including instructions, narration, and call-to-actions are written naturally in ${language}. Use native expressions and cultural references appropriate for ${language}-speaking audiences.`;
+    const languageInstructions = `Write the entire script in fluent, natural ${language}. Make sure all content, including instructions, narration, and call-to-actions are written naturally in ${language}. Use native expressions and cultural references appropriate for ${language}-speaking audiences.`;
 
     const prompt = `You are a professional YouTube content scriptwriter specializing in viral, engaging content.
 
@@ -43,8 +43,17 @@ Create a compelling video script based on the following information:
 6. **Duration Appropriate:** Ensure content fits the ${duration}-minute format
 7. **Language:** ${languageInstructions}
 
+**STYLE:** ${narrationType === 'interview' ? 'Interview (Q/A between host and guest)' : 'Narration (single narrator)'}
+
+For Interview style, write the mainContent as alternating question/answer lines with localized labels and natural questions:
+- Use localized labels in ${language}: Host and Guest lines must begin with these labels followed by a colon
+- Keep each line short and punchy; make questions derived from the upcoming answer
+- Ensure each question and each answer is on its own line, separated by blank lines between logical blocks
+
+For Narration style, write normal paragraphs.
+
 **OUTPUT FORMAT:**
-Return ONLY valid JSON in this exact structure (no markdown, no commentary):
+Return ONLY valid JSON in this exact structure (no markdown, no commentary). For Interview style, the mainContent must already be in Q/A lines as described:
 
 {
   "title": "Compelling video title",
@@ -53,17 +62,13 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary):
   "conclusion": "Strong conclusion text",
   "callToAction": "Call to action for likes, comments, subscribe",
   "estimatedWords": 155,
-  "emotionalTone": "Enthusiastic, engaging, conversational",
-  "pacing": "Dynamic, varied, maintains interest"
 }
 
 **IMPORTANT:** 
 - Return ONLY the JSON object, no additional text
 - Ensure the JSON is valid and complete
 - The mainContent should be the full script text
-- estimatedWords should be the actual word count of the script
-- emotionalTone and pacing should describe the overall style`;
-
+- estimatedWords should be the actual word count of the script`;
 
     try {
       const result = await model.generateContent(prompt);
@@ -88,7 +93,56 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary):
       }
 
       // Combine all content into the main script
-      const fullScript = `${parsedData.hook || ''}\n\n${parsedData.mainContent || ''}\n\n${parsedData.conclusion || ''}\n\n${parsedData.callToAction || ''}`.trim();
+      let fullScript = `${parsedData.hook || ''}\n\n${parsedData.mainContent || ''}\n\n${parsedData.conclusion || ''}\n\n${parsedData.callToAction || ''}`.trim();
+
+      // If interview style requested, ensure interview Q/A formatting with language localization
+      if ((narrationType || '').toLowerCase() === 'interview') {
+        const getInterviewLocalization = (lang: string) => {
+          const l = (lang || '').toLowerCase();
+          if (l.includes('urdu') || l.includes('balochi') || l.includes('punjabi')) {
+            return { interviewerLabel: 'میزبان', guestLabel: 'مہمان', qPrefix: ' کیا آپ ', qSuffix: ' پر مزید روشنی ڈالیں گے؟' } as const;
+          }
+          if (l.includes('arabic')) {
+            return { interviewerLabel: 'المحاور', guestLabel: 'الضيف', qPrefix: ' هل يمكنك التوسع في ', qSuffix: '؟' } as const;
+          }
+          return { interviewerLabel: 'Interviewer', guestLabel: 'Guest', qPrefix: ' Could you elaborate on ', qSuffix: '?' } as const;
+        };
+
+        const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const generateInterviewQAFromScript = (script: string, lang: string) => {
+          const loc = getInterviewLocalization(lang);
+          const paragraphs = (script || '')
+            .split(/\n\s*\n/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+          const labelPattern = new RegExp(`^\\s*(?:${escapeRegExp(loc.interviewerLabel)}|${escapeRegExp(loc.guestLabel)}|Interviewer|Guest)\\s*:\\s*`, 'i');
+          const toQuestion = (text: string) => {
+            const cleaned = text.replace(labelPattern, '').trim();
+            const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0] || cleaned;
+            const words = firstSentence.split(/\s+/).slice(0, 12).join(' ');
+            const topic = words.replace(/[\.:;]+$/, '');
+            return `${loc.interviewerLabel}:${loc.qPrefix}${topic}${loc.qSuffix}`;
+          };
+          const lines: string[] = [];
+          for (const p of paragraphs) {
+            const cleanedP = p.replace(labelPattern, '').trim();
+            lines.push(toQuestion(cleanedP));
+            lines.push(`${loc.guestLabel}: ${cleanedP}`);
+            lines.push('');
+          }
+          return lines.join('\n').trim();
+        };
+
+        // If the model already returned Q/A with localized labels, don't re-wrap
+        const loc = getInterviewLocalization(language);
+        const alreadyQA = fullScript.split('\n').some(l => {
+          const t = l.trim();
+          return t.startsWith(`${loc.interviewerLabel}:`) || t.startsWith(`${loc.guestLabel}:`) || t.startsWith('Interviewer:') || t.startsWith('Guest:');
+        });
+        if (!alreadyQA) {
+          fullScript = generateInterviewQAFromScript(fullScript, language);
+        }
+      }
 
       return NextResponse.json({
         script: fullScript,
