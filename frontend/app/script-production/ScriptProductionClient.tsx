@@ -332,6 +332,22 @@ const ScriptProductionClient: React.FC = () => {
         }
     }, [scriptData]);
 
+    // Fetch Google Drive library once when approved script is present
+    useEffect(() => {
+        const run = async () => {
+            try {
+                if (isScriptApproved) {
+                    const res = await fetch('/api/google-drive-library?category=all', { cache: 'no-store' });
+                    const data = await res.json();
+                    console.log('[Drive Library]', data);
+                }
+            } catch (e) {
+                console.error('Failed to fetch Drive library', e);
+            }
+        };
+        run();
+    }, [isScriptApproved]);
+
     // Calculate estimated duration when script data changes
     useEffect(() => {
         if (chapters && chapters.length > 0) {
