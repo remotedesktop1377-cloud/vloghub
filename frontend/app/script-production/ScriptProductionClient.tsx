@@ -111,6 +111,11 @@ const ScriptProductionClient: React.FC = () => {
     const [uploadingCompleted, setUploadingCompleted] = useState(false);
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
+    const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
+    
+    // Chapter edit dialog states
+    const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
+    const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
 
     // Function to upload JSON to Google Drive
     const uploadToGoogleDrive = async (chapters: Chapter[]) => {
@@ -340,6 +345,13 @@ const ScriptProductionClient: React.FC = () => {
                     const res = await fetch('/api/google-drive-library?category=all', { cache: 'no-store' });
                     const data = await res.json();
                     console.log('[Drive Library]', data);
+                    if (data && data.data) {
+                        setDriveLibrary({
+                            backgrounds: Array.isArray(data.data.backgrounds) ? data.data.backgrounds : [],
+                            music: Array.isArray(data.data.music) ? data.data.music : [],
+                            transitions: Array.isArray(data.data.transitions) ? data.data.transitions : [],
+                        });
+                    }
                 }
             } catch (e) {
                 console.error('Failed to fetch Drive library', e);
@@ -1503,6 +1515,12 @@ const ScriptProductionClient: React.FC = () => {
                                             // Open the image in a new tab for preview
                                             window.open(imageUrl, '_blank');
                                         }}
+                                        chapterEditDialogOpen={chapterEditDialogOpen}
+                                        onChapterEditDialogOpen={setChapterEditDialogOpen}
+                                        onChapterEditDialogChapterIndex={setChapterEditDialogChapterIndex}
+                                        driveBackgrounds={driveLibrary?.backgrounds}
+                                        driveMusic={driveLibrary?.music}
+                                        driveTransitions={driveLibrary?.transitions}
                                     />
                                 )}
 

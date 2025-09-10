@@ -16,7 +16,11 @@ import {
   Tabs,
   Tab,
   Switch,
-  Tooltip
+  Tooltip,
+  Select,
+  MenuItem,
+  Slider,
+  FormControlLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -26,16 +30,27 @@ import {
   Close as CloseIcon,
   DragIndicator as DragIcon,
   AutoFixHigh as MagicIcon,
+  PlayArrow as PlayIcon,
+  Image as ImageIcon,
+  VolumeUp as VolumeIcon,
+  AutoFixHigh as WandIcon,
   Visibility as PreviewIcon,
-  AccessTime as TimeIcon
+  AccessTime as TimeIcon,
+  Pause as PauseIcon,
+  SkipNext as SkipNextIcon,
+  SkipPrevious as SkipPreviousIcon
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Chapter } from '../../types/chapters';
 import { HelperFunctions } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
+import { MediaPlayer } from '../videoEffects/MediaPlayer';
 import { useImageViewer, formatChapterImages } from '../../hooks/useImageViewer';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL, TEXT, BORDER, HOVER, SPECIAL } from '../../styles/colors';
 import ImageSearch from './ImageSearch';
+import { ChapterEditDialog } from './ChapterEditDialog';
+import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights';
+import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 
 interface ChaptersSectionProps {
   chapters: Chapter[];
@@ -96,58 +111,15 @@ interface ChaptersSectionProps {
   onGoogleImagePreview?: (imageUrl: string) => void;
   // Optional: notify parent when opening media for a specific keyword
   onOpenMediaForKeyword?: (chapterIndex: number, keyword: string) => void;
+  // Chapter editing dialog
+  chapterEditDialogOpen: boolean;
+  onChapterEditDialogOpen: (open: boolean) => void;
+  onChapterEditDialogChapterIndex: (index: number | null) => void;
+  // Drive library options
+  driveBackgrounds?: Array<{ id: string; name: string; webViewLink?: string; webContentLink?: string }>;
+  driveMusic?: Array<{ id: string; name: string; webContentLink?: string }>;
+  driveTransitions?: Array<{ id: string; name: string; webContentLink?: string }>;
 }
-
-// Component to render text with highlighted keywords that preserves text selection
-const TextWithHighlights: React.FC<{ text: string; keywords: string[] }> = ({ text, keywords }) => {
-  if (!text || !keywords || keywords.length === 0) {
-    return <>{text}</>;
-  }
-
-  const nonEmptyKeywords = keywords
-    .map(k => k.trim())
-    .filter(k => k.length > 0);
-
-  if (nonEmptyKeywords.length === 0) {
-    return <>{text}</>;
-  }
-
-  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  // Sort by length to prioritize longer phrases and reduce partial overlaps
-  const pattern = nonEmptyKeywords
-    .sort((a, b) => b.length - a.length)
-    .map(escapeRegExp)
-    .join('|');
-
-  const regex = new RegExp(`(${pattern})`, 'gi');
-  const parts = text.split(regex);
-
-  return (
-    <>
-      {parts.map((part, idx) => {
-        // If part matches any keyword (case-insensitive), highlight it
-        const isMatch = nonEmptyKeywords.some(k => k.toLowerCase() === part.toLowerCase());
-        if (isMatch) {
-          return (
-            <span
-              key={idx}
-              style={{
-                backgroundColor: 'rgba(255, 220, 40, 0.6)',
-                borderRadius: 3,
-                padding: '0 2px'
-              }}
-              data-highlighted="true"
-            >
-              {part}
-            </span>
-          );
-        }
-        return <span key={idx}>{part}</span>;
-      })}
-    </>
-  );
-};
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   chapters,
@@ -182,9 +154,19 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   onToolbarInteraction,
   language,
   onGoogleImagePreview,
+  chapterEditDialogOpen,
+  onChapterEditDialogOpen,
+  onChapterEditDialogChapterIndex,
+  driveBackgrounds,
+  driveMusic,
+  driveTransitions,
 }) => {
+  const [expandedChapterIndex, setExpandedChapterIndex] = React.useState<number | null>(null);
+  // Volume popover open state per chapter (inline editor)
+  const [volumeOpenIndex, setVolumeOpenIndex] = React.useState<number | null>(null);
   // Image viewer hook for enhanced image viewing
   const imageViewer = useImageViewer();
+
 
   // Handle opening image viewer for a chapter
   const handleImageClick = (chapterIndex: number, imageIndex: number = 0) => {
@@ -245,32 +227,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
     <Paper sx={{ minHeight: '400px' }}>
       {chaptersGenerated && chapters.length > 0 ? (
         <Box sx={{ width: '100%' }}>
-          {/* Total Duration Header */}
-          {/* <Box sx={{
-            px: 2,
-            py: 1.5,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            bgcolor: 'background.default',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TimeIcon sx={{ fontSize: 20, color: INFO.main }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                Scenes ({chapters.length})
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                Total Duration:
-              </Typography>
-              <Typography variant="h6" sx={{ color: INFO.main, fontWeight: 700 }}>
-                {calculateTotalDuration()}
-              </Typography>
-            </Box>
-          </Box> */}
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="chapters" isDropDisabled={true} isCombineEnabled={true} ignoreContainerClipping={true}>
               {(provided) => (
@@ -415,11 +371,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         </Box>
                                       ) : (
                                         <>
-                                          {/* Content Area - 50% Narration + 50% Media */}
+                                          {/* Content Area - narration and media */}
                                           <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%', minHeight: '120px', bgcolor: 'background.paper', justifyContent: 'center', alignItems: 'center' }}>
-                                            {/* Narration Content - 50% */}
+                                            {/* Narration Content */}
                                             <Box sx={{
-                                              flex: '0 0 70%',
+                                              flex: expandedChapterIndex === index ? '1 1 100%' : '0 0 70%',
                                               display: 'flex',
                                               flexDirection: 'column',
                                               height: '100%',
@@ -451,15 +407,819 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   window.getSelection()?.removeAllRanges();
                                                 }}
                                               >
-                                                {chapter.narration ? (
-                                                  <TextWithHighlights
-                                                    text={chapter.narration}
-                                                    keywords={chapter.highlightedKeywords || []}
-                                                  />
-                                                ) : (
-                                                  'Narration content will be generated here.'
+                                                {expandedChapterIndex !== index && (
+                                                  <>
+                                                    {chapter.narration ? (
+                                                      <TextWithHighlights
+                                                        text={chapter.narration}
+                                                        keywords={chapter.highlightedKeywords || []}
+                                                      />
+                                                    ) : (
+                                                      'Narration content will be generated here.'
+                                                    )}
+                                                  </>
                                                 )}
                                               </Box>
+
+                                              {/* Inline Editor (expanded view) */}
+                                              {expandedChapterIndex === index && (
+                                                <Box sx={{
+                                                  mt: 1,
+                                                  p: 2,
+                                                  borderRadius: 1,
+                                                  width: '100%',
+                                                  fontSize: '1.6rem'
+                                                }}>
+
+                                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.6 }}>
+
+                                                    <TextField
+                                                      label="Narration"
+                                                      value={chapters[index].narration}
+                                                      onChange={(e) => {
+                                                        onEditNarrationChange(e.target.value);
+                                                        // Recompute duration from narration length (simple heuristic: ~150 wpm)
+                                                        const words = e.target.value.trim().split(/\s+/).filter(Boolean).length;
+                                                        const seconds = Math.ceil((words / 150) * 60);
+                                                        const updated = chapters.map((ch, i) => i === index ? { ...ch, narration: e.target.value, words, durationInSeconds: seconds } : ch);
+                                                        onChaptersUpdate(updated);
+                                                      }}
+                                                      multiline
+                                                      minRows={3}
+                                                      fullWidth
+                                                      sx={{
+                                                        '& .MuiInputBase-input': {
+                                                          fontSize: '1.4rem',
+                                                          lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.4 : 1.9,
+                                                          fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                                                          textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
+                                                        }
+                                                      }}
+                                                    />
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                                        Duration: {Math.max(0, Math.round(chapters[index].durationInSeconds))} seconds
+                                                      </Typography>
+                                                    </Box>
+
+                                                    {/* Inline Rows: Media & Effects */}
+                                                    {/* Video Clips */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.25 }}>
+                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
+                                                        <PlayIcon sx={{ color: INFO.main, fontSize: 18 }} />
+                                                        Video Clips
+                                                      </Typography>
+                                                      {(() => {
+                                                        const clips = (((chapters[index] as any).videoEffects?.clips) || []) as Array<{ url?: string }>;
+                                                        const blockAdd = clips.some(c => !c || !c.url || String(c.url).trim().length === 0);
+                                                        const btn = (
+                                                          <Button
+                                                            size="small"
+                                                            startIcon={<AddIcon />}
+                                                            variant="contained"
+                                                            disableElevation
+                                                            disabled={blockAdd}
+                                                            sx={{
+                                                              bgcolor: INFO.main,
+                                                              color: NEUTRAL.white,
+                                                              textTransform: 'none',
+                                                              borderRadius: 2,
+                                                              px: 1.75,
+                                                              fontSize: '1.05rem',
+                                                              '&:hover': { bgcolor: HOVER.info }
+                                                            }}
+                                                            onClick={() => {
+                                                              const updated = chapters.map((ch, i) => {
+                                                                if (i !== index) return ch;
+                                                                const clipsList = (ch as any).videoEffects?.clips || [];
+                                                                const next = {
+                                                                  ...(ch as any),
+                                                                  videoEffects: {
+                                                                    ...(ch as any).videoEffects,
+                                                                    clips: [...clipsList, { id: Date.now().toString(), name: 'New Clip', url: '', duration: 10 }]
+                                                                  }
+                                                                } as any;
+                                                                return next;
+                                                              });
+                                                              onChaptersUpdate(updated);
+                                                            }}
+                                                          >
+                                                            Add Clip
+                                                          </Button>
+                                                        );
+                                                        return blockAdd ? (
+                                                          <Tooltip title="Upload/select video for the current clip before adding another."><span>{btn}</span></Tooltip>
+                                                        ) : btn;
+                                                      })()}
+                                                    </Box>
+
+                                                    {/* Render Clips Inline */}
+                                                    {(((chapters[index] as any).videoEffects?.clips) || []).length > 0 && (
+                                                      <Box sx={{ mt: 1 }}>
+                                                        {(((chapters[index] as any).videoEffects?.clips) || []).map((clip: any, clipIdx: number) => (
+                                                          <Box key={clip.id || clipIdx} sx={{
+                                                            display: 'grid',
+                                                            gridTemplateColumns: '1.2fr 1.6fr 1.2fr 0.8fr auto auto',
+                                                            gap: 1,
+                                                            alignItems: 'center',
+                                                            mb: 0.75
+                                                          }}>
+                                                            <TextField
+                                                              size="small"
+                                                              label="Clip Name"
+                                                              value={clip.name || ''}
+                                                              onChange={(e) => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
+                                                                  clips[clipIdx] = { ...clips[clipIdx], name: e.target.value };
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                            />
+                                                            <TextField
+                                                              size="small"
+                                                              label="URL or File"
+                                                              value={clip.url || ''}
+                                                              onChange={(e) => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
+                                                                  clips[clipIdx] = { ...clips[clipIdx], url: e.target.value };
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                            />
+                                                            {/* Backgrounds dropdown from Drive */}
+                                                            <Select
+                                                              size="small"
+                                                              displayEmpty
+                                                              value={clip.driveBackgroundId || ''}
+                                                              onChange={(e) => {
+                                                                const val = String(e.target.value);
+                                                                const bg = (((driveBackgrounds as Array<{ id: string; webContentLink?: string; name?: string }>) || [])
+                                                                  .filter(f => !(f.name || '').toLowerCase().endsWith('.zip'))
+                                                                  ).find((x) => x.id === val);
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
+                                                                  clips[clipIdx] = { ...clips[clipIdx], driveBackgroundId: val, url: bg?.webContentLink || clips[clipIdx]?.url };
+                                                                  return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, clips } } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                              sx={{ minWidth: 180 }}
+                                                            >
+                                                              <MenuItem value="">Select background from Drive...</MenuItem>
+                                                              {(((driveBackgrounds as Array<{ id: string; name: string }>) || []).filter(file => !(file.name || '').toLowerCase().endsWith('.zip'))).map((file) => (
+                                                                <MenuItem key={file.id} value={file.id}>{file.name}</MenuItem>
+                                                              ))}
+                                                            </Select>
+                                                            <TextField
+                                                              size="small"
+                                                              label="Duration (s)"
+                                                              type="number"
+                                                              value={clip.duration || 0}
+                                                              onChange={(e) => {
+                                                                const val = parseInt(e.target.value) || 0;
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
+                                                                  clips[clipIdx] = { ...clips[clipIdx], duration: val };
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                            />
+                                                            <>
+                                                              <input
+                                                                id={`clip-upload-${index}-${clipIdx}`}
+                                                                type="file"
+                                                                accept="video/*"
+                                                                style={{ display: 'none' }}
+                                                                onChange={(e) => {
+                                                                  const file = (e.target as HTMLInputElement).files?.[0];
+                                                                  if (!file) return;
+                                                                  const objectUrl = URL.createObjectURL(file);
+                                                                  const updated = chapters.map((ch, i) => {
+                                                                    if (i !== index) return ch;
+                                                                    const clips = [...(((ch as any).videoEffects?.clips) || [])];
+                                                                    clips[clipIdx] = { ...clips[clipIdx], url: objectUrl, name: file.name };
+                                                                    return {
+                                                                      ...(ch as any),
+                                                                      videoEffects: { ...(ch as any).videoEffects, clips }
+                                                                    } as any;
+                                                                  });
+                                                                  onChaptersUpdate(updated);
+                                                                }}
+                                                              />
+                                                              <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                onClick={() => {
+                                                                  const el = document.getElementById(`clip-upload-${index}-${clipIdx}`) as HTMLInputElement | null;
+                                                                  el?.click();
+                                                                }}
+                                                                sx={{ textTransform: 'none', fontSize: '1rem' }}
+                                                              >
+                                                                Upload
+                                                              </Button>
+                                                            </>
+                                                            <IconButton
+                                                              size="small"
+                                                              sx={{ color: ERROR.main }}
+                                                              onClick={() => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])].filter((_: any, idx: number) => idx !== clipIdx);
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                              title="Remove clip"
+                                                            >
+                                                              <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                          </Box>
+                                                        ))}
+                                                      </Box>
+                                                    )}
+
+                                                    {/* Logo Overlays */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.25 }}>
+                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
+                                                        <ImageIcon sx={{ color: PRIMARY.main, fontSize: 18 }} />
+                                                        Logo Overlays
+                                                      </Typography>
+                                                      {(() => {
+                                                        const logos = (((chapters[index] as any).videoEffects?.logos) || []) as Array<{ url?: string }>;
+                                                        const blockAddLogo = logos.some(l => !l || !l.url || String(l.url).trim().length === 0);
+                                                        const btn = (
+                                                          <Button
+                                                            size="small"
+                                                            startIcon={<AddIcon />}
+                                                            variant="contained"
+                                                            disableElevation
+                                                            disabled={blockAddLogo}
+                                                            sx={{
+                                                              bgcolor: PRIMARY.main,
+                                                              color: NEUTRAL.white,
+                                                              textTransform: 'none',
+                                                              borderRadius: 2,
+                                                              px: 1.75,
+                                                              fontSize: '1.05rem',
+                                                              '&:hover': { bgcolor: HOVER.info }
+                                                            }}
+                                                            onClick={() => {
+                                                              const updated = chapters.map((ch, i) => {
+                                                                if (i !== index) return ch;
+                                                                const logosList = (ch as any).videoEffects?.logos || [];
+                                                                const next = {
+                                                                  ...(ch as any),
+                                                                  videoEffects: {
+                                                                    ...(ch as any).videoEffects,
+                                                                    logos: [...logosList, { id: Date.now().toString(), name: 'New Logo', url: '', position: 'top-right' }]
+                                                                  }
+                                                                } as any;
+                                                                return next;
+                                                              });
+                                                              onChaptersUpdate(updated);
+                                                            }}
+                                                          >
+                                                            Add Logo
+                                                          </Button>
+                                                        );
+                                                        return blockAddLogo ? (
+                                                          <Tooltip title="Provide an image URL or upload for the current logo before adding another."><span>{btn}</span></Tooltip>
+                                                        ) : btn;
+                                                      })()}
+                                                    </Box>
+
+                                                    {/* Render Logos Inline */}
+                                                    {(((chapters[index] as any).videoEffects?.logos) || []).length > 0 && (
+                                                      <Box sx={{ mt: 1 }}>
+                                                        {(((chapters[index] as any).videoEffects?.logos) || []).map((logo: any, logoIdx: number) => (
+                                                          <Box key={logo.id || logoIdx} sx={{
+                                                            display: 'grid',
+                                                            gridTemplateColumns: '1.2fr 1.6fr 1.1fr auto auto',
+                                                            gap: 1,
+                                                            alignItems: 'center',
+                                                            mb: 0.75
+                                                          }}>
+                                                            <TextField
+                                                              size="small"
+                                                              label="Logo Name"
+                                                              value={logo.name || ''}
+                                                              onChange={(e) => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])];
+                                                                  logos[logoIdx] = { ...logos[logoIdx], name: e.target.value };
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                            />
+                                                            <TextField
+                                                              size="small"
+                                                              label="Image URL"
+                                                              value={logo.url || ''}
+                                                              onChange={(e) => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])];
+                                                                  logos[logoIdx] = { ...logos[logoIdx], url: e.target.value };
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                            />
+                                                            <Select
+                                                              size="small"
+                                                              value={logo.position || 'top-right'}
+                                                              onChange={(e) => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])];
+                                                                  logos[logoIdx] = { ...logos[logoIdx], position: String(e.target.value) };
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                            >
+                                                              <MenuItem value="top-left">Top Left</MenuItem>
+                                                              <MenuItem value="top-right">Top Right</MenuItem>
+                                                              <MenuItem value="bottom-left">Bottom Left</MenuItem>
+                                                              <MenuItem value="bottom-right">Bottom Right</MenuItem>
+                                                              <MenuItem value="center">Center</MenuItem>
+                                                            </Select>
+                                                            <>
+                                                              <input
+                                                                id={`logo-upload-${index}-${logoIdx}`}
+                                                                type="file"
+                                                                accept="image/*"
+                                                                style={{ display: 'none' }}
+                                                                onChange={(e) => {
+                                                                  const file = (e.target as HTMLInputElement).files?.[0];
+                                                                  if (!file) return;
+                                                                  const objectUrl = URL.createObjectURL(file);
+                                                                  const updated = chapters.map((ch, i) => {
+                                                                    if (i !== index) return ch;
+                                                                    const logos = [...(((ch as any).videoEffects?.logos) || [])];
+                                                                    logos[logoIdx] = { ...logos[logoIdx], url: objectUrl, name: file.name };
+                                                                    return {
+                                                                      ...(ch as any),
+                                                                      videoEffects: { ...(ch as any).videoEffects, logos }
+                                                                    } as any;
+                                                                  });
+                                                                  onChaptersUpdate(updated);
+                                                                }}
+                                                              />
+                                                              <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                onClick={() => {
+                                                                  const el = document.getElementById(`logo-upload-${index}-${logoIdx}`) as HTMLInputElement | null;
+                                                                  el?.click();
+                                                                }}
+                                                                sx={{ textTransform: 'none', fontSize: '1rem' }}
+                                                              >
+                                                                Upload
+                                                              </Button>
+                                                            </>
+                                                            <IconButton
+                                                              size="small"
+                                                              sx={{ color: ERROR.main }}
+                                                              onClick={() => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])].filter((_: any, idx: number) => idx !== logoIdx);
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                              }}
+                                                              title="Remove logo"
+                                                            >
+                                                              <DeleteIcon fontSize="small" />
+                                                            </IconButton>
+                                                          </Box>
+                                                        ))}
+                                                      </Box>
+                                                    )}
+
+                                                    {/* Background Music */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.25 }}>
+                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
+                                                        <VolumeIcon sx={{ color: WARNING.main, fontSize: 18 }} />
+                                                        Background Music
+                                                      </Typography>
+                                                      {(() => {
+                                                        const bg = ((chapters[index] as any).videoEffects?.backgroundMusic) as any;
+                                                        const blockAddMusic = !!bg && (!bg.selectedMusic || String(bg.selectedMusic).trim().length === 0);
+                                                        const btn = (
+                                                          <Button
+                                                            size="small"
+                                                            startIcon={<AddIcon />}
+                                                            variant="contained"
+                                                            disableElevation
+                                                            disabled={blockAddMusic}
+                                                            sx={{
+                                                              bgcolor: WARNING.main,
+                                                              color: NEUTRAL.white,
+                                                              textTransform: 'none',
+                                                              borderRadius: 2,
+                                                              px: 1.75,
+                                                              fontSize: '1.05rem',
+                                                              '&:hover': { bgcolor: HOVER.warning }
+                                                            }}
+                                                            onClick={() => {
+                                                              const updated = chapters.map((ch, i) => {
+                                                                if (i !== index) return ch;
+                                                                const next = {
+                                                                  ...(ch as any),
+                                                                  videoEffects: {
+                                                                    ...(ch as any).videoEffects,
+                                                                    backgroundMusic: {
+                                                                      id: Date.now().toString(),
+                                                                      selectedMusic: '',
+                                                                      volume: 0.3,
+                                                                      autoAdjust: true,
+                                                                      fadeIn: true,
+                                                                      fadeOut: true,
+                                                                    }
+                                                                  }
+                                                                } as any;
+                                                                return next;
+                                                              });
+                                                              onChaptersUpdate(updated);
+                                                            }}
+                                                          >
+                                                            Add Music
+                                                          </Button>
+                                                        );
+                                                        return blockAddMusic ? (
+                                                          <Tooltip title="Select a track for the current music before adding another."><span>{btn}</span></Tooltip>
+                                                        ) : btn;
+                                                      })()}
+                                                    </Box>
+
+                                                    {((chapters[index] as any).videoEffects?.backgroundMusic) && (
+                                                      <Box sx={{ width: '100%' }}>
+                                                        <Box sx={{
+                                                          display: 'flex',
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          justifyContent: 'space-between',
+                                                          borderRadius: 1,
+                                                          border: '1px solid',
+                                                          borderColor: 'divider',
+                                                        }}>
+                                                          <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', pl: 1.25 }}>
+                                                            <Select
+                                                              size="small"
+                                                              value={(chapters[index] as any).videoEffects?.backgroundMusic?.selectedMusic || ''}
+                                                              onChange={(e) => {
+                                                                const updated = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const bg = { ...((ch as any).videoEffects?.backgroundMusic || {}) };
+                                                                  return {
+                                                                    ...(ch as any),
+                                                                    videoEffects: {
+                                                                      ...(ch as any).videoEffects,
+                                                                      backgroundMusic: { ...bg, selectedMusic: String(e.target.value) }
+                                                                    }
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(updated);
+                                                                // close volume if open and reset player by changing key below automatically
+                                                                setVolumeOpenIndex(null);
+                                                              }}
+                                                              disabled={Boolean((chapters[index] as any).assets?.backgroundMusic)}
+                                                              sx={{
+                                                                minWidth: 280,
+                                                                maxWidth: 320,
+                                                                maxHeight: 50,
+                                                                '& .MuiSelect-select': {
+                                                                  display: 'inline-block',
+                                                                  maxWidth: 280,
+                                                                  overflow: 'hidden',
+                                                                  textOverflow: 'ellipsis',
+                                                                  whiteSpace: 'nowrap'
+                                                                }
+                                                              }}
+                                                              renderValue={(value) => {
+                                                                const id = String(value || '');
+                                                                const option = ((driveMusic as Array<{ id: string; name: string }>) || []).find(m => m.id === id);
+                                                                const text = option?.name || 'Select background music...';
+                                                                return text;
+                                                              }}
+                                                            >
+                                                              <MenuItem value="">Select background music...</MenuItem>
+                                                              {((driveMusic as Array<{ id: string; name: string }>) || []).map((m) => (
+                                                                <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>
+                                                              ))}
+                                                            </Select>
+
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                              {/* Music Preview */}
+                                                              {(() => {
+                                                                const id = (chapters[index] as any).videoEffects?.backgroundMusic?.selectedMusic || '';
+                                                                const track = ((driveMusic as Array<{ id: string; webContentLink?: string; name: string }>) || []).find((m) => m.id === id);
+                                                                return (
+                                                                  <Box
+                                                                    sx={{
+                                                                      mt: 1,
+                                                                      p: 1.25,
+                                                                      bgcolor: 'rgba(29,161,242,0.04)'
+                                                                    }}>
+                                                                    <CustomAudioPlayer src={track?.id ? `/api/google-drive-media?id=${encodeURIComponent(track?.id)}` : (track?.webContentLink || '')} title={undefined} playerId={`bgm-${index}`} />
+                                                                  </Box>
+                                                                );
+                                                              })()}
+                                                              <Tooltip title={`Volume (${Math.round((((chapters[index] as any).videoEffects?.backgroundMusic?.volume || 0.3) * 100))}%)`}>
+                                                                <IconButton size="small" onClick={() => setVolumeOpenIndex(volumeOpenIndex === index ? null : index)} disabled={Boolean((chapters[index] as any).videoEffects?.backgroundMusicApplied)}>
+                                                                  <VolumeIcon sx={{ color: WARNING.main }} fontSize="small" />
+                                                                </IconButton>
+                                                              </Tooltip>
+                                                              <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 34, textAlign: 'center' }}>
+                                                                {Math.round((((chapters[index] as any).videoEffects?.backgroundMusic?.volume || 0.3) * 100))}%
+                                                              </Typography>
+                                                              {volumeOpenIndex === index && (
+                                                                <Box sx={{
+                                                                  bgcolor: 'background.paper',
+                                                                  border: '1px solid',
+                                                                  borderColor: 'divider',
+                                                                  ml: 1,
+                                                                  p: 1,
+                                                                  borderRadius: 1,
+                                                                  boxShadow: 4,
+                                                                }}
+                                                                  onMouseLeave={() => setVolumeOpenIndex(null)}
+                                                                >
+                                                                  <Box sx={{ width: 160, px: 1, display: 'flex', alignItems: 'center', }}>
+                                                                    <Slider
+                                                                      size="small"
+                                                                      min={0.0}
+                                                                      max={1}
+                                                                      step={0.05}
+                                                                      value={(chapters[index] as any).videoEffects?.backgroundMusic?.volume || 0.3}
+                                                                      onChange={(_, value) => {
+                                                                        const vol = Array.isArray(value) ? value[0] : value;
+                                                                        const updated = chapters.map((ch, i) => {
+                                                                          if (i !== index) return ch;
+                                                                          const bg = { ...((ch as any).videoEffects?.backgroundMusic || {}) };
+                                                                          return {
+                                                                            ...(ch as any),
+                                                                            videoEffects: {
+                                                                              ...(ch as any).videoEffects,
+                                                                              backgroundMusic: { ...bg, volume: Number(vol) }
+                                                                            }
+                                                                          } as any;
+                                                                        });
+                                                                        onChaptersUpdate(updated);
+                                                                      }}
+                                                                    />
+                                                                  </Box>
+                                                                </Box>
+                                                              )}
+                                                            </Box>
+                                                          </Box>
+
+                                                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                            <Tooltip title={(chapters[index] as any).videoEffects?.backgroundMusic?.autoAdjust !== false ? 'Auto Adjust: On' : 'Auto Adjust: Off'}>
+                                                              <Button
+                                                                size="small"
+                                                                disabled={Boolean((chapters[index] as any).videoEffects?.backgroundMusicApplied)}
+                                                                variant={(chapters[index] as any).videoEffects?.backgroundMusic?.autoAdjust !== false ? 'contained' : 'outlined'}
+                                                                onClick={() => {
+                                                                  const updated = chapters.map((ch, i) => {
+                                                                    if (i !== index) return ch;
+                                                                    const bg = { ...((ch as any).videoEffects?.backgroundMusic || {}) };
+                                                                    const next = !(bg.autoAdjust === true);
+                                                                    return {
+                                                                      ...(ch as any),
+                                                                      videoEffects: { ...(ch as any).videoEffects, backgroundMusic: { ...bg, autoAdjust: next } }
+                                                                    } as any;
+                                                                  });
+                                                                  onChaptersUpdate(updated);
+                                                                }}
+                                                                sx={{ textTransform: 'none', fontSize: '1rem', width: 120, height: 40 }}
+                                                              >
+                                                                Auto Adjust
+                                                              </Button>
+                                                            </Tooltip>
+                                                            <Tooltip title={(chapters[index] as any).videoEffects?.backgroundMusic?.fadeIn !== false ? 'Fade In: On' : 'Fade In: Off'}>
+                                                              <Button
+                                                                size="small"
+                                                                variant={(chapters[index] as any).videoEffects?.backgroundMusic?.fadeIn !== false ? 'contained' : 'outlined'}
+                                                                disabled={Boolean((chapters[index] as any).videoEffects?.backgroundMusicApplied)}
+                                                                onClick={() => {
+                                                                  const updated = chapters.map((ch, i) => {
+                                                                    if (i !== index) return ch;
+                                                                    const bg = { ...((ch as any).videoEffects?.backgroundMusic || {}) };
+                                                                    const next = !(bg.fadeIn === true);
+                                                                    return {
+                                                                      ...(ch as any),
+                                                                      videoEffects: { ...(ch as any).videoEffects, backgroundMusic: { ...bg, fadeIn: next } }
+                                                                    } as any;
+                                                                  });
+                                                                  onChaptersUpdate(updated);
+                                                                }}
+                                                                sx={{ textTransform: 'none', fontSize: '1rem', width: 100, height: 40 }}
+                                                              >
+                                                                Fade In
+                                                              </Button>
+                                                            </Tooltip>
+                                                            <Tooltip title={(chapters[index] as any).videoEffects?.backgroundMusic?.fadeOut !== false ? 'Fade Out: On' : 'Fade Out: Off'}>
+                                                              <Button
+                                                                size="small"
+                                                                variant={(chapters[index] as any).videoEffects?.backgroundMusic?.fadeOut !== false ? 'contained' : 'outlined'}
+                                                                disabled={Boolean((chapters[index] as any).videoEffects?.backgroundMusicApplied)}
+                                                                onClick={() => {
+                                                                  const updated = chapters.map((ch, i) => {
+                                                                    if (i !== index) return ch;
+                                                                    const bg = { ...((ch as any).videoEffects?.backgroundMusic || {}) };
+                                                                    const next = !(bg.fadeOut === true);
+                                                                    return {
+                                                                      ...(ch as any),
+                                                                      videoEffects: { ...(ch as any).videoEffects, backgroundMusic: { ...bg, fadeOut: next } }
+                                                                    } as any;
+                                                                  });
+                                                                  onChaptersUpdate(updated);
+                                                                }}
+                                                                sx={{ textTransform: 'none', fontSize: '1rem', width: 100, height: 40 }}
+                                                              >
+                                                                Fade Out
+                                                              </Button>
+                                                            </Tooltip>
+                                                            <Button
+                                                              size="small"
+                                                              variant="contained"
+                                                              disabled={Boolean((chapters[index] as any).videoEffects?.backgroundMusicApplied)}
+                                                              color="success"
+                                                              sx={{ textTransform: 'none', fontSize: '1rem', width: 120, height: 40 }}
+                                                              onClick={() => {
+                                                                const id = (chapters[index] as any).videoEffects?.backgroundMusic?.selectedMusic || '';
+                                                                const track = ((driveMusic as Array<{ id: string; webContentLink?: string }>) || []).find((m) => m.id === id);
+                                                                const bg = (chapters[index] as any).videoEffects?.backgroundMusic || {};
+                                                                // Pause current audio if playing
+                                                                try { (window as any).__audioPlayers && (window as any).__audioPlayers[`bgm-${index}`]?.pause?.(); } catch {}
+                                                                const nextChapters = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  const musicObj = {
+                                                                    id: bg.id || Date.now().toString(),
+                                                                    selectedMusic: track?.webContentLink ? track.webContentLink : (track?.id ? `/api/google-drive-media?id=${encodeURIComponent(track.id)}` : ''),
+                                                                    volume: typeof bg.volume === 'number' ? bg.volume : 0.3,
+                                                                    autoAdjust: bg.autoAdjust !== false,
+                                                                    fadeIn: bg.fadeIn !== false,
+                                                                    fadeOut: bg.fadeOut !== false,
+                                                                  };
+                                                                  return {
+                                                                    ...ch,
+                                                                    assets: {
+                                                                      ...ch.assets,
+                                                                      backgroundMusic: musicObj,
+                                                                    },
+                                                                    videoEffects: {
+                                                                      ...(ch as any).videoEffects,
+                                                                      backgroundMusic: { ...(ch as any).videoEffects?.backgroundMusic },
+                                                                      backgroundMusicApplied: true as any,
+                                                                    } as any,
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(nextChapters);
+                                                                if (typeof window !== 'undefined' && (window as any).toast) {
+                                                                  (window as any).toast.success('Background music applied');
+                                                                }
+                                                              }}
+                                                            >
+                                                              Apply Music
+                                                            </Button>
+                                                            <Button
+                                                              size="small"
+                                                              variant="outlined"
+                                                              color="warning"
+                                                              sx={{ textTransform: 'none', fontSize: '1rem', width: 100, height: 40 }}
+                                                              onClick={() => {
+                                                                // Pause any playing preview for this scene
+                                                                try { (window as any).__audioPlayers && (window as any).__audioPlayers[`bgm-${index}`]?.pause?.(); } catch {}
+                                                                const nextChapters = chapters.map((ch, i) => {
+                                                                  if (i !== index) return ch;
+                                                                  return {
+                                                                    ...ch,
+                                                                    assets: { ...ch.assets, backgroundMusic: undefined },
+                                                                    videoEffects: { ...(ch as any).videoEffects, backgroundMusic: undefined, backgroundMusicApplied: undefined } as any,
+                                                                  } as any;
+                                                                });
+                                                                onChaptersUpdate(nextChapters);
+                                                                setVolumeOpenIndex(null);
+                                                                if (typeof window !== 'undefined' && (window as any).toast) {
+                                                                  (window as any).toast.success('Background music removed');
+                                                                }
+                                                              }}
+                                                            >
+                                                              Remove 
+                                                            </Button>
+                                                          </Box>
+                                                        </Box>
+                                                      </Box>
+                                                    )}
+
+                                                    {/* Transition Effect */}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
+                                                        <WandIcon sx={{ color: PURPLE.main, fontSize: 18 }} />
+                                                        Transition Effect
+                                                      </Typography>
+                                                      <Select
+                                                        size="small"
+                                                        sx={{
+                                                          minWidth: 260,
+                                                          bgcolor: 'background.default',
+                                                          borderRadius: 2,
+                                                          fontSize: '1.05rem'
+                                                        }}
+                                                        value={(chapters[index] as any).videoEffects?.transition || ''}
+                                                        onChange={(e) => {
+                                                          const updated = chapters.map((ch, i) => {
+                                                            if (i !== index) return ch;
+                                                            const next = {
+                                                              ...(ch as any),
+                                                              videoEffects: {
+                                                                ...(ch as any).videoEffects,
+                                                                transition: String(e.target.value)
+                                                              }
+                                                            } as any;
+                                                            return next;
+                                                          });
+                                                          onChaptersUpdate(updated);
+                                                        }}
+                                                      >
+                                                        <MenuItem value="">Select transition...</MenuItem>
+                                                        {((driveTransitions as Array<{ id: string; name: string }>) || []).map((t) => (
+                                                          <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                                                        ))}
+                                                      </Select>
+                                                    </Box>
+
+                                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                                      <Button
+                                                        variant="contained"
+                                                        color="success"
+                                                        onClick={() => setExpandedChapterIndex(null)}
+                                                        sx={{ fontSize: '1.05rem' }}
+                                                      >
+                                                        Save
+                                                      </Button>
+                                                      <Button
+                                                        variant="outlined"
+                                                        color="inherit"
+                                                        onClick={() => setExpandedChapterIndex(null)}
+                                                        sx={{ fontSize: '1.05rem' }}
+                                                      >
+                                                        Close
+                                                      </Button>
+                                                      <Button
+                                                        variant="text"
+                                                        color="primary"
+                                                        onClick={() => {
+                                                          onChapterEditDialogChapterIndex(index);
+                                                          onChapterEditDialogOpen(true);
+                                                        }}
+                                                        sx={{ fontSize: '1.05rem' }}
+                                                      >
+                                                        Open Advanced Editor
+                                                      </Button>
+                                                    </Box>
+                                                  </Box>
+                                                </Box>
+                                              )}
 
                                               {/* Highlighted Keywords Display */}
                                               {chapter.highlightedKeywords && chapter.highlightedKeywords.length > 0 && (
@@ -691,360 +1451,362 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
                                             </Box>
 
-                                            {/* Media Section - 50% */}
-                                            <Box sx={{
-                                              flex: '0 0 30%',
-                                              px: 1.5,
-                                              py: 1,
-                                              height: '100%',
-                                              // maxHeight: '120px',
-                                              // overflow: 'auto',
-                                              // bgcolor: 'background.default',
-                                              borderLeft: '1px solid',
-                                              borderLeftColor: 'divider'
-                                            }}>
-                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                                <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.05rem' }}>
-                                                  📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.images ? 1 : 0)})
-                                                </Typography>
-                                                <Button
-                                                  size="small"
-                                                  variant="outlined"
-                                                  sx={{
-                                                    fontSize: '1rem',
-                                                    py: 0.4,
-                                                    px: 0.9,
-                                                    minHeight: 'auto',
-                                                    borderColor: 'primary.main',
-                                                    color: 'primary.main',
-                                                    '&:hover': {
-                                                      borderColor: 'primary.dark',
-                                                      bgcolor: 'action.hover'
-                                                    }
-                                                  }}
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (typeof window !== 'undefined') {
-                                                      (window as any).__keywordSuggestions = undefined;
-                                                    }
-                                                    onMediaManagementChapterIndex(index);
-                                                    onMediaManagementOpen(true);
-                                                  }}
-                                                >
-                                                  {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? 'Manage' : 'Add'}
-                                                </Button>
-                                              </Box>
-
-                                              {/* Media Display */}
-                                              {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? (
-                                                <>
-                                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
-                                                    {/* Determine if first image is AI (not from Google/Envato) */}
-                                                    {(() => {
-                                                      const allImages = (chapter.assets && Array.isArray(chapter.assets.images)) ? chapter.assets.images : [];
-                                                      const googleSet = new Set(chapter.assets?.imagesGoogle || []);
-                                                      const envatoSet = new Set(chapter.assets?.imagesEnvato || []);
-                                                      const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
-                                                      return hasAIAtFirst;
-                                                    })() && (
-                                                        <Box
-                                                          sx={{
-                                                            position: 'relative',
-                                                            width: '75px',
-                                                            height: '75px',
-                                                            borderRadius: 0.5,
-                                                            overflow: 'hidden',
-                                                            border: `2px solid ${SUCCESS.main}`,
-                                                            cursor: 'pointer',
-                                                            transition: 'transform 0.2s',
-                                                            '&:hover': {
-                                                              transform: 'scale(1.02)',
-                                                              borderColor: '#388e3c'
-                                                            }
-                                                          }}
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleImageClick(index, 0);
-                                                          }}
-                                                        >
-                                                          <img
-                                                            src={chapter.assets?.images?.[0] || ''}
-                                                            alt={`Generated chapter ${index + 1} Image`}
-                                                            style={{
-                                                              position: 'absolute',
-                                                              width: '100%',
-                                                              height: '100%',
-                                                              objectFit: 'cover'
-                                                            }}
-                                                          />
-                                                          {/* Delete Button */}
-                                                          <IconButton
-                                                            size="small"
-                                                            sx={{
-                                                              position: 'absolute',
-                                                              top: 2,
-                                                              right: 2,
-                                                              bgcolor: 'background.paper',
-                                                              width: 14,
-                                                              height: 14,
-                                                              minWidth: 14,
-                                                              '&:hover': { bgcolor: 'background.paper' }
-                                                            }}
-                                                            onClick={(e) => {
-                                                              e.stopPropagation();
-                                                              // Remove the AI generated image from chapter
-                                                              const updatedChapters = chapters.map((ch, chIndex) => {
-                                                                if (chIndex === index) {
-                                                                  const aiUrl = ch.assets?.images?.[0] || '';
-                                                                  return {
-                                                                    ...ch,
-                                                                    assets: {
-                                                                      ...ch.assets,
-                                                                      images: ch.assets?.images?.slice(1) || null,
-                                                                      imagesGoogle: (ch.assets?.imagesGoogle || []).filter(u => u !== aiUrl) || null,
-                                                                      imagesEnvato: (ch.assets?.imagesEnvato || []).filter(u => u !== aiUrl) || null
-                                                                    }
-                                                                  };
-                                                                }
-                                                                return ch;
-                                                              });
-                                                              onChaptersUpdate(updatedChapters);
-                                                            }}
-                                                          >
-                                                            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                              <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                            </svg>
-                                                          </IconButton>
-                                                        </Box>
-                                                      )}
-
-                                                    {/* Show Selected Images (Google/Envato) */}
-                                                    {(() => {
-                                                      const allImages = (chapter.assets && Array.isArray(chapter.assets.images)) ? chapter.assets.images : [];
-                                                      const googleSet = new Set(chapter.assets?.imagesGoogle || []);
-                                                      const envatoSet = new Set(chapter.assets?.imagesEnvato || []);
-                                                      const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
-                                                      const list = hasAIAtFirst ? allImages.slice(1) : allImages;
-                                                      return list.map((imageUrl, imgIndex) => (
-                                                        <Box
-                                                          key={`selected-${imgIndex}`}
-                                                          sx={{
-                                                            position: 'relative',
-                                                            width: '75px',
-                                                            height: '75px',
-                                                            borderRadius: 0.5,
-                                                            overflow: 'hidden',
-                                                            border: `2px solid ${PRIMARY.main}`,
-                                                            cursor: 'pointer',
-                                                            transition: 'transform 0.2s',
-                                                            '&:hover': {
-                                                              transform: 'scale(1.02)',
-                                                              borderColor: PRIMARY.dark
-                                                            }
-                                                          }}
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const imageIndex = (hasAIAtFirst ? 1 : 0) + imgIndex;
-                                                            handleImageClick(index, imageIndex);
-                                                          }}
-                                                        >
-                                                          <img
-                                                            src={imageUrl}
-                                                            alt={`Selected Image ${imgIndex + 1}`}
-                                                            style={{
-                                                              position: 'absolute',
-                                                              width: '100%',
-                                                              height: '100%',
-                                                              objectFit: 'cover'
-                                                            }}
-                                                          />
-                                                          {/* Delete Button */}
-                                                          <IconButton
-                                                            size="small"
-                                                            sx={{
-                                                              position: 'absolute',
-                                                              top: 2,
-                                                              right: 2,
-                                                              bgcolor: 'background.paper',
-                                                              width: 14,
-                                                              height: 14,
-                                                              minWidth: 14,
-                                                              '&:hover': { bgcolor: 'background.paper' }
-                                                            }}
-                                                            onClick={(e) => {
-                                                              e.stopPropagation();
-                                                              // Remove the selected image from chapter assets
-                                                              const updatedChapters = chapters.map((ch, chIndex) => {
-                                                                if (chIndex === index) {
-                                                                  const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
-                                                                  const googleSetInner = new Set(ch.assets?.imagesGoogle || []);
-                                                                  const envatoSetInner = new Set(ch.assets?.imagesEnvato || []);
-                                                                  const hasAIAtFirstInner = currentImages.length > 0 && !googleSetInner.has(currentImages[0]) && !envatoSetInner.has(currentImages[0]);
-                                                                  const absoluteIndex = (hasAIAtFirstInner ? 1 : 0) + imgIndex;
-                                                                  const targetUrl = currentImages[absoluteIndex];
-                                                                  const updatedImages = currentImages.filter((_, i) => i !== absoluteIndex);
-                                                                  const currentGoogle = ch.assets?.imagesGoogle || [];
-                                                                  const currentEnvato = ch.assets?.imagesEnvato || [];
-                                                                  const updatedGoogle = currentGoogle.filter((u) => u !== targetUrl);
-                                                                  const updatedEnvato = currentEnvato.filter((u) => u !== targetUrl);
-                                                                  return {
-                                                                    ...ch,
-                                                                    assets: {
-                                                                      ...ch.assets,
-                                                                      images: updatedImages.length > 0 ? updatedImages : null,
-                                                                      imagesGoogle: updatedGoogle.length > 0 ? updatedGoogle : null,
-                                                                      imagesEnvato: updatedEnvato.length > 0 ? updatedEnvato : null
-                                                                    }
-                                                                  };
-                                                                }
-                                                                return ch;
-                                                              });
-                                                              onChaptersUpdate(updatedChapters);
-                                                            }}
-                                                          >
-                                                            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                              <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                            </svg>
-                                                          </IconButton>
-                                                        </Box>
-                                                      ));
-                                                    })()}
-
-                                                    {/* Show Additional Images */}
-                                                    {(chapterImagesMap[index] || []).slice(0, 4).map((imageUrl, imgIndex) => (
-                                                      <Box
-                                                        key={imgIndex}
-                                                        sx={{
-                                                          position: 'relative',
-                                                          width: '75px',
-                                                          height: '75px',
-                                                          borderRadius: 0.5,
-                                                          overflow: 'hidden',
-                                                          border: `1px solid ${BORDER.light}`,
-                                                          cursor: 'pointer',
-                                                          transition: 'transform 0.2s',
-                                                          '&:hover': {
-                                                            transform: 'scale(1.02)',
-                                                            borderColor: PRIMARY.main
-                                                          }
-                                                        }}
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          const imageIndex = chapter.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
-                                                          handleImageClick(index, imageIndex);
-                                                        }}
-                                                      >
-                                                        <img
-                                                          src={imageUrl}
-                                                          alt={`Scene ${index + 1} Media ${imgIndex + 1}`}
-                                                          style={{
-                                                            position: 'absolute',
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover'
-                                                          }}
-                                                        />
-                                                        {/* Delete Button */}
-                                                        <IconButton
-                                                          size="small"
-                                                          sx={{
-                                                            position: 'absolute',
-                                                            top: 2,
-                                                            right: 2,
-                                                            bgcolor: 'background.paper',
-                                                            width: 14,
-                                                            height: 14,
-                                                            minWidth: 14,
-                                                            '&:hover': { bgcolor: 'background.paper' }
-                                                          }}
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const currentImages = chapterImagesMap[index] || [];
-                                                            const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
-                                                            onChapterImagesMapChange({
-                                                              ...chapterImagesMap,
-                                                              [index]: updatedImages
-                                                            });
-                                                          }}
-                                                        >
-                                                          <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                          </svg>
-                                                        </IconButton>
-                                                      </Box>
-                                                    ))}
-                                                    {(chapterImagesMap[index] || []).length > 4 && (
-                                                      <Box sx={{
-                                                        position: 'relative',
-                                                        width: '50px',
-                                                        height: '50px',
-                                                        borderRadius: 0.5,
-                                                        border: `1px dashed ${BORDER.medium}`,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        bgcolor: SPECIAL.lightGray,
-                                                        cursor: 'pointer',
-                                                        fontSize: '0.8rem',
-                                                        color: TEXT.dark
-                                                      }}
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          if (typeof window !== 'undefined') {
-                                                            (window as any).__keywordSuggestions = undefined;
-                                                          }
-                                                          onMediaManagementChapterIndex(index);
-                                                          onMediaManagementOpen(true);
-                                                        }}
-                                                      >
-                                                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                          +{(chapterImagesMap[index] || []).length - 4}
-                                                        </Box>
-                                                      </Box>
-                                                    )}
-                                                  </Box>
-                                                </>
-                                              ) : (
-                                                <Box sx={{
-                                                  border: '1px dashed',
-                                                  borderColor: 'divider',
-                                                  borderRadius: 1,
-                                                  p: 1,
-                                                  textAlign: 'center',
-                                                  bgcolor: 'background.default',
-                                                  cursor: generatingChapters ? 'default' : 'pointer',
-                                                  minHeight: '60px',
-                                                  display: 'flex',
-                                                  flexDirection: 'column',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center'
-                                                }}
-                                                  onClick={(e) => {
-                                                    if (!generatingChapters) {
+                                            {/* Media Section */}
+                                            {expandedChapterIndex !== index && (
+                                              <Box sx={{
+                                                flex: '0 0 30%',
+                                                px: 1.5,
+                                                py: 1,
+                                                height: '100%',
+                                                // maxHeight: '120px',
+                                                // overflow: 'auto',
+                                                // bgcolor: 'background.default',
+                                                borderLeft: '1px solid',
+                                                borderLeftColor: 'divider'
+                                              }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.05rem' }}>
+                                                    📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.images ? 1 : 0)})
+                                                  </Typography>
+                                                  <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{
+                                                      fontSize: '1rem',
+                                                      py: 0.4,
+                                                      px: 0.9,
+                                                      minHeight: 'auto',
+                                                      borderColor: 'primary.main',
+                                                      color: 'primary.main',
+                                                      '&:hover': {
+                                                        borderColor: 'primary.dark',
+                                                        bgcolor: 'action.hover'
+                                                      }
+                                                    }}
+                                                    onClick={(e) => {
                                                       e.stopPropagation();
                                                       if (typeof window !== 'undefined') {
                                                         (window as any).__keywordSuggestions = undefined;
                                                       }
                                                       onMediaManagementChapterIndex(index);
                                                       onMediaManagementOpen(true);
-                                                    }
-                                                  }}
-                                                >
-                                                  {generatingChapters ? (
-                                                    <>
-                                                      <CircularProgress size={16} sx={{ mb: 0.5 }} />
-                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.95rem' }}>
-                                                        Generating AI image...
-                                                      </Typography>
-                                                    </>
-                                                  ) : (
-                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.95rem' }}>
-                                                      Click to add media
-                                                    </Typography>
-                                                  )}
+                                                    }}
+                                                  >
+                                                    {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? 'Manage' : 'Add'}
+                                                  </Button>
                                                 </Box>
-                                              )}
-                                            </Box>
+
+                                                {/* Media Display */}
+                                                {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? (
+                                                  <>
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
+                                                      {/* Determine if first image is AI (not from Google/Envato) */}
+                                                      {(() => {
+                                                        const allImages = (chapter.assets && Array.isArray(chapter.assets.images)) ? chapter.assets.images : [];
+                                                        const googleSet = new Set(chapter.assets?.imagesGoogle || []);
+                                                        const envatoSet = new Set(chapter.assets?.imagesEnvato || []);
+                                                        const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
+                                                        return hasAIAtFirst;
+                                                      })() && (
+                                                          <Box
+                                                            sx={{
+                                                              position: 'relative',
+                                                              width: '75px',
+                                                              height: '75px',
+                                                              borderRadius: 0.5,
+                                                              overflow: 'hidden',
+                                                              border: `2px solid ${SUCCESS.main}`,
+                                                              cursor: 'pointer',
+                                                              transition: 'transform 0.2s',
+                                                              '&:hover': {
+                                                                transform: 'scale(1.02)',
+                                                                borderColor: '#388e3c'
+                                                              }
+                                                            }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              handleImageClick(index, 0);
+                                                            }}
+                                                          >
+                                                            <img
+                                                              src={chapter.assets?.images?.[0] || ''}
+                                                              alt={`Generated chapter ${index + 1} Image`}
+                                                              style={{
+                                                                position: 'absolute',
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover'
+                                                              }}
+                                                            />
+                                                            {/* Delete Button */}
+                                                            <IconButton
+                                                              size="small"
+                                                              sx={{
+                                                                position: 'absolute',
+                                                                top: 2,
+                                                                right: 2,
+                                                                bgcolor: 'background.paper',
+                                                                width: 14,
+                                                                height: 14,
+                                                                minWidth: 14,
+                                                                '&:hover': { bgcolor: 'background.paper' }
+                                                              }}
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                // Remove the AI generated image from chapter
+                                                                const updatedChapters = chapters.map((ch, chIndex) => {
+                                                                  if (chIndex === index) {
+                                                                    const aiUrl = ch.assets?.images?.[0] || '';
+                                                                    return {
+                                                                      ...ch,
+                                                                      assets: {
+                                                                        ...ch.assets,
+                                                                        images: ch.assets?.images?.slice(1) || null,
+                                                                        imagesGoogle: (ch.assets?.imagesGoogle || []).filter(u => u !== aiUrl) || null,
+                                                                        imagesEnvato: (ch.assets?.imagesEnvato || []).filter(u => u !== aiUrl) || null
+                                                                      }
+                                                                    };
+                                                                  }
+                                                                  return ch;
+                                                                });
+                                                                onChaptersUpdate(updatedChapters);
+                                                              }}
+                                                            >
+                                                              <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                              </svg>
+                                                            </IconButton>
+                                                          </Box>
+                                                        )}
+
+                                                      {/* Show Selected Images (Google/Envato) */}
+                                                      {(() => {
+                                                        const allImages = (chapter.assets && Array.isArray(chapter.assets.images)) ? chapter.assets.images : [];
+                                                        const googleSet = new Set(chapter.assets?.imagesGoogle || []);
+                                                        const envatoSet = new Set(chapter.assets?.imagesEnvato || []);
+                                                        const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
+                                                        const list = hasAIAtFirst ? allImages.slice(1) : allImages;
+                                                        return list.map((imageUrl, imgIndex) => (
+                                                          <Box
+                                                            key={`selected-${imgIndex}`}
+                                                            sx={{
+                                                              position: 'relative',
+                                                              width: '75px',
+                                                              height: '75px',
+                                                              borderRadius: 0.5,
+                                                              overflow: 'hidden',
+                                                              border: `2px solid ${PRIMARY.main}`,
+                                                              cursor: 'pointer',
+                                                              transition: 'transform 0.2s',
+                                                              '&:hover': {
+                                                                transform: 'scale(1.02)',
+                                                                borderColor: PRIMARY.dark
+                                                              }
+                                                            }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              const imageIndex = (hasAIAtFirst ? 1 : 0) + imgIndex;
+                                                              handleImageClick(index, imageIndex);
+                                                            }}
+                                                          >
+                                                            <img
+                                                              src={imageUrl}
+                                                              alt={`Selected Image ${imgIndex + 1}`}
+                                                              style={{
+                                                                position: 'absolute',
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover'
+                                                              }}
+                                                            />
+                                                            {/* Delete Button */}
+                                                            <IconButton
+                                                              size="small"
+                                                              sx={{
+                                                                position: 'absolute',
+                                                                top: 2,
+                                                                right: 2,
+                                                                bgcolor: 'background.paper',
+                                                                width: 14,
+                                                                height: 14,
+                                                                minWidth: 14,
+                                                                '&:hover': { bgcolor: 'background.paper' }
+                                                              }}
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                // Remove the selected image from chapter assets
+                                                                const updatedChapters = chapters.map((ch, chIndex) => {
+                                                                  if (chIndex === index) {
+                                                                    const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
+                                                                    const googleSetInner = new Set(ch.assets?.imagesGoogle || []);
+                                                                    const envatoSetInner = new Set(ch.assets?.imagesEnvato || []);
+                                                                    const hasAIAtFirstInner = currentImages.length > 0 && !googleSetInner.has(currentImages[0]) && !envatoSetInner.has(currentImages[0]);
+                                                                    const absoluteIndex = (hasAIAtFirstInner ? 1 : 0) + imgIndex;
+                                                                    const targetUrl = currentImages[absoluteIndex];
+                                                                    const updatedImages = currentImages.filter((_, i) => i !== absoluteIndex);
+                                                                    const currentGoogle = ch.assets?.imagesGoogle || [];
+                                                                    const currentEnvato = ch.assets?.imagesEnvato || [];
+                                                                    const updatedGoogle = currentGoogle.filter((u) => u !== targetUrl);
+                                                                    const updatedEnvato = currentEnvato.filter((u) => u !== targetUrl);
+                                                                    return {
+                                                                      ...ch,
+                                                                      assets: {
+                                                                        ...ch.assets,
+                                                                        images: updatedImages.length > 0 ? updatedImages : null,
+                                                                        imagesGoogle: updatedGoogle.length > 0 ? updatedGoogle : null,
+                                                                        imagesEnvato: updatedEnvato.length > 0 ? updatedEnvato : null
+                                                                      }
+                                                                    };
+                                                                  }
+                                                                  return ch;
+                                                                });
+                                                                onChaptersUpdate(updatedChapters);
+                                                              }}
+                                                            >
+                                                              <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                              </svg>
+                                                            </IconButton>
+                                                          </Box>
+                                                        ));
+                                                      })()}
+
+                                                      {/* Show Additional Images */}
+                                                      {(chapterImagesMap[index] || []).slice(0, 4).map((imageUrl, imgIndex) => (
+                                                        <Box
+                                                          key={imgIndex}
+                                                          sx={{
+                                                            position: 'relative',
+                                                            width: '75px',
+                                                            height: '75px',
+                                                            borderRadius: 0.5,
+                                                            overflow: 'hidden',
+                                                            border: `1px solid ${BORDER.light}`,
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.2s',
+                                                            '&:hover': {
+                                                              transform: 'scale(1.02)',
+                                                              borderColor: PRIMARY.main
+                                                            }
+                                                          }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const imageIndex = chapter.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
+                                                            handleImageClick(index, imageIndex);
+                                                          }}
+                                                        >
+                                                          <img
+                                                            src={imageUrl}
+                                                            alt={`Scene ${index + 1} Media ${imgIndex + 1}`}
+                                                            style={{
+                                                              position: 'absolute',
+                                                              width: '100%',
+                                                              height: '100%',
+                                                              objectFit: 'cover'
+                                                            }}
+                                                          />
+                                                          {/* Delete Button */}
+                                                          <IconButton
+                                                            size="small"
+                                                            sx={{
+                                                              position: 'absolute',
+                                                              top: 2,
+                                                              right: 2,
+                                                              bgcolor: 'background.paper',
+                                                              width: 14,
+                                                              height: 14,
+                                                              minWidth: 14,
+                                                              '&:hover': { bgcolor: 'background.paper' }
+                                                            }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              const currentImages = chapterImagesMap[index] || [];
+                                                              const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
+                                                              onChapterImagesMapChange({
+                                                                ...chapterImagesMap,
+                                                                [index]: updatedImages
+                                                              });
+                                                            }}
+                                                          >
+                                                            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                              <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                          </IconButton>
+                                                        </Box>
+                                                      ))}
+                                                      {(chapterImagesMap[index] || []).length > 4 && (
+                                                        <Box sx={{
+                                                          position: 'relative',
+                                                          width: '50px',
+                                                          height: '50px',
+                                                          borderRadius: 0.5,
+                                                          border: `1px dashed ${BORDER.medium}`,
+                                                          display: 'flex',
+                                                          alignItems: 'center',
+                                                          justifyContent: 'center',
+                                                          bgcolor: SPECIAL.lightGray,
+                                                          cursor: 'pointer',
+                                                          fontSize: '0.8rem',
+                                                          color: TEXT.dark
+                                                        }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (typeof window !== 'undefined') {
+                                                              (window as any).__keywordSuggestions = undefined;
+                                                            }
+                                                            onMediaManagementChapterIndex(index);
+                                                            onMediaManagementOpen(true);
+                                                          }}
+                                                        >
+                                                          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            +{(chapterImagesMap[index] || []).length - 4}
+                                                          </Box>
+                                                        </Box>
+                                                      )}
+                                                    </Box>
+                                                  </>
+                                                ) : (
+                                                  <Box sx={{
+                                                    border: '1px dashed',
+                                                    borderColor: 'divider',
+                                                    borderRadius: 1,
+                                                    p: 1,
+                                                    textAlign: 'center',
+                                                    bgcolor: 'background.default',
+                                                    cursor: generatingChapters ? 'default' : 'pointer',
+                                                    minHeight: '60px',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                  }}
+                                                    onClick={(e) => {
+                                                      if (!generatingChapters) {
+                                                        e.stopPropagation();
+                                                        if (typeof window !== 'undefined') {
+                                                          (window as any).__keywordSuggestions = undefined;
+                                                        }
+                                                        onMediaManagementChapterIndex(index);
+                                                        onMediaManagementOpen(true);
+                                                      }
+                                                    }}
+                                                  >
+                                                    {generatingChapters ? (
+                                                      <>
+                                                        <CircularProgress size={16} sx={{ mb: 0.5 }} />
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1rem' }}>
+                                                          Generating AI image...
+                                                        </Typography>
+                                                      </>
+                                                    ) : (
+                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1rem' }}>
+                                                        Click to add media
+                                                      </Typography>
+                                                    )}
+                                                  </Box>
+                                                )}
+                                              </Box>
+                                            )}
                                           </Box>
                                         </>
                                       )}
@@ -1053,7 +1815,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 </Box>
 
                                 {/* Chapter Actions */}
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
+                                <Box sx={{ display: expandedChapterIndex === index ? 'none' : 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
                                   {editingChapter === index ? (
                                     <>
                                       {/* Save Button */}
@@ -1093,9 +1855,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       </IconButton>
                                     </>
                                   ) : (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, visibility: 'hidden' }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                       {/* Magic variations for this chapter */}
-                                      <IconButton
+                                      {/* <IconButton
                                         className="chapter-actions"
                                         size="small"
                                         onClick={async () => {
@@ -1131,14 +1893,17 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         title="Magic variations"
                                       >
                                         <MagicIcon fontSize="small" />
-                                      </IconButton>
+                                      </IconButton> */}
                                       {/* Edit Chapter Button */}
                                       <IconButton
                                         className="chapter-actions"
                                         size="small"
-                                        onClick={() => onStartEdit(index, chapter.narration || '', chapter.narration || '')}
+                                        onClick={() => {
+                                          onSelectChapter(index);
+                                          setExpandedChapterIndex(expandedChapterIndex === index ? null : index);
+                                        }}
                                         sx={{
-                                          opacity: selectedChapterIndex === index ? 1 : 0,
+                                          opacity: 1,
                                           transition: 'opacity 0.2s ease',
                                           color: WARNING.main,
                                           '&:hover': {
@@ -1159,7 +1924,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         size="small"
                                         onClick={() => onDeleteChapter(index)}
                                         sx={{
-                                          opacity: selectedChapterIndex === index ? 1 : 0,
+                                          opacity: 1,
                                           transition: 'opacity 0.2s ease',
                                           color: ERROR.main,
                                           '&:hover': {
@@ -1180,7 +1945,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         size="small"
                                         onClick={() => onAddChapterAfter(index)}
                                         sx={{
-                                          opacity: selectedChapterIndex === index ? 1 : 0,
+                                          opacity: 1,
                                           transition: 'opacity 0.2s ease',
                                           color: INFO.main,
                                           '&:hover': {
@@ -1365,6 +2130,22 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         showNavigation={true}
         showDownload={true}
         showViewModeSelector={true}
+      />
+
+      {/* Chapter Edit Dialog */}
+      <ChapterEditDialog
+        open={chapterEditDialogOpen}
+        chapter={chapters[selectedChapterIndex] || null}
+        chapterIndex={selectedChapterIndex}
+        language={language}
+        onClose={() => onChapterEditDialogOpen(false)}
+        onSave={(chapterIndex, updatedChapter) => {
+          const updatedChapters = chapters.map((ch, idx) =>
+            idx === chapterIndex ? updatedChapter : ch
+          );
+          onChaptersUpdate(updatedChapters);
+          onChapterEditDialogOpen(false);
+        }}
       />
     </Paper>
   );
