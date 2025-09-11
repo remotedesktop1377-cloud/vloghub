@@ -118,8 +118,8 @@ const ScriptProductionClient: React.FC = () => {
     const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
 
     // Function to upload JSON to Google Drive
-    const uploadToGoogleDrive = async () => {
-        // setLoading(true);
+    const uploadToGoogleDrive = async (chapters: Chapter[]) => {
+        setLoading(true);
         try {
             // Ensure each chapter has assets.images populated with all selected sources
             // const chaptersForUpload: Chapter[] = chapters.map((ch) => {
@@ -165,7 +165,7 @@ const ScriptProductionClient: React.FC = () => {
                     startTime: chapter.startTime,
                     endTime: chapter.endTime,
                     highlightedKeywords: chapter.highlightedKeywords || [],
-                    keywordsSelected: chapter.keywordsSelected || {},
+                    keywordsSelected: Array.isArray(chapter.keywordsSelected) ? chapter.keywordsSelected : [],
                     assets: {
                         images: chapter.assets?.images || [],
                     },
@@ -203,6 +203,7 @@ const ScriptProductionClient: React.FC = () => {
 
             const result = await response.json();
             console.log('Drive result:', result);
+            setLoading(false);
 
         } catch (e: any) {
             console.error(e);
@@ -264,10 +265,9 @@ const ScriptProductionClient: React.FC = () => {
             startTime: p.startTime,
             endTime: p.endTime,
             durationInSeconds: p.durationInSeconds,
-            keywordsSelected: {},
+            keywordsSelected: [],
             assets: { image: null, audio: null, video: null, images: [], imagesGoogle: [], imagesEnvato: [] }
         }));
-
         setChapters(chaptersAsRequired);
     };
 
@@ -275,7 +275,6 @@ const ScriptProductionClient: React.FC = () => {
         // Load from secure storage - check metadata first, then approved script
         let storedData = null;
         let isApproved = false;
-        setLoading(true);
 
         // First try to load from metadata (for unapproved scripts)
         try {
@@ -327,10 +326,8 @@ const ScriptProductionClient: React.FC = () => {
         const run = async () => {
             try {
                 if (isScriptApproved) {
-                    setLoading(true);
                     const res = await fetch('/api/google-drive-library?category=all', { cache: 'no-store' });
                     const data = await res.json();
-                    console.log('[Drive Library]', data);
                     if (data && data.data) {
                         setDriveLibrary({
                             backgrounds: Array.isArray(data.data.backgrounds) ? data.data.backgrounds : [],
@@ -347,14 +344,25 @@ const ScriptProductionClient: React.FC = () => {
     }, [isScriptApproved]);
 
     useEffect(() => {
-        if (chapters && chapters.length > 0) {
+        if (isScriptApproved && chapters && chapters.length > 0) {
             // save updated chapters
             secure.j.approvedScript.set({ ...scriptData, chapters });
-            uploadToGoogleDrive();
-            // If highlightedKeywords are missing on any chapter, fetch them once
+            try {
+                console.log('Chapters modified:', JSON.stringify(chapters));
+            } catch { }
+            // If highlightedKeywords are missing on any chapter, fetch them once            
             const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
             if (needsHighlights) {
-                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters);
+                debugger
+                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
+                    debugger
+                    console.log('chapters with highlights', chapters);
+                    uploadToGoogleDrive(chapters);
+                });
+            } else {
+                // this will be restricted when we will get the boolean from the Supabse to verify the script is uploaded or not
+                // we need to add a service to update the status on the supabase once the script is uploaded.
+                uploadToGoogleDrive(chapters);
             }
         }
     }, [chapters]);
@@ -1129,7 +1137,7 @@ const ScriptProductionClient: React.FC = () => {
         return (
             <LoadingOverlay
                 title={'Please wait'}
-                desc={`We are uploading your script to process it...`}
+                desc={`We are processing your script...`}
             />
         );
     }

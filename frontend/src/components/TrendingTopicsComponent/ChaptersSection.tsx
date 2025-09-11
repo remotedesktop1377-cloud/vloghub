@@ -1329,19 +1329,40 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             e.stopPropagation();
                                                             const updatedChapters = chapters.map((ch, idx) => {
                                                               if (idx !== index) return ch;
-                                                              const keywordMap = ch.keywordsSelected || {};
-                                                              const urlsToRemove = keywordMap[keyword] || [];
+                                                              // Build list of URLs tied to this keyword based on new array format (fallback to legacy map)
+                                                              let urlsToRemove: string[] = [];
+                                                              if (Array.isArray(ch.keywordsSelected)) {
+                                                                const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                const entry = arr.find(e => e.suggestedKeyword === keyword);
+                                                                if (entry && entry.media) {
+                                                                  const low = entry.media.lowResMedia;
+                                                                  const high = entry.media.highResMedia;
+                                                                  urlsToRemove = [low, high].filter((u): u is string => typeof u === 'string' && !!u);
+                                                                }
+                                                              } else {
+                                                                const map = (ch.keywordsSelected || {}) as Record<string, string[]>;
+                                                                urlsToRemove = map[keyword] || [];
+                                                              }
                                                               const images = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
                                                               const imagesGoogle = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
                                                               const imagesEnvato = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
                                                               const filteredImages = images.filter(u => !urlsToRemove.includes(u));
                                                               const filteredGoogle = imagesGoogle.filter(u => !urlsToRemove.includes(u));
                                                               const filteredEnvato = imagesEnvato.filter(u => !urlsToRemove.includes(u));
-                                                              const { [keyword]: _removed, ...restMap } = keywordMap;
+                                                              // Remove keyword from keywordsSelected
+                                                              let nextKeywordsSelected: import('@/types/chapters').ChapterKeywordSelection[] | Record<string, string[]> | undefined = ch.keywordsSelected;
+                                                              if (Array.isArray(ch.keywordsSelected)) {
+                                                                const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                nextKeywordsSelected = arr.filter(e => e.suggestedKeyword !== keyword);
+                                                              } else {
+                                                                const map = (ch.keywordsSelected || {}) as Record<string, string[]>;
+                                                                const { [keyword]: _removed, ...restMap } = map;
+                                                                nextKeywordsSelected = restMap;
+                                                              }
                                                               return {
                                                                 ...ch,
                                                                 highlightedKeywords: (ch.highlightedKeywords || []).filter(k => k !== keyword),
-                                                                keywordsSelected: restMap,
+                                                                keywordsSelected: nextKeywordsSelected as any,
                                                                 assets: {
                                                                   ...ch.assets,
                                                                   images: filteredImages.length > 0 ? filteredImages : null,
@@ -1564,10 +1585,28 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               }}
                                                               onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                // Remove the AI generated image from chapter
+                                                                // Remove the AI generated image from chapter and related keyword selections
                                                                 const updatedChapters = chapters.map((ch, chIndex) => {
                                                                   if (chIndex === index) {
                                                                     const aiUrl = ch.assets?.images?.[0] || '';
+                                                                    // Update keywordsSelected
+                                                                    let nextKeywordsSelected: any = ch.keywordsSelected;
+                                                                    if (Array.isArray(ch.keywordsSelected)) {
+                                                                      const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                      nextKeywordsSelected = arr.filter(entry => {
+                                                                        const low = entry.media?.lowResMedia;
+                                                                        const high = entry.media?.highResMedia;
+                                                                        return low !== aiUrl && high !== aiUrl;
+                                                                      });
+                                                                    } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
+                                                                      const map = ch.keywordsSelected as Record<string, string[]>;
+                                                                      const newMap: Record<string, string[]> = {};
+                                                                      Object.entries(map).forEach(([k, list]) => {
+                                                                        const filtered = (list || []).filter(u => u !== aiUrl);
+                                                                        if (filtered.length > 0) newMap[k] = filtered;
+                                                                      });
+                                                                      nextKeywordsSelected = newMap;
+                                                                    }
                                                                     return {
                                                                       ...ch,
                                                                       assets: {
@@ -1575,7 +1614,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         images: ch.assets?.images?.slice(1) || null,
                                                                         imagesGoogle: (ch.assets?.imagesGoogle || []).filter(u => u !== aiUrl) || null,
                                                                         imagesEnvato: (ch.assets?.imagesEnvato || []).filter(u => u !== aiUrl) || null
-                                                                      }
+                                                                      },
+                                                                      ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
                                                                     };
                                                                   }
                                                                   return ch;
@@ -1645,7 +1685,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               }}
                                                               onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                // Remove the selected image from chapter assets
+                                                                // Remove the selected image from chapter assets and related keyword selections
                                                                 const updatedChapters = chapters.map((ch, chIndex) => {
                                                                   if (chIndex === index) {
                                                                     const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
@@ -1659,6 +1699,24 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     const currentEnvato = ch.assets?.imagesEnvato || [];
                                                                     const updatedGoogle = currentGoogle.filter((u) => u !== targetUrl);
                                                                     const updatedEnvato = currentEnvato.filter((u) => u !== targetUrl);
+                                                                    // Update keywordsSelected
+                                                                    let nextKeywordsSelected: any = ch.keywordsSelected;
+                                                                    if (Array.isArray(ch.keywordsSelected)) {
+                                                                      const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                      nextKeywordsSelected = arr.filter(entry => {
+                                                                        const low = entry.media?.lowResMedia;
+                                                                        const high = entry.media?.highResMedia;
+                                                                        return low !== targetUrl && high !== targetUrl;
+                                                                      });
+                                                                    } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
+                                                                      const map = ch.keywordsSelected as Record<string, string[]>;
+                                                                      const newMap: Record<string, string[]> = {};
+                                                                      Object.entries(map).forEach(([k, list]) => {
+                                                                        const filtered = (list || []).filter(u => u !== targetUrl);
+                                                                        if (filtered.length > 0) newMap[k] = filtered;
+                                                                      });
+                                                                      nextKeywordsSelected = newMap;
+                                                                    }
                                                                     return {
                                                                       ...ch,
                                                                       assets: {
@@ -1666,7 +1724,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         images: updatedImages.length > 0 ? updatedImages : null,
                                                                         imagesGoogle: updatedGoogle.length > 0 ? updatedGoogle : null,
                                                                         imagesEnvato: updatedEnvato.length > 0 ? updatedEnvato : null
-                                                                      }
+                                                                      },
+                                                                      ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
                                                                     };
                                                                   }
                                                                   return ch;
@@ -1737,6 +1796,48 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                 ...chapterImagesMap,
                                                                 [index]: updatedImages
                                                               });
+
+                                                              // Also remove from chapter assets and keywordsSelected if this URL was associated
+                                                              const imageUrlToRemove = imageUrl;
+                                                              const updatedChapters = chapters.map((ch, chIndex) => {
+                                                                if (chIndex !== index) return ch;
+                                                                // Remove from assets.images lists if present
+                                                                const imagesList = Array.isArray(ch.assets?.images) ? (ch.assets!.images as string[]) : [];
+                                                                const newImagesList = imagesList.filter(u => u !== imageUrlToRemove);
+                                                                const newImagesGoogle = (ch.assets?.imagesGoogle || []).filter(u => u !== imageUrlToRemove) || null;
+                                                                const newImagesEnvato = (ch.assets?.imagesEnvato || []).filter(u => u !== imageUrlToRemove) || null;
+
+                                                                // Remove keyword selection entries referencing this URL
+                                                                let nextKeywordsSelected: any = ch.keywordsSelected;
+                                                                if (Array.isArray(ch.keywordsSelected)) {
+                                                                  const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                  nextKeywordsSelected = arr.filter(entry => {
+                                                                    const low = entry.media?.lowResMedia;
+                                                                    const high = entry.media?.highResMedia;
+                                                                    return low !== imageUrlToRemove && high !== imageUrlToRemove;
+                                                                  });
+                                                                } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
+                                                                  const map = ch.keywordsSelected as Record<string, string[]>;
+                                                                  const newMap: Record<string, string[]> = {};
+                                                                  Object.entries(map).forEach(([k, list]) => {
+                                                                    const filtered = (list || []).filter(u => u !== imageUrlToRemove);
+                                                                    if (filtered.length > 0) newMap[k] = filtered;
+                                                                  });
+                                                                  nextKeywordsSelected = newMap;
+                                                                }
+
+                                                                return {
+                                                                  ...ch,
+                                                                  assets: {
+                                                                    ...ch.assets,
+                                                                    images: newImagesList.length > 0 ? newImagesList : null,
+                                                                    imagesGoogle: newImagesGoogle,
+                                                                    imagesEnvato: newImagesEnvato
+                                                                  },
+                                                                  ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
+                                                                };
+                                                              });
+                                                              onChaptersUpdate(updatedChapters);
                                                             }}
                                                           >
                                                             <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2058,13 +2159,44 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                   // Update the chapter with new assets
                   const updatedChapters = chapters.map((chapter, index) => {
                     if (index === chapterIndex) {
-                      const mergedKeywordsSelected = {
-                        ...(chapter.keywordsSelected || {}),
-                        ...(updatedChapter.keywordsSelectedMerge || {})
-                      };
+                      // Transform any legacy merge payload (map) into array entries
+                      let nextKeywordsSelected: import('@/types/chapters').ChapterKeywordSelection[] = Array.isArray(chapter.keywordsSelected) ? (chapter.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[]) : [];
+                      if (updatedChapter.keywordsSelectedMerge && typeof updatedChapter.keywordsSelectedMerge === 'object') {
+                        const mergeMap = updatedChapter.keywordsSelectedMerge as Record<string, string[]>;
+                        const entries = Object.entries(mergeMap);
+                        if (entries.length > 0) {
+                          const [kw, urls] = entries[0];
+                          const low = urls?.[0] || undefined;
+                          const high = urls?.[1] || urls?.[0] || undefined;
+                          const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
+                          const newEntry: import('@/types/chapters').ChapterKeywordSelection = {
+                            suggestedKeyword: kw,
+                            ...(updatedChapter.modifiedKeywordForMapping && typeof updatedChapter.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedChapter.modifiedKeywordForMapping } : {}),
+                            media: {
+                              ...(low ? { lowResMedia: low } : {}),
+                              ...(high ? { highResMedia: high } : {})
+                            }
+                          };
+                          if (idx >= 0) {
+                            const existing = nextKeywordsSelected[idx];
+                            nextKeywordsSelected = nextKeywordsSelected.slice();
+                            nextKeywordsSelected[idx] = {
+                              ...existing,
+                              ...(updatedChapter.modifiedKeywordForMapping && typeof updatedChapter.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedChapter.modifiedKeywordForMapping } : {}),
+                              media: {
+                                ...(existing.media || {}),
+                                ...(low ? { lowResMedia: low } : {}),
+                                ...(high ? { highResMedia: high } : {})
+                              }
+                            };
+                          } else {
+                            nextKeywordsSelected = [...nextKeywordsSelected, newEntry];
+                          }
+                        }
+                      }
                       return {
                         ...chapter,
-                        ...(Object.keys(mergedKeywordsSelected).length > 0 ? { keywordsSelected: mergedKeywordsSelected } : {}),
+                        ...(nextKeywordsSelected.length > 0 ? { keywordsSelected: nextKeywordsSelected } : {}),
                         assets: {
                           ...chapter.assets,
                           ...updatedChapter.assets
@@ -2073,6 +2205,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                     }
                     return chapter;
                   });
+                  try {
+                    console.log('Chapter modified (onChapterUpdate):', JSON.stringify(updatedChapters[chapterIndex]));
+                  } catch {}
                   onChaptersUpdate(updatedChapters);
                 }}
                 onDone={() => {
@@ -2093,26 +2228,55 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                 suggestionKeywords={typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords || []}
                 autoSearchOnMount={!!(typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords?.length)}
                 currentKeywordForMapping={typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword}
-                onDoneWithSelected={(selectedUrls) => {
+                onDoneWithSelected={(selectedUrls, modifiedKeyword) => {
                   const chapterIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
                   const kw = typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword;
                   if (kw) {
                     // add selected urls to the images array and keywordsSelected
                     const updated = chapters.map((ch, idx) => {
                       if (idx !== chapterIdx) return ch;
-                      const existingMap = ch.keywordsSelected || {};
+                      const existingArray: import('@/types/chapters').ChapterKeywordSelection[] = Array.isArray(ch.keywordsSelected) ? (ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[]) : [];
+                      const low = selectedUrls?.[0] || undefined;
+                      const high = selectedUrls?.[1] || selectedUrls?.[0] || undefined;
+                      const existingIdx = existingArray.findIndex(e => e && e.suggestedKeyword === kw);
+                      let nextArray: import('@/types/chapters').ChapterKeywordSelection[];
+                      if (existingIdx >= 0) {
+                        nextArray = existingArray.slice();
+                        const existing = nextArray[existingIdx] || {} as import('@/types/chapters').ChapterKeywordSelection;
+                        nextArray[existingIdx] = {
+                          ...existing,
+                          ...(modifiedKeyword && modifiedKeyword.trim() ? { modifiedKeyword: modifiedKeyword.trim() } : {}),
+                          media: {
+                            ...(existing.media || {}),
+                            ...(low ? { lowResMedia: low } : {}),
+                            ...(high ? { highResMedia: high } : {})
+                          }
+                        };
+                      } else {
+                        nextArray = [
+                          ...existingArray,
+                          {
+                            suggestedKeyword: kw,
+                            ...(modifiedKeyword && modifiedKeyword.trim() ? { modifiedKeyword: modifiedKeyword.trim() } : {}),
+                            media: {
+                              ...(low ? { lowResMedia: low } : {}),
+                              ...(high ? { highResMedia: high } : {})
+                            }
+                          }
+                        ];
+                      }
                       return {
                         ...ch,
-                        keywordsSelected: {
-                          ...existingMap,
-                          [kw]: selectedUrls
-                        },
+                        keywordsSelected: nextArray,
                         assets: {
                           ...ch.assets,
                           images: [...(ch.assets?.images || []), ...selectedUrls],
                         }
                       };
                     });
+                    try {
+                      console.log('Media added to chapter:', JSON.stringify(updated[chapterIdx]));
+                    } catch {}
                     onChaptersUpdate(updated);
                     if (typeof window !== 'undefined') {
                       (window as any).__keywordSuggestions = undefined;

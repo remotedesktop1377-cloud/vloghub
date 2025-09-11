@@ -1,5 +1,6 @@
 import { TrendingTopic } from '../types/TrendingTopics';
 import { Chapter } from '../types/chapters';
+import { toast } from 'react-toastify';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -218,8 +219,6 @@ export class HelperFunctions {
       durationInSeconds: 0,
       assets: {
         images: null,
-        audio: null,
-        video: null,
       }
     }
 
@@ -383,19 +382,33 @@ export class HelperFunctions {
    * Extract image URLs from a chapter's keywordsSelected map.
    * Accepts shapes like: { keyword: ["https://...", "..."], other: "https://..." }
    */
-  static extractImageUrlsFromKeywordsSelected(keywordsSelected: Record<string, unknown> | undefined | null): string[] {
-    if (!keywordsSelected || typeof keywordsSelected !== 'object') return [];
+  static extractImageUrlsFromKeywordsSelected(keywordsSelected: unknown): string[] {
+    if (!keywordsSelected) return [];
 
     const urls: string[] = [];
-    for (const value of Object.values(keywordsSelected)) {
-      if (Array.isArray(value)) {
-        for (const v of value) {
-          if (typeof v === 'string' && /^https?:\/\//i.test(v)) {
-            urls.push(v);
-          }
+    // New array format
+    if (Array.isArray(keywordsSelected)) {
+      for (const entry of keywordsSelected as any[]) {
+        const media = entry?.media;
+        if (media) {
+          const low = media.lowResMedia;
+          const high = media.highResMedia;
+          if (typeof low === 'string' && /^https?:\/\//i.test(low)) urls.push(low);
+          if (typeof high === 'string' && /^https?:\/\//i.test(high)) urls.push(high);
         }
-      } else if (typeof value === 'string' && /^https?:\/\//i.test(value)) {
-        urls.push(value);
+      }
+    } else if (typeof keywordsSelected === 'object') {
+      // Legacy map format
+      for (const value of Object.values(keywordsSelected as Record<string, unknown>)) {
+        if (Array.isArray(value)) {
+          for (const v of value) {
+            if (typeof v === 'string' && /^https?:\/\//i.test(v)) {
+              urls.push(v);
+            }
+          }
+        } else if (typeof value === 'string' && /^https?:\/\//i.test(value)) {
+          urls.push(value);
+        }
       }
     }
     // de-duplicate while preserving order
@@ -453,8 +466,10 @@ export class HelperFunctions {
    */
   static async fetchAndApplyHighlightedKeywords(
     chapters: Chapter[],
-    setChapters: (chapters: Chapter[]) => void
+    setChapters: (chapters: Chapter[]) => void,
+    chaptersUpdated: (chapters: Chapter[]) => void
   ): Promise<void> {
+    let bestChapters: Chapter[] = chapters;
     try {
       const payload = chapters.map(c => ({ id: c.id, narration: c.narration }));
       const res = await fetch('/api/gemini-highlight-keywords', {
@@ -480,8 +495,15 @@ export class HelperFunctions {
         highlightedKeywords: map[ch.id] && map[ch.id].length > 0 ? map[ch.id] : (ch.highlightedKeywords || [])
       }));
       setChapters(updated);
+      bestChapters = updated;
     } catch (e) {
       console.error('highlight extraction failed', e);
+      toast.error(e instanceof Error ? e.message : 'Failed to extract highlighted keywords');
+    } finally {
+      // Ensure callback is invoked even on failure, with best available chapters
+      try {
+        chaptersUpdated(bestChapters);
+      } catch {}
     }
   }
 }

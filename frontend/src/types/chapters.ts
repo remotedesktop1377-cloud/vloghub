@@ -12,8 +12,8 @@ export interface Chapter {
     visual_guidance?: string;
     on_screen_text?: string;
     highlightedKeywords?: string[];
-    // Map from keyword (key) to selected media URLs (value array)
-    keywordsSelected?: Record<string, string[]>;
+    // Selected media for keywords; supports new array format and legacy map
+    keywordsSelected?: ChapterKeywordSelection[] | Record<string, string[]>;
     assets?: {
         images?: string[] | null;
         imagesGoogle?: string[] | null;
@@ -27,6 +27,17 @@ export interface Chapter {
         transition?: string;
         effects?: string[];
     };
+}
+
+export interface ChapterKeywordSelection {
+    suggestedKeyword: string; // highlighted keyword
+    modifiedKeyword?: string; // user-changed search term
+    media?: {
+        lowResMedia?: string;
+        highResMedia?: string;
+    };
+    backgroundMusic?: string;
+    transitionEffect?: string;
 }
 
 export interface VideoClip {
