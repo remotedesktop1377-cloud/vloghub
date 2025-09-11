@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   // Image Search APIs
   GOOGLE_IMAGE_SEARCH: '/api/google-image-search',
   ENVATO_IMAGE_SEARCH: '/api/envato-image-search',
+  ENVATO_CLIPS_SEARCH: '/api/envato-clips-search',
   
   // Google Drive APIs
   GOOGLE_DRIVE_UPLOAD: '/api/google-drive-upload',

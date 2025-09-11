@@ -16,7 +16,9 @@ import {
     Tabs,
     Tab,
     Badge,
-    InputAdornment
+    InputAdornment,
+    Dialog,
+    DialogContent
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -72,7 +74,7 @@ interface ImageSearchProps {
     currentKeywordForMapping?: string;
 }
 
-type TabValue = 'google' | 'envato';
+type TabValue = 'google' | 'envato' | 'envatoClips' | 'youtube' | 'upload';
 
 const ImageSearch: React.FC<ImageSearchProps> = ({
     chapterNarration,
@@ -92,19 +94,22 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [googleImages, setGoogleImages] = useState<ImageResult[]>([]);
     const [envatoImages, setEnvatoImages] = useState<ImageResult[]>([]);
+    const [envatoClips, setEnvatoClips] = useState<ImageResult[]>([]);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [envatoLoading, setEnvatoLoading] = useState(false);
     const [googleError, setGoogleError] = useState<string | null>(null);
     const [envatoError, setEnvatoError] = useState<string | null>(null);
-    const [selectedBySource, setSelectedBySource] = useState<{ google: Set<string>; envato: Set<string> }>({ google: new Set(), envato: new Set() });
+    const [selectedBySource, setSelectedBySource] = useState<{ google: Set<string>; envato: Set<string>; envatoClips: Set<string> }>({ google: new Set(), envato: new Set(), envatoClips: new Set() });
     const [googleSuggestions, setGoogleSuggestions] = useState<string[]>([]);
     const [envatoKeywords, setEnvatoKeywords] = useState<string[]>([]);
+    const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
+    const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
 
 
     // Ref to prevent duplicate API calls when useEffect runs multiple times
     const hasInitialSearch = useRef(false);
 
-    const currentImages = activeTab === 'google' ? googleImages : envatoImages;
+    const currentImages = activeTab === 'google' ? googleImages : activeTab === 'envato' ? envatoImages : envatoClips;
     const currentLoading = activeTab === 'google' ? googleLoading : envatoLoading;
     const currentError = activeTab === 'google' ? googleError : envatoError;
 
@@ -205,6 +210,54 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         }
     };
 
+    // Search Envato Clips (videos)
+    const searchEnvatoClips = async (query: string) => {
+        setEnvatoLoading(true);
+        setEnvatoError(null);
+
+        try {
+            const response = await fetch(API_ENDPOINTS.ENVATO_CLIPS_SEARCH, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query, page: 1 }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                const errorMessage = data.error || 'Failed to search Envato clips';
+                const errorDetails = data.details ? ` (${data.details})` : '';
+                throw new Error(`${errorMessage}${errorDetails}`);
+            }
+
+            const data = await response.json();
+            const clipsWithSource = (data.clips || []).map((clip: any) => ({
+                id: clip.id || clip.url,
+                url: clip.url,
+                thumbnail: clip.thumbnail || clip.url,
+                title: clip.title || 'Clip',
+                context: clip.context || '',
+                width: clip.width || 0,
+                height: clip.height || 0,
+                size: clip.size || '',
+                mime: clip.mime || 'video/mp4',
+                source: 'envato' as const
+            }));
+
+            setEnvatoClips(clipsWithSource);
+            checkAndSelectExistingImages(clipsWithSource, 'envatoClips');
+            toast.success(`Found ${clipsWithSource.length} Envato clips`);
+        } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'An error occurred searching Envato clips';
+            setEnvatoError(errorMsg);
+            setEnvatoClips([]);
+            toast.error(errorMsg);
+        } finally {
+            setEnvatoLoading(false);
+        }
+    };
+
     // Create a comprehensive search query by combining all suggestions
     const createCombinedSearchQuery = (suggestions: string[]): string => {
         if (suggestions.length === 0) return '';
@@ -238,13 +291,13 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     };
 
     // Function to check if existing image URLs match API response images and auto-select them
-    const checkAndSelectExistingImages = (apiImages: ImageResult[], source: 'google' | 'envato') => {
+    const checkAndSelectExistingImages = (apiImages: ImageResult[], source: 'google' | 'envato' | 'envatoClips') => {
         if (existingImageUrls.length === 0) return;
 
         // Enforce single selection: pick the first matching URL only
         const firstMatch = existingImageUrls.find((existingUrl) => apiImages.some(apiImage => apiImage.url === existingUrl));
         if (firstMatch) {
-            setSelectedBySource({ google: new Set(source === 'google' ? [firstMatch] : []), envato: new Set(source === 'envato' ? [firstMatch] : []) });
+            setSelectedBySource({ google: new Set(source === 'google' ? [firstMatch] : []), envato: new Set(source === 'envato' ? [firstMatch] : []), envatoClips: new Set(source === 'envatoClips' ? [firstMatch] : []) });
         }
     };
 
@@ -331,7 +384,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             setEnvatoKeywords(suggestionKeywords);
             // Trigger both searches using provided suggestions
             searchGoogleImages('', suggestionKeywords);
-            searchEnvatoImages(suggestionKeywords.join(' '));
+            const keywordsJoined = suggestionKeywords.join(' ');
+            searchEnvatoImages(keywordsJoined);
+            searchEnvatoClips(keywordsJoined);
             return;
         }
 
@@ -345,7 +400,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 hasInitialSearch.current = true;
                 // Search both APIs using their respective suggestions/keywords
                 searchGoogleImages('', gSuggestions);
-                searchEnvatoImages(eKeywords.join(' '));
+                const ek = eKeywords.join(' ');
+                searchEnvatoImages(ek);
+                searchEnvatoClips(ek);
             }
         }
     }, [chapterNarration]);
@@ -383,14 +440,14 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     };
 
     const handleImageSelect = (imageUrl: string) => {
-        const sourceKey = activeTab;
+        const sourceKey: 'google' | 'envato' | 'envatoClips' = activeTab === 'envato' ? 'envato' : (activeTab === 'envatoClips' ? 'envatoClips' : 'google');
         const isSelected = selectedBySource[sourceKey].has(imageUrl);
         if (isSelected) {
             // Unselect if already selected
-            setSelectedBySource({ google: new Set(), envato: new Set() });
+            setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set() });
         } else {
             // Enforce single selection across both sources
-            setSelectedBySource({ google: new Set(sourceKey === 'google' ? [imageUrl] : []), envato: new Set(sourceKey === 'envato' ? [imageUrl] : []) });
+            setSelectedBySource({ google: new Set(sourceKey === 'google' ? [imageUrl] : []), envato: new Set(sourceKey === 'envato' ? [imageUrl] : []), envatoClips: new Set(sourceKey === 'envatoClips' ? [imageUrl] : []) });
         }
     };
 
@@ -417,24 +474,15 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         }
     };
 
-    const toggleSelectAll = () => {
-        const sourceKey = activeTab;
-        const currentSelected = selectedBySource[sourceKey];
-        let newSelected: Set<string>;
-        if (currentSelected.size === currentImages.length) {
-            newSelected = new Set();
-        } else {
-            newSelected = new Set(currentImages.map(img => img.url));
-        }
-        setSelectedBySource(prev => ({ ...prev, [sourceKey]: newSelected }));
-    };
+    const toggleSelectAll = () => { };
 
     const handleDone = () => {
         // Single selection across tabs
-        const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value;
+        const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value || selectedBySource.envatoClips.values().next().value;
         if (selectedUrl) {
             const isGoogle = selectedBySource.google.size === 1 && selectedBySource.google.has(selectedUrl);
             const isEnvato = selectedBySource.envato.size === 1 && selectedBySource.envato.has(selectedUrl);
+            const isEnvatoClip = selectedBySource.envatoClips.size === 1 && selectedBySource.envatoClips.has(selectedUrl);
             const updatedChapter: any = {
                 assets: {
                     images: [selectedUrl],
@@ -535,6 +583,90 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             justifyContent: 'center'
                         }}
                     />
+                    <Tab
+                        value="envatoClips"
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                <Box
+                                    sx={{
+                                        width: { xs: 14, sm: 18, md: 20 },
+                                        height: { xs: 14, sm: 18, md: 20 },
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
+                                </Box>
+                                <Badge badgeContent={envatoClips.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
+                                    Envato Clips
+                                </Badge>
+                            </Box>
+                        }
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            width: '50%',
+                            maxWidth: '50%',
+                            display: 'flex',
+                            justifyContent: 'center'
+                        }}
+                    />
+                    <Tab
+                        value="youtube"
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                <Box
+                                    sx={{
+                                        width: { xs: 14, sm: 18, md: 20 },
+                                        height: { xs: 14, sm: 18, md: 20 },
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    <Image src="/images/youtube.jpg" alt="Youtube" fill style={{ objectFit: 'cover' }} />
+                                </Box>
+                                <Badge badgeContent={envatoClips.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
+                                    YouTube Clips
+                                </Badge>
+                            </Box>
+                        }
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            width: '50%',
+                            maxWidth: '50%',
+                            display: 'flex',
+                            justifyContent: 'center'
+                        }}
+                    />
+                    <Tab
+                        value="upload"
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                <Box
+                                    sx={{
+                                        width: { xs: 14, sm: 18, md: 20 },
+                                        height: { xs: 14, sm: 18, md: 20 },
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                >
+                                    <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
+                                </Box>
+                                <Badge badgeContent={envatoClips.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
+                                    Upload
+                                </Badge>
+                            </Box>
+                        }
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            width: '50%',
+                            maxWidth: '50%',
+                            display: 'flex',
+                            justifyContent: 'center'
+                        }}
+                    />
                 </Tabs>
 
                 {/* Search Controls */}
@@ -579,21 +711,15 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             variant="outlined"
                             fullWidth
                             startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
-                            onClick={handleSearch}
+                            onClick={() => {
+                                if (activeTab === 'google') return handleSearch();
+                                if (activeTab === 'envato') return handleSearch();
+                                if (activeTab === 'envatoClips') return searchEnvatoClips(searchQuery); // reuse until dedicated clips implemented
+                            }}
                             disabled={currentLoading || !searchQuery.trim()}
                             sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
                         >
-                            Search {activeTab === 'google' ? 'Google' : 'Envato'}
-                        </Button>
-
-                        <Button
-                            variant="outlined"
-                            onClick={handleSearchBoth}
-                            disabled={currentLoading || !searchQuery.trim()}
-                            startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
-                            sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
-                        >
-                            Search Both
+                            {activeTab === 'google' ? 'Search Google' : activeTab === 'envato' ? 'Search Envato Images' : activeTab === 'envatoClips' ? 'Search Envato Clips' : 'Search'}
                         </Button>
                     </Box>
 
@@ -617,8 +743,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 setSearchQuery(suggestion);
                                                 if (activeTab === 'google') {
                                                     searchGoogleImages(suggestion);
-                                                } else {
+                                                } else if (activeTab === 'envato') {
                                                     searchEnvatoImages(suggestion);
+                                                } else if (activeTab === 'envatoClips') {
+                                                    searchEnvatoClips(suggestion);
                                                 }
                                             }}
                                             sx={{
@@ -703,14 +831,48 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                     }}
                                 >
                                     <Box sx={{ position: 'relative' }}>
-                                        <CardMedia
-                                            component="img"
-                                            height="140"
-                                            image={image.thumbnail}
-                                            alt={image.title}
-                                            sx={{ objectFit: 'cover' }}
-                                            onClick={() => handleImageSelect(image.url)}
-                                        />
+                                        {activeTab === 'envatoClips' ? (
+                                            <Box
+                                                onClick={() => { setVideoPreviewUrl(image.url); setVideoPreviewOpen(true); }}
+                                                sx={{ position: 'relative', width: '100%', height: 140, cursor: 'pointer' }}
+                                            >
+                                                <img
+                                                    src={image.thumbnail || '/images/youtube.jpg'}
+                                                    alt={image.title}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                                <Box sx={{
+                                                    position: 'absolute',
+                                                    inset: 0,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}>
+                                                    <Box sx={{
+                                                        width: 40,
+                                                        height: 40,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: 'rgba(0,0,0,0.5)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M8 5v14l11-7z" />
+                                                        </svg>
+                                                    </Box>
+                                                </Box>
+                                            </Box>
+                                        ) : (
+                                            <CardMedia
+                                                component="img"
+                                                height="140"
+                                                image={image.thumbnail}
+                                                alt={image.title}
+                                                sx={{ objectFit: 'cover' }}
+                                                onClick={() => handleImageSelect(image.url)}
+                                            />
+                                        )}
 
                                         {/* Selection Overlay */}
                                         {(selectedBySource[image.source || 'google']?.has(image.url)) && (
@@ -766,7 +928,12 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                     size="medium"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleImagePreview(image.url);
+                                                        if (activeTab === 'envatoClips') {
+                                                            setVideoPreviewUrl(image.url);
+                                                            setVideoPreviewOpen(true);
+                                                        } else {
+                                                            handleImagePreview(image.url);
+                                                        }
                                                     }}
                                                     sx={{
                                                         backgroundColor: 'rgba(255,255,255,0.9)',
@@ -855,8 +1022,20 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     </Box>
                 )}
             </Box>
+
+            {/* Video Preview Dialog for Envato Clips */}
+            <Dialog open={videoPreviewOpen} onClose={() => setVideoPreviewOpen(false)} maxWidth="md" fullWidth>
+                <DialogContent sx={{ p: 0, bgcolor: 'black' }}>
+                    {videoPreviewUrl && (
+                        <video src={'https://previews.customer.envatousercontent.com/8a627632-09af-472a-9ddd-bc3006a82635/watermarked_preview/watermarked_preview.mp4'} controls autoPlay playsInline style={{ width: '100%', height: 'auto' }} />
+                        // <video src={videoPreviewUrl} controls autoPlay playsInline style={{ width: '100%', height: 'auto' }} />
+                    )}
+                </DialogContent>
+            </Dialog>
+
         </Box >
     );
 };
 
 export default ImageSearch;
+
