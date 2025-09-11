@@ -166,7 +166,9 @@ const ScriptProductionClient: React.FC = () => {
                     endTime: chapter.endTime,
                     highlightedKeywords: chapter.highlightedKeywords || [],
                     keywordsSelected: chapter.keywordsSelected || {},
-                    assets: {},
+                    assets: {
+                        images: chapter.assets?.images || [],
+                    },
                 })),
             };
 
@@ -325,6 +327,7 @@ const ScriptProductionClient: React.FC = () => {
         const run = async () => {
             try {
                 if (isScriptApproved) {
+                    setLoading(true);
                     const res = await fetch('/api/google-drive-library?category=all', { cache: 'no-store' });
                     const data = await res.json();
                     console.log('[Drive Library]', data);
@@ -343,12 +346,16 @@ const ScriptProductionClient: React.FC = () => {
         run();
     }, [isScriptApproved]);
 
-    // Calculate estimated duration when script data changes
     useEffect(() => {
         if (chapters && chapters.length > 0) {
             // save updated chapters
             secure.j.approvedScript.set({ ...scriptData, chapters });
             uploadToGoogleDrive();
+            // If highlightedKeywords are missing on any chapter, fetch them once
+            const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
+            if (needsHighlights) {
+                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters);
+            }
         }
     }, [chapters]);
 

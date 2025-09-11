@@ -447,5 +447,42 @@ export class HelperFunctions {
         };
     }
   };
+
+  /**
+   * Call Gemini endpoint to get highlighted keywords for chapters and merge into chapters array
+   */
+  static async fetchAndApplyHighlightedKeywords(
+    chapters: Chapter[],
+    setChapters: (chapters: Chapter[]) => void
+  ): Promise<void> {
+    try {
+      const payload = chapters.map(c => ({ id: c.id, narration: c.narration }));
+      const res = await fetch('/api/gemini-highlight-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapters: payload })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to get highlighted keywords');
+      }
+      const data = await res.json();
+      const map: Record<string, string[]> = {};
+      if (Array.isArray(data?.results)) {
+        for (const r of data.results) {
+          const id = String(r?.id ?? '');
+          const kws = Array.isArray(r?.highlightedKeywords) ? r.highlightedKeywords.filter((x: any) => typeof x === 'string' && x.trim()) : [];
+          if (id) map[id] = kws;
+        }
+      }
+      const updated = chapters.map(ch => ({
+        ...ch,
+        highlightedKeywords: map[ch.id] && map[ch.id].length > 0 ? map[ch.id] : (ch.highlightedKeywords || [])
+      }));
+      setChapters(updated);
+    } catch (e) {
+      console.error('highlight extraction failed', e);
+    }
+  }
 }
 

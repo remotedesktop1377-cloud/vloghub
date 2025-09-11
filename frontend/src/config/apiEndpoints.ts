@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
   // Content Generation
   GENERATE_SCRIPT: '/api/generate-script',
   GENERATE_IMAGES: '/api/generate-images',
+  GEMINI_HIGHLIGHT_KEYWORDS: '/api/gemini-highlight-keywords',
   
   // Image Search APIs
   GOOGLE_IMAGE_SEARCH: '/api/google-image-search',
