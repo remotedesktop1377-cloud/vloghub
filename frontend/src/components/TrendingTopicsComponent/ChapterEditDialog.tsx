@@ -107,7 +107,11 @@ export function ChapterEditDialog({
                 videoEffects: {
                     clips: chapter.videoEffects?.clips || [],
                     logos: chapter.videoEffects?.logos || [],
-                    backgroundMusic: chapter.videoEffects?.backgroundMusic,
+                    backgroundMusic: Array.isArray(chapter.videoEffects?.backgroundMusic)
+                        ? chapter.videoEffects?.backgroundMusic
+                        : (chapter.videoEffects?.backgroundMusic
+                            ? [chapter.videoEffects.backgroundMusic as unknown as BackgroundMusic]
+                            : []),
                     transition: chapter.videoEffects?.transition || 'quantum_dissolve',
                     effects: chapter.videoEffects?.effects || []
                 }
@@ -231,17 +235,23 @@ export function ChapterEditDialog({
             ...prev!,
             videoEffects: {
                 ...prev!.videoEffects!,
-                backgroundMusic: {
-                    ...(prev!.videoEffects?.backgroundMusic || {
+                backgroundMusic: (() => {
+                    const list = Array.isArray(prev!.videoEffects?.backgroundMusic)
+                        ? [...(prev!.videoEffects!.backgroundMusic as BackgroundMusic[])]
+                        : [] as BackgroundMusic[];
+                    const ensure = (bm?: BackgroundMusic): BackgroundMusic => bm || {
                         id: Date.now().toString(),
                         selectedMusic: '',
                         volume: 0.3,
                         autoAdjust: true,
                         fadeIn: true,
                         fadeOut: true
-                    }),
-                    [field]: value
-                }
+                    };
+                    const first = ensure(list[0]);
+                    (first as any)[field] = value;
+                    list[0] = first;
+                    return list;
+                })()
             }
         }));
     };
@@ -559,7 +569,7 @@ export function ChapterEditDialog({
                                             <FormControl fullWidth>
                                                 <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Select Music</InputLabel>
                                                 <Select
-                                                    value={editData.videoEffects?.backgroundMusic?.selectedMusic || ''}
+                                                    value={editData.videoEffects?.backgroundMusic?.[0]?.selectedMusic || ''}
                                                     onChange={(e) => updateBackgroundMusic('selectedMusic', e.target.value)}
                                                     sx={{ color: 'white' }}
                                                 >
@@ -574,10 +584,10 @@ export function ChapterEditDialog({
                                         </Grid>
                                         <Grid item xs={12} md={6}>
                                             <Typography gutterBottom>
-                                                Volume ({Math.round((editData.videoEffects?.backgroundMusic?.volume || 0.3) * 100)}%)
+                                                Volume ({Math.round(((editData.videoEffects?.backgroundMusic?.[0]?.volume || 0.3) as number) * 100)}%)
                                             </Typography>
                                             <Slider
-                                                value={editData.videoEffects?.backgroundMusic?.volume || 0.3}
+                                                value={editData.videoEffects?.backgroundMusic?.[0]?.volume || 0.3}
                                                 onChange={(e, value) => updateBackgroundMusic('volume', value)}
                                                 min={0.1}
                                                 max={1}
@@ -590,7 +600,7 @@ export function ChapterEditDialog({
                                                 <FormControlLabel
                                                     control={
                                                         <Switch
-                                                            checked={editData.videoEffects?.backgroundMusic?.autoAdjust !== false}
+                                                            checked={editData.videoEffects?.backgroundMusic?.[0]?.autoAdjust !== false}
                                                             onChange={(e) => updateBackgroundMusic('autoAdjust', e.target.checked)}
                                                             sx={{ color: WARNING.main }}
                                                         />
@@ -601,7 +611,7 @@ export function ChapterEditDialog({
                                                 <FormControlLabel
                                                     control={
                                                         <Switch
-                                                            checked={editData.videoEffects?.backgroundMusic?.fadeIn !== false}
+                                                            checked={editData.videoEffects?.backgroundMusic?.[0]?.fadeIn !== false}
                                                             onChange={(e) => updateBackgroundMusic('fadeIn', e.target.checked)}
                                                             sx={{ color: WARNING.main }}
                                                         />
@@ -612,7 +622,7 @@ export function ChapterEditDialog({
                                                 <FormControlLabel
                                                     control={
                                                         <Switch
-                                                            checked={editData.videoEffects?.backgroundMusic?.fadeOut !== false}
+                                                            checked={editData.videoEffects?.backgroundMusic?.[0]?.fadeOut !== false}
                                                             onChange={(e) => updateBackgroundMusic('fadeOut', e.target.checked)}
                                                             sx={{ color: WARNING.main }}
                                                         />
@@ -624,15 +634,15 @@ export function ChapterEditDialog({
                                         </Grid>
                                     </Grid>
 
-                                    {editData.videoEffects?.backgroundMusic?.selectedMusic && (
+                                    {editData.videoEffects?.backgroundMusic?.[0]?.selectedMusic && (
                                         <Box sx={{ mt: 3 }}>
                                             <Typography variant="subtitle2" sx={{ mb: 1, color: 'rgba(255,255,255,0.7)' }}>
                                                 Music Preview
                                             </Typography>
                                             <MediaPlayer
-                                                src={preStoredMusic.find(m => m.id === editData.videoEffects?.backgroundMusic?.selectedMusic)?.url || ''}
+                                                src={preStoredMusic.find(m => m.id === editData.videoEffects?.backgroundMusic?.[0]?.selectedMusic)?.url || ''}
                                                 type="audio"
-                                                title={preStoredMusic.find(m => m.id === editData.videoEffects?.backgroundMusic?.selectedMusic)?.name}
+                                                title={preStoredMusic.find(m => m.id === editData.videoEffects?.backgroundMusic?.[0]?.selectedMusic)?.name}
                                                 className="w-full"
                                             />
                                         </Box>

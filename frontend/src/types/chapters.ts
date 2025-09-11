@@ -18,15 +18,12 @@ export interface Chapter {
         images?: string[] | null;
         imagesGoogle?: string[] | null;
         imagesEnvato?: string[] | null;
-        audio?: string | null;
-        video?: string | null;
-        backgroundMusic?: BackgroundMusic | undefined;
     };
     // Video effects and editing properties
     videoEffects?: {
         clips?: VideoClip[];
         logos?: LogoOverlay[];
-        backgroundMusic?: BackgroundMusic;
+        backgroundMusic?: BackgroundMusic[]; // array
         transition?: string;
         effects?: string[];
     };
