@@ -940,206 +940,207 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           };
                                                           const currentId = getDriveIdFromLink(bm?.selectedMusic || '');
                                                           return (
-                                                          <Box key={bm.id || bmIdx} sx={{
-                                                            display: 'flex',
-                                                            flexDirection: 'row',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'space-between',
-                                                            borderRadius: 1,
-                                                            border: '1px solid',
-                                                            borderColor: 'divider',
-                                                            mb: 1
-                                                          }}>
-                                                            <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', pl: 1.25 }}>
-                                                              <Select
-                                                                size="small"
-                                                                value={currentId || ''}
-                                                                onChange={(e) => {
-                                                                  const updated = chapters.map((ch, i) => {
-                                                                    if (i !== index) return ch;
-                                                                    const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
-                                                                    const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
-                                                                    const selId = String(e.target.value);
-                                                                    // Always store as Drive view link
-                                                                    nextItem.selectedMusic = selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '';
-                                                                    // nextItem.selectedMusic = selId ? `https://drive.google.com/file/d/1_m1xNAfRIFzY0f8ixSgiRAVL0Js0njZH/view?usp=drive_link` : '';
-                                                                    list[bmIdx] = nextItem;
-                                                                    return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
-                                                                  });
-                                                                  onChaptersUpdate(updated);
-                                                                  setVolumeOpenIndex(null);
-                                                                }}
-                                                                disabled={false}
-                                                                sx={{
-                                                                  minWidth: 280,
-                                                                  maxWidth: 320,
-                                                                  '& .MuiSelect-select': {
-                                                                    display: 'inline-block',
-                                                                    maxWidth: 280,
-                                                                    overflow: 'hidden',
-                                                                    textOverflow: 'ellipsis',
-                                                                    whiteSpace: 'nowrap'
-                                                                  }
-                                                                }}
-                                                                renderValue={(value) => {
-                                                                  const id = String(value || '');
-                                                                  const option = ((driveMusic as Array<{ id: string; name: string }> ) || []).find(m => m.id === id);
-                                                                  const text = option?.name || 'Select background music...';
-                                                                  return text;
-                                                                }}
-                                                              >
-                                                                <MenuItem value="">Select background music...</MenuItem>
-                                                                {((driveMusic as Array<{ id: string; name: string }>) || []).map((m) => (
-                                                                  <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>
-                                                                ))}
-                                                              </Select>
-
-                                                              {/* Music Preview */}
-                                                              {(() => {
-                                                                const id = currentId;
-                                                                const track = ((driveMusic as Array<{ id: string; webContentLink?: string; name: string }>) || []).find((m) => m.id === id);
-                                                                return (
-                                                                  <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                                                                    <CustomAudioPlayer
-                                                                      key={`audio-${index}-${bmIdx}-${id}`}
-                                                                      src={id ? `/api/google-drive-media?id=${id}` : ''}
-                                                                      title={''}
-                                                                    />
-                                                                  </Box>
-                                                                );
-                                                              })()}
-
-                                                              <Tooltip title={`Volume (${Math.round(((bm?.volume || 0.3) * 100))}%)`}>
-                                                                <span><IconButton size="small" onClick={() => setVolumeOpenIndex((volumeOpenIndex as any) === `${index}-${bmIdx}` ? null : (`${index}-${bmIdx}` as any))} disabled={false}>
-                                                                  <VolumeIcon sx={{ color: WARNING.main }} fontSize="small" />
-                                                                </IconButton></span>
-                                                              </Tooltip>
-                                                              <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 34, textAlign: 'center' }}>
-                                                                {Math.round(((bm?.volume || 0.3) * 100))}%
-                                                              </Typography>
-                                                              {((volumeOpenIndex as any) === `${index}-${bmIdx}`) && (
-                                                                <Box sx={{ position: 'relative' }}>
-                                                                  <Box sx={{ position: 'absolute', top: -8, left: 0, bgcolor: 'background.paper', p: 1, borderRadius: 1, boxShadow: 2 }}>
-                                                                    <Slider
-                                                                      orientation="vertical"
-                                                                      min={0}
-                                                                      max={1}
-                                                                      step={0.05}
-                                                                      value={bm?.volume || 0.3}
-                                                                      onChange={(_, value) => {
-                                                                        const vol = Array.isArray(value) ? value[0] : value;
-                                                                        const updated = chapters.map((ch, i) => {
-                                                                          if (i !== index) return ch;
-                                                                          const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
-                                                                          const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
-                                                                          nextItem.volume = Number(vol ?? 0.3);
-                                                                          list[bmIdx] = nextItem;
-                                                                          return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
-                                                                        });
-                                                                        onChaptersUpdate(updated);
-                                                                      }}
-                                                                      sx={{ height: 120, ml: 1 }}
-                                                                    />
-                                                                  </Box>
-                                                                </Box>
-                                                              )}
-                                                            </Box>
-
-                                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
-                                                              <Tooltip title={(bm?.autoAdjust !== false ? 'Auto Adjust: On' : 'Auto Adjust: Off')}>
-                                                                <span><Button
+                                                            <Box key={bm.id || bmIdx} sx={{
+                                                              display: 'flex',
+                                                              flexDirection: 'row',
+                                                              alignItems: 'center',
+                                                              justifyContent: 'space-between',
+                                                              borderRadius: 1,
+                                                              border: '1px solid',
+                                                              borderColor: 'divider',
+                                                              mb: 1
+                                                            }}>
+                                                              <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', pl: 1.25 }}>
+                                                                <Select
                                                                   size="small"
+                                                                  value={currentId || ''}
+                                                                  onChange={(e) => {
+                                                                    const updated = chapters.map((ch, i) => {
+                                                                      if (i !== index) return ch;
+                                                                      const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
+                                                                      const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
+                                                                      const selId = String(e.target.value);
+                                                                      // Always store as Drive view link
+                                                                      nextItem.selectedMusic = selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '';
+                                                                      // nextItem.selectedMusic = selId ? `https://drive.google.com/file/d/1_m1xNAfRIFzY0f8ixSgiRAVL0Js0njZH/view?usp=drive_link` : '';
+                                                                      list[bmIdx] = nextItem;
+                                                                      return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
+                                                                    });
+                                                                    onChaptersUpdate(updated);
+                                                                    setVolumeOpenIndex(null);
+                                                                  }}
                                                                   disabled={false}
-                                                                  variant={(bm?.autoAdjust !== false ? 'contained' : 'outlined')}
-                                                                  onClick={() => {
-                                                                    const updated = chapters.map((ch, i) => {
-                                                                      if (i !== index) return ch;
-                                                                      const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
-                                                                      const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
-                                                                      nextItem.autoAdjust = !(nextItem.autoAdjust === true);
-                                                                      list[bmIdx] = nextItem;
-                                                                      return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
-                                                                    });
-                                                                    onChaptersUpdate(updated);
+                                                                  sx={{
+                                                                    minWidth: 280,
+                                                                    maxWidth: 320,
+                                                                    '& .MuiSelect-select': {
+                                                                      display: 'inline-block',
+                                                                      maxWidth: 280,
+                                                                      overflow: 'hidden',
+                                                                      textOverflow: 'ellipsis',
+                                                                      whiteSpace: 'nowrap'
+                                                                    }
                                                                   }}
-                                                                  sx={{ textTransform: 'none', fontSize: '0.8rem' }}
-                                                                >Auto Adjust</Button></span>
-                                                              </Tooltip>
-                                                              <Tooltip title={(bm?.fadeIn !== false ? 'Fade In: On' : 'Fade In: Off')}>
-                                                                <span><Button
-                                                                  size="small"
-                                                                  disabled={false}
-                                                                  variant={(bm?.fadeIn !== false ? 'contained' : 'outlined')}
-                                                                  onClick={() => {
-                                                                    const updated = chapters.map((ch, i) => {
-                                                                      if (i !== index) return ch;
-                                                                      const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
-                                                                      const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
-                                                                      nextItem.fadeIn = !(nextItem.fadeIn === true);
-                                                                      list[bmIdx] = nextItem;
-                                                                      return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
-                                                                    });
-                                                                    onChaptersUpdate(updated);
+                                                                  renderValue={(value) => {
+                                                                    const id = String(value || '');
+                                                                    const option = ((driveMusic as Array<{ id: string; name: string }>) || []).find(m => m.id === id);
+                                                                    const text = option?.name || 'Select background music...';
+                                                                    return text;
                                                                   }}
-                                                                  sx={{ textTransform: 'none', fontSize: '0.8rem' }}
-                                                                >Fade In</Button></span>
-                                                              </Tooltip>
-                                                              <Tooltip title={(bm?.fadeOut !== false ? 'Fade Out: On' : 'Fade Out: Off')}>
-                                                                <span><Button
-                                                                  size="small"
-                                                                  variant={(bm?.fadeOut !== false ? 'contained' : 'outlined')}
-                                                                  onClick={() => {
-                                                                    const updated = chapters.map((ch, i) => {
-                                                                      if (i !== index) return ch;
-                                                                      const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
-                                                                      const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
-                                                                      nextItem.fadeOut = !(nextItem.fadeOut === true);
-                                                                      list[bmIdx] = nextItem;
-                                                                      return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
-                                                                    });
-                                                                    onChaptersUpdate(updated);
-                                                                  }}
-                                                                  sx={{ textTransform: 'none', fontSize: '0.8rem' }}
-                                                                >Fade Out</Button></span>
-                                                              </Tooltip>
+                                                                >
+                                                                  <MenuItem value="">Select background music...</MenuItem>
+                                                                  {((driveMusic as Array<{ id: string; name: string }>) || []).map((m) => (
+                                                                    <MenuItem key={m.id} value={m.id}>{m.name}</MenuItem>
+                                                                  ))}
+                                                                </Select>
 
-                                                              <Button
-                                                                size="small"
-                                                                variant="contained"
-                                                                color="success"
-                                                                disabled={!currentId}
-                                                                sx={{ textTransform: 'none', fontSize: '1rem', width: 120, height: 40 }}
-                                                                onClick={() => {
+                                                                {/* Music Preview */}
+                                                                {(() => {
                                                                   const id = currentId;
-                                                                  const current = Array.isArray((chapters[index] as any).videoEffects?.backgroundMusic) ? (chapters[index] as any).videoEffects.backgroundMusic : [];
-                                                                  // already saved link on change; here we just ensure item exists
-                                                                  const applied = current.map((item: any, idx: number) => idx === bmIdx ? { ...item } : item);
-                                                                  const updated = chapters.map((ch, i) => {
-                                                                    if (i !== index) return ch;
-                                                                    return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: applied } } as any;
-                                                                  });
-                                                                  onChaptersUpdate(updated);
-                                                                }}
-                                                              >Apply Music</Button>
+                                                                  const track = ((driveMusic as Array<{ id: string; webContentLink?: string; name: string }>) || []).find((m) => m.id === id);
+                                                                  return (
+                                                                    <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                                                                      <CustomAudioPlayer
+                                                                        key={`audio-${index}-${bmIdx}-${id}`}
+                                                                        src={id ? `/api/google-drive-media?id=${id}` : ''}
+                                                                        title={''}
+                                                                      />
+                                                                    </Box>
+                                                                  );
+                                                                })()}
 
-                                                              <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                color="error"
-                                                                sx={{ textTransform: 'none', fontSize: '1rem', width: 100, height: 40 }}
-                                                                onClick={() => {
-                                                                  const updated = chapters.map((ch, i) => {
-                                                                    if (i !== index) return ch;
-                                                                    const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
-                                                                    const pruned = list.filter((_: any, idx: number) => idx !== bmIdx);
-                                                                    return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: pruned } } as any;
-                                                                  });
-                                                                  onChaptersUpdate(updated);
-                                                                }}
-                                                              >Remove</Button>
+                                                                <Tooltip title={`Volume (${Math.round(((bm?.volume || 0.3) * 100))}%)`}>
+                                                                  <span><IconButton size="small" onClick={() => setVolumeOpenIndex((volumeOpenIndex as any) === `${index}-${bmIdx}` ? null : (`${index}-${bmIdx}` as any))} disabled={false}>
+                                                                    <VolumeIcon sx={{ color: WARNING.main }} fontSize="small" />
+                                                                  </IconButton></span>
+                                                                </Tooltip>
+                                                                <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 34, textAlign: 'center' }}>
+                                                                  {Math.round(((bm?.volume || 0.3) * 100))}%
+                                                                </Typography>
+                                                                {((volumeOpenIndex as any) === `${index}-${bmIdx}`) && (
+                                                                  <Box sx={{ position: 'relative' }}>
+                                                                    <Box sx={{ position: 'absolute', top: -8, left: 0, bgcolor: 'background.paper', p: 1, borderRadius: 1, boxShadow: 2 }}>
+                                                                      <Slider
+                                                                        orientation="vertical"
+                                                                        min={0}
+                                                                        max={1}
+                                                                        step={0.05}
+                                                                        value={bm?.volume || 0.3}
+                                                                        onChange={(_, value) => {
+                                                                          const vol = Array.isArray(value) ? value[0] : value;
+                                                                          const updated = chapters.map((ch, i) => {
+                                                                            if (i !== index) return ch;
+                                                                            const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
+                                                                            const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
+                                                                            nextItem.volume = Number(vol ?? 0.3);
+                                                                            list[bmIdx] = nextItem;
+                                                                            return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
+                                                                          });
+                                                                          onChaptersUpdate(updated);
+                                                                        }}
+                                                                        sx={{ height: 120, ml: 1 }}
+                                                                      />
+                                                                    </Box>
+                                                                  </Box>
+                                                                )}
+                                                              </Box>
+
+                                                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                                <Tooltip title={(bm?.autoAdjust !== false ? 'Auto Adjust: On' : 'Auto Adjust: Off')}>
+                                                                  <span><Button
+                                                                    size="small"
+                                                                    disabled={false}
+                                                                    variant={(bm?.autoAdjust !== false ? 'contained' : 'outlined')}
+                                                                    onClick={() => {
+                                                                      const updated = chapters.map((ch, i) => {
+                                                                        if (i !== index) return ch;
+                                                                        const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
+                                                                        const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
+                                                                        nextItem.autoAdjust = !(nextItem.autoAdjust === true);
+                                                                        list[bmIdx] = nextItem;
+                                                                        return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
+                                                                      });
+                                                                      onChaptersUpdate(updated);
+                                                                    }}
+                                                                    sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                                  >Auto Adjust</Button></span>
+                                                                </Tooltip>
+                                                                <Tooltip title={(bm?.fadeIn !== false ? 'Fade In: On' : 'Fade In: Off')}>
+                                                                  <span><Button
+                                                                    size="small"
+                                                                    disabled={false}
+                                                                    variant={(bm?.fadeIn !== false ? 'contained' : 'outlined')}
+                                                                    onClick={() => {
+                                                                      const updated = chapters.map((ch, i) => {
+                                                                        if (i !== index) return ch;
+                                                                        const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
+                                                                        const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
+                                                                        nextItem.fadeIn = !(nextItem.fadeIn === true);
+                                                                        list[bmIdx] = nextItem;
+                                                                        return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
+                                                                      });
+                                                                      onChaptersUpdate(updated);
+                                                                    }}
+                                                                    sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                                  >Fade In</Button></span>
+                                                                </Tooltip>
+                                                                <Tooltip title={(bm?.fadeOut !== false ? 'Fade Out: On' : 'Fade Out: Off')}>
+                                                                  <span><Button
+                                                                    size="small"
+                                                                    variant={(bm?.fadeOut !== false ? 'contained' : 'outlined')}
+                                                                    onClick={() => {
+                                                                      const updated = chapters.map((ch, i) => {
+                                                                        if (i !== index) return ch;
+                                                                        const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
+                                                                        const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
+                                                                        nextItem.fadeOut = !(nextItem.fadeOut === true);
+                                                                        list[bmIdx] = nextItem;
+                                                                        return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
+                                                                      });
+                                                                      onChaptersUpdate(updated);
+                                                                    }}
+                                                                    sx={{ textTransform: 'none', fontSize: '0.8rem' }}
+                                                                  >Fade Out</Button></span>
+                                                                </Tooltip>
+
+                                                                <Button
+                                                                  size="small"
+                                                                  variant="contained"
+                                                                  color="success"
+                                                                  disabled={!currentId}
+                                                                  sx={{ textTransform: 'none', fontSize: '1rem', width: 120, height: 40 }}
+                                                                  onClick={() => {
+                                                                    const id = currentId;
+                                                                    const current = Array.isArray((chapters[index] as any).videoEffects?.backgroundMusic) ? (chapters[index] as any).videoEffects.backgroundMusic : [];
+                                                                    // already saved link on change; here we just ensure item exists
+                                                                    const applied = current.map((item: any, idx: number) => idx === bmIdx ? { ...item } : item);
+                                                                    const updated = chapters.map((ch, i) => {
+                                                                      if (i !== index) return ch;
+                                                                      return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: applied } } as any;
+                                                                    });
+                                                                    onChaptersUpdate(updated);
+                                                                  }}
+                                                                >Apply Music</Button>
+
+                                                                <Button
+                                                                  size="small"
+                                                                  variant="outlined"
+                                                                  color="error"
+                                                                  sx={{ textTransform: 'none', fontSize: '1rem', width: 100, height: 40 }}
+                                                                  onClick={() => {
+                                                                    const updated = chapters.map((ch, i) => {
+                                                                      if (i !== index) return ch;
+                                                                      const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
+                                                                      const pruned = list.filter((_: any, idx: number) => idx !== bmIdx);
+                                                                      return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: pruned } } as any;
+                                                                    });
+                                                                    onChaptersUpdate(updated);
+                                                                  }}
+                                                                >Remove</Button>
+                                                              </Box>
                                                             </Box>
-                                                          </Box>
-                                                        )})}
+                                                          )
+                                                        })}
                                                       </Box>
                                                     )}
 
@@ -1478,7 +1479,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.05rem' }}>
                                                     📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.images ? 1 : 0)})
                                                   </Typography>
-                                                  <Button
+                                                  {/* <Button
                                                     size="small"
                                                     variant="outlined"
                                                     sx={{
@@ -1503,7 +1504,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     }}
                                                   >
                                                     {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? 'Manage' : 'Add'}
-                                                  </Button>
+                                                  </Button> */}
                                                 </Box>
 
                                                 {/* Media Display */}
@@ -1791,14 +1792,14 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     justifyContent: 'center'
                                                   }}
                                                     onClick={(e) => {
-                                                      if (!generatingChapters) {
-                                                        e.stopPropagation();
-                                                        if (typeof window !== 'undefined') {
-                                                          (window as any).__keywordSuggestions = undefined;
-                                                        }
-                                                        onMediaManagementChapterIndex(index);
-                                                        onMediaManagementOpen(true);
-                                                      }
+                                                      // if (!generatingChapters) {
+                                                      //   e.stopPropagation();
+                                                      //   if (typeof window !== 'undefined') {
+                                                      //     (window as any).__keywordSuggestions = undefined;
+                                                      //   }
+                                                      //   onMediaManagementChapterIndex(index);
+                                                      //   onMediaManagementOpen(true);
+                                                      // }
                                                     }}
                                                   >
                                                     {generatingChapters ? (
@@ -1810,7 +1811,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       </>
                                                     ) : (
                                                       <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1rem' }}>
-                                                        Click to add media
+                                                        {/* Click to add media */}
+                                                        No Media added
                                                       </Typography>
                                                     )}
                                                   </Box>
@@ -1825,10 +1827,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 </Box>
 
                                 {/* Chapter Actions */}
-                                <Box sx={{ display: expandedChapterIndex === index ? 'none' : 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
+                                {/* <Box sx={{ display: expandedChapterIndex === index ? 'none' : 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
                                   {editingChapter === index ? (
                                     <>
-                                      {/* Save Button */}
                                       <IconButton
                                         size="small"
                                         onClick={() => {
@@ -1854,7 +1855,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         <CheckIcon fontSize="small" />
                                       </IconButton>
 
-                                      {/* Cancel Button */}
                                       <IconButton
                                         size="small"
                                         onClick={onCancelEdit}
@@ -1874,8 +1874,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                     </>
                                   ) : (
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                      {/* Magic variations for this chapter */}
-                                      {/* <IconButton
+                                      <IconButton
                                         className="chapter-actions"
                                         size="small"
                                         onClick={async () => {
@@ -1911,8 +1910,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         title="Magic variations"
                                       >
                                         <MagicIcon fontSize="small" />
-                                      </IconButton> */}
-                                      {/* Edit Chapter Button */}
+                                      </IconButton>
+                                      
                                       <IconButton
                                         className="chapter-actions"
                                         size="small"
@@ -1935,8 +1934,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       >
                                         <CreateIcon fontSize="small" />
                                       </IconButton>
-
-                                      {/* Delete Icon */}
+                                     
                                       <IconButton
                                         className="chapter-actions"
                                         size="small"
@@ -1957,7 +1955,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         <DeleteIcon fontSize="small" />
                                       </IconButton>
 
-                                      {/* Add Chapter After This One Button */}
                                       <IconButton
                                         className="chapter-actions"
                                         size="small"
@@ -1979,7 +1976,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       </IconButton>
                                     </Box>
                                   )}
-                                </Box>
+                                </Box> */}
 
                               </Box>
                             </CardContent>

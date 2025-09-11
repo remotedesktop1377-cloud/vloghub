@@ -112,43 +112,37 @@ const ScriptProductionClient: React.FC = () => {
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
-    
+
     // Chapter edit dialog states
     const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
     const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
 
     // Function to upload JSON to Google Drive
-    const uploadToGoogleDrive = async (chapters: Chapter[]) => {
-        if (!scriptData) {
-            toast.error('No script data available to upload');
-            return;
-        }
-
-        setLoading(true);
+    const uploadToGoogleDrive = async () => {
+        // setLoading(true);
         try {
             // Ensure each chapter has assets.images populated with all selected sources
-            const chaptersForUpload: Chapter[] = chapters.map((ch) => {
-                const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
-                const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
-                const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
-                const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
-                const combined = Array.from(new Set([
-                    ...existingImages,
-                    ...googleImages,
-                    ...envatoImages,
-                    ...keywordImages,
-                ].filter(Boolean)));
-                return {
-                    ...ch,
-                    assets: {
-                        ...ch.assets,
-                        images: combined,
-                        imagesGoogle: googleImages,
-                        imagesEnvato: envatoImages,
-                    }
-                } as Chapter;
-            });
-
+            // const chaptersForUpload: Chapter[] = chapters.map((ch) => {
+            //     const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
+            //     const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
+            //     const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
+            //     const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
+            //     const combined = Array.from(new Set([
+            //         ...existingImages,
+            //         ...googleImages,
+            //         ...envatoImages,
+            //         ...keywordImages,
+            //     ].filter(Boolean)));
+            //     return {
+            //         ...ch,
+            //         assets: {
+            //             ...ch.assets,
+            //             images: combined,
+            //             imagesGoogle: googleImages,
+            //             imagesEnvato: envatoImages,
+            //         }
+            //     } as Chapter;
+            // });
             const scriptProductionJSON = {
                 project: {
                     topic: scriptData?.topic || null,
@@ -162,7 +156,7 @@ const ScriptProductionClient: React.FC = () => {
                     narrationType: scriptData?.narrationType || null,
                 },
                 // Use chaptersForUpload to ensure merged images are included
-                script: chaptersForUpload.map(chapter => ({
+                script: chapters.map(chapter => ({
                     id: chapter.id,
                     narration: chapter.narration,
                     duration: chapter.duration,
@@ -172,11 +166,7 @@ const ScriptProductionClient: React.FC = () => {
                     endTime: chapter.endTime,
                     highlightedKeywords: chapter.highlightedKeywords || [],
                     keywordsSelected: chapter.keywordsSelected || {},
-                    assets: {
-                        images: chapter.assets?.images || [],
-                        imagesGoogle: chapter.assets?.imagesGoogle || [],
-                        imagesEnvato: chapter.assets?.imagesEnvato || []
-                    },
+                    assets: {},
                 })),
             };
 
@@ -210,10 +200,8 @@ const ScriptProductionClient: React.FC = () => {
             }
 
             const result = await response.json();
-            // console.log('Drive result:', result);
+            console.log('Drive result:', result);
 
-            setShowBackConfirmation(true);
-            setUploadingCompleted(true);
         } catch (e: any) {
             console.error(e);
             toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
@@ -231,11 +219,11 @@ const ScriptProductionClient: React.FC = () => {
                 .split('\n')
                 .map(p => p.trim())
                 .filter(p => p.length > 0);
-        } else {    
+        } else {
             scriptParagraphs = scriptData.script
-            .split(/\n\s*\n/)
-            .map(p => p.trim())
-            .filter(p => p.length > 0);
+                .split(/\n\s*\n/)
+                .map(p => p.trim())
+                .filter(p => p.length > 0);
         }
 
         // Calculate sequential time allocation for paragraphs
@@ -257,12 +245,7 @@ const ScriptProductionClient: React.FC = () => {
                     highlightedKeywords: ch.highlightedKeywords ?? paragraphsWithTimeRanges[index].highlightedKeywords,
                     keywordsSelected: ch.keywordsSelected ?? {},
                     assets: {
-                        image: ch.assets?.image || (Array.isArray(ch.assets?.images) && ch.assets.images.length > 0 ? ch.assets.images[0] : null),
-                        audio: ch.assets?.audio || null,
-                        video: ch.assets?.video || null,
                         images: ch.assets?.images || [],
-                        imagesGoogle: ch.assets?.imagesGoogle || [],
-                        imagesEnvato: ch.assets?.imagesEnvato || [],
                     }
                 }));
                 setChapters(normalizedFromStorage);
@@ -365,7 +348,7 @@ const ScriptProductionClient: React.FC = () => {
         if (chapters && chapters.length > 0) {
             // save updated chapters
             secure.j.approvedScript.set({ ...scriptData, chapters });
-            // console.log('chapters saved to approvedScript');
+            uploadToGoogleDrive();
         }
     }, [chapters]);
 
@@ -563,7 +546,10 @@ const ScriptProductionClient: React.FC = () => {
             toast.error('Please upload a chroma key before generating video');
             return;
         }
-        uploadToGoogleDrive(chapters);
+
+        toast.info('Video generation started...');
+        setUploadingCompleted(true);
+        setShowBackConfirmation(true);
     };
 
     // Chapter Management Functions
@@ -1020,7 +1006,7 @@ const ScriptProductionClient: React.FC = () => {
             }
             setMediaManagementChapterIndex(selectedText.chapterIndex);
             setMediaManagementOpen(true);
-        } catch {}
+        } catch { }
 
         // Clear selection after adding
         setSelectedText(null);
