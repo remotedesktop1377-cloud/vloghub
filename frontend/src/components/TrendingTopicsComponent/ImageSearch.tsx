@@ -32,7 +32,7 @@ import {
 } from '@mui/icons-material';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../styles/colors';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
-import { toast } from 'react-toastify';
+import { HelperFunctions } from '../../utils/helperFunctions';
 import Image from 'next/image';
 
 interface ImageResult {
@@ -105,6 +105,18 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
     const [uploadedFiles, setUploadedFiles] = useState<ImageResult[]>([]);
+    const predefinedTransitions = [
+        'quantum_dissolve',
+        'particle_burst',
+        'quantum_tunnel',
+        'digital_matrix',
+        'data_stream',
+        'holographic_dissolve',
+        'reality_shift',
+        'quantum_fade_to_black'
+    ];
+
+    const [selectedTransitionsEffects, setSelectedTransitionsEffects] = useState<string[]>([]);
 
 
     // Ref to prevent duplicate API calls when useEffect runs multiple times
@@ -153,13 +165,13 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             setGoogleImages(imagesWithSource);
             checkAndSelectExistingImages(imagesWithSource, 'google');
 
-            toast.success(`Found ${imagesWithSource.length} Google images`);
+            HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Google images`);
 
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'An error occurred searching Google images';
             setGoogleError(errorMsg);
             setGoogleImages([]);
-            toast.error(errorMsg);
+            HelperFunctions.showError(errorMsg);
         } finally {
             setGoogleLoading(false);
         }
@@ -199,13 +211,13 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             setEnvatoImages(imagesWithSource);
             checkAndSelectExistingImages(imagesWithSource, 'envato');
 
-            toast.success(`Found ${imagesWithSource.length} Envato images`);
+            HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Envato images`);
 
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'An error occurred searching Envato images';
             setEnvatoError(errorMsg);
             setEnvatoImages([]);
-            toast.error(errorMsg);
+            HelperFunctions.showError(errorMsg);
         } finally {
             setEnvatoLoading(false);
         }
@@ -248,12 +260,12 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
             setEnvatoClips(clipsWithSource);
             checkAndSelectExistingImages(clipsWithSource, 'envatoClips');
-            toast.success(`Found ${clipsWithSource.length} Envato clips`);
+            HelperFunctions.showSuccess(`Found ${clipsWithSource.length} Envato clips`);
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'An error occurred searching Envato clips';
             setEnvatoError(errorMsg);
             setEnvatoClips([]);
-            toast.error(errorMsg);
+            HelperFunctions.showError(errorMsg);
         } finally {
             setEnvatoLoading(false);
         }
@@ -298,9 +310,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         // Enforce single selection: pick the first matching URL only
         const firstMatch = existingImageUrls.find((existingUrl) => apiImages.some(apiImage => apiImage.url === existingUrl));
         if (firstMatch) {
-            setSelectedBySource({ 
-                google: new Set(source === 'google' ? [firstMatch] : []), 
-                envato: new Set(source === 'envato' ? [firstMatch] : []), 
+            setSelectedBySource({
+                google: new Set(source === 'google' ? [firstMatch] : []),
+                envato: new Set(source === 'envato' ? [firstMatch] : []),
                 envatoClips: new Set(source === 'envatoClips' ? [firstMatch] : []),
                 upload: new Set(source === 'upload' ? [firstMatch] : [])
             });
@@ -430,7 +442,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             const eKeywords = generateEnvatoWords(query);
             searchGoogleImages(query, gSuggestions);
             searchEnvatoImages(eKeywords.join(' '));
-            toast.info('Searching both Google and Envato...');
+            HelperFunctions.showInfo('Searching both Google and Envato...');
         }
     };
 
@@ -451,14 +463,16 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         if (isSelected) {
             // Unselect if already selected
             setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
+            setSelectedTransitionsEffects([]);
         } else {
             // Enforce single selection across all sources
-            setSelectedBySource({ 
-                google: new Set(sourceKey === 'google' ? [imageUrl] : []), 
-                envato: new Set(sourceKey === 'envato' ? [imageUrl] : []), 
+            setSelectedBySource({
+                google: new Set(sourceKey === 'google' ? [imageUrl] : []),
+                envato: new Set(sourceKey === 'envato' ? [imageUrl] : []),
                 envatoClips: new Set(sourceKey === 'envatoClips' ? [imageUrl] : []),
                 upload: new Set(sourceKey === 'upload' ? [imageUrl] : [])
             });
+            setSelectedTransitionsEffects([]);
         }
     };
 
@@ -478,10 +492,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-            toast.success('Image downloaded successfully');
+            HelperFunctions.showSuccess('Image downloaded successfully');
         } catch (error) {
             console.error('Failed to download image:', error);
-            toast.error('Failed to download image');
+            HelperFunctions.showError('Failed to download image');
         }
     };
 
@@ -491,6 +505,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         // Single selection across tabs
         const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value || selectedBySource.envatoClips.values().next().value || selectedBySource.upload.values().next().value;
         if (selectedUrl) {
+            if (!selectedTransitionsEffects || selectedTransitionsEffects.length === 0) {
+                HelperFunctions.showError('Please select at least one transition effect');
+                return;
+            }
             const isGoogle = selectedBySource.google.size === 1 && selectedBySource.google.has(selectedUrl);
             const isEnvato = selectedBySource.envato.size === 1 && selectedBySource.envato.has(selectedUrl);
             const isEnvatoClip = selectedBySource.envatoClips.size === 1 && selectedBySource.envatoClips.has(selectedUrl);
@@ -511,15 +529,22 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     updatedChapter.modifiedKeywordForMapping = typed;
                 }
             }
+            // Persist effects into chapter videoEffects
+            if (selectedTransitionsEffects && selectedTransitionsEffects.length > 0) {
+                updatedChapter.videoEffects = {
+                    ...(updatedChapter.videoEffects || {}),
+                    effects: selectedTransitionsEffects
+                };
+            }
             onChapterUpdate(chapterIndex, updatedChapter);
-            toast.success('1 image selected for chapter');
+            HelperFunctions.showSuccess('1 image selected for chapter');
             if (onDoneWithSelected) {
                 const typed = (searchQuery || '').trim();
                 const mk = (currentKeywordForMapping && typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) ? typed : undefined;
                 onDoneWithSelected([selectedUrl], mk);
             }
         } else {
-            toast.info('Please select one image');
+            HelperFunctions.showInfo('Please select one image');
         }
         onDone();
     };
@@ -535,7 +560,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         const file = files[0];
         const fileUrl = URL.createObjectURL(file);
         const isVideo = file.type.startsWith('video/');
-        
+
         const newFile: ImageResult = {
             id: `upload-${Date.now()}`,
             url: fileUrl,
@@ -548,9 +573,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             mime: file.type,
             source: 'upload' as const
         };
-        
+
         setUploadedFiles(prev => [...prev, newFile]);
-        
+
         try {
             const updatedChapter: any = {
                 assets: {
@@ -570,9 +595,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             }
             onChapterUpdate(chapterIndex, updatedChapter);
             setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
-            toast.success('File uploaded and added to chapter');
+            HelperFunctions.showSuccess('File uploaded and added to chapter');
         } catch (e) {
-            toast.error('Failed to upload file');
+            HelperFunctions.showError('Failed to upload file');
         }
     };
 
@@ -1141,9 +1166,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                             onChapterUpdate(chapterIndex, updatedChapter);
                                                             // notify parent selection if needed
                                                             try { onImageSelect(selectedUrl); } catch { }
-                                                            toast.success('Added video link to chapter');
+                                                            HelperFunctions.showSuccess('Added video link to chapter');
                                                         } catch (e) {
-                                                            toast.error('Failed to add video link');
+                                                            HelperFunctions.showError('Failed to add video link');
                                                         }
                                                     }}
                                                 />
@@ -1288,6 +1313,39 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                 </Card>
                             </Grid>
                         ))}
+                        {/* Transitions/Effects Section */}
+                        <Grid item xs={12}>
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 1 }}>
+                                    Transitions Effects
+                                </Typography>
+                                <Grid container spacing={1}>
+                                    {predefinedTransitions.map((transition) => (
+                                        <Grid item xs={6} md={4} lg={3} key={transition}>
+                                            <Button
+                                                fullWidth
+                                                variant={selectedTransitionsEffects.includes(transition) ? 'contained' : 'outlined'}
+                                                onClick={() => {
+                                                    setSelectedTransitionsEffects(prev => prev.includes(transition) ? prev.filter(e => e !== transition) : [...prev, transition]);
+                                                }}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    py: 1.2,
+                                                    borderRadius: 2
+                                                }}
+                                            >
+                                                {transition.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                                            </Button>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                                {selectedTransitionsEffects.length > 0 && (
+                                    <Typography variant="caption" sx={{ display: 'block', color: 'gray.300', mt: 1 }}>
+                                        Selected: {selectedTransitionsEffects.join(', ')}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Grid>
                     </Grid>
                 ) : searchQuery && !currentLoading ? (
                     <Box sx={{ textAlign: 'center', py: 4 }}>

@@ -113,7 +113,7 @@ export function ChapterEditDialog({
                             ? [chapter.videoEffects.backgroundMusic as unknown as BackgroundMusic]
                             : []),
                     transition: chapter.videoEffects?.transition || 'quantum_dissolve',
-                    effects: chapter.videoEffects?.effects || []
+                    transitionEffects: chapter.videoEffects?.transitionEffects || []
                 }
             });
         }
@@ -215,7 +215,7 @@ export function ChapterEditDialog({
 
     const toggleEffect = (effect: string) => {
         if (!editData) return;
-        const currentEffects = editData.videoEffects?.effects || [];
+        const currentEffects = editData.videoEffects?.transitionEffects || [];
         const newEffects = currentEffects.includes(effect)
             ? currentEffects.filter(e => e !== effect)
             : [...currentEffects, effect];
@@ -680,7 +680,7 @@ export function ChapterEditDialog({
                                 Video Effects
                             </Typography>
                             <EffectsPanel
-                                selectedEffects={editData.videoEffects?.effects || []}
+                                selectedEffects={editData.videoEffects?.transitionEffects || []}
                                 onEffectToggle={toggleEffect}
                             />
                         </Box>

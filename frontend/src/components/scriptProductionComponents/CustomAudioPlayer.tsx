@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, IconButton, CircularProgress } from '@mui/material';
 import { Pause as PauseIcon, PlayArrow as PlayIcon, SkipNext as SkipNextIcon, SkipPrevious as SkipPreviousIcon } from '@mui/icons-material';
+import { HelperFunctions } from '../../utils/helperFunctions';
 
 interface Props {
   src: string;
@@ -34,7 +35,7 @@ export const CustomAudioPlayer: React.FC<Props> = ({ src, title, playerId }) => 
     if (!el) return;
     const onError = () => {
       if (typeof window !== 'undefined' && (window as any).toast) {
-        (window as any).toast.error('Unable to play audio. Please ensure the Drive file is publicly accessible.');
+        HelperFunctions.showError('Unable to play audio. Please ensure the Drive file is publicly accessible.');
       }
     };
     const onCanPlay = () => setIsLoading(false);

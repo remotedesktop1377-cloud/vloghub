@@ -33,7 +33,7 @@ import {
     Cancel as CancelIcon
 } from '@mui/icons-material';
 import { HelperFunctions } from '@/utils/helperFunctions';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
@@ -64,7 +64,7 @@ interface ScriptData {
 }
 
 
-const ScriptProductionClient: React.FC = () => {
+const ScriptProductionClient = () => {
 
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
@@ -362,7 +362,7 @@ const ScriptProductionClient: React.FC = () => {
             } else {
                 // this will be restricted when we will get the boolean from the Supabse to verify the script is uploaded or not
                 // we need to add a service to update the status on the supabase once the script is uploaded.
-                uploadToGoogleDrive(chapters);
+                // uploadToGoogleDrive(chapters);
             }
         }
     }, [chapters]);

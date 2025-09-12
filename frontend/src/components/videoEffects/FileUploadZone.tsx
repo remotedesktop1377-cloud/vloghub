@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Upload, File, X, CheckCircle } from 'lucide-react';
 import { MediaPlayer } from './MediaPlayer';
+import { HelperFunctions } from '../../utils/helperFunctions';
 
 interface UploadedFile {
   id: string;
@@ -41,7 +42,7 @@ export function FileUploadZone({
 
   const processFile = useCallback(async (file: File) => {
     if (file.size > maxSize * 1024 * 1024) {
-      alert(`File size must be less than ${maxSize}MB`);
+      HelperFunctions.showError(`File size must be less than ${maxSize}MB`);
       return;
     }
 

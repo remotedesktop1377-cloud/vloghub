@@ -1,6 +1,6 @@
 import { TrendingTopic } from '../types/TrendingTopics';
 import { Chapter } from '../types/chapters';
-import { toast } from 'react-toastify';
+import { toast, ToastOptions } from 'react-toastify';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -178,6 +178,104 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 };
 
 export class HelperFunctions {
+  /**
+   * Show success toast notification
+   */
+  static showSuccess(message: string, options?: ToastOptions): void {
+    toast.success(message, {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      ...options
+    });
+  }
+
+  /**
+   * Show error toast notification
+   */
+  static showError(message: string, options?: ToastOptions): void {
+    toast.error(message, {
+      position: "top-right",
+      autoClose: 7000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      ...options
+    });
+  }
+
+  /**
+   * Show warning toast notification
+   */
+  static showWarning(message: string, options?: ToastOptions): void {
+    toast.warning(message, {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      ...options
+    });
+  }
+
+  /**
+   * Show info toast notification
+   */
+  static showInfo(message: string, options?: ToastOptions): void {
+    toast.info(message, {
+      position: "top-right",
+      autoClose: 4000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      ...options
+    });
+  }
+
+  /**
+   * Show loading toast notification
+   */
+  static showLoading(message: string, options?: ToastOptions): string {
+    return toast.loading(message, {
+      position: "top-right",
+      autoClose: false,
+      hideProgressBar: true,
+      closeOnClick: false,
+      pauseOnHover: true,
+      draggable: false,
+      ...options
+    }) as string;
+  }
+
+  /**
+   * Update existing toast notification
+   */
+  static updateToast(toastId: string, message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
+    toast.update(toastId, {
+      render: message,
+      type: type,
+      isLoading: false,
+      autoClose: 5000,
+    });
+  }
+
+  /**
+   * Dismiss toast notification
+   */
+  static dismissToast(toastId?: string): void {
+    if (toastId) {
+      toast.dismiss(toastId);
+    } else {
+      toast.dismiss();
+    }
+  }
+
   /**
    * Format tweet volume numbers to human-readable format
    */
@@ -498,7 +596,7 @@ export class HelperFunctions {
       bestChapters = updated;
     } catch (e) {
       console.error('highlight extraction failed', e);
-      toast.error(e instanceof Error ? e.message : 'Failed to extract highlighted keywords');
+      HelperFunctions.showError(e instanceof Error ? e.message : 'Failed to extract highlighted keywords');
     } finally {
       // Ensure callback is invoked even on failure, with best available chapters
       try {

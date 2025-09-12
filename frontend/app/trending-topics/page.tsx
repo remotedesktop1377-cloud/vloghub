@@ -5,7 +5,8 @@ export const metadata = {
   description: 'Discover trending topics and generate AI-powered content',
 }
 
-export default function TrendingTopicsPage() {
+const TrendingTopicsPage = () => {
   return <TrendingTopics />
 }
 
+export default TrendingTopicsPage;

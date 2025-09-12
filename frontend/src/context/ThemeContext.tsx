@@ -3,7 +3,7 @@
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
-import { PRIMARY, SECONDARY, BACKGROUND } from '../src/styles/colors';
+import { PRIMARY, SECONDARY, BACKGROUND } from '../styles/colors';
 
 // Create Material-UI theme
 const theme = createTheme({

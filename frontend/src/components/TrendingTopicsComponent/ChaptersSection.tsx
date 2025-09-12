@@ -1255,7 +1255,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             : ch
                                                         ));
                                                         if (typeof window !== 'undefined' && (window as any).toast) {
-                                                          (window as any).toast.success('Cleared all keywords');
+                                                          HelperFunctions.showSuccess('Cleared all keywords');
                                                         }
                                                       }}
                                                       sx={{
@@ -1373,7 +1373,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             });
                                                             onChaptersUpdate(updatedChapters);
                                                             if (typeof window !== 'undefined' && (window as any).toast) {
-                                                              (window as any).toast.success(`Removed "${keyword}" and its images`);
+                                                              HelperFunctions.showSuccess(`Removed "${keyword}" and its images`);
                                                             }
                                                           }}
                                                         >

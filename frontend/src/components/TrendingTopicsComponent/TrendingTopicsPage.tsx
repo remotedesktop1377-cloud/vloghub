@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-toastify';
+import { HelperFunctions } from '../../utils/helperFunctions';
 import { TrendingTopic } from '../../types/TrendingTopics';
 
 import { durationOptions } from '../../data/mockDurationOptions';
@@ -52,17 +52,17 @@ const TrendingTopics: React.FC = () => {
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
     if (!isAllFieldsSelected()) {
-      toast.info('Please select all options before clearing cache');
+      HelperFunctions.showInfo('Please select all options before clearing cache');
       return;
     }
 
     try {
       const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
       clearCache(cacheRegion);
-      toast.success('Cache cleared for current location and time range');
+      HelperFunctions.showSuccess('Cache cleared for current location and time range');
     } catch (error) {
       console.warn('Error clearing cache:', error);
-      toast.error('Failed to clear cache');
+      HelperFunctions.showError('Failed to clear cache');
     }
   };
 
@@ -130,13 +130,13 @@ const TrendingTopics: React.FC = () => {
 
         // Show success message only on manual refresh
         if (forceRefresh) {
-          toast.success('Fresh trending topics loaded!');
+          HelperFunctions.showSuccess('Fresh trending topics loaded!');
         }
 
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
         setLastUpdated(new Date().toISOString());
-        toast.error('Failed to fetch trending topics');
+        HelperFunctions.showError('Failed to fetch trending topics');
       }
 
       setError(null);
@@ -144,7 +144,7 @@ const TrendingTopics: React.FC = () => {
       console.error('Error fetching trending topics, using mock data:', err);
       setError(null);
       setLastUpdated(new Date().toISOString());
-      toast.error('Error loading trending topics');
+      HelperFunctions.showError('Error loading trending topics');
     } finally {
       setLoading(false);
     }
@@ -192,7 +192,7 @@ const TrendingTopics: React.FC = () => {
       console.log('🟢 Refreshing trending topics for1:', selectedLocation, selectedLocationType, selectedDateRange);
       fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
     } else {
-      toast.info('Please select all options before refreshing');
+      HelperFunctions.showInfo('Please select all options before refreshing');
     }
   };
 

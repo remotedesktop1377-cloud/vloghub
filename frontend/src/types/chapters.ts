@@ -25,7 +25,7 @@ export interface Chapter {
         logos?: LogoOverlay[];
         backgroundMusic?: BackgroundMusic[]; // array
         transition?: string;
-        effects?: string[];
+        transitionEffects?: string[];
     };
 }
 
