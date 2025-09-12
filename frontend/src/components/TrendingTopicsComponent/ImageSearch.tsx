@@ -53,7 +53,7 @@ interface ImageResult {
     category?: string;
     price?: string;
     downloadUrl?: string;
-    source?: 'google' | 'envato';
+    source?: 'google' | 'envato' | 'envatoClips' | 'upload';
 }
 
 interface ImageSearchProps {
@@ -99,17 +99,18 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [envatoLoading, setEnvatoLoading] = useState(false);
     const [googleError, setGoogleError] = useState<string | null>(null);
     const [envatoError, setEnvatoError] = useState<string | null>(null);
-    const [selectedBySource, setSelectedBySource] = useState<{ google: Set<string>; envato: Set<string>; envatoClips: Set<string> }>({ google: new Set(), envato: new Set(), envatoClips: new Set() });
+    const [selectedBySource, setSelectedBySource] = useState<{ google: Set<string>; envato: Set<string>; envatoClips: Set<string>; upload: Set<string> }>({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
     const [googleSuggestions, setGoogleSuggestions] = useState<string[]>([]);
     const [envatoKeywords, setEnvatoKeywords] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+    const [uploadedFiles, setUploadedFiles] = useState<ImageResult[]>([]);
 
 
     // Ref to prevent duplicate API calls when useEffect runs multiple times
     const hasInitialSearch = useRef(false);
 
-    const currentImages = activeTab === 'google' ? googleImages : activeTab === 'envato' ? envatoImages : envatoClips;
+    const currentImages = activeTab === 'google' ? googleImages : activeTab === 'envato' ? envatoImages : activeTab === 'envatoClips' ? envatoClips : uploadedFiles;
     const currentLoading = activeTab === 'google' ? googleLoading : envatoLoading;
     const currentError = activeTab === 'google' ? googleError : envatoError;
 
@@ -242,7 +243,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 height: clip.height || 0,
                 size: clip.size || '',
                 mime: clip.mime || 'video/mp4',
-                source: 'envato' as const
+                source: 'envatoClips' as const
             }));
 
             setEnvatoClips(clipsWithSource);
@@ -291,13 +292,18 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     };
 
     // Function to check if existing image URLs match API response images and auto-select them
-    const checkAndSelectExistingImages = (apiImages: ImageResult[], source: 'google' | 'envato' | 'envatoClips') => {
+    const checkAndSelectExistingImages = (apiImages: ImageResult[], source: 'google' | 'envato' | 'envatoClips' | 'upload') => {
         if (existingImageUrls.length === 0) return;
 
         // Enforce single selection: pick the first matching URL only
         const firstMatch = existingImageUrls.find((existingUrl) => apiImages.some(apiImage => apiImage.url === existingUrl));
         if (firstMatch) {
-            setSelectedBySource({ google: new Set(source === 'google' ? [firstMatch] : []), envato: new Set(source === 'envato' ? [firstMatch] : []), envatoClips: new Set(source === 'envatoClips' ? [firstMatch] : []) });
+            setSelectedBySource({ 
+                google: new Set(source === 'google' ? [firstMatch] : []), 
+                envato: new Set(source === 'envato' ? [firstMatch] : []), 
+                envatoClips: new Set(source === 'envatoClips' ? [firstMatch] : []),
+                upload: new Set(source === 'upload' ? [firstMatch] : [])
+            });
         }
     };
 
@@ -440,14 +446,19 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     };
 
     const handleImageSelect = (imageUrl: string) => {
-        const sourceKey: 'google' | 'envato' | 'envatoClips' = activeTab === 'envato' ? 'envato' : (activeTab === 'envatoClips' ? 'envatoClips' : 'google');
+        const sourceKey: 'google' | 'envato' | 'envatoClips' | 'upload' = activeTab === 'envato' ? 'envato' : (activeTab === 'envatoClips' ? 'envatoClips' : activeTab === 'upload' ? 'upload' : 'google');
         const isSelected = selectedBySource[sourceKey].has(imageUrl);
         if (isSelected) {
             // Unselect if already selected
-            setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set() });
+            setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
         } else {
-            // Enforce single selection across both sources
-            setSelectedBySource({ google: new Set(sourceKey === 'google' ? [imageUrl] : []), envato: new Set(sourceKey === 'envato' ? [imageUrl] : []), envatoClips: new Set(sourceKey === 'envatoClips' ? [imageUrl] : []) });
+            // Enforce single selection across all sources
+            setSelectedBySource({ 
+                google: new Set(sourceKey === 'google' ? [imageUrl] : []), 
+                envato: new Set(sourceKey === 'envato' ? [imageUrl] : []), 
+                envatoClips: new Set(sourceKey === 'envatoClips' ? [imageUrl] : []),
+                upload: new Set(sourceKey === 'upload' ? [imageUrl] : [])
+            });
         }
     };
 
@@ -478,11 +489,12 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
     const handleDone = () => {
         // Single selection across tabs
-        const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value || selectedBySource.envatoClips.values().next().value;
+        const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value || selectedBySource.envatoClips.values().next().value || selectedBySource.upload.values().next().value;
         if (selectedUrl) {
             const isGoogle = selectedBySource.google.size === 1 && selectedBySource.google.has(selectedUrl);
             const isEnvato = selectedBySource.envato.size === 1 && selectedBySource.envato.has(selectedUrl);
             const isEnvatoClip = selectedBySource.envatoClips.size === 1 && selectedBySource.envatoClips.has(selectedUrl);
+            const isUpload = selectedBySource.upload.size === 1 && selectedBySource.upload.has(selectedUrl);
             const updatedChapter: any = {
                 assets: {
                     images: [selectedUrl],
@@ -514,6 +526,54 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: TabValue) => {
         setActiveTab(newValue);
+    };
+
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        const fileUrl = URL.createObjectURL(file);
+        const isVideo = file.type.startsWith('video/');
+        
+        const newFile: ImageResult = {
+            id: `upload-${Date.now()}`,
+            url: fileUrl,
+            thumbnail: fileUrl,
+            title: file.name,
+            context: 'Uploaded file',
+            width: 0,
+            height: 0,
+            size: file.size.toString(),
+            mime: file.type,
+            source: 'upload' as const
+        };
+        
+        setUploadedFiles(prev => [...prev, newFile]);
+        
+        try {
+            const updatedChapter: any = {
+                assets: {
+                    images: [fileUrl],
+                    imagesGoogle: [],
+                    imagesEnvato: []
+                }
+            };
+            if (currentKeywordForMapping) {
+                const typed = (searchQuery || '').trim();
+                updatedChapter.keywordsSelectedMerge = {
+                    [currentKeywordForMapping]: [fileUrl]
+                };
+                if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
+                    updatedChapter.modifiedKeywordForMapping = typed;
+                }
+            }
+            onChapterUpdate(chapterIndex, updatedChapter);
+            setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
+            toast.success('File uploaded and added to chapter');
+        } catch (e) {
+            toast.error('Failed to upload file');
+        }
     };
 
     return (
@@ -623,10 +683,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         overflow: 'hidden'
                                     }}
                                 >
-                                    <Image src="/images/youtube.jpg" alt="Youtube" fill style={{ objectFit: 'cover' }} />
+                                    <Image src="/images/youtube.png" alt="Youtube" fill style={{ objectFit: 'cover' }} />
                                 </Box>
-                                <Badge badgeContent={envatoClips.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
-                                    YouTube Clips
+                                <Badge badgeContent={0} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
+                                    YouTube Clips (coming soon)
                                 </Badge>
                             </Box>
                         }
@@ -651,9 +711,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         overflow: 'hidden'
                                     }}
                                 >
-                                    <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
+                                    <Image src="/images/cloud-computing.png" alt="Envato" fill style={{ objectFit: 'cover' }} />
                                 </Box>
-                                <Badge badgeContent={envatoClips.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
+                                <Badge badgeContent={0} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
                                     Upload
                                 </Badge>
                             </Box>
@@ -812,6 +872,226 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             Searching {activeTab === 'google' ? 'Google' : 'Envato'} images...
                         </Typography>
                     </Box>
+                ) : (activeTab === 'youtube') ? (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+                            YouTube integration coming soon
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            We will add YouTube API support here shortly.
+                        </Typography>
+                    </Box>
+                ) : (activeTab === 'upload') ? (
+                    uploadedFiles.length > 0 ? (
+                        <Grid container spacing={2}>
+                            {uploadedFiles.map((file, index) => (
+                                <Grid item xs={6} sm={4} md={3} key={file.id}>
+                                    <Card
+                                        sx={{
+                                            height: '100%',
+                                            cursor: 'pointer',
+                                            border: selectedBySource.upload.has(file.url)
+                                                ? `2px solid ${WARNING.main}`
+                                                : '2px solid transparent',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: 3
+                                            }
+                                        }}
+                                    >
+                                        <Box sx={{ position: 'relative' }}>
+                                            {file.mime.startsWith('video/') ? (
+                                                <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
+                                                    <img
+                                                        src={file.thumbnail}
+                                                        alt={file.title}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                        onClick={() => handleImageSelect(file.url)}
+                                                    />
+                                                    <Box sx={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <Box
+                                                            onClick={(e) => { e.stopPropagation(); setVideoPreviewUrl(file.url); setVideoPreviewOpen(true); }}
+                                                            sx={{
+                                                                width: 52,
+                                                                height: 52,
+                                                                borderRadius: '50%',
+                                                                backgroundColor: 'rgba(0,0,0,0.55)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                                                <path d="M8 5v14l11-7z" />
+                                                            </svg>
+                                                        </Box>
+                                                    </Box>
+                                                </Box>
+                                            ) : (
+                                                <CardMedia
+                                                    component="img"
+                                                    height="140"
+                                                    image={file.thumbnail}
+                                                    alt={file.title}
+                                                    sx={{ objectFit: 'cover' }}
+                                                    onClick={() => handleImageSelect(file.url)}
+                                                />
+                                            )}
+
+                                            {/* Selection Overlay */}
+                                            {selectedBySource.upload.has(file.url) && (
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 8,
+                                                        right: 8,
+                                                        width: 24,
+                                                        height: 24,
+                                                        borderRadius: '50%',
+                                                        backgroundColor: WARNING.main,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: 'white'
+                                                    }}
+                                                >
+                                                    <CheckIcon sx={{ fontSize: 16 }} />
+                                                </Box>
+                                            )}
+
+                                            {/* Source Badge */}
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 8,
+                                                    left: 8,
+                                                    bgcolor: SUCCESS.main,
+                                                    color: 'white',
+                                                    fontSize: '0.6rem',
+                                                    px: 0.5,
+                                                    py: 0.1,
+                                                    borderRadius: 0.5,
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                UPLOAD
+                                            </Box>
+
+                                            {/* Action Buttons */}
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: 8,
+                                                    right: 8,
+                                                    display: 'flex',
+                                                    gap: 0.5
+                                                }}
+                                            >
+                                                {!file.mime.startsWith('video/') && (
+                                                    <Tooltip title="Preview">
+                                                        <IconButton
+                                                            size="medium"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleImagePreview(file.url);
+                                                            }}
+                                                            sx={{
+                                                                backgroundColor: 'rgba(255,255,255,0.9)',
+                                                                '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                            }}
+                                                        >
+                                                            <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                )}
+                                                <Tooltip title="Download">
+                                                    <IconButton
+                                                        size="medium"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDownloadImage(file.url, file.title);
+                                                        }}
+                                                        sx={{
+                                                            backgroundColor: 'rgba(255,255,255,0.9)',
+                                                            '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                        }}
+                                                    >
+                                                        <DownloadIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        </Box>
+
+                                        <CardContent sx={{ p: 1 }}>
+                                            <Typography
+                                                variant="subtitle2"
+                                                sx={{
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden',
+                                                    fontSize: '1rem',
+                                                    lineHeight: 1.4,
+                                                    color: 'text.secondary'
+                                                }}
+                                            >
+                                                {file.title}
+                                            </Typography>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    ) : (
+                        <Box sx={{ textAlign: 'center', py: 6 }}>
+                            <Box
+                                component="label"
+                                htmlFor="file-upload"
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    height: 200,
+                                    border: '2px dashed',
+                                    borderColor: 'primary.main',
+                                    borderRadius: 2,
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                        borderColor: 'primary.dark',
+                                        backgroundColor: 'action.hover'
+                                    }
+                                }}
+                            >
+                                <input
+                                    id="file-upload"
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    onChange={handleFileUpload}
+                                    style={{ display: 'none' }}
+                                />
+                                <Box sx={{ mb: 2 }}>
+                                    <Image src="/images/cloud-computing.png" alt="Upload" width={64} height={64} />
+                                </Box>
+                                <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
+                                    Click to upload image or video
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Supports images and video files
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )
                 ) : currentImages.length > 0 ? (
                     <Grid container spacing={2}>
                         {currentImages.map((image, index) => (
@@ -820,7 +1100,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                     sx={{
                                         height: '100%',
                                         cursor: 'pointer',
-                                        border: (selectedBySource[image.source || 'google']?.has(image.url))
+                                        border: ((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url)))
                                             ? `2px solid ${image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' ? WARNING.main : PRIMARY.main)}`
                                             : '2px solid transparent',
                                         transition: 'all 0.2s ease',
@@ -832,14 +1112,40 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                 >
                                     <Box sx={{ position: 'relative' }}>
                                         {activeTab === 'envatoClips' ? (
-                                            <Box
-                                                onClick={() => { setVideoPreviewUrl(image.url); setVideoPreviewOpen(true); }}
-                                                sx={{ position: 'relative', width: '100%', height: 140, cursor: 'pointer' }}
-                                            >
+                                            <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
                                                 <img
-                                                    src={image.thumbnail || '/images/youtube.jpg'}
+                                                    src={image.thumbnail || '/images/youtube.png'}
                                                     alt={image.title}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                    onClick={() => {
+                                                        try {
+                                                            const selectedUrl = image.url;
+                                                            // ensure consistent single-selection across tabs
+                                                            handleImageSelect(selectedUrl);
+                                                            const updatedChapter: any = {
+                                                                assets: {
+                                                                    images: [selectedUrl],
+                                                                    imagesGoogle: [],
+                                                                    imagesEnvato: []
+                                                                }
+                                                            };
+                                                            if (currentKeywordForMapping) {
+                                                                const typed = (searchQuery || '').trim();
+                                                                updatedChapter.keywordsSelectedMerge = {
+                                                                    [currentKeywordForMapping]: [selectedUrl]
+                                                                };
+                                                                if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
+                                                                    updatedChapter.modifiedKeywordForMapping = typed;
+                                                                }
+                                                            }
+                                                            onChapterUpdate(chapterIndex, updatedChapter);
+                                                            // notify parent selection if needed
+                                                            try { onImageSelect(selectedUrl); } catch { }
+                                                            toast.success('Added video link to chapter');
+                                                        } catch (e) {
+                                                            toast.error('Failed to add video link');
+                                                        }
+                                                    }}
                                                 />
                                                 <Box sx={{
                                                     position: 'absolute',
@@ -848,16 +1154,20 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                     alignItems: 'center',
                                                     justifyContent: 'center'
                                                 }}>
-                                                    <Box sx={{
-                                                        width: 40,
-                                                        height: 40,
-                                                        borderRadius: '50%',
-                                                        backgroundColor: 'rgba(0,0,0,0.5)',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                                    <Box
+                                                        onClick={(e) => { e.stopPropagation(); handleImageSelect(image.url); setVideoPreviewUrl(image.url); setVideoPreviewOpen(true); }}
+                                                        sx={{
+                                                            width: 52,
+                                                            height: 52,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: 'rgba(0,0,0,0.55)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
                                                             <path d="M8 5v14l11-7z" />
                                                         </svg>
                                                     </Box>
@@ -875,7 +1185,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         )}
 
                                         {/* Selection Overlay */}
-                                        {(selectedBySource[image.source || 'google']?.has(image.url)) && (
+                                        {((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url))) && (
                                             <Box
                                                 sx={{
                                                     position: 'absolute',
@@ -884,7 +1194,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                     width: 24,
                                                     height: 24,
                                                     borderRadius: '50%',
-                                                    backgroundColor: image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' ? WARNING.main : PRIMARY.main),
+                                                    backgroundColor: image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' || image.source === 'envatoClips' ? WARNING.main : PRIMARY.main),
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
@@ -923,26 +1233,23 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 gap: 0.5
                                             }}
                                         >
-                                            <Tooltip title="Preview">
-                                                <IconButton
-                                                    size="medium"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (activeTab === 'envatoClips') {
-                                                            setVideoPreviewUrl(image.url);
-                                                            setVideoPreviewOpen(true);
-                                                        } else {
+                                            {activeTab !== 'envatoClips' && (
+                                                <Tooltip title="Preview">
+                                                    <IconButton
+                                                        size="medium"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
                                                             handleImagePreview(image.url);
-                                                        }
-                                                    }}
-                                                    sx={{
-                                                        backgroundColor: 'rgba(255,255,255,0.9)',
-                                                        '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
-                                                    }}
-                                                >
-                                                    <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
-                                                </IconButton>
-                                            </Tooltip>
+                                                        }}
+                                                        sx={{
+                                                            backgroundColor: 'rgba(255,255,255,0.9)',
+                                                            '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                        }}
+                                                    >
+                                                        <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
                                             <Tooltip title="Download">
                                                 <IconButton
                                                     size="medium"
@@ -1027,8 +1334,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             <Dialog open={videoPreviewOpen} onClose={() => setVideoPreviewOpen(false)} maxWidth="md" fullWidth>
                 <DialogContent sx={{ p: 0, bgcolor: 'black' }}>
                     {videoPreviewUrl && (
-                        <video src={'https://previews.customer.envatousercontent.com/8a627632-09af-472a-9ddd-bc3006a82635/watermarked_preview/watermarked_preview.mp4'} controls autoPlay playsInline style={{ width: '100%', height: 'auto' }} />
-                        // <video src={videoPreviewUrl} controls autoPlay playsInline style={{ width: '100%', height: 'auto' }} />
+                        <video src={videoPreviewUrl} controls autoPlay playsInline style={{ width: '100%', height: 'auto' }} />
                     )}
                 </DialogContent>
             </Dialog>
