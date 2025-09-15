@@ -1,6 +1,7 @@
 import { TrendingTopic } from '../types/TrendingTopics';
 import { Chapter } from '../types/chapters';
 import { toast, ToastOptions } from 'react-toastify';
+import { API_ENDPOINTS } from '../config/apiEndpoints';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -191,6 +192,70 @@ export class HelperFunctions {
       draggable: true,
       ...options
     });
+  }
+
+  /**
+   * Merge a chapter's assets with any media referenced in keywordsSelected.
+   * Ensures assets.images includes low/high media URLs without duplicates.
+   */
+  static ensureAssetsContainKeywordMedia(chapter: Chapter): Chapter {
+    const existingImages = Array.isArray(chapter.assets?.images) ? (chapter.assets!.images as string[]) : [];
+    const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected((chapter as any).keywordsSelected);
+    const merged = Array.from(new Set([...(existingImages || []), ...keywordImages].filter(Boolean)));
+    return {
+      ...chapter,
+      assets: {
+        ...(chapter.assets || {} as any),
+        images: merged
+      } as any
+    } as Chapter;
+  }
+
+  /**
+   * Update a single scene JSON on the server/Drive and ensure assets are synced.
+   * Returns true on success.
+   */
+  static async updateChapterSceneOnDrive(jobName: string, jobId: string, sceneId: string, chapter: Chapter): Promise<boolean> {
+    try {
+      const chapterWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(chapter);
+      const scene = {
+        id: chapterWithAssets.id,
+        narration: chapterWithAssets.narration,
+        duration: chapterWithAssets.duration,
+        durationInSeconds: (chapterWithAssets as any).durationInSeconds,
+        words: (chapterWithAssets as any).words,
+        startTime: (chapterWithAssets as any).startTime,
+        endTime: (chapterWithAssets as any).endTime,
+        highlightedKeywords: chapterWithAssets.highlightedKeywords || [],
+        keywordsSelected: Array.isArray((chapterWithAssets as any).keywordsSelected) ? (chapterWithAssets as any).keywordsSelected : [],
+        assets: {
+          images: chapterWithAssets.assets?.images || []
+        }
+      };
+      console.log('Updating scene on Drive:', scene);
+
+      const form = new FormData();
+      // Pass job folder and scene folder separately so backend can resolve path as jobs/<folderName>/<sceneFolderId>/
+      form.append('jobName', jobName);
+      form.append('jobId', jobId);
+      form.append('sceneId', sceneId);
+      form.append('fileName', 'scene-config.json');
+      form.append('jsonData', JSON.stringify(scene)); 
+
+      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_SCENE_UPLOAD, {
+        method: 'POST',
+        body: form
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || err?.details || 'Drive scene update failed');
+      }
+      return true;
+    } catch (e) {
+      console.error('updateChapterSceneOnDrive error', e);
+      return false;
+    }
   }
 
   /**
@@ -520,7 +585,7 @@ export class HelperFunctions {
     }
     return deduped;
   }
-  
+
   // Function to get localized section headers based on language
   static getLocalizedSectionHeaders = (lang: string) => {
     switch (lang.toLowerCase()) {
@@ -601,7 +666,7 @@ export class HelperFunctions {
       // Ensure callback is invoked even on failure, with best available chapters
       try {
         chaptersUpdated(bestChapters);
-      } catch {}
+      } catch { }
     }
   }
 }

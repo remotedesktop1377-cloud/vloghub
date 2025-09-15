@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
   
   // Google Drive APIs
   GOOGLE_DRIVE_UPLOAD: '/api/google-drive-upload',
+  GOOGLE_DRIVE_SCENE_UPLOAD: '/api/google-drive-scene-upload',
   GOOGLE_DRIVE_FOLDERS: '/api/google-drive-folders',
   
 } as const;

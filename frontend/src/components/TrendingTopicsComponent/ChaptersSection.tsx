@@ -53,7 +53,7 @@ import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 
 interface ChaptersSectionProps {
-  driveScriptJSON: { folderName?: string; scriptJSON?: any } | null;
+  jobInfo: { jobId?: string, jobName?: string } | null;
   chapters: Chapter[];
   chaptersGenerated: boolean;
   generatingChapters: boolean;
@@ -123,7 +123,7 @@ interface ChaptersSectionProps {
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
-  driveScriptJSON,
+  jobInfo,
   chapters,
   chaptersGenerated,
   generatingChapters,
@@ -2248,8 +2248,22 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                     return chapter;
                   });
                   try {
-                    console.log('Chapter modified (onChapterUpdate):', JSON.stringify(updatedChapters[chapterIndex]));
-                  } catch {}
+                    // console.log('Chapter modified (onChapterUpdate):', JSON.stringify(updatedChapters[chapterIndex]));
+                    const sceneId = updatedChapters[chapterIndex].id || '';
+                    const jobId = updatedChapters[chapterIndex].jobId || '';
+                    const jobName = updatedChapters[chapterIndex].jobName || '';
+                    if (jobId && sceneId) {
+                      const modifiedChapter = updatedChapters[chapterIndex];
+                      HelperFunctions.updateChapterSceneOnDrive(jobName || '', jobId || '', sceneId, modifiedChapter).then((ok) => {
+                        if (!ok) {
+                          console.error('Failed to update scene on Drive');
+                          try { (window as any).toast?.error('Failed to update scene on Drive'); } catch { }
+                        } else {
+                          try { (window as any).toast?.success('Scene updated on Drive'); } catch { }
+                        }
+                      });
+                    }
+                  } catch { }
                   onChaptersUpdate(updatedChapters);
                 }}
                 onDone={() => {

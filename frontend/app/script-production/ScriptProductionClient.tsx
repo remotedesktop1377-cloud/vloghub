@@ -112,7 +112,7 @@ const ScriptProductionClient = () => {
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
-    const [driveScriptJSON, setDriveScriptJSON] = useState<{ folderName?: string; scriptJSON?: any; sceneFolderMap?: Record<string, string> } | null>(null);
+    const [jobInfo, setJobInfo] = useState<{ jobId?: string, jobName?: string } | null>(null);
     // Chapter edit dialog states
     const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
     const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
@@ -147,13 +147,13 @@ const ScriptProductionClient = () => {
             const now = new Date();
             const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
 
-            const jobId = HelperFunctions.generateRandomId();
-            const folderName = `job-${jobId}-${timestamp}`; // <-- folder only, no ".json"
+            const randomJobId = HelperFunctions.generateRandomId();
+            const jobName = `job-${randomJobId}-${timestamp}`; // <-- folder only, no ".json"
             const fileName = `project-config.json`;
 
             const scriptProductionJSON = {
                 project: {
-                    folderName: folderName,
+                    jobName: jobName,
                     topic: scriptData?.topic || null,
                     title: scriptData?.title || null,
                     description: scriptData?.description || null,
@@ -166,6 +166,7 @@ const ScriptProductionClient = () => {
                 },
                 // Use chaptersForUpload to ensure merged images are included
                 script: chapters.map(chapter => ({
+                    jobId: '',
                     id: chapter.id,
                     narration: chapter.narration,
                     duration: chapter.duration,
@@ -182,7 +183,7 @@ const ScriptProductionClient = () => {
             };
 
             const form = new FormData();
-            form.append('folderName', folderName);
+            form.append('jobName', jobName);
             form.append('fileName', fileName);
             form.append('jsonData', JSON.stringify(scriptProductionJSON));
 
@@ -203,6 +204,34 @@ const ScriptProductionClient = () => {
 
             const result = await response.json();
             console.log('Drive result:', result);
+
+            // get job folder id
+            // setJobInfo({ jobId: result.projectFolderId, jobName: jobName });
+
+            // Store scene folder mapping for future updates
+            // const sceneFolderMap: Record<string, string> = {};
+            // if (result.images?.scenes) {
+            //     result.images.scenes.forEach((scene: any) => {            
+            //         sceneFolderMap[scene.sceneId] = scene.folderId;
+            //     });
+            // }
+
+            const jobId = result.projectFolderId;
+
+            debugger
+            // Update chapters with their corresponding folder IDs
+            const updatedChapters = chapters.map((chapter, index) => {
+                const sceneId = `scene-${index + 1}`;
+                // const folderId = sceneFolderMap[sceneId];
+                return {
+                    ...chapter,
+                    // id: folderId || chapter.id, // Replace with folder ID if available
+                    jobId: jobId,
+                    jobName: jobName,
+                };
+            });
+            setChapters(updatedChapters);
+
             setLoading(false);
 
         } catch (e: any) {
@@ -239,6 +268,8 @@ const ScriptProductionClient = () => {
             if (storedData && Array.isArray(storedData.chapters) && storedData.chapters.length === paragraphsWithTimeRanges.length) {
                 const normalizedFromStorage: Chapter[] = storedData.chapters.map((ch: any, index: number) => ({
                     id: ch.id || `scene-${index + 1}`,
+                    jobId: ch.jobId || '',
+                    jobName: ch.jobName || '',
                     narration: ch.narration || paragraphsWithTimeRanges[index].text,
                     duration: ch.duration || paragraphsWithTimeRanges[index].duration,
                     words: ch.words ?? paragraphsWithTimeRanges[index].words,
@@ -259,6 +290,8 @@ const ScriptProductionClient = () => {
         // Map to Chapter[] with required fields
         const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
             id: `scene-${index + 1}`,
+            jobId: '',
+            jobName: '',
             narration: p.text,
             duration: p.duration,
             words: p.words,
@@ -322,10 +355,12 @@ const ScriptProductionClient = () => {
     }, [scriptData]);
 
     // Fetch Google Drive library once when approved script is present
+    // Handle browser back button
     useEffect(() => {
         const run = async () => {
             try {
                 if (isScriptApproved) {
+                    setLoading(true);
                     const res = await fetch('/api/google-drive-library?category=all', { cache: 'no-store' });
                     const data = await res.json();
                     if (data && data.data) {
@@ -335,40 +370,23 @@ const ScriptProductionClient = () => {
                             transitions: Array.isArray(data.data.transitions) ? data.data.transitions : [],
                         });
                     }
+
+                    const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
+                    if (needsHighlights) {
+                        HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
+                            console.log('chapters with highlights', chapters);
+                            uploadToGoogleDrive(chapters);
+                            setLoading(false);
+                        });
+                    } else {
+                        setLoading(false);
+                    }
                 }
             } catch (e) {
                 console.error('Failed to fetch Drive library', e);
             }
         };
         run();
-    }, [isScriptApproved]);
-
-    useEffect(() => {
-        if (isScriptApproved && chapters && chapters.length > 0) {
-            // save updated chapters
-            secure.j.approvedScript.set({ ...scriptData, chapters });
-            // try {
-            //     console.log('Chapters modified:', JSON.stringify(chapters));
-            // } catch { }
-            // If highlightedKeywords are missing on any chapter, fetch them once            
-            const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
-            if (needsHighlights) {
-                debugger
-                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
-                    debugger
-                    console.log('chapters with highlights', chapters);
-                    uploadToGoogleDrive(chapters);
-                });
-            } else {
-                // this will be restricted when we will get the boolean from the Supabse to verify the script is uploaded or not
-                // we need to add a service to update the status on the supabase once the script is uploaded.
-                // uploadToGoogleDrive(chapters);
-            }
-        }
-    }, [chapters]);
-
-    // Handle browser back button
-    useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (!isScriptApproved) {
                 e.preventDefault();
@@ -400,6 +418,13 @@ const ScriptProductionClient = () => {
             window.removeEventListener('popstate', handlePopState);
         };
     }, [isScriptApproved]);
+
+    useEffect(() => {
+        if (isScriptApproved && chapters && chapters.length > 0) {
+            // save updated chapters
+            secure.j.approvedScript.set({ ...scriptData, chapters });
+        }
+    }, [chapters]);
 
     // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
     const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
@@ -1457,7 +1482,7 @@ const ScriptProductionClient = () => {
 
                                 {chapters.length > 0 && (
                                     <ChaptersSection
-                                        driveScriptJSON={driveScriptJSON}
+                                        jobInfo={jobInfo}
                                         chaptersGenerated={true}
                                         generatingChapters={false}
                                         chapters={chapters}

@@ -57,38 +57,99 @@ export async function POST(request: NextRequest) {
         });
         const drive = google.drive({ version: 'v3', auth: jwtClient });
 
+        const form = await request.formData();
+        const fileNameForm = String(form.get('fileName') || '').trim();
+        const jsonDataRaw = form.get('jsonData');
+        const jobName = String(form.get('jobName') || '').trim();
+        const jobId = String(form.get('jobId') || '').trim();
+        const sceneId = String(form.get('sceneId') || '').trim();
+        const file = form.get('file') as unknown as File | null;
+
         // root from env (support both var names)
-        const ROOT_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || process.env.GOOGLE_PARENT_FOLDER_ID;
+        const ROOT_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
         if (!ROOT_ID) {
             return NextResponse.json({ error: 'Google Drive root folder env not set (GOOGLE_DRIVE_FOLDER_ID or GOOGLE_PARENT_FOLDER_ID)' }, { status: 500 });
         }
 
         if (isMultipart) {
-            // Multipart mode: folderName, jsonData (string), fileName, optional file (chroma key)
+            // Multipart mode: supports two flows
+            // 1) project JSON upload (folderName, jsonData, fileName [, file])
+            // 2) scene JSON update (jobId, sceneId, jsonData [, fileName])
 
-            const form = await request.formData();
-            const jobName = String(form.get('jobName') || '').trim();
-            const fileName = String(form.get('fileName') || 'project-config.json').trim();
-            const jsonDataRaw = form.get('jsonData');
-            const file = form.get('file') as unknown as File | null;
-
-            if (!jobName || !jsonDataRaw) {
-                return NextResponse.json({ error: 'folderName and jsonData are required' }, { status: 400 });
+            if (!jsonDataRaw) {
+                return NextResponse.json({ error: 'jsonData is required' }, { status: 400 });
             }
 
             const jsonData = typeof jsonDataRaw === 'string' ? JSON.parse(jsonDataRaw) : JSON.parse(await (jsonDataRaw as any).text());
-
             const project = await findOrCreateFolder(drive, jobName, ROOT_ID);
-            const input = await findOrCreateFolder(drive, 'input', project.id);
+            const sceneFolder = await findOrCreateFolder(drive, sceneId, project.id);
+            // console.log('project', project);
+            // console.log('sceneFolder project', sceneFolder);
 
-            // Upload JSON
-            const jsonString = JSON.stringify(jsonData, null, 2);
-            const uploadedJson = await drive.files.create({
-                requestBody: { name: fileName, parents: [input.id], mimeType: 'application/json' },
-                media: { mimeType: 'application/json', body: jsonString },
-                supportsAllDrives: true,
-                fields: 'id, name, webViewLink, parents',
-            });
+            if (jobId && sceneId) {
+                const jsonString = JSON.stringify(jsonData, null, 2);
+                const uploadedJson = await drive.files.create({
+                    requestBody: { name: 'scene-config.json', parents: [sceneFolder.id], mimeType: 'application/json' },
+                    media: { mimeType: 'application/json', body: jsonString },
+                    supportsAllDrives: true,
+                    fields: 'id, name, webViewLink, parents',
+                });
+
+                // Upload scene images from assets
+                const assets = jsonData?.assets || {};
+                const images: string[] = Array.isArray(assets.images) ? assets.images : [];
+                let uploadedCount = 0;
+
+                if (images.length > 0) {
+                    const imagesFolder = await findOrCreateFolder(drive, 'images', sceneFolder.id);
+                    
+                    const uploadBatch = async (urls: string[], parentId: string, prefix: string) => {
+                        for (let j = 0; j < urls.length; j++) {
+                            const url = urls[j];
+                            try {
+                                const res = await fetch(url, {
+                                    headers: {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+                                        'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                                        'Referer': new URL(url).origin,
+                                    },
+                                    redirect: 'follow',
+                                });
+                                if (!res.ok) throw new Error(`download ${res.status}`);
+                                const contentType = res.headers.get('content-type') || undefined;
+                                const arrayBuffer = await res.arrayBuffer();
+                                const buffer = Buffer.from(arrayBuffer);
+                                const stream = Readable.from(buffer);
+                                const name = `${prefix}-${j + 1}`;
+                                const created = await drive.files.create({
+                                    requestBody: { name, parents: [parentId], mimeType: contentType },
+                                    media: { body: stream, mimeType: contentType },
+                                    supportsAllDrives: true,
+                                    fields: 'id, name',
+                                });
+                                if (created.data.id) uploadedCount += 1;
+                            } catch (e) {
+                                console.error('Image upload failed', { sceneId, url, error: (e as any)?.message });
+                            }
+                        }
+                    };
+
+                    await uploadBatch(images, imagesFolder.id, `${sceneId}-images`);
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    projectFolderId: project.id,
+                    sceneFolderId: sceneFolder.id,
+                    json: {
+                        fileId: uploadedJson.data.id,
+                        fileName: uploadedJson.data.name,
+                        webViewLink: uploadedJson.data.webViewLink
+                    },
+                    images: { uploaded: uploadedCount },
+                    message: 'Scene JSON and images uploaded successfully',
+                });
+            }
 
             // Upload scene images
             const scenesSummary: Array<{ sceneId: string | number; uploaded: number; folderId: string }> = [];
@@ -102,14 +163,10 @@ export async function POST(request: NextRequest) {
 
                 const assets = chapter?.assets || {};
                 const images: string[] = Array.isArray(assets.images) ? assets.images : [];
-                const imagesGoogle: string[] = Array.isArray(assets.imagesGoogle) ? assets.imagesGoogle : [];
-                const imagesEnvato: string[] = Array.isArray(assets.imagesEnvato) ? assets.imagesEnvato : [];
 
                 let uploadedCount = 0;
                 const folders: Record<string, { id: string } | null> = {
                     'images': images.length ? await findOrCreateFolder(drive, 'images', sceneFolder.id) : null,
-                    // 'google-images': imagesGoogle.length ? await findOrCreateFolder(drive, 'google-images', sceneFolder.id) : null,
-                    // 'envato-images': imagesEnvato.length ? await findOrCreateFolder(drive, 'envato-images', sceneFolder.id) : null,
                 };
 
                 const uploadBatch = async (urls: string[], parentId: string, prefix: string) => {
@@ -143,53 +200,40 @@ export async function POST(request: NextRequest) {
                     }
                 };
 
+                console.log('folders', folders);
                 if (folders['images']) {
-                    // Upload the combined scene images (chapter.assets.images)
                     await uploadBatch(images, folders['images'].id, `${sceneId}-images`);
                 }
-                // if (folders['google-images']) {
-                //     await uploadBatch(imagesGoogle, folders['google-images'].id, `${sceneId}-google`);
-                // }
-                // if (folders['envato-images']) {
-                //     await uploadBatch(imagesEnvato, folders['envato-images'].id, `${sceneId}-envato`);
-                // }
 
                 scenesSummary.push({ sceneId, uploaded: uploadedCount, folderId: sceneFolder.id });
             }
 
-            // Upload optional chroma key file to input folder
-            let chromaInfo: { id?: string; name?: string; webViewLink?: string } | null = null;
-            if (file) {
-                const arrayBuffer = await (file as any).arrayBuffer();
-                const buffer = Buffer.from(arrayBuffer);
-                const stream = Readable.from(buffer);
-                const fileFileName = (file as any).name || 'chroma-key.mp4';
-                const mimeType = (file as any).type || 'video/mp4';
-                const uploadedFile = await drive.files.create({
-                    requestBody: { name: fileFileName, parents: [input.id], mimeType },
-                    media: { mimeType, body: stream },
-                    supportsAllDrives: true,
-                    fields: 'id, name, webViewLink',
-                });
-                chromaInfo = {
-                    id: uploadedFile.data.id || undefined,
-                    name: uploadedFile.data.name || undefined,
-                    webViewLink: uploadedFile.data.webViewLink || undefined
-                };
-            }
+            // // Upload optional chroma key file to input folder
+            // let chromaInfo: { id?: string; name?: string; webViewLink?: string } | null = null;
+            // if (file) {
+            //     const arrayBuffer = await (file as any).arrayBuffer();
+            //     const buffer = Buffer.from(arrayBuffer);
+            //     const stream = Readable.from(buffer);
+            //     const fileFileName = (file as any).name || 'chroma-key.mp4';
+            //     const mimeType = (file as any).type || 'video/mp4';
+            //     const uploadedFile = await drive.files.create({
+            //         requestBody: { name: fileFileName, parents: [sceneFolder.id], mimeType },
+            //         media: { mimeType, body: stream },
+            //         supportsAllDrives: true,
+            //         fields: 'id, name, webViewLink',
+            //     });
+            //     chromaInfo = {
+            //         id: uploadedFile.data.id || undefined,
+            //         name: uploadedFile.data.name || undefined,
+            //         webViewLink: uploadedFile.data.webViewLink || undefined
+            //     };
+            // }
 
             return NextResponse.json({
                 success: true,
-                projectFolderId: project.id,
-                inputFolderId: input.id,
-                json: {
-                    fileId: uploadedJson.data.id,
-                    fileName: uploadedJson.data.name,
-                    webViewLink: uploadedJson.data.webViewLink
-                },
                 images: { scenes: scenesSummary },
-                chromaKey: chromaInfo,
-                message: 'Uploaded JSON, scene images and optional chroma key file',
+                // chromaKey: chromaInfo,
+                message: 'Scene images uploaded successfully',
             });
         } else {
             // JSON-only mode (backwards compatible)

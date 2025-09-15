@@ -1,5 +1,7 @@
 export interface Chapter {
     id: string;
+    jobId?: string;
+    jobName?: string;
     title?: string;
     narration: string;
     duration: string;
