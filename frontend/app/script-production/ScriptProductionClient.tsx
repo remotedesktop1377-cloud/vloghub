@@ -112,7 +112,7 @@ const ScriptProductionClient = () => {
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
-
+    const [driveScriptJSON, setDriveScriptJSON] = useState<{ folderName?: string; scriptJSON?: any; sceneFolderMap?: Record<string, string> } | null>(null);
     // Chapter edit dialog states
     const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
     const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
@@ -142,9 +142,18 @@ const ScriptProductionClient = () => {
             //             imagesEnvato: envatoImages,
             //         }
             //     } as Chapter;
-            // });
+            // });        
+
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
+
+            const jobId = HelperFunctions.generateRandomId();
+            const folderName = `job-${jobId}-${timestamp}`; // <-- folder only, no ".json"
+            const fileName = `project-config.json`;
+
             const scriptProductionJSON = {
                 project: {
+                    folderName: folderName,
                     topic: scriptData?.topic || null,
                     title: scriptData?.title || null,
                     description: scriptData?.description || null,
@@ -171,15 +180,6 @@ const ScriptProductionClient = () => {
                     },
                 })),
             };
-
-            // console.log('scriptProductionJSON', scriptProductionJSON);
-
-            const now = new Date();
-            const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
-
-            const jobId = HelperFunctions.generateRandomId();
-            const folderName = `job-${jobId}-${timestamp}`; // <-- folder only, no ".json"
-            const fileName = `project-config.json`;
 
             const form = new FormData();
             form.append('folderName', folderName);
@@ -347,9 +347,9 @@ const ScriptProductionClient = () => {
         if (isScriptApproved && chapters && chapters.length > 0) {
             // save updated chapters
             secure.j.approvedScript.set({ ...scriptData, chapters });
-            try {
-                console.log('Chapters modified:', JSON.stringify(chapters));
-            } catch { }
+            // try {
+            //     console.log('Chapters modified:', JSON.stringify(chapters));
+            // } catch { }
             // If highlightedKeywords are missing on any chapter, fetch them once            
             const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
             if (needsHighlights) {
@@ -1457,6 +1457,7 @@ const ScriptProductionClient = () => {
 
                                 {chapters.length > 0 && (
                                     <ChaptersSection
+                                        driveScriptJSON={driveScriptJSON}
                                         chaptersGenerated={true}
                                         generatingChapters={false}
                                         chapters={chapters}

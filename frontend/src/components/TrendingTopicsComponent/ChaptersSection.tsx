@@ -53,6 +53,7 @@ import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 
 interface ChaptersSectionProps {
+  driveScriptJSON: { folderName?: string; scriptJSON?: any } | null;
   chapters: Chapter[];
   chaptersGenerated: boolean;
   generatingChapters: boolean;
@@ -122,6 +123,7 @@ interface ChaptersSectionProps {
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
+  driveScriptJSON,
   chapters,
   chaptersGenerated,
   generatingChapters,
@@ -2175,7 +2177,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                             media: {
                               ...(low ? { lowResMedia: low } : {}),
                               ...(high ? { highResMedia: high } : {})
-                            }
+                            },
+                            // Add transitionsEffects to chapter and log
+                            ...(updatedChapter.keywordsSelected && Array.isArray(updatedChapter.keywordsSelected) && updatedChapter.keywordsSelected.length > 0 && updatedChapter.keywordsSelected[0].transitionsEffects
+                              ? { transitionsEffects: updatedChapter.keywordsSelected[0].transitionsEffects }
+                              : {}),
                           };
                           if (idx >= 0) {
                             const existing = nextKeywordsSelected[idx];
@@ -2191,6 +2197,42 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                             };
                           } else {
                             nextKeywordsSelected = [...nextKeywordsSelected, newEntry];
+                          }
+                        }
+                      }
+                      // Merge direct keywordsSelected array payload (carry transitionsEffects)
+                      if (updatedChapter.keywordsSelected && Array.isArray(updatedChapter.keywordsSelected) && updatedChapter.keywordsSelected.length > 0) {
+                        const entry = updatedChapter.keywordsSelected[0] as any;
+                        const kw = String(entry?.suggestedKeyword || '').trim();
+                        if (kw) {
+                          const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
+                          const low = entry?.media?.lowResMedia as string | undefined;
+                          const high = entry?.media?.highResMedia as string | undefined;
+                          const transitionsEffects = Array.isArray(entry?.transitionsEffects) ? entry.transitionsEffects as string[] : undefined;
+                          if (idx >= 0) {
+                            const existing = nextKeywordsSelected[idx];
+                            nextKeywordsSelected = nextKeywordsSelected.slice();
+                            nextKeywordsSelected[idx] = {
+                              ...existing,
+                              media: {
+                                ...(existing.media || {}),
+                                ...(low ? { lowResMedia: low } : {}),
+                                ...(high ? { highResMedia: high } : {})
+                              },
+                              ...(transitionsEffects ? { transitionsEffects } : {})
+                            } as any;
+                          } else {
+                            nextKeywordsSelected = [
+                              ...nextKeywordsSelected,
+                              {
+                                suggestedKeyword: kw,
+                                media: {
+                                  ...(low ? { lowResMedia: low } : {}),
+                                  ...(high ? { highResMedia: high } : {})
+                                },
+                                ...(transitionsEffects ? { transitionsEffects } : {})
+                              } as any
+                            ];
                           }
                         }
                       }
@@ -2274,9 +2316,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                         }
                       };
                     });
-                    try {
-                      console.log('Media added to chapter:', JSON.stringify(updated[chapterIdx]));
-                    } catch {}
+                    // try {
+                    //   console.log('Media added to chapter:', JSON.stringify(updated[chapterIdx]));
+                    // } catch {}
                     onChaptersUpdate(updated);
                     if (typeof window !== 'undefined') {
                       (window as any).__keywordSuggestions = undefined;

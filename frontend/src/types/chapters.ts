@@ -37,7 +37,7 @@ export interface ChapterKeywordSelection {
         highResMedia?: string;
     };
     backgroundMusic?: string;
-    transitionEffect?: string;
+    transitionsEffects?: string[];
 }
 
 export interface VideoClip {

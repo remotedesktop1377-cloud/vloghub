@@ -529,12 +529,43 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     updatedChapter.modifiedKeywordForMapping = typed;
                 }
             }
-            // Persist effects into chapter videoEffects
-            if (selectedTransitionsEffects && selectedTransitionsEffects.length > 0) {
-                updatedChapter.videoEffects = {
-                    ...(updatedChapter.videoEffects || {}),
-                    effects: selectedTransitionsEffects
+            // // Persist effects into chapter videoEffects
+            // if (selectedTransitionsEffects && selectedTransitionsEffects.length > 0) {
+            //     updatedChapter.videoEffects = {
+            //         ...(updatedChapter.videoEffects || {}),
+            //         effects: selectedTransitionsEffects
+            //     };
+            // }
+
+            // Also add to keywordsSelected array with media and selected transition effects
+            try {
+                // Find the selected image object to pick a thumbnail for lowResMedia
+                const allResults: ImageResult[] = [
+                    ...googleImages,
+                    ...envatoImages,
+                    ...envatoClips,
+                    ...uploadedFiles
+                ];
+                const selectedObj = allResults.find((it) => it.url === selectedUrl);
+                const lowResMedia = selectedObj?.thumbnail || selectedUrl;
+                const highResMedia = selectedUrl;
+                const typed = (searchQuery || '').trim();
+                const suggestedKeyword = (currentKeywordForMapping && currentKeywordForMapping.trim())
+                    || (selectedObj?.sourceSuggestion && String(selectedObj.sourceSuggestion))
+                    || (typed || '');
+
+                const keywordEntry = {
+                    suggestedKeyword,
+                    media: {
+                        lowResMedia,
+                        highResMedia
+                    },
+                    transitionsEffects: [...selectedTransitionsEffects]
                 };
+
+                updatedChapter.keywordsSelected = [keywordEntry];
+            } catch (_e) {
+                // Non-fatal; continue
             }
             onChapterUpdate(chapterIndex, updatedChapter);
             HelperFunctions.showSuccess('1 image selected for chapter');
@@ -888,504 +919,507 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 )
             }
 
-            {/* Images Grid */}
+            {/* Images Grid with Transitions Sidebar */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
-                {currentLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
-                        <CircularProgress />
-                        <Typography sx={{ ml: 2 }}>
-                            Searching {activeTab === 'google' ? 'Google' : 'Envato'} images...
-                        </Typography>
-                    </Box>
-                ) : (activeTab === 'youtube') ? (
-                    <Box sx={{ textAlign: 'center', py: 6 }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-                            YouTube integration coming soon
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            We will add YouTube API support here shortly.
-                        </Typography>
-                    </Box>
-                ) : (activeTab === 'upload') ? (
-                    uploadedFiles.length > 0 ? (
-                        <Grid container spacing={2}>
-                            {uploadedFiles.map((file, index) => (
-                                <Grid item xs={6} sm={4} md={3} key={file.id}>
-                                    <Card
-                                        sx={{
-                                            height: '100%',
-                                            cursor: 'pointer',
-                                            border: selectedBySource.upload.has(file.url)
-                                                ? `2px solid ${WARNING.main}`
-                                                : '2px solid transparent',
-                                            transition: 'all 0.2s ease',
-                                            '&:hover': {
-                                                transform: 'translateY(-2px)',
-                                                boxShadow: 3
-                                            }
-                                        }}
-                                    >
-                                        <Box sx={{ position: 'relative' }}>
-                                            {file.mime.startsWith('video/') ? (
-                                                <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
-                                                    <img
-                                                        src={file.thumbnail}
-                                                        alt={file.title}
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                        onClick={() => handleImageSelect(file.url)}
-                                                    />
-                                                    <Box sx={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
+                <Grid container spacing={2}>
+                    <Grid item xs={12} md={9} lg={9}>
+                        {currentLoading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+                                <CircularProgress />
+                                <Typography sx={{ ml: 2 }}>
+                                    Searching {activeTab === 'google' ? 'Google' : 'Envato'} images...
+                                </Typography>
+                            </Box>
+                        ) : (activeTab === 'youtube') ? (
+                            <Box sx={{ textAlign: 'center', py: 6 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+                                    YouTube integration coming soon
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    We will add YouTube API support here shortly.
+                                </Typography>
+                            </Box>
+                        ) : (activeTab === 'upload') ? (
+                            uploadedFiles.length > 0 ? (
+                                <Grid container spacing={2}>
+                                    {uploadedFiles.map((file, index) => (
+                                        <Grid item xs={12} sm={4} md={4} key={file.id}>
+                                            <Card
+                                                sx={{
+                                                    height: '100%',
+                                                    cursor: 'pointer',
+                                                    border: selectedBySource.upload.has(file.url)
+                                                        ? `2px solid ${WARNING.main}`
+                                                        : '2px solid transparent',
+                                                    transition: 'all 0.2s ease',
+                                                    '&:hover': {
+                                                        transform: 'translateY(-2px)',
+                                                        boxShadow: 3
+                                                    }
+                                                }}
+                                            >
+                                                <Box sx={{ position: 'relative' }}>
+                                                    {file.mime.startsWith('video/') ? (
+                                                        <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
+                                                            <img
+                                                                src={file.thumbnail}
+                                                                alt={file.title}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                                onClick={() => handleImageSelect(file.url)}
+                                                            />
+                                                            <Box sx={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }}>
+                                                                <Box
+                                                                    onClick={(e) => { e.stopPropagation(); setVideoPreviewUrl(file.url); setVideoPreviewOpen(true); }}
+                                                                    sx={{
+                                                                        width: 52,
+                                                                        height: 52,
+                                                                        borderRadius: '50%',
+                                                                        backgroundColor: 'rgba(0,0,0,0.55)',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                >
+                                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                                                        <path d="M8 5v14l11-7z" />
+                                                                    </svg>
+                                                                </Box>
+                                                            </Box>
+                                                        </Box>
+                                                    ) : (
+                                                        <CardMedia
+                                                            component="img"
+                                                            height="140"
+                                                            image={file.thumbnail}
+                                                            alt={file.title}
+                                                            sx={{ objectFit: 'cover' }}
+                                                            onClick={() => handleImageSelect(file.url)}
+                                                        />
+                                                    )}
+
+                                                    {/* Selection Overlay */}
+                                                    {selectedBySource.upload.has(file.url) && (
                                                         <Box
-                                                            onClick={(e) => { e.stopPropagation(); setVideoPreviewUrl(file.url); setVideoPreviewOpen(true); }}
                                                             sx={{
-                                                                width: 52,
-                                                                height: 52,
+                                                                position: 'absolute',
+                                                                top: 8,
+                                                                right: 8,
+                                                                width: 24,
+                                                                height: 24,
                                                                 borderRadius: '50%',
-                                                                backgroundColor: 'rgba(0,0,0,0.55)',
+                                                                backgroundColor: WARNING.main,
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                cursor: 'pointer'
+                                                                color: 'white'
                                                             }}
                                                         >
-                                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
-                                                                <path d="M8 5v14l11-7z" />
-                                                            </svg>
+                                                            <CheckIcon sx={{ fontSize: 16 }} />
                                                         </Box>
+                                                    )}
+
+                                                    {/* Source Badge */}
+                                                    <Box
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 8,
+                                                            left: 8,
+                                                            bgcolor: SUCCESS.main,
+                                                            color: 'white',
+                                                            fontSize: '0.6rem',
+                                                            px: 0.5,
+                                                            py: 0.1,
+                                                            borderRadius: 0.5,
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        UPLOAD
+                                                    </Box>
+
+                                                    {/* Action Buttons */}
+                                                    <Box
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            bottom: 8,
+                                                            right: 8,
+                                                            display: 'flex',
+                                                            gap: 0.5
+                                                        }}
+                                                    >
+                                                        {!file.mime.startsWith('video/') && (
+                                                            <Tooltip title="Preview">
+                                                                <IconButton
+                                                                    size="medium"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleImagePreview(file.url);
+                                                                    }}
+                                                                    sx={{
+                                                                        backgroundColor: 'rgba(255,255,255,0.9)',
+                                                                        '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                                    }}
+                                                                >
+                                                                    <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        )}
+                                                        <Tooltip title="Download">
+                                                            <IconButton
+                                                                size="medium"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDownloadImage(file.url, file.title);
+                                                                }}
+                                                                sx={{
+                                                                    backgroundColor: 'rgba(255,255,255,0.9)',
+                                                                    '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                                }}
+                                                            >
+                                                                <DownloadIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                            </IconButton>
+                                                        </Tooltip>
                                                     </Box>
                                                 </Box>
-                                            ) : (
-                                                <CardMedia
-                                                    component="img"
-                                                    height="140"
-                                                    image={file.thumbnail}
-                                                    alt={file.title}
-                                                    sx={{ objectFit: 'cover' }}
-                                                    onClick={() => handleImageSelect(file.url)}
-                                                />
-                                            )}
 
-                                            {/* Selection Overlay */}
-                                            {selectedBySource.upload.has(file.url) && (
+                                                <CardContent sx={{ p: 1 }}>
+                                                    <Typography
+                                                        variant="subtitle2"
+                                                        sx={{
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical',
+                                                            overflow: 'hidden',
+                                                            fontSize: '1rem',
+                                                            lineHeight: 1.4,
+                                                            color: 'text.secondary'
+                                                        }}
+                                                    >
+                                                        {file.title}
+                                                    </Typography>
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            ) : (
+                                <Box sx={{ textAlign: 'center', py: 6 }}>
+                                    <Box
+                                        component="label"
+                                        htmlFor="file-upload"
+                                        sx={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            width: '100%',
+                                            height: 200,
+                                            border: '2px dashed',
+                                            borderColor: 'primary.main',
+                                            borderRadius: 2,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                borderColor: 'primary.dark',
+                                                backgroundColor: 'action.hover'
+                                            }
+                                        }}
+                                    >
+                                        <input
+                                            id="file-upload"
+                                            type="file"
+                                            accept="image/*,video/*"
+                                            onChange={handleFileUpload}
+                                            style={{ display: 'none' }}
+                                        />
+                                        <Box sx={{ mb: 2 }}>
+                                            <Image src="/images/cloud-computing.png" alt="Upload" width={64} height={64} />
+                                        </Box>
+                                        <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
+                                            Click to upload image or video
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Supports images and video files
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            )
+                        ) : currentImages.length > 0 ? (
+                            <Grid container spacing={2}>
+                                {currentImages.map((image, index) => (
+                                    <Grid item xs={12} sm={4} md={4} key={image.id}>
+                                        <Card
+                                            sx={{
+                                                height: '100%',
+                                                cursor: 'pointer',
+                                                border: ((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url)))
+                                                    ? `2px solid ${image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' ? WARNING.main : PRIMARY.main)}`
+                                                    : '2px solid transparent',
+                                                transition: 'all 0.2s ease',
+                                                '&:hover': {
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: 3
+                                                }
+                                            }}
+                                        >
+                                            <Box sx={{ position: 'relative' }}>
+                                                {activeTab === 'envatoClips' ? (
+                                                    <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
+                                                        <img
+                                                            src={image.thumbnail || '/images/youtube.png'}
+                                                            alt={image.title}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                            onClick={() => {
+                                                                try {
+                                                                    const selectedUrl = image.url;
+                                                                    // ensure consistent single-selection across tabs
+                                                                    handleImageSelect(selectedUrl);
+                                                                    const updatedChapter: any = {
+                                                                        assets: {
+                                                                            images: [selectedUrl],
+                                                                            imagesGoogle: [],
+                                                                            imagesEnvato: []
+                                                                        }
+                                                                    };
+                                                                    if (currentKeywordForMapping) {
+                                                                        const typed = (searchQuery || '').trim();
+                                                                        updatedChapter.keywordsSelectedMerge = {
+                                                                            [currentKeywordForMapping]: [selectedUrl]
+                                                                        };
+                                                                        if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
+                                                                            updatedChapter.modifiedKeywordForMapping = typed;
+                                                                        }
+                                                                    }
+                                                                    onChapterUpdate(chapterIndex, updatedChapter);
+                                                                    // notify parent selection if needed
+                                                                    try { onImageSelect(selectedUrl); } catch { }
+                                                                    HelperFunctions.showSuccess('Added video link to chapter');
+                                                                } catch (e) {
+                                                                    HelperFunctions.showError('Failed to add video link');
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Box sx={{
+                                                            position: 'absolute',
+                                                            inset: 0,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center'
+                                                        }}>
+                                                            <Box
+                                                                onClick={(e) => { e.stopPropagation(); handleImageSelect(image.url); setVideoPreviewUrl(image.url); setVideoPreviewOpen(true); }}
+                                                                sx={{
+                                                                    width: 52,
+                                                                    height: 52,
+                                                                    borderRadius: '50%',
+                                                                    backgroundColor: 'rgba(0,0,0,0.55)',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                                                    <path d="M8 5v14l11-7z" />
+                                                                </svg>
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
+                                                ) : (
+                                                    <CardMedia
+                                                        component="img"
+                                                        height="140"
+                                                        image={image.thumbnail}
+                                                        alt={image.title}
+                                                        sx={{ objectFit: 'cover' }}
+                                                        onClick={() => handleImageSelect(image.url)}
+                                                    />
+                                                )}
+
+                                                {/* Selection Overlay */}
+                                                {((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url))) && (
+                                                    <Box
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 8,
+                                                            right: 8,
+                                                            width: 24,
+                                                            height: 24,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' || image.source === 'envatoClips' ? WARNING.main : PRIMARY.main),
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: 'white'
+                                                        }}
+                                                    >
+                                                        <CheckIcon sx={{ fontSize: 16 }} />
+                                                    </Box>
+                                                )}
+
+                                                {/* Source Badge */}
                                                 <Box
                                                     sx={{
                                                         position: 'absolute',
                                                         top: 8,
-                                                        right: 8,
-                                                        width: 24,
-                                                        height: 24,
-                                                        borderRadius: '50%',
-                                                        backgroundColor: WARNING.main,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: 'white'
+                                                        left: 8,
+                                                        bgcolor: image.source === 'envato' ? WARNING.main : INFO.main,
+                                                        color: 'white',
+                                                        fontSize: '0.6rem',
+                                                        px: 0.5,
+                                                        py: 0.1,
+                                                        borderRadius: 0.5,
+                                                        fontWeight: 'bold'
                                                     }}
                                                 >
-                                                    <CheckIcon sx={{ fontSize: 16 }} />
+                                                    {image.source?.toUpperCase() || 'IMG'}
                                                 </Box>
-                                            )}
 
-                                            {/* Source Badge */}
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 8,
-                                                    left: 8,
-                                                    bgcolor: SUCCESS.main,
-                                                    color: 'white',
-                                                    fontSize: '0.6rem',
-                                                    px: 0.5,
-                                                    py: 0.1,
-                                                    borderRadius: 0.5,
-                                                    fontWeight: 'bold'
-                                                }}
-                                            >
-                                                UPLOAD
-                                            </Box>
-
-                                            {/* Action Buttons */}
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    bottom: 8,
-                                                    right: 8,
-                                                    display: 'flex',
-                                                    gap: 0.5
-                                                }}
-                                            >
-                                                {!file.mime.startsWith('video/') && (
-                                                    <Tooltip title="Preview">
+                                                {/* Action Buttons */}
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        bottom: 8,
+                                                        right: 8,
+                                                        display: 'flex',
+                                                        gap: 0.5
+                                                    }}
+                                                >
+                                                    {activeTab !== 'envatoClips' && (
+                                                        <Tooltip title="Preview">
+                                                            <IconButton
+                                                                size="medium"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleImagePreview(image.url);
+                                                                }}
+                                                                sx={{
+                                                                    backgroundColor: 'rgba(255,255,255,0.9)',
+                                                                    '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                                }}
+                                                            >
+                                                                <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
+                                                    <Tooltip title="Download">
                                                         <IconButton
                                                             size="medium"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleImagePreview(file.url);
+                                                                handleDownloadImage(image.url, `${image.source}-image-${index + 1}.jpg`);
                                                             }}
                                                             sx={{
                                                                 backgroundColor: 'rgba(255,255,255,0.9)',
                                                                 '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
                                                             }}
                                                         >
-                                                            <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                            <DownloadIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
                                                         </IconButton>
                                                     </Tooltip>
-                                                )}
-                                                <Tooltip title="Download">
-                                                    <IconButton
-                                                        size="medium"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDownloadImage(file.url, file.title);
-                                                        }}
-                                                        sx={{
-                                                            backgroundColor: 'rgba(255,255,255,0.9)',
-                                                            '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
-                                                        }}
-                                                    >
-                                                        <DownloadIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            </Box>
-                                        </Box>
-
-                                        <CardContent sx={{ p: 1 }}>
-                                            <Typography
-                                                variant="subtitle2"
-                                                sx={{
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 2,
-                                                    WebkitBoxOrient: 'vertical',
-                                                    overflow: 'hidden',
-                                                    fontSize: '1rem',
-                                                    lineHeight: 1.4,
-                                                    color: 'text.secondary'
-                                                }}
-                                            >
-                                                {file.title}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    ) : (
-                        <Box sx={{ textAlign: 'center', py: 6 }}>
-                            <Box
-                                component="label"
-                                htmlFor="file-upload"
-                                sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: '100%',
-                                    height: 200,
-                                    border: '2px dashed',
-                                    borderColor: 'primary.main',
-                                    borderRadius: 2,
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': {
-                                        borderColor: 'primary.dark',
-                                        backgroundColor: 'action.hover'
-                                    }
-                                }}
-                            >
-                                <input
-                                    id="file-upload"
-                                    type="file"
-                                    accept="image/*,video/*"
-                                    onChange={handleFileUpload}
-                                    style={{ display: 'none' }}
-                                />
-                                <Box sx={{ mb: 2 }}>
-                                    <Image src="/images/cloud-computing.png" alt="Upload" width={64} height={64} />
-                                </Box>
-                                <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
-                                    Click to upload image or video
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Supports images and video files
-                                </Typography>
-                            </Box>
-                        </Box>
-                    )
-                ) : currentImages.length > 0 ? (
-                    <Grid container spacing={2}>
-                        {currentImages.map((image, index) => (
-                            <Grid item xs={6} sm={4} md={3} key={image.id}>
-                                <Card
-                                    sx={{
-                                        height: '100%',
-                                        cursor: 'pointer',
-                                        border: ((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url)))
-                                            ? `2px solid ${image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' ? WARNING.main : PRIMARY.main)}`
-                                            : '2px solid transparent',
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: 3
-                                        }
-                                    }}
-                                >
-                                    <Box sx={{ position: 'relative' }}>
-                                        {activeTab === 'envatoClips' ? (
-                                            <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
-                                                <img
-                                                    src={image.thumbnail || '/images/youtube.png'}
-                                                    alt={image.title}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                    onClick={() => {
-                                                        try {
-                                                            const selectedUrl = image.url;
-                                                            // ensure consistent single-selection across tabs
-                                                            handleImageSelect(selectedUrl);
-                                                            const updatedChapter: any = {
-                                                                assets: {
-                                                                    images: [selectedUrl],
-                                                                    imagesGoogle: [],
-                                                                    imagesEnvato: []
-                                                                }
-                                                            };
-                                                            if (currentKeywordForMapping) {
-                                                                const typed = (searchQuery || '').trim();
-                                                                updatedChapter.keywordsSelectedMerge = {
-                                                                    [currentKeywordForMapping]: [selectedUrl]
-                                                                };
-                                                                if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
-                                                                    updatedChapter.modifiedKeywordForMapping = typed;
-                                                                }
-                                                            }
-                                                            onChapterUpdate(chapterIndex, updatedChapter);
-                                                            // notify parent selection if needed
-                                                            try { onImageSelect(selectedUrl); } catch { }
-                                                            HelperFunctions.showSuccess('Added video link to chapter');
-                                                        } catch (e) {
-                                                            HelperFunctions.showError('Failed to add video link');
-                                                        }
-                                                    }}
-                                                />
-                                                <Box sx={{
-                                                    position: 'absolute',
-                                                    inset: 0,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <Box
-                                                        onClick={(e) => { e.stopPropagation(); handleImageSelect(image.url); setVideoPreviewUrl(image.url); setVideoPreviewOpen(true); }}
-                                                        sx={{
-                                                            width: 52,
-                                                            height: 52,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: 'rgba(0,0,0,0.55)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M8 5v14l11-7z" />
-                                                        </svg>
-                                                    </Box>
                                                 </Box>
                                             </Box>
-                                        ) : (
-                                            <CardMedia
-                                                component="img"
-                                                height="140"
-                                                image={image.thumbnail}
-                                                alt={image.title}
-                                                sx={{ objectFit: 'cover' }}
-                                                onClick={() => handleImageSelect(image.url)}
-                                            />
-                                        )}
 
-                                        {/* Selection Overlay */}
-                                        {((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url))) && (
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 8,
-                                                    right: 8,
-                                                    width: 24,
-                                                    height: 24,
-                                                    borderRadius: '50%',
-                                                    backgroundColor: image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' || image.source === 'envatoClips' ? WARNING.main : PRIMARY.main),
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: 'white'
-                                                }}
-                                            >
-                                                <CheckIcon sx={{ fontSize: 16 }} />
-                                            </Box>
-                                        )}
-
-                                        {/* Source Badge */}
-                                        <Box
-                                            sx={{
-                                                position: 'absolute',
-                                                top: 8,
-                                                left: 8,
-                                                bgcolor: image.source === 'envato' ? WARNING.main : INFO.main,
-                                                color: 'white',
-                                                fontSize: '0.6rem',
-                                                px: 0.5,
-                                                py: 0.1,
-                                                borderRadius: 0.5,
-                                                fontWeight: 'bold'
-                                            }}
-                                        >
-                                            {image.source?.toUpperCase() || 'IMG'}
-                                        </Box>
-
-                                        {/* Action Buttons */}
-                                        <Box
-                                            sx={{
-                                                position: 'absolute',
-                                                bottom: 8,
-                                                right: 8,
-                                                display: 'flex',
-                                                gap: 0.5
-                                            }}
-                                        >
-                                            {activeTab !== 'envatoClips' && (
-                                                <Tooltip title="Preview">
-                                                    <IconButton
-                                                        size="medium"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleImagePreview(image.url);
-                                                        }}
-                                                        sx={{
-                                                            backgroundColor: 'rgba(255,255,255,0.9)',
-                                                            '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
-                                                        }}
-                                                    >
-                                                        <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
-                                                    </IconButton>
-                                                </Tooltip>
-                                            )}
-                                            <Tooltip title="Download">
-                                                <IconButton
-                                                    size="medium"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDownloadImage(image.url, `${image.source}-image-${index + 1}.jpg`);
-                                                    }}
+                                            <CardContent sx={{ p: 1 }}>
+                                                <Typography
+                                                    variant="subtitle2"
                                                     sx={{
-                                                        backgroundColor: 'rgba(255,255,255,0.9)',
-                                                        '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        overflow: 'hidden',
+                                                        fontSize: '1rem',
+                                                        lineHeight: 1.4,
+                                                        color: 'text.secondary'
                                                     }}
                                                 >
-                                                    <DownloadIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    </Box>
+                                                    {image.title}
+                                                </Typography>
 
-                                    <CardContent sx={{ p: 1 }}>
-                                        <Typography
-                                            variant="subtitle2"
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                        ) : searchQuery && !currentLoading ? (
+                            <Box sx={{ textAlign: 'center', py: 4 }}>
+                                <Typography variant="body1" color="text.secondary">
+                                    No images found for "{searchQuery}" in {activeTab === 'google' ? 'Google' : 'Envato'}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                    Try adjusting your search terms or switch to the other tab
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Box sx={{ textAlign: 'center', py: 4 }}>
+                                <Box sx={{
+                                    width: 80,
+                                    height: 80,
+                                    borderRadius: 2,
+                                    mx: 'auto',
+                                    mb: 2,
+                                    background: activeTab === 'google' ? PURPLE.gradient.blue : SUCCESS.main,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    {activeTab === 'google' ?
+                                        <GoogleIcon sx={{ fontSize: 40, color: NEUTRAL.white }} /> :
+                                        <EnvatoIcon sx={{ fontSize: 40, color: NEUTRAL.white }} />
+                                    }
+                                </Box>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
+                                    Search for Images in {activeTab === 'google' ? 'Google' : 'Envato Images'}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, mx: 'auto' }}>
+                                    Enter a search query to find relevant images for your chapter.
+                                    {activeTab === 'google' ?
+                                        ' Google provides free images from across the web.' :
+                                        ' Envato Images provides premium stock images, graphics, and templates.'
+                                    }
+                                </Typography>
+                            </Box>
+                        )}
+                    </Grid>
+                    <Grid item xs={12} md={3} lg={3}>
+                        <Box sx={{ position: 'sticky', top: 0 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 1 }}>
+                                Transitions Effects
+                            </Typography>
+                            <Grid container spacing={1}>
+                                {predefinedTransitions.map((transition) => (
+                                    <Grid item xs={6} sm={6} md={12} key={transition}>
+                                        <Button
+                                            fullWidth
+                                            variant={selectedTransitionsEffects.includes(transition) ? 'contained' : 'outlined'}
+                                            onClick={() => {
+                                                setSelectedTransitionsEffects(prev => prev.includes(transition) ? prev.filter(e => e !== transition) : [...prev, transition]);
+                                            }}
                                             sx={{
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 2,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden',
-                                                fontSize: '1rem',
-                                                lineHeight: 1.4,
-                                                color: 'text.secondary'
+                                                textTransform: 'none',
+                                                py: 1.2,
+                                                borderRadius: 2
                                             }}
                                         >
-                                            {image.title}
-                                        </Typography>
-
-                                    </CardContent>
-                                </Card>
+                                            {transition.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                                        </Button>
+                                    </Grid>
+                                ))}
                             </Grid>
-                        ))}
-                        {/* Transitions/Effects Section */}
-                        <Grid item xs={12}>
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 1 }}>
-                                    Transitions Effects
+                            {/* {selectedTransitionsEffects.length > 0 && (
+                                <Typography variant="caption" sx={{ display: 'block', color: 'gray.300', mt: 1 }}>
+                                    Selected: {selectedTransitionsEffects.join(', ')}
                                 </Typography>
-                                <Grid container spacing={1}>
-                                    {predefinedTransitions.map((transition) => (
-                                        <Grid item xs={6} md={4} lg={3} key={transition}>
-                                            <Button
-                                                fullWidth
-                                                variant={selectedTransitionsEffects.includes(transition) ? 'contained' : 'outlined'}
-                                                onClick={() => {
-                                                    setSelectedTransitionsEffects(prev => prev.includes(transition) ? prev.filter(e => e !== transition) : [...prev, transition]);
-                                                }}
-                                                sx={{
-                                                    textTransform: 'none',
-                                                    py: 1.2,
-                                                    borderRadius: 2
-                                                }}
-                                            >
-                                                {transition.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                                            </Button>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                                {selectedTransitionsEffects.length > 0 && (
-                                    <Typography variant="caption" sx={{ display: 'block', color: 'gray.300', mt: 1 }}>
-                                        Selected: {selectedTransitionsEffects.join(', ')}
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Grid>
-                    </Grid>
-                ) : searchQuery && !currentLoading ? (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body1" color="text.secondary">
-                            No images found for "{searchQuery}" in {activeTab === 'google' ? 'Google' : 'Envato'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            Try adjusting your search terms or switch to the other tab
-                        </Typography>
-                    </Box>
-                ) : (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Box sx={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: 2,
-                            mx: 'auto',
-                            mb: 2,
-                            background: activeTab === 'google' ? PURPLE.gradient.blue : SUCCESS.main,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}>
-                            {activeTab === 'google' ?
-                                <GoogleIcon sx={{ fontSize: 40, color: NEUTRAL.white }} /> :
-                                <EnvatoIcon sx={{ fontSize: 40, color: NEUTRAL.white }} />
-                            }
+                            )} */}
                         </Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-                            Search for Images in {activeTab === 'google' ? 'Google' : 'Envato Images'}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, mx: 'auto' }}>
-                            Enter a search query to find relevant images for your chapter.
-                            {activeTab === 'google' ?
-                                ' Google provides free images from across the web.' :
-                                ' Envato Images provides premium stock images, graphics, and templates.'
-                            }
-                        </Typography>
-                    </Box>
-                )}
+                    </Grid>
+                </Grid>
             </Box>
 
             {/* Video Preview Dialog for Envato Clips */}
