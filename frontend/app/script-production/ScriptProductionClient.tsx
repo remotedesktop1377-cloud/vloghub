@@ -30,7 +30,9 @@ import {
     Edit as EditIcon,
     Check as CheckIcon,
     Save as SaveIcon,
-    Cancel as CancelIcon
+    Cancel as CancelIcon,
+    PlayArrow as PlayIcon,
+    Pause as PauseIcon
 } from '@mui/icons-material';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { toast, ToastContainer } from 'react-toastify';
@@ -45,6 +47,7 @@ import { fallbackImages } from '@/data/mockImages';
 import { SUCCESS } from '@/styles/colors';
 import { ROUTES_KEYS } from '@/data/constants';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
+import CustomAudioPlayer from '@/components/scriptProductionComponents/CustomAudioPlayer';
 
 interface ScriptData {
     description: string;
@@ -119,6 +122,12 @@ const ScriptProductionClient = () => {
     const [projectMusic, setProjectMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
     const [projectVideoClip, setProjectVideoClip] = useState<{ name?: string; url: string } | null>(null);
     const [projectTransitionEffects, setProjectTransitionEffects] = useState<string[]>([]);
+    const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
+    const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+    const [isMusicLoading, setIsMusicLoading] = useState(false);
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [lastMusicIdLoaded, setLastMusicIdLoaded] = useState<string | null>(null);
     const predefinedTransitions = [
         'quantum_dissolve',
         'particle_burst',
@@ -134,6 +143,41 @@ const ScriptProductionClient = () => {
     // Chapter edit dialog states
     const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
     const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
+
+    const handleToggleBackgroundMusic = async () => {
+        try {
+            const id = (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '';
+            if (!id) return;
+            const src = `/api/google-drive-media?id=${id}`;
+            if (!audioRef.current) {
+                audioRef.current = new Audio();
+                audioRef.current.addEventListener('playing', () => setIsMusicPlaying(true));
+                audioRef.current.addEventListener('ended', () => setIsMusicPlaying(false));
+                audioRef.current.addEventListener('canplaythrough', () => setIsMusicLoading(false));
+                audioRef.current.addEventListener('error', () => setIsMusicLoading(false));
+            }
+            // Toggle logic: pause if currently playing same source; otherwise (re)load and play
+            if (isMusicPlaying && audioRef.current.src.includes(id)) {
+                audioRef.current.pause();
+                setIsMusicPlaying(false);
+                return;
+            }
+            // If the same id was already loaded previously, do not reload; just resume
+            if (lastMusicIdLoaded === id && audioRef.current.src.includes(id)) {
+                setIsMusicLoading(false);
+            } else {
+                setIsMusicLoading(true);
+                if (!audioRef.current.src.includes(id)) {
+                    audioRef.current.src = src;
+                }
+                setLastMusicIdLoaded(id);
+            }
+            await audioRef.current.play();
+        } catch {
+            setIsMusicLoading(false);
+            setIsMusicPlaying(false);
+        }
+    };
 
     // Function to upload JSON to Google Drive
     const uploadToGoogleDrive = async (chapters: Chapter[]) => {
@@ -1532,8 +1576,7 @@ const ScriptProductionClient = () => {
                                         {/* Logo Overlay (single) */}
                                         <Grid item xs={12} md={6}>
                                             <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                                <TextField size="small" label="Name" value={projectLogo?.name || ''} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), name: e.target.value })} sx={{ '& .MuiInputBase-input': { fontSize: '1.25rem' } }} />
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                                                 <TextField size="small" select label="Position" value={projectLogo?.position || 'top-right'} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
                                                     <option value="top-left">top-left</option>
                                                     <option value="top-right">top-right</option>
@@ -1560,6 +1603,37 @@ const ScriptProductionClient = () => {
                                                 >
                                                     Upload Logo
                                                 </Button>
+                                                {projectLogo?.url && (
+                                                    <>
+                                                        <Button
+                                                            variant="outlined"
+                                                            size="small"
+                                                            sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                            onClick={() => window.open(projectLogo.url, '_blank')}
+                                                        >
+                                                            Preview
+                                                        </Button>
+                                                        <Button
+                                                            variant="outlined"
+                                                            color="error"
+                                                            size="small"
+                                                            sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                            onClick={() => setProjectLogo(null)}
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </>
+                                                )}
+                                                {projectLogo?.url && (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <img
+                                                            src={projectLogo.url}
+                                                            alt={projectLogo.name || 'Logo'}
+                                                            style={{ width: 100, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#111', cursor: 'pointer' }}
+                                                            onClick={() => window.open(projectLogo.url, '_blank')}
+                                                        />
+                                                    </Box>
+                                                )}
                                             </Box>
                                         </Grid>
 
@@ -1570,20 +1644,36 @@ const ScriptProductionClient = () => {
                                                 <TextField
                                                     select
                                                     fullWidth
+                                                    sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
                                                     size="small"
                                                     value={(projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
                                                     onChange={(e) => {
                                                         const selId = String(e.target.value);
                                                         setProjectMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: projectMusic?.volume ?? 0.3, autoAdjust: projectMusic?.autoAdjust ?? true, fadeIn: projectMusic?.fadeIn ?? true, fadeOut: projectMusic?.fadeOut ?? true });
+                                                        // Stop currently playing audio when changing selection
+                                                        try { audioRef.current?.pause(); } catch { }
+                                                        setIsMusicPlaying(false);
+                                                        setIsMusicLoading(false);
+                                                        setLastMusicIdLoaded(null);
                                                     }}
                                                     SelectProps={{ native: true }}
-                                                    sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
                                                 >
                                                     <option value="">Select music...</option>
                                                     {(driveLibrary?.music || []).map((t: any) => (
                                                         <option key={t.id} value={t.id}>{t.name}</option>
                                                     ))}
                                                 </TextField>
+                                                <Button
+                                                    variant="contained"
+                                                    color="primary"
+                                                    size="small"
+                                                    disabled={!((projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
+                                                    onClick={handleToggleBackgroundMusic}
+                                                    sx={{ height: CONTROL_HEIGHT, minWidth: 90, textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 1 }}
+                                                >
+                                                    {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
+                                                    {isMusicPlaying ? 'Pause' : 'Play'}
+                                                </Button>
                                                 {/* Volume option removed as per requirement */}
                                             </Box>
                                         </Grid>
@@ -1591,8 +1681,7 @@ const ScriptProductionClient = () => {
                                         {/* Video Clip (single) */}
                                         <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
                                             <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                                <TextField size="small" label="Name" value={projectVideoClip?.name || ''} onChange={(e) => setProjectVideoClip({ ...(projectVideoClip || { url: '' }), name: e.target.value })} sx={{ '& .MuiInputBase-input': { fontSize: '1.25rem' } }} />
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                                                 <Button
                                                     variant="contained"
                                                     color="secondary"
@@ -1613,6 +1702,34 @@ const ScriptProductionClient = () => {
                                                 >
                                                     Upload Clip
                                                 </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="error"
+                                                    size="small"
+                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                    onClick={() => setProjectVideoClip(null)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                                {projectVideoClip?.url && (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Box sx={{ position: 'relative', width: 160, height: 90 }} onClick={() => { setVideoPreviewUrl(projectVideoClip.url); setVideoPreviewOpen(true); }}>
+                                                            <video
+                                                                src={projectVideoClip.url}
+                                                                muted
+                                                                playsInline
+                                                                loop
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: '#000', cursor: 'pointer' }}
+                                                            />
+                                                            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                                                <Box sx={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <PlayIcon sx={{ color: '#fff' }} fontSize="small" />
+                                                                </Box>
+                                                            </Box>
+                                                        </Box>
+
+                                                    </Box>
+                                                )}
                                             </Box>
                                         </Grid>
                                         {/* Video Effects (project-level) */}
@@ -1844,6 +1961,50 @@ const ScriptProductionClient = () => {
                     >
                         Discard Script
                     </Button>}
+                </DialogActions>
+            </Dialog>
+
+            {/* Video Preview Dialog */}
+            <Dialog
+                open={videoPreviewOpen}
+                onClose={() => setVideoPreviewOpen(false)}
+                aria-labelledby="clip-preview-dialog-title"
+                maxWidth="md"
+                fullWidth
+            >
+                <DialogTitle id="clip-preview-dialog-title" variant="h6">Clip Preview</DialogTitle>
+                <DialogContent>
+                    {videoPreviewUrl && (() => {
+                        const driveIdMatch = /\/d\/([\w-]+)/.exec(videoPreviewUrl || '') || /[?&]id=([\w-]+)/.exec(videoPreviewUrl || '');
+                        const effectiveSrc = driveIdMatch && driveIdMatch[1]
+                            ? `/api/google-drive-media?id=${driveIdMatch[1]}`
+                            : videoPreviewUrl;
+                        return (
+                            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ width: '100%' }}>
+                                    <video
+                                        key={effectiveSrc}
+                                        controls
+                                        playsInline
+                                        preload="auto"
+                                        muted={false}
+                                        autoPlay
+                                        style={{ width: '100%', maxHeight: 540, borderRadius: 8, backgroundColor: '#000' }}
+                                    >
+                                        <source src={effectiveSrc} type="video/mp4" />
+                                        <source src={effectiveSrc} type="video/webm" />
+                                        Your browser does not support the video tag.
+                                    </video>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                        If the video does not play, <a href={effectiveSrc} target="_blank" rel="noreferrer">open in a new tab</a>.
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        );
+                    })()}
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => setVideoPreviewOpen(false)} variant="contained">Close</Button>
                 </DialogActions>
             </Dialog>
         </Box>

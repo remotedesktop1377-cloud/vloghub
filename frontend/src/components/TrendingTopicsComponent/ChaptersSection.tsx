@@ -892,7 +892,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(projectSettings.transition).replace(/_/g,' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
                                                         )}
                                                         {projectSettings.musicId && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: SUCCESS.light, color: 'text.white', border: `1px solid ${SUCCESS.main}` }}>Music: {projectSettings.musicId}</Box>
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: SUCCESS.light, color: 'text.white', border: `1px solid ${SUCCESS.main}` }}>
+                                                            Music: {((driveMusic as Array<{ id: string; name: string }> | undefined) || []).find(m => m.id === projectSettings.musicId)?.name || projectSettings.musicId}
+                                                          </Box>
                                                         )}
                                                         {projectSettings.logo?.url && (
                                                           <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>Logo: {projectSettings.logo.name || 'Selected'}</Box>
