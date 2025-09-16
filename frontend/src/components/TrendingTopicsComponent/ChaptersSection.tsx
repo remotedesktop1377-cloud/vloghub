@@ -154,6 +154,8 @@ interface ChaptersSectionProps {
     clip?: { name?: string; url: string } | null;
     transitionEffects?: string[];
   };
+  // Open project settings dialog in scene context
+  onOpenProjectSettingsDialog?: (sceneIndex: number) => void;
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
@@ -197,6 +199,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   driveMusic,
   driveTransitions,
   projectSettings,
+  onOpenProjectSettingsDialog,
 }) => {
   const [expandedChapterIndex, setExpandedChapterIndex] = React.useState<number | null>(null);
   // Volume popover open state per chapter (inline editor)
@@ -881,35 +884,56 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       </Box>
                                                     ))}
                                                   </Box>
-                                                  {/* Project-level Media Selected */}
-                                                  {projectSettings && (
+                                                  {/* Media Selected (prefer scene-level videoEffects, fallback to project-level) */}
+                                                  {projectSettings && (() => {
+                                                    const ve: any = (chapters[index] as any)?.videoEffects || {};
+                                                    const driveIdFromLink = (link: string): string => {
+                                                      if (!link) return '';
+                                                      const idParam = /[?&]id=([\w-]+)/.exec(link);
+                                                      if (idParam && idParam[1]) return idParam[1];
+                                                      const pathMatch = /\/d\/([\w-]+)/.exec(link);
+                                                      if (pathMatch && pathMatch[1]) return pathMatch[1];
+                                                      return '';
+                                                    };
+                                                    const effective = {
+                                                      transition: ve.transition || projectSettings.transition,
+                                                      musicId: ve.backgroundMusic?.selectedMusic ? driveIdFromLink(ve.backgroundMusic.selectedMusic) : projectSettings.musicId,
+                                                      logo: ve.logo || projectSettings.logo,
+                                                      clip: ve.clip || projectSettings.clip,
+                                                      transitionEffects: Array.isArray(ve.transitionEffects) && ve.transitionEffects.length > 0 ? ve.transitionEffects : (projectSettings.transitionEffects || []),
+                                                    } as typeof projectSettings;
+                                                    return (
                                                     <Box sx={{ mt: 1 }}>
-                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'block', mb: 0.5 }}>
-                                                        Media Selected:
+                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                                        <span>Media Selected:</span>
+                                                        {typeof onOpenProjectSettingsDialog === 'function' && (
+                                                          <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontSize: '0.9rem', height: 28 }} onClick={(e) => { e.stopPropagation(); onOpenProjectSettingsDialog(index); }}>Edit media for this Scene</Button>
+                                                        )}
                                                       </Typography>
                                                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                        {projectSettings.transition && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(projectSettings.transition).replace(/_/g,' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
+                                                        {effective.transition && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(effective.transition).replace(/_/g,' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
                                                         )}
-                                                        {projectSettings.musicId && (
+                                                        {effective.musicId && (
                                                           <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: SUCCESS.light, color: 'text.white', border: `1px solid ${SUCCESS.main}` }}>
-                                                            Music: {((driveMusic as Array<{ id: string; name: string }> | undefined) || []).find(m => m.id === projectSettings.musicId)?.name || projectSettings.musicId}
+                                                            Music: {((driveMusic as Array<{ id: string; name: string }> | undefined) || []).find(m => m.id === effective.musicId)?.name || effective.musicId}
                                                           </Box>
                                                         )}
-                                                        {projectSettings.logo?.url && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>Logo: {projectSettings.logo.name || 'Selected'}</Box>
+                                                        {effective.logo?.url && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>Logo: {effective.logo.name || 'Selected'}</Box>
                                                         )}
-                                                        {projectSettings.clip?.url && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: WARNING.light, color: 'text.white', border: `1px solid ${WARNING.main}` }}>Clip: {projectSettings.clip.name || 'Selected'}</Box>
+                                                        {effective.clip?.url && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: WARNING.light, color: 'text.white', border: `1px solid ${WARNING.main}` }}>Clip: {effective.clip.name || 'Selected'}</Box>
                                                         )}
-                                                        {Array.isArray(projectSettings.transitionEffects) && projectSettings.transitionEffects.length > 0 && (
+                                                        {Array.isArray(effective.transitionEffects) && effective.transitionEffects.length > 0 && (
                                                           <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PURPLE.light, color: 'text.white', border: `1px solid ${PURPLE.main}` }}>
-                                                            Effects: {projectSettings.transitionEffects.map((id) => EFFECT_NAME_MAP[id] || id).join(', ')}
+                                                            Effects: {effective.transitionEffects.map((id) => EFFECT_NAME_MAP[id] || id).join(', ')}
                                                           </Box>
                                                         )}
                                                       </Box>
                                                     </Box>
-                                                  )}
+                                                    );
+                                                  })()}
                                                 </Box>
                                               )}
 

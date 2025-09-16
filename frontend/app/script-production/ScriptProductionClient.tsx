@@ -8,6 +8,7 @@ import {
     Paper,
     Container,
     Button,
+    IconButton,
     Alert,
     Grid,
     LinearProgress,
@@ -143,6 +144,107 @@ const ScriptProductionClient = () => {
     // Chapter edit dialog states
     const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
     const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
+    // Project Settings Dialog state
+    const [projectSettingsDialogOpen, setProjectSettingsDialogOpen] = useState(false);
+    const [projectSettingsContext, setProjectSettingsContext] = useState<{ mode: 'project' | 'scene'; sceneIndex?: number }>({ mode: 'project' });
+    // Temp state used inside dialog for cancel/discard behavior
+    const [tmpTransitionId, setTmpTransitionId] = useState<string>('');
+    const [tmpMusic, setTmpMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
+    const [tmpLogo, setTmpLogo] = useState<{ name?: string; url: string; position?: string } | null>(null);
+    const [tmpClip, setTmpClip] = useState<{ name?: string; url: string } | null>(null);
+    const [tmpEffects, setTmpEffects] = useState<string[]>([]);
+    // Seed snapshot for change detection
+    const projectSettingsSeedRef = useRef<{ transition?: string; music?: any; logo?: any; clip?: any; effects?: string[] } | null>(null);
+
+    const openProjectSettingsDialog = (mode: 'project' | 'scene', sceneIndex?: number) => {
+        setProjectSettingsContext({ mode, sceneIndex });
+        if (mode === 'scene' && typeof sceneIndex === 'number') {
+            const ch = chapters[sceneIndex];
+            const ve: any = (ch as any)?.videoEffects || {};
+            const seedTransition = ve.transition || projectTransitionId || '';
+            const seedMusic = ve.backgroundMusic ? { ...ve.backgroundMusic } : (projectMusic ? { ...projectMusic } : null);
+            const seedLogo = ve.logo ? { ...ve.logo } : (projectLogo ? { ...projectLogo } : null);
+            const seedClip = ve.clip ? { ...ve.clip } : (projectVideoClip ? { ...projectVideoClip } : null);
+            const seedEffects = Array.isArray(ve.transitionEffects) ? [...ve.transitionEffects] : ([...(projectTransitionEffects || [])]);
+            setTmpTransitionId(seedTransition);
+            setTmpMusic(seedMusic);
+            setTmpLogo(seedLogo);
+            setTmpClip(seedClip);
+            setTmpEffects(seedEffects);
+            projectSettingsSeedRef.current = { transition: seedTransition, music: seedMusic, logo: seedLogo, clip: seedClip, effects: seedEffects };
+        } else {
+            // seed temporary state from current project selections
+            const seedTransition = projectTransitionId || '';
+            const seedMusic = projectMusic ? { ...projectMusic } : null;
+            const seedLogo = projectLogo ? { ...projectLogo } : null;
+            const seedClip = projectVideoClip ? { ...projectVideoClip } : null;
+            const seedEffects = [...(projectTransitionEffects || [])];
+            setTmpTransitionId(seedTransition);
+            setTmpMusic(seedMusic);
+            setTmpLogo(seedLogo);
+            setTmpClip(seedClip);
+            setTmpEffects(seedEffects);
+            projectSettingsSeedRef.current = { transition: seedTransition, music: seedMusic, logo: seedLogo, clip: seedClip, effects: seedEffects };
+        }
+        setProjectSettingsDialogOpen(true);
+    };
+
+    const closeProjectSettingsDialog = () => {
+        setProjectSettingsDialogOpen(false);
+    };
+
+    const applyProjectSettingsDialog = async () => {
+        // Apply to scenes according to context
+        if (projectSettingsContext.mode === 'project') {
+            // Update project-level states from temp (global apply)
+            setProjectTransitionId(tmpTransitionId || '');
+            setProjectMusic(tmpMusic ? { selectedMusic: tmpMusic.selectedMusic } as any : null);
+            setProjectLogo(tmpLogo ? { ...tmpLogo } : null);
+            setProjectVideoClip(tmpClip ? { ...tmpClip } : null);
+            setProjectTransitionEffects([...(tmpEffects || [])]);
+            const updated = chapters.map((ch) => ({
+                ...(ch as any),
+                videoEffects: {
+                    ...(ch as any).videoEffects,
+                    transition: tmpTransitionId || '',
+                    backgroundMusic: tmpMusic ? ({ selectedMusic: tmpMusic.selectedMusic } as any) : null,
+                    logo: tmpLogo || null,
+                    clip: tmpClip || null,
+                    transitionEffects: tmpEffects || [],
+                }
+            }));
+            setChapters(updated);
+            try {
+                for (let i = 0; i < updated.length; i++) {
+                    await HelperFunctions.persistSceneUpdate(jobInfo, updated, i, 'Project settings applied to all scenes');
+                }
+            } catch { }
+        } else if (projectSettingsContext.mode === 'scene' && typeof projectSettingsContext.sceneIndex === 'number') {
+            const idx = projectSettingsContext.sceneIndex;
+            const seed = projectSettingsSeedRef.current;
+            const updated = chapters.map((ch, i) => {
+                if (i !== idx) return ch;
+                const currentVE: any = (ch as any).videoEffects || {};
+                // Only replace fields that changed compared to seed
+                const nextVE: any = { ...currentVE };
+                if (!seed || seed.transition !== tmpTransitionId) nextVE.transition = tmpTransitionId || '';
+                if (!seed || JSON.stringify(seed.music || null) !== JSON.stringify(tmpMusic ? { selectedMusic: tmpMusic.selectedMusic } : null)) nextVE.backgroundMusic = tmpMusic ? ({ selectedMusic: tmpMusic.selectedMusic } as any) : null;
+                if (!seed || JSON.stringify(seed.logo || null) !== JSON.stringify(tmpLogo || null)) nextVE.logo = tmpLogo || null;
+                if (!seed || JSON.stringify(seed.clip || null) !== JSON.stringify(tmpClip || null)) nextVE.clip = tmpClip || null;
+                if (!seed || JSON.stringify(seed.effects || []) !== JSON.stringify(tmpEffects || [])) nextVE.transitionEffects = tmpEffects || [];
+                return ({ ...(ch as any), videoEffects: nextVE });
+            });
+            setChapters(updated);
+            try {
+                setProjectSettingsDialogOpen(false);
+                await HelperFunctions.persistSceneUpdate(jobInfo, updated, idx, 'Project settings applied to scene');
+            } catch {
+                setProjectSettingsDialogOpen(false);
+            }
+        }
+
+        try { (window as any).toast?.success('Saved'); } catch { }
+    };
 
     const handleToggleBackgroundMusic = async () => {
         try {
@@ -209,8 +311,7 @@ const ScriptProductionClient = () => {
             const now = new Date();
             const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
 
-            const randomJobId = HelperFunctions.generateRandomId();
-            const jobName = `job-${randomJobId}-${timestamp}`; // <-- folder only, no ".json"
+            const jobName = `job-${HelperFunctions.generateRandomId()}-${timestamp}`;
             const fileName = `project-config.json`;
 
             const scriptProductionJSON = {
@@ -288,7 +389,6 @@ const ScriptProductionClient = () => {
 
             const jobId = result.projectFolderId;
 
-            debugger
             // Update chapters with their corresponding folder IDs
             const updatedChapters = chapters.map((chapter, index) => {
                 const sceneId = `scene-${index + 1}`;
@@ -652,7 +752,24 @@ const ScriptProductionClient = () => {
             return;
         }
 
-        if (!chromaKeyFile || !chromaKeyUrl) {
+        // Upload chroma key first using dedicated API
+        if (chromaKeyFile) {
+            try {
+                setLoading(true);
+                const jobName = chapters[0].jobName || `job-${HelperFunctions.generateRandomId()}`;
+                const uploadResult = await HelperFunctions.uploadMediaToDrive(jobName, 'input', chromaKeyFile);
+                setLoading(false);
+                if (!uploadResult.success) {
+                    toast.error('Chroma key upload failed');
+                    setLoading(false);
+                    return;
+                }
+            } catch (e: any) {
+                toast.error(`Chroma key upload failed: ${e?.message || 'Unknown error'}`);
+                setLoading(false);
+                return;
+            }
+        } else {
             toast.error('Please upload a chroma key before generating video');
             return;
         }
@@ -1550,10 +1667,13 @@ const ScriptProductionClient = () => {
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
 
-                                {/* Project-level Settings */}
+                                {/* Project-level Settings (moved into dialog) */}
                                 <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                                    <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontSize: '1.25rem' }}>Project Settings</Typography>
-                                    <Grid container spacing={2}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Project Settings</Typography>
+                                        <Button variant="contained" size="small" sx={{ textTransform: 'none' }} onClick={() => openProjectSettingsDialog('project')}>Open</Button>
+                                    </Box>
+                                    <Grid container spacing={2} sx={{ display: 'none' }}>
                                         {/* Transition selector */}
                                         <Grid item xs={12} md={6}>
                                             <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
@@ -1825,6 +1945,7 @@ const ScriptProductionClient = () => {
                                             clip: projectVideoClip,
                                             transitionEffects: projectTransitionEffects,
                                         }}
+                                        onOpenProjectSettingsDialog={(sceneIndex: number) => openProjectSettingsDialog('scene', sceneIndex)}
                                     />
                                 )}
 
@@ -1964,6 +2085,224 @@ const ScriptProductionClient = () => {
                 </DialogActions>
             </Dialog>
 
+            {/* Project Settings Dialog */}
+            <Dialog
+                open={projectSettingsDialogOpen}
+                onClose={closeProjectSettingsDialog}
+                aria-labelledby="project-settings-dialog-title"
+                maxWidth="xl"
+                fullWidth
+                onKeyDown={(e) => {
+                    if (e.key === 'Escape') closeProjectSettingsDialog();
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (tmpTransitionId !== undefined) applyProjectSettingsDialog();
+                    }
+                }}
+            >
+                <DialogTitle id="project-settings-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="h6">Project Settings {projectSettingsContext.mode === 'scene' ? `(Scene ${(projectSettingsContext.sceneIndex || 0) + 1})` : ''}</Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button onClick={closeProjectSettingsDialog} variant="outlined" size="small" sx={{ textTransform: 'none' }}>✕ Close</Button>
+                        <Button onClick={applyProjectSettingsDialog} variant="contained" size="small" disabled={false} sx={{ textTransform: 'none' }}>✔ Done</Button>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2}>
+                        {/* Transition selector */}
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
+                            <TextField
+                                select
+                                fullWidth
+                                size="small"
+                                value={tmpTransitionId}
+                                onChange={(e) => setTmpTransitionId(String(e.target.value))}
+                                SelectProps={{ native: true }}
+                                sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
+                            >
+                                <option value="">Select transition...</option>
+                                {predefinedTransitions.map((t) => (
+                                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
+                                ))}
+                            </TextField>
+                        </Grid>
+
+                        {/* Logo Overlay (single) */}
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                <TextField size="small" select label="Position" value={tmpLogo?.position || 'top-right'} onChange={(e) => setTmpLogo({ ...(tmpLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
+                                    <option value="top-left">top-left</option>
+                                    <option value="top-right">top-right</option>
+                                    <option value="bottom-left">bottom-left</option>
+                                    <option value="bottom-right">bottom-right</option>
+                                </TextField>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    size="small"
+                                    sx={{ height: 44, textTransform: 'none' }}
+                                    onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'image/*';
+                                        input.onchange = (e) => {
+                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                            if (!file) return;
+                                            const objectUrl = URL.createObjectURL(file);
+                                            setTmpLogo({ name: file.name, url: objectUrl, position: tmpLogo?.position || 'top-right' });
+                                        };
+                                        input.click();
+                                    }}
+                                >
+                                    Upload Logo
+                                </Button>
+                                {tmpLogo?.url && (
+                                    <>
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            sx={{ height: 44, textTransform: 'none' }}
+                                            onClick={() => window.open(tmpLogo.url, '_blank')}
+                                        >
+                                            Preview
+                                        </Button>
+                                        <Button
+                                            variant="outlined"
+                                            color="error"
+                                            size="small"
+                                            sx={{ height: 44, textTransform: 'none' }}
+                                            onClick={() => setTmpLogo(null)}
+                                        >
+                                            Remove
+                                        </Button>
+                                    </>
+                                )}
+                                {tmpLogo?.url && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <img
+                                            src={tmpLogo.url}
+                                            alt={tmpLogo.name || 'Logo'}
+                                            style={{ width: 100, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#111', cursor: 'pointer' }}
+                                            onClick={() => window.open(tmpLogo.url, '_blank')}
+                                        />
+                                    </Box>
+                                )}
+                            </Box>
+                        </Grid>
+
+                        {/* Background Music (single) */}
+                        <Grid item xs={12} md={6}>
+                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Background Music</Typography>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <TextField
+                                    select
+                                    fullWidth
+                                    sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
+                                    size="small"
+                                    value={(tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
+                                    onChange={(e) => {
+                                        const selId = String(e.target.value);
+                                        setTmpMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: tmpMusic?.volume ?? 0.3, autoAdjust: tmpMusic?.autoAdjust ?? true, fadeIn: tmpMusic?.fadeIn ?? true, fadeOut: tmpMusic?.fadeOut ?? true });
+                                        try { audioRef.current?.pause(); } catch { }
+                                        setIsMusicPlaying(false);
+                                        setIsMusicLoading(false);
+                                        setLastMusicIdLoaded(null);
+                                    }}
+                                    SelectProps={{ native: true }}
+                                >
+                                    <option value="">Select music...</option>
+                                    {(driveLibrary?.music || []).map((t: any) => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </TextField>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="small"
+                                    disabled={!((tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
+                                    onClick={handleToggleBackgroundMusic}
+                                    sx={{ height: 44, minWidth: 90, textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 1 }}
+                                >
+                                    {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
+                                    {isMusicPlaying ? 'Pause' : 'Play'}
+                                </Button>
+                            </Box>
+                        </Grid>
+
+                        {/* Video Clip (single) */}
+                        <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    size="small"
+                                    sx={{ height: 44, textTransform: 'none' }}
+                                    onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'video/*';
+                                        input.onchange = (e) => {
+                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                            if (!file) return;
+                                            const objectUrl = URL.createObjectURL(file);
+                                            setTmpClip({ name: file.name, url: objectUrl });
+                                        };
+                                        input.click();
+                                    }}
+                                >
+                                    Upload Clip
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    size="small"
+                                    sx={{ height: 44, textTransform: 'none' }}
+                                    onClick={() => setTmpClip(null)}
+                                >
+                                    Remove
+                                </Button>
+                                {tmpClip?.url && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{ position: 'relative', width: 160, height: 90 }} onClick={() => { setVideoPreviewUrl(tmpClip.url); setVideoPreviewOpen(true); }}>
+                                            <video
+                                                src={tmpClip.url}
+                                                muted
+                                                playsInline
+                                                loop
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: '#000', cursor: 'pointer' }}
+                                            />
+                                            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                                <Box sx={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <PlayIcon sx={{ color: '#fff' }} fontSize="small" />
+                                                </Box>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                )}
+                            </Box>
+                        </Grid>
+
+                        {/* Video Effects (project-level) */}
+                        <Grid xs={12} sx={{ mt: 2, pl: 2 }}>
+                            <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
+                            <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+                                <EffectsPanel
+                                    selectedEffects={tmpEffects}
+                                    onEffectToggle={(id: string) => {
+                                        setTmpEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+                                    }}
+                                    onApplyToAllScenes={(effects: string[]) => {
+                                        setTmpEffects(effects);
+                                    }}
+                                />
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+            </Dialog>
             {/* Video Preview Dialog */}
             <Dialog
                 open={videoPreviewOpen}

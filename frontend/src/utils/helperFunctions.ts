@@ -218,6 +218,42 @@ export class HelperFunctions {
   static async updateChapterSceneOnDrive(jobName: string, jobId: string, sceneId: string, chapter: Chapter): Promise<boolean> {
     try {
       const chapterWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(chapter);
+      const ve: any = (chapterWithAssets as any).videoEffects || {};
+      const sceneSettings = {
+        transition: ve.transition || '',
+        backgroundMusic: ve.backgroundMusic && typeof ve.backgroundMusic === 'object'
+          ? ({ selectedMusic: ve.backgroundMusic.selectedMusic || '' } as any)
+          : null,
+        logo: ve.logo || null,
+        clip: ve.clip || null,
+        transitionEffects: Array.isArray(ve.transitionEffects) ? ve.transitionEffects : [],
+      };
+
+      // Build assets with logo image and video clip included
+      const existingImages: string[] = Array.isArray(chapterWithAssets.assets?.images) ? (chapterWithAssets.assets!.images as string[]) : [];
+      const logoUrl: string | undefined = ve?.logo?.url;
+      const mergedImages = Array.from(new Set<string>([
+        ...existingImages,
+        ...(logoUrl ? [logoUrl] : []),
+      ].filter(Boolean) as string[]));
+
+      const existingVideos: string[] = Array.isArray((chapterWithAssets as any).assets?.videos) ? ((chapterWithAssets as any).assets.videos as string[]) : [];
+      let mergedVideos = existingVideos;
+      const clipUrl: string | undefined = ve?.clip?.url;
+      if (clipUrl) {
+        try {
+          // Upload clip to Drive/videos for this scene folder path and use returned link
+          const jobFolderName = chapterWithAssets.jobName || jobName || `job-${HelperFunctions.generateRandomId()}`;
+          const uploadResult = await HelperFunctions.uploadMediaToDrive(jobFolderName, `${sceneId}/videos`, await HelperFunctions.fetchBlobAsFile(clipUrl, ve?.clip?.name || 'clip.mp4'));
+          if (uploadResult && uploadResult.success && uploadResult.fileId) {
+            mergedVideos = Array.from(new Set<string>([...existingVideos, `https://drive.google.com/uc?id=${uploadResult.fileId}`]));
+          } else {
+            mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
+          }
+        } catch {
+          mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
+        }
+      }
       const scene = {
         id: chapterWithAssets.id,
         narration: chapterWithAssets.narration,
@@ -229,8 +265,10 @@ export class HelperFunctions {
         highlightedKeywords: chapterWithAssets.highlightedKeywords || [],
         keywordsSelected: Array.isArray((chapterWithAssets as any).keywordsSelected) ? (chapterWithAssets as any).keywordsSelected : [],
         assets: {
-          images: chapterWithAssets.assets?.images || []
-        }
+          images: mergedImages,
+          ...(mergedVideos.length > 0 ? { videos: mergedVideos } : {}),
+        },
+        sceneSettings
       };
       console.log('Updating scene on Drive:', scene);
 
@@ -259,6 +297,38 @@ export class HelperFunctions {
   }
 
   /**
+   * Upload a media file (e.g., chroma key or any video) to Google Drive under the given job folder and target subfolder.
+   * Returns Drive identifiers on success.
+   */
+  static async uploadMediaToDrive(jobName: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }>{
+    try {
+      const form = new FormData();
+      form.append('jobName', jobName);
+      form.append('targetFolder', targetFolder || 'input');
+      form.append('file', file);
+
+      const res = await fetch('/api/google-drive-media-upload', { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || data?.details || 'Media upload failed');
+      }
+      return data;
+    } catch (e: any) {
+      console.error('uploadMediaToDrive error', e);
+      return { success: false };
+    }
+  }
+
+  // Utility: fetch a URL or blob: URL as a File for upload
+  static async fetchBlobAsFile(url: string, fileName: string): Promise<File> {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    // Preserve basic type if available
+    const type = (blob as any).type || (fileName.endsWith('.mp4') ? 'video/mp4' : undefined);
+    return new File([blob], fileName, { type });
+  }
+
+  /**
    * Persist a chapter scene change to Drive and show toast feedback
    */
   static async persistSceneUpdate(
@@ -273,7 +343,7 @@ export class HelperFunctions {
       const sceneId = String((chapter as any).id || '');
       const jobId = String((chapter as any).jobId || jobInfo?.jobId || '');
       const jobName = String((chapter as any).jobName || jobInfo?.jobName || '');
-      if (!jobId || !sceneId) return;
+      if (!jobId || !sceneId) return;      
       const ok = await HelperFunctions.updateChapterSceneOnDrive(jobName, jobId, sceneId, chapter);
       if (ok) {
         HelperFunctions.showSuccess(successMessage);
