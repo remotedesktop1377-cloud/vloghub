@@ -51,6 +51,7 @@ import ImageSearch from './ImageSearch';
 import { ChapterEditDialog } from './ChapterEditDialog';
 import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights';
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 
 // Map effect ids to human-readable names for project-level effects display
 const EFFECT_NAME_MAP: Record<string, string> = {
@@ -581,7 +582,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
                                                                       <CustomAudioPlayer
                                                                         key={`audio-${index}-${bmIdx}-${id}`}
-                                                                        src={id ? `/api/google-drive-media?id=${id}` : ''}
+                                                                        src={id ? `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA}${id}` : ''}
                                                                         title={''}
                                                                       />
                                                                     </Box>

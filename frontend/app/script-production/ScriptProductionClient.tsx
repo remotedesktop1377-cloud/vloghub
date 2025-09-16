@@ -250,7 +250,7 @@ const ScriptProductionClient = () => {
         try {
             const id = (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '';
             if (!id) return;
-            const src = `/api/google-drive-media?id=${id}`;
+            const src = `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA}${id}`;
             if (!audioRef.current) {
                 audioRef.current = new Audio();
                 audioRef.current.addEventListener('playing', () => setIsMusicPlaying(true));
@@ -531,7 +531,7 @@ const ScriptProductionClient = () => {
             try {
                 if (isScriptApproved) {
                     setLoading(true);
-                    const res = await fetch('/api/google-drive-library?category=all', { cache: 'no-store' });
+                    const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY, { cache: 'no-store' });
                     const data = await res.json();
                     if (data && data.data) {
                         setDriveLibrary({
@@ -2316,7 +2316,7 @@ const ScriptProductionClient = () => {
                     {videoPreviewUrl && (() => {
                         const driveIdMatch = /\/d\/([\w-]+)/.exec(videoPreviewUrl || '') || /[?&]id=([\w-]+)/.exec(videoPreviewUrl || '');
                         const effectiveSrc = driveIdMatch && driveIdMatch[1]
-                            ? `/api/google-drive-media?id=${driveIdMatch[1]}`
+                            ? `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA}${driveIdMatch[1]}`
                             : videoPreviewUrl;
                         return (
                             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>

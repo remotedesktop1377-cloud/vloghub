@@ -41,6 +41,23 @@ async function findOrCreateFolder(drive: any, name: string, parentId: string) {
     return { id: created.data.id!, created: true };
 }
 
+async function clearFolder(drive: any, folderId: string) {
+    const res = await drive.files.list({
+        q: `'${folderId}' in parents and trashed = false`,
+        fields: 'files(id)'
+    });
+    const files = res.data.files || [];
+    for (const f of files) {
+        try { await drive.files.delete({ fileId: f.id, supportsAllDrives: true }); } catch {}
+    }
+}
+
+async function findOrCreateCleanFolder(drive: any, name: string, parentId: string) {
+    const folder = await findOrCreateFolder(drive, name, parentId);
+    await clearFolder(drive, folder.id);
+    return folder;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const contentType = request.headers.get('content-type') || '';
@@ -91,17 +108,35 @@ export async function POST(request: NextRequest) {
                 const assetsIn = jsonData?.assets || {};
                 const imagesIn: string[] = Array.isArray(assetsIn.images) ? assetsIn.images : [];
                 const videosIn: string[] = Array.isArray((assetsIn as any).videos) ? (assetsIn as any).videos : [];
+                const keywordsSelected: Array<any> = Array.isArray(jsonData?.keywordsSelected) ? jsonData.keywordsSelected : [];
+                const sceneSettings: any = jsonData?.sceneSettings || {};
+
+                // Derive low/high res image URLs and scene logo
+                const lowResUrls: string[] = [];
+                const highResUrls: string[] = [];
+                for (const entry of keywordsSelected) {
+                    const low = entry?.media?.lowResMedia;
+                    const high = entry?.media?.highResMedia;
+                    if (typeof low === 'string' && low) lowResUrls.push(low);
+                    if (typeof high === 'string' && high) highResUrls.push(high);
+                }
+                const logoUrl: string | null = (sceneSettings?.logo && typeof sceneSettings.logo.url === 'string') ? sceneSettings.logo.url : null;
 
                 const imagesOut: string[] = [];
                 const videosOut: string[] = [];
 
                 let uploadedImages = 0;
                 let uploadedVideos = 0;
+                let uploadedLow = 0;
+                let uploadedHigh = 0;
+                let uploadedLogos = 0;
 
                 if (imagesIn.length > 0) {
-                    const imagesFolder = await findOrCreateFolder(drive, 'images', sceneFolder.id);
+                    const imagesFolder = await findOrCreateCleanFolder(drive, 'images', sceneFolder.id);
                     for (let j = 0; j < imagesIn.length; j++) {
                         const url = imagesIn[j];
+                        // Skip if this URL is already handled as low or high res upload
+                        if (lowResUrls.includes(url) || highResUrls.includes(url)) continue;
                         try {
                             if (url.startsWith('blob:')) throw new Error('Cannot fetch blob URL on server');
                             const res = await fetch(url, {
@@ -137,11 +172,116 @@ export async function POST(request: NextRequest) {
                     }
                 }
 
+                // Upload scene lowRes images
+                if (lowResUrls.length > 0) {
+                    const lowFolder = await findOrCreateCleanFolder(drive, 'lowRes', sceneFolder.id);
+                    for (let j = 0; j < lowResUrls.length; j++) {
+                        const url = lowResUrls[j];
+                        try {
+                            if (url.startsWith('blob:')) throw new Error('Cannot fetch blob URL on server');
+                            const res = await fetch(url, {
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+                                    'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                                    'Referer': new URL(url).origin,
+                                },
+                                redirect: 'follow',
+                            });
+                            if (!res.ok) throw new Error(`download ${res.status}`);
+                            const contentType = res.headers.get('content-type') || undefined;
+                            const arrayBuffer = await res.arrayBuffer();
+                            const buffer = Buffer.from(arrayBuffer);
+                            const stream = Readable.from(buffer);
+                            const name = `${sceneId}-low-${j + 1}`;
+                            const created = await drive.files.create({
+                                requestBody: { name, parents: [lowFolder.id], mimeType: contentType },
+                                media: { body: stream, mimeType: contentType },
+                                supportsAllDrives: true,
+                                fields: 'id, name',
+                            });
+                            if (created.data.id) uploadedLow += 1;
+                        } catch (e) {
+                            console.error('LowRes upload failed', { sceneId, url, error: (e as any)?.message });
+                        }
+                    }
+                }
+
+                // Upload scene highRes images
+                if (highResUrls.length > 0) {
+                    const highFolder = await findOrCreateCleanFolder(drive, 'highRes', sceneFolder.id);
+                    for (let j = 0; j < highResUrls.length; j++) {
+                        const url = highResUrls[j];
+                        try {
+                            if (url.startsWith('blob:')) throw new Error('Cannot fetch blob URL on server');
+                            const res = await fetch(url, {
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+                                    'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                                    'Referer': new URL(url).origin,
+                                },
+                                redirect: 'follow',
+                            });
+                            if (!res.ok) throw new Error(`download ${res.status}`);
+                            const contentType = res.headers.get('content-type') || undefined;
+                            const arrayBuffer = await res.arrayBuffer();
+                            const buffer = Buffer.from(arrayBuffer);
+                            const stream = Readable.from(buffer);
+                            const name = `${sceneId}-high-${j + 1}`;
+                            const created = await drive.files.create({
+                                requestBody: { name, parents: [highFolder.id], mimeType: contentType },
+                                media: { body: stream, mimeType: contentType },
+                                supportsAllDrives: true,
+                                fields: 'id, name',
+                            });
+                            if (created.data.id) uploadedHigh += 1;
+                        } catch (e) {
+                            console.error('HighRes upload failed', { sceneId, url, error: (e as any)?.message });
+                        }
+                    }
+                }
+
+                // Upload scene logo into scene-logos if present
+                if (logoUrl) {
+                    try {
+                        if (!logoUrl.startsWith('blob:')) {
+                            const logosFolder = await findOrCreateCleanFolder(drive, 'scene-logos', sceneFolder.id);
+                            const res = await fetch(logoUrl, {
+                                headers: {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+                                    'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                                    'Referer': new URL(logoUrl).origin,
+                                },
+                                redirect: 'follow',
+                            });
+                            if (res.ok) {
+                                const contentType = res.headers.get('content-type') || undefined;
+                                const arrayBuffer = await res.arrayBuffer();
+                                const buffer = Buffer.from(arrayBuffer);
+                                const stream = Readable.from(buffer);
+                                const name = `${sceneId}-logo-1`;
+                                const created = await drive.files.create({
+                                    requestBody: { name, parents: [logosFolder.id], mimeType: contentType },
+                                    media: { body: stream, mimeType: contentType },
+                                    supportsAllDrives: true,
+                                    fields: 'id, name',
+                                });
+                                if (created.data.id) uploadedLogos += 1;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Logo upload failed', { sceneId, url: logoUrl, error: (e as any)?.message });
+                    }
+                }
+
                 if (videosIn.length > 0) {
-                    const videosFolder = await findOrCreateFolder(drive, 'videos', sceneFolder.id);
+                    const videosFolder = await findOrCreateCleanFolder(drive, 'videos', sceneFolder.id);
                     for (let j = 0; j < videosIn.length; j++) {
                         const url = videosIn[j];
                         try {
+                            // Skip if already a Google Drive link (client uploaded via media-upload)
+                            if (/https:\/\/drive\.google\.com\//i.test(url)) {
+                                continue;
+                            }
                             if (url.startsWith('blob:')) throw new Error('Cannot fetch blob URL on server');
                             const res = await fetch(url, {
                                 headers: {
@@ -198,6 +338,9 @@ export async function POST(request: NextRequest) {
                     },
                     images: { uploaded: uploadedImages },
                     videos: { uploaded: uploadedVideos },
+                    lowRes: { uploaded: uploadedLow },
+                    highRes: { uploaded: uploadedHigh },
+                    logos: { uploaded: uploadedLogos },
                     message: 'Scene media uploaded and JSON saved with Drive links',
                 });
             }
