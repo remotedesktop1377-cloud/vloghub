@@ -259,6 +259,34 @@ export class HelperFunctions {
   }
 
   /**
+   * Persist a chapter scene change to Drive and show toast feedback
+   */
+  static async persistSceneUpdate(
+    jobInfo: { jobId?: string; jobName?: string } | null | undefined,
+    chapters: Chapter[],
+    chapterIndex: number,
+    successMessage: string = 'Scene updated on Drive'
+  ): Promise<void> {
+    try {
+      const chapter = chapters?.[chapterIndex];
+      if (!chapter) return;
+      const sceneId = String((chapter as any).id || '');
+      const jobId = String((chapter as any).jobId || jobInfo?.jobId || '');
+      const jobName = String((chapter as any).jobName || jobInfo?.jobName || '');
+      if (!jobId || !sceneId) return;
+      const ok = await HelperFunctions.updateChapterSceneOnDrive(jobName, jobId, sceneId, chapter);
+      if (ok) {
+        HelperFunctions.showSuccess(successMessage);
+      } else {
+        HelperFunctions.showError('Failed to update scene on Drive');
+      }
+    } catch (e) {
+      console.error('persistSceneUpdate error', e);
+      HelperFunctions.showError('Failed to update scene on Drive');
+    }
+  }
+
+  /**
    * Show error toast notification
    */
   static showError(message: string, options?: ToastOptions): void {

@@ -38,6 +38,7 @@ import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import { Chapter } from '@/types/chapters';
+import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
 import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
@@ -112,6 +113,23 @@ const ScriptProductionClient = () => {
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
+    // Project-level settings
+    const [projectLogo, setProjectLogo] = useState<{ name?: string; url: string; position?: string } | null>(null);
+    const [projectTransitionId, setProjectTransitionId] = useState<string>('');
+    const [projectMusic, setProjectMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
+    const [projectVideoClip, setProjectVideoClip] = useState<{ name?: string; url: string } | null>(null);
+    const [projectTransitionEffects, setProjectTransitionEffects] = useState<string[]>([]);
+    const predefinedTransitions = [
+        'quantum_dissolve',
+        'particle_burst',
+        'quantum_tunnel',
+        'digital_matrix',
+        'data_stream',
+        'holographic_dissolve',
+        'reality_shift',
+        'quantum_fade_to_black'
+    ];
+    const CONTROL_HEIGHT = 44;
     const [jobInfo, setJobInfo] = useState<{ jobId?: string, jobName?: string } | null>(null);
     // Chapter edit dialog states
     const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
@@ -163,6 +181,14 @@ const ScriptProductionClient = () => {
                     language: scriptData?.language || null,
                     subtitleLanguage: scriptData?.subtitleLanguage || null,
                     narrationType: scriptData?.narrationType || null,
+                    // Project-level settings
+                    videoEffects: {
+                        transition: projectTransitionId || '',
+                        logo: projectLogo,
+                        backgroundMusic: projectMusic,
+                        clip: projectVideoClip,
+                        transitionEffects: projectTransitionEffects,
+                    },
                 },
                 // Use chaptersForUpload to ensure merged images are included
                 script: chapters.map(chapter => ({
@@ -1480,6 +1506,133 @@ const ScriptProductionClient = () => {
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
 
+                                {/* Project-level Settings */}
+                                <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                                    <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontSize: '1.25rem' }}>Project Settings</Typography>
+                                    <Grid container spacing={2}>
+                                        {/* Transition selector */}
+                                        <Grid item xs={12} md={6}>
+                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                size="small"
+                                                value={projectTransitionId}
+                                                onChange={(e) => setProjectTransitionId(String(e.target.value))}
+                                                SelectProps={{ native: true }}
+                                                sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
+                                            >
+                                                <option value="">Select transition...</option>
+                                                {predefinedTransitions.map((t) => (
+                                                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
+                                                ))}
+                                            </TextField>
+                                        </Grid>
+
+                                        {/* Logo Overlay (single) */}
+                                        <Grid item xs={12} md={6}>
+                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                <TextField size="small" label="Name" value={projectLogo?.name || ''} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), name: e.target.value })} sx={{ '& .MuiInputBase-input': { fontSize: '1.25rem' } }} />
+                                                <TextField size="small" select label="Position" value={projectLogo?.position || 'top-right'} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
+                                                    <option value="top-left">top-left</option>
+                                                    <option value="top-right">top-right</option>
+                                                    <option value="bottom-left">bottom-left</option>
+                                                    <option value="bottom-right">bottom-right</option>
+                                                </TextField>
+                                                <Button
+                                                    variant="contained"
+                                                    color="secondary"
+                                                    size="small"
+                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                    onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'image/*';
+                                                        input.onchange = (e) => {
+                                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                                            if (!file) return;
+                                                            const objectUrl = URL.createObjectURL(file);
+                                                            setProjectLogo({ name: file.name, url: objectUrl, position: projectLogo?.position || 'top-right' });
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                >
+                                                    Upload Logo
+                                                </Button>
+                                            </Box>
+                                        </Grid>
+
+                                        {/* Background Music (single) */}
+                                        <Grid item xs={12} md={6}>
+                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Background Music</Typography>
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                <TextField
+                                                    select
+                                                    fullWidth
+                                                    size="small"
+                                                    value={(projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
+                                                    onChange={(e) => {
+                                                        const selId = String(e.target.value);
+                                                        setProjectMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: projectMusic?.volume ?? 0.3, autoAdjust: projectMusic?.autoAdjust ?? true, fadeIn: projectMusic?.fadeIn ?? true, fadeOut: projectMusic?.fadeOut ?? true });
+                                                    }}
+                                                    SelectProps={{ native: true }}
+                                                    sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
+                                                >
+                                                    <option value="">Select music...</option>
+                                                    {(driveLibrary?.music || []).map((t: any) => (
+                                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                                    ))}
+                                                </TextField>
+                                                {/* Volume option removed as per requirement */}
+                                            </Box>
+                                        </Grid>
+
+                                        {/* Video Clip (single) */}
+                                        <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
+                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
+                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                <TextField size="small" label="Name" value={projectVideoClip?.name || ''} onChange={(e) => setProjectVideoClip({ ...(projectVideoClip || { url: '' }), name: e.target.value })} sx={{ '& .MuiInputBase-input': { fontSize: '1.25rem' } }} />
+                                                <Button
+                                                    variant="contained"
+                                                    color="secondary"
+                                                    size="small"
+                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                    onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'video/*';
+                                                        input.onchange = (e) => {
+                                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                                            if (!file) return;
+                                                            const objectUrl = URL.createObjectURL(file);
+                                                            setProjectVideoClip({ name: file.name, url: objectUrl });
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                >
+                                                    Upload Clip
+                                                </Button>
+                                            </Box>
+                                        </Grid>
+                                        {/* Video Effects (project-level) */}
+                                        <Grid xs={12} sx={{ mt: 2, pl: 2 }}>
+                                            <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
+                                            <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+                                                <EffectsPanel
+                                                    selectedEffects={projectTransitionEffects}
+                                                    onEffectToggle={(id: string) => {
+                                                        setProjectTransitionEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+                                                    }}
+                                                    onApplyToAllScenes={(effects: string[]) => {
+                                                        setProjectTransitionEffects(effects);
+                                                    }}
+                                                />
+                                            </Box>
+                                        </Grid>
+                                    </Grid>
+                                </Paper>
+
                                 {chapters.length > 0 && (
                                     <ChaptersSection
                                         jobInfo={jobInfo}
@@ -1547,7 +1700,14 @@ const ScriptProductionClient = () => {
                                         onChapterEditDialogChapterIndex={setChapterEditDialogChapterIndex}
                                         driveBackgrounds={driveLibrary?.backgrounds}
                                         driveMusic={driveLibrary?.music}
-                                        driveTransitions={driveLibrary?.transitions}
+                                        driveTransitions={predefinedTransitions.map((t) => ({ id: t, name: t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) }))}
+                                        projectSettings={{
+                                            transition: projectTransitionId,
+                                            musicId: (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '',
+                                            logo: projectLogo,
+                                            clip: projectVideoClip,
+                                            transitionEffects: projectTransitionEffects,
+                                        }}
                                     />
                                 )}
 

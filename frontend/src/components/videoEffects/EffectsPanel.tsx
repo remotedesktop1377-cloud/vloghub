@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  Palette, 
-  Zap, 
-  Eye, 
-  Sparkles, 
+import {
+  Palette,
+  Zap,
+  Eye,
+  Sparkles,
   Settings,
   ChevronDown,
   ChevronUp,
@@ -73,115 +73,85 @@ const effectCategories = {
 };
 
 export function EffectsPanel({ selectedEffects, onEffectToggle, onApplyToAllScenes }: EffectsPanelProps) {
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['color', 'visual']);
+  // helpers to get currently selected per category
+  const getSelectedForCategory = (categoryKey: keyof typeof effectCategories): string => {
+    const ids = effectCategories[categoryKey].effects.map(e => e.id);
+    const hit = selectedEffects.find(id => ids.includes(id));
+    return hit || '';
+  };
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
+  const setSelectedForCategory = (categoryKey: keyof typeof effectCategories, nextId: string) => {
+    const ids = effectCategories[categoryKey].effects.map(e => e.id);
+    const current = selectedEffects.find(id => ids.includes(id));
+    if (current && current !== nextId) {
+      // toggle off previous
+      onEffectToggle(current);
+    }
+    if (nextId) {
+      // toggle on new if not already set
+      if (!selectedEffects.includes(nextId)) onEffectToggle(nextId);
+    }
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-      <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-yellow-400" />
-        Video Effects Library
-      </h3>
+    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
 
-      <div className="space-y-4">
-        {Object.entries(effectCategories).map(([categoryKey, category]) => {
-          const Icon = category.icon;
-          const isExpanded = expandedCategories.includes(categoryKey);
-          
+      {/* Four dropdowns horizontally */}
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 10, width: '100%' }}>
+        {(['color', 'visual', 'motion', 'audio'] as Array<keyof typeof effectCategories>).map((categoryKey) => {
+          const category = effectCategories[categoryKey];
+          const selected = getSelectedForCategory(categoryKey);
           return (
-            <div key={categoryKey} className="border border-white/10 rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleCategory(categoryKey)}
-                className="w-full flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 transition-colors"
+            <div key={categoryKey} >
+              <div style={{ marginBottom: 5 }}>
+                <span className="text-white text-sm font-semibold">{category.name}</span>
+              </div>
+              <select
+                style={{
+                  height: 44, 
+                  minWidth: 280,
+                  // maxWidth: 320,
+                  display: 'inline-block',
+                  // maxWidth: 280,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+                value={selected}
+                onChange={(e) => setSelectedForCategory(categoryKey, e.target.value)}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-5 h-5 text-cyan-400" />
-                  <span className="text-white font-medium">{category.name}</span>
-                  <span className="text-xs text-gray-400">
-                    ({category.effects.filter(e => selectedEffects.includes(e.id)).length} selected)
-                  </span>
-                </div>
-                {isExpanded ? (
-                  <ChevronUp className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-
-              {isExpanded && (
-                <div className="p-4 space-y-2">
-                  {category.effects.map((effect) => (
-                    <div
-                      key={effect.id}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
-                        selectedEffects.includes(effect.id)
-                          ? 'bg-cyan-500/20 border border-cyan-400/30'
-                          : 'bg-white/5 hover:bg-white/10 border border-white/10'
-                      }`}
-                      onClick={() => onEffectToggle(effect.id)}
-                    >
-                      <div>
-                        <div className="text-white font-medium text-sm">{effect.name}</div>
-                        <div className="text-gray-400 text-xs">{effect.description}</div>
-                      </div>
-                      <div className={`w-4 h-4 rounded border-2 transition-colors ${
-                        selectedEffects.includes(effect.id)
-                          ? 'bg-cyan-400 border-cyan-400'
-                          : 'border-gray-400'
-                      }`}>
-                        {selectedEffects.includes(effect.id) && (
-                          <Check className="w-3 h-3 text-white" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                <option value="" className="bg-black text-gray-300">Select {category.name}...</option>
+                {category.effects.map((e) => (
+                  <option key={e.id} value={e.id} className="bg-black text-white">{e.name}</option>
+                ))}
+              </select>
             </div>
           );
         })}
       </div>
 
-      {/* Selected Effects Summary */}
-      {selectedEffects.length > 0 && (
-        <div className="mt-6 p-4 bg-cyan-500/10 rounded-lg border border-cyan-400/20">
-          <h4 className="text-cyan-400 font-medium mb-2">Active Effects ({selectedEffects.length})</h4>
-          <div className="flex flex-wrap gap-2">
-            {selectedEffects.map((effectId) => {
-              const effect = Object.values(effectCategories)
-                .flatMap(cat => cat.effects)
-                .find(e => e.id === effectId);
-              
-              return (
-                <span
-                  key={effectId}
-                  className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded border border-cyan-400/30"
-                >
-                  {effect?.name || effectId}
-                </span>
-              );
-            })}
-          </div>
-          
-          {/* Apply to All Scenes Button */}
-          {onApplyToAllScenes && (
-            <button
-              onClick={() => onApplyToAllScenes(selectedEffects)}
-              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 rounded-lg border border-cyan-400/30 text-cyan-400 font-medium transition-all duration-300 transform hover:scale-105"
-            >
-              <Sparkles className="w-4 h-4" />
-              Apply to All Scenes
-            </button>
-          )}
+      {/* Summary + Apply All */}
+      {/* <div style={{ marginTop: 10, display: 'flex', flexDirection: 'row', gap: 10, width: '100%' }}>
+        <div className="flex flex-wrap gap-2">
+          {selectedEffects.map((effectId) => {
+            const effect = Object.values(effectCategories).flatMap(cat => cat.effects).find(e => e.id === effectId);
+            return (
+              <span key={effectId} className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded border border-cyan-400/30">
+                {effect?.name || effectId}
+              </span>
+            );
+          })}
         </div>
-      )}
+        {onApplyToAllScenes && (
+          <button
+            onClick={() => onApplyToAllScenes(selectedEffects)}
+            className="self-start md:self-auto inline-flex items-center justify-center gap-2 px-4 h-10 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 rounded-md border border-cyan-400/30 text-cyan-300 text-sm font-medium"
+          >
+            <Sparkles className="w-4 h-4" />
+            Apply to All Scenes
+          </button>
+        )}
+      </div> */}
     </div>
   );
 }

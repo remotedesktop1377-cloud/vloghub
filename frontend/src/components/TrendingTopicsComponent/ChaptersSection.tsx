@@ -52,6 +52,33 @@ import { ChapterEditDialog } from './ChapterEditDialog';
 import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights';
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 
+// Map effect ids to human-readable names for project-level effects display
+const EFFECT_NAME_MAP: Record<string, string> = {
+  // color & grading
+  color_grade_blue: 'Blue Grade',
+  sepia_tone: 'Sepia Tone',
+  desaturate_50: 'Desaturate',
+  contrast_boost: 'Contrast Boost',
+  color_enhancement: 'Color Enhancement',
+  // visual
+  chroma_key: 'Chroma Key',
+  background_blur: 'Background Blur',
+  vignette: 'Vignette',
+  lens_flare: 'Lens Flare',
+  border_highlight: 'Border Highlight',
+  // motion
+  glow: 'Glow Effect',
+  particle_trails: 'Particle Trails',
+  slight_blur: 'Motion Blur',
+  scaling_80_percent: 'Scale Down',
+  center_focus: 'Center Focus',
+  // audio
+  echo: 'Echo',
+  reverb: 'Reverb',
+  quantum_resonance: 'Quantum Resonance',
+  spatial_audio: 'Spatial Audio',
+};
+
 interface ChaptersSectionProps {
   jobInfo: { jobId?: string, jobName?: string } | null;
   chapters: Chapter[];
@@ -119,7 +146,14 @@ interface ChaptersSectionProps {
   // Drive library options
   driveBackgrounds?: Array<{ id: string; name: string; webViewLink?: string; webContentLink?: string }>;
   driveMusic?: Array<{ id: string; name: string; webContentLink?: string }>;
-  driveTransitions?: Array<{ id: string; name: string; webContentLink?: string }>;
+  driveTransitions?: Array<{ id: string; name: string; webViewLink?: string }>;
+  projectSettings?: {
+    transition?: string;
+    musicId?: string;
+    logo?: { name?: string; url: string; position?: string } | null;
+    clip?: { name?: string; url: string } | null;
+    transitionEffects?: string[];
+  };
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
@@ -162,6 +196,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
   driveBackgrounds,
   driveMusic,
   driveTransitions,
+  projectSettings,
 }) => {
   const [expandedChapterIndex, setExpandedChapterIndex] = React.useState<number | null>(null);
   // Volume popover open state per chapter (inline editor)
@@ -464,469 +499,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       </Typography>
                                                     </Box>
 
-                                                    {/* Inline Rows: Media & Effects */}
-                                                    {/* Video Clips */}
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.25 }}>
-                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
-                                                        <PlayIcon sx={{ color: INFO.main, fontSize: 18 }} />
-                                                        Video Clips
-                                                      </Typography>
-                                                      {(() => {
-                                                        const clips = (((chapters[index] as any).videoEffects?.clips) || []) as Array<{ url?: string }>;
-                                                        const blockAdd = clips.some(c => !c || !c.url || String(c.url).trim().length === 0);
-                                                        const btn = (
-                                                          <Button
-                                                            size="small"
-                                                            startIcon={<AddIcon />}
-                                                            variant="contained"
-                                                            disableElevation
-                                                            disabled={blockAdd}
-                                                            sx={{
-                                                              bgcolor: INFO.main,
-                                                              color: NEUTRAL.white,
-                                                              textTransform: 'none',
-                                                              borderRadius: 2,
-                                                              px: 1.75,
-                                                              fontSize: '1.05rem',
-                                                              '&:hover': { bgcolor: HOVER.info }
-                                                            }}
-                                                            onClick={() => {
-                                                              const updated = chapters.map((ch, i) => {
-                                                                if (i !== index) return ch;
-                                                                const clipsList = (ch as any).videoEffects?.clips || [];
-                                                                const next = {
-                                                                  ...(ch as any),
-                                                                  videoEffects: {
-                                                                    ...(ch as any).videoEffects,
-                                                                    clips: [...clipsList, { id: Date.now().toString(), name: 'New Clip', url: '', duration: 10 }]
-                                                                  }
-                                                                } as any;
-                                                                return next;
-                                                              });
-                                                              onChaptersUpdate(updated);
-                                                            }}
-                                                          >
-                                                            Add Clip
-                                                          </Button>
-                                                        );
-                                                        return blockAdd ? (
-                                                          <Tooltip title="Upload/select video for the current clip before adding another."><span>{btn}</span></Tooltip>
-                                                        ) : btn;
-                                                      })()}
-                                                    </Box>
-
-                                                    {/* Render Clips Inline */}
-                                                    {(((chapters[index] as any).videoEffects?.clips) || []).length > 0 && (
-                                                      <Box sx={{ mt: 1 }}>
-                                                        {(((chapters[index] as any).videoEffects?.clips) || []).map((clip: any, clipIdx: number) => (
-                                                          <Box key={clip.id || clipIdx} sx={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: '1.2fr 1.6fr 1.2fr 0.8fr auto auto',
-                                                            gap: 1,
-                                                            alignItems: 'center',
-                                                            mb: 0.75
-                                                          }}>
-                                                            <TextField
-                                                              size="small"
-                                                              label="Clip Name"
-                                                              value={clip.name || ''}
-                                                              onChange={(e) => {
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
-                                                                  clips[clipIdx] = { ...clips[clipIdx], name: e.target.value };
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                            />
-                                                            <TextField
-                                                              size="small"
-                                                              label="URL or File"
-                                                              value={clip.url || ''}
-                                                              onChange={(e) => {
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
-                                                                  clips[clipIdx] = { ...clips[clipIdx], url: e.target.value };
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                            />
-                                                            {/* Backgrounds dropdown from Drive */}
-                                                            <Select
-                                                              size="small"
-                                                              displayEmpty
-                                                              value={clip.driveBackgroundId || ''}
-                                                              onChange={(e) => {
-                                                                const val = String(e.target.value);
-                                                                const bg = (((driveBackgrounds as Array<{ id: string; webContentLink?: string; name?: string }>) || [])
-                                                                  .filter(f => !(f.name || '').toLowerCase().endsWith('.zip'))
-                                                                ).find((x) => x.id === val);
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
-                                                                  clips[clipIdx] = { ...clips[clipIdx], driveBackgroundId: val, url: bg?.webContentLink || clips[clipIdx]?.url };
-                                                                  return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, clips } } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                              sx={{ minWidth: 180 }}
-                                                            >
-                                                              <MenuItem value="">Select background from Drive...</MenuItem>
-                                                              {(((driveBackgrounds as Array<{ id: string; name: string }>) || []).filter(file => !(file.name || '').toLowerCase().endsWith('.zip'))).map((file) => (
-                                                                <MenuItem key={file.id} value={file.id}>{file.name}</MenuItem>
-                                                              ))}
-                                                            </Select>
-                                                            <TextField
-                                                              size="small"
-                                                              label="Duration (s)"
-                                                              type="number"
-                                                              value={clip.duration || 0}
-                                                              onChange={(e) => {
-                                                                const val = parseInt(e.target.value) || 0;
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])];
-                                                                  clips[clipIdx] = { ...clips[clipIdx], duration: val };
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                            />
-                                                            <>
-                                                              <input
-                                                                id={`clip-upload-${index}-${clipIdx}`}
-                                                                type="file"
-                                                                accept="video/*"
-                                                                style={{ display: 'none' }}
-                                                                onChange={(e) => {
-                                                                  const file = (e.target as HTMLInputElement).files?.[0];
-                                                                  if (!file) return;
-                                                                  const objectUrl = URL.createObjectURL(file);
-                                                                  const updated = chapters.map((ch, i) => {
-                                                                    if (i !== index) return ch;
-                                                                    const clips = [...(((ch as any).videoEffects?.clips) || [])];
-                                                                    clips[clipIdx] = { ...clips[clipIdx], url: objectUrl, name: file.name };
-                                                                    return {
-                                                                      ...(ch as any),
-                                                                      videoEffects: { ...(ch as any).videoEffects, clips }
-                                                                    } as any;
-                                                                  });
-                                                                  onChaptersUpdate(updated);
-                                                                }}
-                                                              />
-                                                              <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                onClick={() => {
-                                                                  const el = document.getElementById(`clip-upload-${index}-${clipIdx}`) as HTMLInputElement | null;
-                                                                  el?.click();
-                                                                }}
-                                                                sx={{ textTransform: 'none', fontSize: '1rem' }}
-                                                              >
-                                                                Upload
-                                                              </Button>
-                                                              <Button
-                                                                size="small"
-                                                                variant="contained"
-                                                                color="success"
-                                                                disabled={!(((((chapters[index] as any).videoEffects?.clips) || [])[clipIdx] || {}).url)}
-                                                                onClick={() => {
-                                                                  try { (window as any).toast?.success('Clip applied to scene'); } catch { }
-                                                                }}
-                                                                sx={{ textTransform: 'none', fontSize: '1rem', ml: 1 }}
-                                                              >
-                                                                Apply
-                                                              </Button>
-                                                            </>
-                                                            <IconButton
-                                                              size="small"
-                                                              sx={{ color: ERROR.main }}
-                                                              onClick={() => {
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const clips = [...(((ch as any).videoEffects?.clips) || [])].filter((_: any, idx: number) => idx !== clipIdx);
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, clips }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                              title="Remove clip"
-                                                            >
-                                                              <DeleteIcon fontSize="small" />
-                                                            </IconButton>
-                                                          </Box>
-                                                        ))}
-                                                      </Box>
-                                                    )}
-
-                                                    {/* Logo Overlays */}
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.25 }}>
-                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
-                                                        <ImageIcon sx={{ color: PRIMARY.main, fontSize: 18 }} />
-                                                        Logo Overlays
-                                                      </Typography>
-                                                      {(() => {
-                                                        const logos = (((chapters[index] as any).videoEffects?.logos) || []) as Array<{ url?: string }>;
-                                                        const blockAddLogo = logos.some(l => !l || !l.url || String(l.url).trim().length === 0);
-                                                        const btn = (
-                                                          <Button
-                                                            size="small"
-                                                            startIcon={<AddIcon />}
-                                                            variant="contained"
-                                                            disableElevation
-                                                            disabled={blockAddLogo}
-                                                            sx={{
-                                                              bgcolor: PRIMARY.main,
-                                                              color: NEUTRAL.white,
-                                                              textTransform: 'none',
-                                                              borderRadius: 2,
-                                                              px: 1.75,
-                                                              fontSize: '1.05rem',
-                                                              '&:hover': { bgcolor: HOVER.info }
-                                                            }}
-                                                            onClick={() => {
-                                                              const updated = chapters.map((ch, i) => {
-                                                                if (i !== index) return ch;
-                                                                const logosList = (ch as any).videoEffects?.logos || [];
-                                                                const next = {
-                                                                  ...(ch as any),
-                                                                  videoEffects: {
-                                                                    ...(ch as any).videoEffects,
-                                                                    logos: [...logosList, { id: Date.now().toString(), name: 'New Logo', url: '', position: 'top-right' }]
-                                                                  }
-                                                                } as any;
-                                                                return next;
-                                                              });
-                                                              onChaptersUpdate(updated);
-                                                            }}
-                                                          >
-                                                            Add Logo
-                                                          </Button>
-                                                        );
-                                                        return blockAddLogo ? (
-                                                          <Tooltip title="Provide an image URL or upload for the current logo before adding another."><span>{btn}</span></Tooltip>
-                                                        ) : btn;
-                                                      })()}
-                                                    </Box>
-
-                                                    {/* Render Logos Inline */}
-                                                    {(((chapters[index] as any).videoEffects?.logos) || []).length > 0 && (
-                                                      <Box sx={{ mt: 1 }}>
-                                                        {(((chapters[index] as any).videoEffects?.logos) || []).map((logo: any, logoIdx: number) => (
-                                                          <Box key={logo.id || logoIdx} sx={{
-                                                            display: 'grid',
-                                                            gridTemplateColumns: '1.2fr 1.6fr 1.1fr auto auto',
-                                                            gap: 1,
-                                                            alignItems: 'center',
-                                                            mb: 0.75
-                                                          }}>
-                                                            <TextField
-                                                              size="small"
-                                                              label="Logo Name"
-                                                              value={logo.name || ''}
-                                                              onChange={(e) => {
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])];
-                                                                  logos[logoIdx] = { ...logos[logoIdx], name: e.target.value };
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                            />
-                                                            <TextField
-                                                              size="small"
-                                                              label="Image URL"
-                                                              value={logo.url || ''}
-                                                              onChange={(e) => {
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])];
-                                                                  logos[logoIdx] = { ...logos[logoIdx], url: e.target.value };
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                            />
-                                                            <Select
-                                                              size="small"
-                                                              value={logo.position || 'top-right'}
-                                                              onChange={(e) => {
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])];
-                                                                  logos[logoIdx] = { ...logos[logoIdx], position: String(e.target.value) };
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                            >
-                                                              <MenuItem value="top-left">Top Left</MenuItem>
-                                                              <MenuItem value="top-right">Top Right</MenuItem>
-                                                              <MenuItem value="bottom-left">Bottom Left</MenuItem>
-                                                              <MenuItem value="bottom-right">Bottom Right</MenuItem>
-                                                              <MenuItem value="center">Center</MenuItem>
-                                                            </Select>
-                                                            <>
-                                                              <input
-                                                                id={`logo-upload-${index}-${logoIdx}`}
-                                                                type="file"
-                                                                accept="image/*"
-                                                                style={{ display: 'none' }}
-                                                                onChange={(e) => {
-                                                                  const file = (e.target as HTMLInputElement).files?.[0];
-                                                                  if (!file) return;
-                                                                  const objectUrl = URL.createObjectURL(file);
-                                                                  const updated = chapters.map((ch, i) => {
-                                                                    if (i !== index) return ch;
-                                                                    const logos = [...(((ch as any).videoEffects?.logos) || [])];
-                                                                    logos[logoIdx] = { ...logos[logoIdx], url: objectUrl, name: file.name };
-                                                                    return {
-                                                                      ...(ch as any),
-                                                                      videoEffects: { ...(ch as any).videoEffects, logos }
-                                                                    } as any;
-                                                                  });
-                                                                  onChaptersUpdate(updated);
-                                                                }}
-                                                              />
-                                                              <Button
-                                                                size="small"
-                                                                variant="outlined"
-                                                                onClick={() => {
-                                                                  const el = document.getElementById(`logo-upload-${index}-${logoIdx}`) as HTMLInputElement | null;
-                                                                  el?.click();
-                                                                }}
-                                                                sx={{ textTransform: 'none', fontSize: '1rem' }}
-                                                              >
-                                                                Upload
-                                                              </Button>
-                                                              <Button
-                                                                size="small"
-                                                                variant="contained"
-                                                                color="success"
-                                                                disabled={!(((((chapters[index] as any).videoEffects?.logos) || [])[logoIdx] || {}).url)}
-                                                                onClick={() => {
-                                                                  const updated = chapters.map((ch, i) => {
-                                                                    if (i !== index) return ch;
-                                                                    const logos = [...(((ch as any).videoEffects?.logos) || [])];
-                                                                    const chosen = logos[logoIdx] || {};
-                                                                    const current = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
-                                                                    const nextImages = chosen?.url && !current.includes(chosen.url) ? [chosen.url, ...current] : current;
-                                                                    return { ...(ch as any), assets: { ...ch.assets, images: nextImages } } as any;
-                                                                  });
-                                                                  onChaptersUpdate(updated);
-                                                                  try { (window as any).toast?.success('Logo applied to scene'); } catch { }
-                                                                }}
-                                                                sx={{ textTransform: 'none', fontSize: '1rem', ml: 1 }}
-                                                              >
-                                                                Apply
-                                                              </Button>
-                                                            </>
-                                                            <IconButton
-                                                              size="small"
-                                                              sx={{ color: ERROR.main }}
-                                                              onClick={() => {
-                                                                const updated = chapters.map((ch, i) => {
-                                                                  if (i !== index) return ch;
-                                                                  const logos = [...(((ch as any).videoEffects?.logos) || [])].filter((_: any, idx: number) => idx !== logoIdx);
-                                                                  return {
-                                                                    ...(ch as any),
-                                                                    videoEffects: { ...(ch as any).videoEffects, logos }
-                                                                  } as any;
-                                                                });
-                                                                onChaptersUpdate(updated);
-                                                              }}
-                                                              title="Remove logo"
-                                                            >
-                                                              <DeleteIcon fontSize="small" />
-                                                            </IconButton>
-                                                          </Box>
-                                                        ))}
-                                                      </Box>
-                                                    )}
-
-                                                    {/* Background Music */}
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.25 }}>
-                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
-                                                        <VolumeIcon sx={{ color: WARNING.main, fontSize: 18 }} />
-                                                        Background Music
-                                                      </Typography>
-                                                      {(() => {
-                                                        const existingList = Array.isArray(((chapters[index] as any).videoEffects?.backgroundMusic))
-                                                          ? ((chapters[index] as any).videoEffects.backgroundMusic as any[])
-                                                          : [];
-                                                        const btn = (
-                                                          <Button
-                                                            size="small"
-                                                            startIcon={<AddIcon />}
-                                                            variant="contained"
-                                                            disableElevation
-                                                            disabled={false}
-                                                            sx={{
-                                                              bgcolor: WARNING.main,
-                                                              color: NEUTRAL.white,
-                                                              textTransform: 'none',
-                                                              borderRadius: 2,
-                                                              px: 1.75,
-                                                              fontSize: '1.05rem',
-                                                              '&:hover': { bgcolor: HOVER.warning }
-                                                            }}
-                                                            onClick={() => {
-                                                              const updated = chapters.map((ch, i) => {
-                                                                if (i !== index) return ch;
-                                                                const list = Array.isArray((ch as any).videoEffects?.backgroundMusic)
-                                                                  ? ([...(ch as any).videoEffects.backgroundMusic] as any[])
-                                                                  : ([] as any[]);
-                                                                const newItem = {
-                                                                  id: Date.now().toString(),
-                                                                  selectedMusic: '',
-                                                                  volume: 0.3,
-                                                                  autoAdjust: true,
-                                                                  fadeIn: true,
-                                                                  fadeOut: true,
-                                                                } as any;
-                                                                return {
-                                                                  ...(ch as any),
-                                                                  videoEffects: {
-                                                                    ...(ch as any).videoEffects,
-                                                                    backgroundMusic: [...list, newItem]
-                                                                  }
-                                                                } as any;
-                                                              });
-                                                              onChaptersUpdate(updated);
-                                                            }}
-                                                          >
-                                                            Add Music
-                                                          </Button>
-                                                        );
-                                                        return btn;
-                                                      })()}
-                                                    </Box>
-
-                                                    {Array.isArray(((chapters[index] as any).videoEffects?.backgroundMusic)) && ((chapters[index] as any).videoEffects.backgroundMusic as any[]).length > 0 && (
+                                                    {false && Array.isArray(((chapters[index] as any).videoEffects?.backgroundMusic)) && ((chapters[index] as any).videoEffects.backgroundMusic as any[]).length > 0 && (
                                                       <Box sx={{ width: '100%' }}>
                                                         {(((chapters[index] as any).videoEffects.backgroundMusic) as any[]).map((bm: any, bmIdx: number) => {
                                                           const getDriveIdFromLink = (link: string): string => {
@@ -970,6 +543,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     });
                                                                     onChaptersUpdate(updated);
                                                                     setVolumeOpenIndex(null);
+                                                                    HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music changed');
                                                                   }}
                                                                   disabled={false}
                                                                   sx={{
@@ -1039,6 +613,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                             return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                           });
                                                                           onChaptersUpdate(updated);
+                                                                          HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music volume updated');
                                                                         }}
                                                                         sx={{ height: 120, ml: 1 }}
                                                                       />
@@ -1063,6 +638,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onChaptersUpdate(updated);
+                                                                      HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music auto-adjust toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Auto Adjust</Button></span>
@@ -1082,6 +658,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onChaptersUpdate(updated);
+                                                                      HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music fade-in toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Fade In</Button></span>
@@ -1100,6 +677,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onChaptersUpdate(updated);
+                                                                      HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music fade-out toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Fade Out</Button></span>
@@ -1121,6 +699,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: applied } } as any;
                                                                     });
                                                                     onChaptersUpdate(updated);
+                                                                    HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music applied');
                                                                   }}
                                                                 >Apply Music</Button>
 
@@ -1137,6 +716,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: pruned } } as any;
                                                                     });
                                                                     onChaptersUpdate(updated);
+                                                                    HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music removed');
                                                                   }}
                                                                 >Remove</Button>
                                                               </Box>
@@ -1145,91 +725,6 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                         })}
                                                       </Box>
                                                     )}
-
-                                                    {/* Transition Effect */}
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                      <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 700, fontSize: '1.15rem' }}>
-                                                        <WandIcon sx={{ color: PURPLE.main, fontSize: 18 }} />
-                                                        Transition Effect
-                                                      </Typography>
-                                                      <Select
-                                                        size="small"
-                                                        sx={{
-                                                          minWidth: 260,
-                                                          bgcolor: 'background.default',
-                                                          borderRadius: 2,
-                                                          fontSize: '1.05rem'
-                                                        }}
-                                                        value={(() => {
-                                                          const v = (chapters[index] as any).videoEffects?.transition || '';
-                                                          const extractId = (link: string): string => {
-                                                            if (!link) return '';
-                                                            if (/^https?:\/\//i.test(link)) {
-                                                              const idParam = /[?&]id=([\w-]+)/.exec(link);
-                                                              if (idParam && idParam[1]) return idParam[1];
-                                                              const pathMatch = /\/d\/([\w-]+)/.exec(link);
-                                                              if (pathMatch && pathMatch[1]) return pathMatch[1];
-                                                              return '';
-                                                            }
-                                                            return link;
-                                                          };
-                                                          return extractId(String(v));
-                                                        })()}
-                                                        onChange={(e) => {
-                                                          const updated = chapters.map((ch, i) => {
-                                                            if (i !== index) return ch;
-                                                            const selId = String(e.target.value);
-                                                            return {
-                                                              ...(ch as any),
-                                                              videoEffects: {
-                                                                ...(ch as any).videoEffects,
-                                                                transition: selId ? `https://drive.google.com/file/d/${selId}/view` : ''
-                                                              }
-                                                            } as any;
-                                                          });
-                                                          onChaptersUpdate(updated);
-                                                        }}
-                                                      >
-                                                        <MenuItem value="">Select transition...</MenuItem>
-                                                        {((driveTransitions as Array<{ id: string; name: string }>) || []).map((t) => (
-                                                          <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
-                                                        ))}
-                                                      </Select>
-                                                    </Box>
-
-                                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                                      <Button
-                                                        variant="contained"
-                                                        color="success"
-                                                        onClick={() => {
-                                                          console.log('[Scene Save]', JSON.stringify(chapters[index]));
-                                                          setExpandedChapterIndex(null)
-                                                        }
-                                                        }
-                                                        sx={{ fontSize: '1.05rem' }}
-                                                      >
-                                                        Save
-                                                      </Button>
-                                                      <Button
-                                                        variant="outlined"
-                                                        color="inherit"
-                                                        onClick={() => setExpandedChapterIndex(null)}
-                                                        sx={{ fontSize: '1.05rem' }}
-                                                      >
-                                                        Close
-                                                      </Button>
-                                                      <Button
-                                                        variant="text"
-                                                        color="primary"
-                                                        onClick={() => {
-                                                          onChapterEditDialogChapterIndex(index);
-                                                          onChapterEditDialogOpen(true);
-                                                        }}
-                                                        sx={{ fontSize: '1.05rem' }}
-                                                      >
-                                                        Open Advanced Editor
-                                                      </Button>
-                                                    </Box>
                                                   </Box>
                                                 </Box>
                                               )}
@@ -1256,6 +751,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             ? { ...ch, highlightedKeywords: [] }
                                                             : ch
                                                         ));
+                                                        HelperFunctions.persistSceneUpdate(jobInfo, chapters, index, 'All keywords cleared');
                                                         if (typeof window !== 'undefined' && (window as any).toast) {
                                                           HelperFunctions.showSuccess('Cleared all keywords');
                                                         }
@@ -1374,6 +870,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               };
                                                             });
                                                             onChaptersUpdate(updatedChapters);
+                                                            HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, `Keyword removed`);
                                                             if (typeof window !== 'undefined' && (window as any).toast) {
                                                               HelperFunctions.showSuccess(`Removed "${keyword}" and its images`);
                                                             }
@@ -1384,6 +881,33 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       </Box>
                                                     ))}
                                                   </Box>
+                                                  {/* Project-level Media Selected */}
+                                                  {projectSettings && (
+                                                    <Box sx={{ mt: 1 }}>
+                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'block', mb: 0.5 }}>
+                                                        Media Selected:
+                                                      </Typography>
+                                                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                        {projectSettings.transition && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(projectSettings.transition).replace(/_/g,' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
+                                                        )}
+                                                        {projectSettings.musicId && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: SUCCESS.light, color: 'text.white', border: `1px solid ${SUCCESS.main}` }}>Music: {projectSettings.musicId}</Box>
+                                                        )}
+                                                        {projectSettings.logo?.url && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>Logo: {projectSettings.logo.name || 'Selected'}</Box>
+                                                        )}
+                                                        {projectSettings.clip?.url && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: WARNING.light, color: 'text.white', border: `1px solid ${WARNING.main}` }}>Clip: {projectSettings.clip.name || 'Selected'}</Box>
+                                                        )}
+                                                        {Array.isArray(projectSettings.transitionEffects) && projectSettings.transitionEffects.length > 0 && (
+                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PURPLE.light, color: 'text.white', border: `1px solid ${PURPLE.main}` }}>
+                                                            Effects: {projectSettings.transitionEffects.map((id) => EFFECT_NAME_MAP[id] || id).join(', ')}
+                                                          </Box>
+                                                        )}
+                                                      </Box>
+                                                    </Box>
+                                                  )}
                                                 </Box>
                                               )}
 
@@ -1623,6 +1147,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   return ch;
                                                                 });
                                                                 onChaptersUpdate(updatedChapters);
+                                                                HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1733,6 +1258,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   return ch;
                                                                 });
                                                                 onChaptersUpdate(updatedChapters);
+                                                                HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1840,6 +1366,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                 };
                                                               });
                                                               onChaptersUpdate(updatedChapters);
+                                                              HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, 'Media deleted');
                                                             }}
                                                           >
                                                             <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2334,6 +1861,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                     //   console.log('Media added to chapter:', JSON.stringify(updated[chapterIdx]));
                     // } catch {}
                     onChaptersUpdate(updated);
+                    HelperFunctions.persistSceneUpdate(jobInfo, updated, chapterIdx, 'Media added');
                     if (typeof window !== 'undefined') {
                       (window as any).__keywordSuggestions = undefined;
                     }
