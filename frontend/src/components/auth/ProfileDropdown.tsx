@@ -91,9 +91,9 @@ export const ProfileDropdown: React.FC = () => {
         >
           <div className={styles.avatarCircleSmall}>
             {user.user_metadata?.avatar_url ? (
-              <img
-                src={user.user_metadata.avatar_url}
-                alt="Profile"
+              <img 
+                src={user.user_metadata.avatar_url} 
+                alt="Profile" 
                 className={styles.avatarImage}
               />
             ) : (
@@ -136,8 +136,8 @@ export const ProfileDropdown: React.FC = () => {
                 </div>
                 <div className={styles.userMeta}>
                   <div id="profileMenuTitle" className={styles.userName}>
-                    {user.user_metadata?.full_name || 'User'}
-                  </div>
+                  {user.user_metadata?.full_name || 'User'}
+                </div>
                   <div className={styles.userEmail}>{user.email}</div>
                 </div>
                 <button
@@ -156,7 +156,7 @@ export const ProfileDropdown: React.FC = () => {
                 </button>
               </div>
             </div>
-
+            
             <div className={styles.dialogSection}>
               <div className={styles.socialForm}>
                 <div className={styles.socialGroup}>
@@ -178,9 +178,9 @@ export const ProfileDropdown: React.FC = () => {
                 <div className={styles.formActions}>
                   <button className={styles.saveBtn} onClick={saveKeys}>Save</button>
                   <button className={styles.cancelBtn} onClick={() => setMenuOpen(false)}>Cancel</button>
-                </div>
-              </div>
             </div>
+          </div>
+      </div>
 
             <div className={styles.dialogFooter}>
               <button className={`${styles.menuItem} ${styles.logout}`} onClick={handleSignOut}>

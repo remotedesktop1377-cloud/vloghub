@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../utils/supabase';
+import { SupabaseHelpers } from '../utils/SupabaseHelpers';
 import { toast } from 'react-toastify';
 
 interface AuthContextType {
@@ -34,6 +35,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
 
   useEffect(() => {
+    const ensureProfile = async (u: User | null | undefined) => {
+      try {
+        if (!u) return;
+        const fullName = (u.user_metadata as any)?.full_name || (u.user_metadata as any)?.name || '';
+        const avatarUrl = (u.user_metadata as any)?.avatar_url || (u.user_metadata as any)?.picture || '';
+        await SupabaseHelpers.saveUserProfile({
+          id: u.id,
+          email: u.email || '',
+          full_name: fullName,
+          avatar_url: avatarUrl,
+        });
+      } catch {}
+    };
     // Get initial session
     const getInitialSession = async () => {
       try {
@@ -44,6 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           setSession(session);
           setUser(session?.user ?? null);
+          // Ensure profile row exists for already-authenticated user
+          await ensureProfile(session?.user ?? null);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -76,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switch (event) {
           case 'SIGNED_IN':
             toast.success('Successfully signed in!');
+            await ensureProfile(session?.user ?? null);
             break;
           case 'SIGNED_OUT':
             toast.success('Successfully signed out!');
@@ -88,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             break;
           case 'USER_UPDATED':
             toast.success('Profile updated successfully!');
+            await ensureProfile(session?.user ?? null);
             break;
         }
       }

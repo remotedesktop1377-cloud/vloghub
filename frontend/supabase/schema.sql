@@ -1,5 +1,5 @@
 -- Enable Row Level Security
-ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
+-- ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
 
 -- Create profiles table
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -222,3 +222,112 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================================
+-- VIDEO PROJECTS + SCENES (to store project JSON and scenes)
+-- ============================================================================
+
+-- Projects table (one per generated project)
+CREATE TABLE IF NOT EXISTS public.video_projects (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    job_name TEXT UNIQUE NOT NULL,
+    topic TEXT,
+    title TEXT,
+    description TEXT,
+    duration INTEGER,
+    resolution TEXT,
+    region TEXT,
+    language TEXT,
+    subtitle_language TEXT,
+    narration_type TEXT,
+    video_effects JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Scenes table (child rows per project scene)
+CREATE TABLE IF NOT EXISTS public.project_scenes (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    project_id UUID REFERENCES public.video_projects(id) ON DELETE CASCADE NOT NULL,
+    scene_key TEXT NOT NULL, -- e.g. "scene-1"
+    narration TEXT,
+    duration_label TEXT,
+    duration_seconds INTEGER,
+    words INTEGER,
+    start_time INTEGER,
+    end_time INTEGER,
+    highlighted_keywords TEXT[],
+    keywords_selected JSONB,
+    assets JSONB,
+    scene_settings JSONB,
+    position INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(project_id, scene_key)
+);
+
+-- Enable RLS
+ALTER TABLE public.video_projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.project_scenes ENABLE ROW LEVEL SECURITY;
+
+-- Policies: users can access only their own projects
+CREATE POLICY "Users can view own projects" ON public.video_projects
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own projects" ON public.video_projects
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own projects" ON public.video_projects
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own projects" ON public.video_projects
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- Policies: scenes tied to projects owned by the user
+CREATE POLICY "Users can view own scenes" ON public.project_scenes
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM public.video_projects p
+            WHERE p.id = project_id AND p.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can insert own scenes" ON public.project_scenes
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.video_projects p
+            WHERE p.id = project_id AND p.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update own scenes" ON public.project_scenes
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM public.video_projects p
+            WHERE p.id = project_id AND p.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can delete own scenes" ON public.project_scenes
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1 FROM public.video_projects p
+            WHERE p.id = project_id AND p.user_id = auth.uid()
+        )
+    );
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_video_projects_user_id ON public.video_projects(user_id);
+CREATE INDEX IF NOT EXISTS idx_video_projects_job_name ON public.video_projects(job_name);
+CREATE INDEX IF NOT EXISTS idx_project_scenes_project_id ON public.project_scenes(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_scenes_position ON public.project_scenes(project_id, position);
+
+-- updated_at triggers
+CREATE TRIGGER update_video_projects_updated_at
+    BEFORE UPDATE ON public.video_projects
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_project_scenes_updated_at
+    BEFORE UPDATE ON public.project_scenes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

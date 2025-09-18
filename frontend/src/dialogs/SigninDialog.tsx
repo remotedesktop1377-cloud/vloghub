@@ -30,9 +30,9 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
     } finally {
       setGoogleLoading(false);
     }
-  };
+    };
 
-  return (
+    return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>Sign in to continue</Typography>
