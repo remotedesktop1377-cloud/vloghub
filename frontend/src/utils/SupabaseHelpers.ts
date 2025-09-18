@@ -28,22 +28,10 @@ export class SupabaseHelpers {
           full_name: profileData.full_name ?? null,
           avatar_url: profileData.avatar_url ?? null,
         };
-  
-        // Try update first; if no row updated, insert
-        const { error: updateErr } = await (supabase.from('profiles') as any)
-          .update({
-            email: payload.email,
-            full_name: payload.full_name,
-            avatar_url: payload.avatar_url,
-          } as any)
-          .eq('id', payload.id);
-  
-        if (updateErr) {
-          // Ignore and attempt insert
-        }
-  
+
+        // Use upsert to avoid duplicate key errors and to insert-or-update by id
         const { data, error } = await (supabase.from('profiles') as any)
-          .insert(payload as any)
+          .upsert(payload as any, { onConflict: 'id' })
           .select();
   
         if (error) {
