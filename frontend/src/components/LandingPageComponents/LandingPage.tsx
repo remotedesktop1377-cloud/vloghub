@@ -11,6 +11,7 @@ import { ROUTES_KEYS } from "../../data/constants";
 import Image from "next/image";
 import FeatureHighlightsMUI from "./sections/FeatureHighlights";
 import Link from "next/link";
+import { AuthenticatedButton } from "../auth/AuthenticatedButton";
 
 const LandingPage: React.FC = () => {
     return (
@@ -90,27 +91,29 @@ const LandingPage: React.FC = () => {
                                 px: { xs: 2, md: 0 }
                             }}
                         >
-                            <Link href={ROUTES_KEYS.TRENDING_TOPICS} prefetch>
-                                <Button
-                                    sx={{
-                                        px: 4,
-                                        py: 2,
-                                        fontSize: { xs: '14px', md: '20px' },
-                                        fontWeight: 500,
-                                        borderRadius: '50px',
-                                        height: 'auto',
-                                        textTransform: 'none',
-                                        background: PURPLE.gradient.primary,
-                                        color: TEXT.primary,
-                                        boxShadow: `0 0 40px ${SHADOW.primary}`,
-                                        '&:hover': {
-                                            background: PURPLE.gradient.secondary,
-                                        }
-                                    }}
-                                >
-                                    ✨ Generate AI Video
-                                </Button>
-                            </Link>
+                            <AuthenticatedButton
+                                targetRoute={ROUTES_KEYS.TRENDING_TOPICS}
+                                variant="contained"
+                                sx={{
+                                    px: 4,
+                                    py: 2,
+                                    fontSize: { xs: '14px', md: '20px' },
+                                    fontWeight: 500,
+                                    borderRadius: '50px',
+                                    height: 'auto',
+                                    textTransform: 'none',
+                                    background: PURPLE.gradient.primary,
+                                    color: TEXT.primary,
+                                    boxShadow: `0 0 40px ${SHADOW.primary}`,
+                                    '&:hover': {
+                                        background: PURPLE.gradient.secondary,
+                                    }
+                                }}
+                                requireAuth={true}
+                            >
+                                ✨ Generate AI Video
+                            </AuthenticatedButton>
+
                             <Button
                                 sx={{
                                     display: "inline-flex",

@@ -3,6 +3,8 @@ import { Box, Button, Typography, Chip, IconButton, Tooltip } from '@mui/materia
 import { Refresh as RefreshIcon, AccessTime as TimeIcon, Clear as ClearIcon } from '@mui/icons-material';
 import LocationSelector from './LocationSelector';
 import DateRangeSelector from './DateRangeSelector';
+import { ProfileDropdown } from '../auth/ProfileDropdown';
+import { useAuth } from '../../context/AuthContext';
 import styles from './css/TrendingTopics.module.css';
 
 interface HeaderSectionProps {
@@ -34,6 +36,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
   selectedCountry,
   onCountryChange,
 }) => {
+  const { user } = useAuth();
   const formatLastUpdated = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
@@ -137,6 +140,13 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
               selectedDateRange={selectedDateRange}
               onDateRangeChange={onDateRangeChange}
             />
+
+            {/* Profile Dropdown */}
+            {user && (
+              <Box sx={{ ml: 2 }}>
+                <ProfileDropdown />
+              </Box>
+            )}
           </Box>
 
         </Box>

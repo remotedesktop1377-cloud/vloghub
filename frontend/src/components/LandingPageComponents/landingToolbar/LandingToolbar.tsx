@@ -1,8 +1,12 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@mui/material';
 import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../../styles/colors';
 import { ROUTES_KEYS } from '../../../data/constants';
-import Link from 'next/link';
+import { AuthenticatedButton } from '../../auth/AuthenticatedButton';
+import { useAuth } from '../../../context/AuthContext';
+import SigninDialog from '../../../dialogs/SigninDialog';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +14,8 @@ interface LayoutProps {
 }
 
 const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
+  const { user, loading, signOut } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {(
@@ -29,9 +35,27 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                   ))}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Link href={ROUTES_KEYS.TRENDING_TOPICS} prefetch>
-                    <Button variant="contained" sx={{ px: 2.5, py: 1.5, borderRadius: '50px', fontSize: '14px', textTransform: 'none', background: PURPLE.gradient.primary, color: TEXT.primary, boxShadow: `0 0 30px ${SHADOW.primary}`, '&:hover': { background: PURPLE.gradient.secondary, color: TEXT.primary } }}>✨ Generate Now</Button>
-                  </Link>
+                  <AuthenticatedButton 
+                    targetRoute={ROUTES_KEYS.TRENDING_TOPICS}
+                    variant="contained" 
+                    sx={{ 
+                      px: 2.5, 
+                      py: 1.5, 
+                      borderRadius: '50px', 
+                      fontSize: '14px', 
+                      textTransform: 'none', 
+                      background: PURPLE.gradient.primary, 
+                      color: TEXT.primary, 
+                      boxShadow: `0 0 30px ${SHADOW.primary}`, 
+                      '&:hover': { 
+                        background: PURPLE.gradient.secondary, 
+                        color: TEXT.primary 
+                      } 
+                    }}
+                    requireAuth={true}
+                  >
+                    ✨ Generate Now
+                  </AuthenticatedButton>
                 </Box>
               </Box>
             </Box>
@@ -46,6 +70,8 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
       >
         {children}
       </Box>
+
+     
     </Box>
   );
 };

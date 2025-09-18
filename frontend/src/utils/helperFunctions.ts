@@ -2,6 +2,8 @@ import { TrendingTopic } from '../types/TrendingTopics';
 import { Chapter } from '../types/chapters';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { supabase, getCurrentUser } from './supabase';
+import { Database } from '../types/database';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -180,6 +182,40 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 
 export class HelperFunctions {
   /**
+   * Get saved social auth keys for a user (stored securely in local storage)
+   */
+  static getSocialAuthKeys(userId: string): { tiktok?: string; instagram?: string; facebook?: string; youtube?: string } {
+    try {
+      const key = `socialAuthKeys_${userId}`;
+      const data = secure.j[key as any].get();
+      if (data && typeof data === 'object') {
+        return data as any;
+      }
+    } catch (e) {
+      console.warn('getSocialAuthKeys failed', e);
+    }
+    return { };
+  }
+
+  /**
+   * Save social auth keys for a user (stored securely in local storage)
+   */
+  static saveSocialAuthKeys(userId: string, keys: { tiktok?: string; instagram?: string; facebook?: string; youtube?: string }): void {
+    try {
+      const key = `socialAuthKeys_${userId}`;
+      secure.j[key as any].set({
+        tiktok: keys.tiktok || '',
+        instagram: keys.instagram || '',
+        facebook: keys.facebook || '',
+        youtube: keys.youtube || ''
+      });
+      HelperFunctions.showSuccess('Social auth keys saved');
+    } catch (e) {
+      console.error('saveSocialAuthKeys failed', e);
+      HelperFunctions.showError('Failed to save social auth keys');
+    }
+  }
+  /**
    * Show success toast notification
    */
   static showSuccess(message: string, options?: ToastOptions): void {
@@ -278,7 +314,7 @@ export class HelperFunctions {
       form.append('jobId', jobId);
       form.append('sceneId', sceneId);
       form.append('fileName', 'scene-config.json');
-      form.append('jsonData', JSON.stringify(scene)); 
+      form.append('jsonData', JSON.stringify(scene));
 
       const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_SCENE_UPLOAD, {
         method: 'POST',
@@ -300,7 +336,7 @@ export class HelperFunctions {
    * Upload a media file (e.g., chroma key or any video) to Google Drive under the given job folder and target subfolder.
    * Returns Drive identifiers on success.
    */
-  static async uploadMediaToDrive(jobName: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }>{
+  static async uploadMediaToDrive(jobName: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
     try {
       const form = new FormData();
       form.append('jobName', jobName);
@@ -343,7 +379,7 @@ export class HelperFunctions {
       const sceneId = String((chapter as any).id || '');
       const jobId = String((chapter as any).jobId || jobInfo?.jobId || '');
       const jobName = String((chapter as any).jobName || jobInfo?.jobName || '');
-      if (!jobId || !sceneId) return;      
+      if (!jobId || !sceneId) return;
       const ok = await HelperFunctions.updateChapterSceneOnDrive(jobName, jobId, sceneId, chapter);
       if (ok) {
         HelperFunctions.showSuccess(successMessage);

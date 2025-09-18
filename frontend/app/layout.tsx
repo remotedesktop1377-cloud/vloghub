@@ -1,15 +1,14 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import ThemeRegistry from '../src/context/ThemeContext'
+import { Providers } from '../src/components/Providers'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'YouTube Clone - Content Creation Platform',
+  title: 'VlogHub - Content Creation Platform',
   description: 'AI-powered content creation platform for YouTube creators',
   keywords: 'YouTube, content creation, AI, video generation, script writing',
-  authors: [{ name: 'YouTube Clone Team' }],
 }
 
 export const viewport = {
@@ -39,9 +38,9 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <ThemeRegistry>
+        <Providers>
           {children}
-        </ThemeRegistry>
+        </Providers>
       </body>
     </html>
   )

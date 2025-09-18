@@ -1,0 +1,203 @@
+.profileDropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Small circular avatar trigger */
+.profileAvatarBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.avatarCircleSmall {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #c6acfd 0%, #6c38f3 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatarInitialsSmall {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.avatarCircle {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffc1dc 0%, #f48fb1 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.avatarInitials {
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 700;
+}
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Overlay to catch clicks */
+.menuDialogOverlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 2000;
+}
+
+/* Anchored menu */
+.menuDialogAnchored {
+  position: fixed;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.16);
+  max-width: 380px;
+  animation: dialogDrop 0.16s ease-out;
+  overflow: hidden;
+}
+@keyframes dialogDrop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Optional arrow pointing up */
+.menuDialogAnchored::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 20px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-left: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
+  transform: rotate(45deg);
+}
+
+/* Header */
+.menuHeader {
+  padding: 14px 16px 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.headerRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+.userMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.userName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+.userEmail {
+  font-size: 12px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dialogClose {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+/* Sections */
+.dialogSection {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.themeSwitcher {
+  display: flex;
+  gap: 6px;
+}
+.themeBtn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+.themeBtn.active {
+  background: #f3f4f6;
+}
+
+/* Items */
+.menuItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.menuItem:hover {
+  background: #f8fafc;
+}
+.logout {
+  color: #ef4444;
+  border-top: 1px solid #fee2e2;
+}
+
+/* Footer */
+.dialogFooter {
+  padding: 8px;
+}
+
+/* Profile Modal (reuse your old styles) */
+.profileModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2100;
+}
+.profileModal {
+  background: #2d2d2d;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+}
+.profileModalHeader {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  color: #fff;
+}
+.profileModalClose {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+.profileModalContent {
+  padding: 16px;
+}
