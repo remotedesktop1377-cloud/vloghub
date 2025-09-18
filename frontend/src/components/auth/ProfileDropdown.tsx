@@ -5,8 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import styles from './ProfileDropdown.module.css';
 import { HelperFunctions } from '../../utils/helperFunctions';
 import { SupabaseHelpers } from '../../utils/SupabaseHelpers';
+import { useRouter } from 'next/navigation';
 
 export const ProfileDropdown: React.FC = () => {
+  const router = useRouter();
   const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -50,13 +52,13 @@ export const ProfileDropdown: React.FC = () => {
     return () => { mounted = false; };
   }, [user?.id]);
 
-  const handleEditProfile = () => {
-   
-  };
-
-  const handleSignOut = () => {
-    signOut();
-    setMenuOpen(false);
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push('/');
+    } finally {
+      setMenuOpen(false);
+    }
   };
 
   const saveKeys = async () => {
