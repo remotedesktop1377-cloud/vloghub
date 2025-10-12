@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../utils/supabase';
 import { toast } from 'react-toastify';
+import { getSupabase } from '../../utils/supabase';
 import './AuthModal.module.css';
 
 interface AuthModalProps {
@@ -60,7 +60,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,

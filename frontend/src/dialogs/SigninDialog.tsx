@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { supabase } from '../utils/supabase';
+import { getSupabase } from '../utils/supabase';
 import { toast } from 'react-toastify';
 
 type SigninDialogProps = { isOpen: boolean; onClose: () => void; onSuccess?: () => void };
@@ -14,7 +14,7 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       });

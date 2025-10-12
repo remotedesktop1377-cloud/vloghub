@@ -1,9 +1,6 @@
-import { TrendingTopic } from '../types/TrendingTopics';
 import { Chapter } from '../types/chapters';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
-import { supabase, getCurrentUser } from './supabase';
-import { Database } from '../types/database';
 
 // Custom Secure Storage Utility
 class SecureStorage {
