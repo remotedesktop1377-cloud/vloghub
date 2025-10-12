@@ -94,14 +94,46 @@ CREATE TABLE IF NOT EXISTS public.trending_topics (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     topic TEXT NOT NULL,
     category TEXT NOT NULL,
+    -- Optional descriptive fields aligning with frontend model
+    description TEXT,
+    source_reference TEXT,
+    engagement_count BIGINT,
+    -- Core model fields
+    value INTEGER NOT NULL DEFAULT 0,
+    "timestamp" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    -- Location and metrics
     location TEXT,
     search_volume INTEGER,
-    date_range TEXT NOT NULL,
+    date_range TEXT,
     related_keywords TEXT[],
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(topic, category, date_range, location)
 );
+
+-- Ensure columns exist if table already created earlier
+ALTER TABLE public.trending_topics
+  ADD COLUMN IF NOT EXISTS description TEXT,
+  ADD COLUMN IF NOT EXISTS source_reference TEXT,
+  ADD COLUMN IF NOT EXISTS engagement_count BIGINT,
+  ADD COLUMN IF NOT EXISTS value INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS "timestamp" TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+-- Relax constraint to make date_range optional for compatibility with new model
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'trending_topics' AND column_name = 'date_range'
+  ) THEN
+    BEGIN
+      ALTER TABLE public.trending_topics ALTER COLUMN date_range DROP NOT NULL;
+    EXCEPTION WHEN others THEN
+      -- ignore if not needed
+      NULL;
+    END;
+  END IF;
+END $$;
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;

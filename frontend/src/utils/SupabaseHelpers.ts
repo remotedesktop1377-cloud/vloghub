@@ -9,6 +9,7 @@
 import { supabase, getCurrentUser } from './supabase';
 import { Database } from '../types/database';
 import { toast, ToastOptions } from 'react-toastify';
+// import removed: TrendingTopic no longer used in helper insert signature
 
 export class SupabaseHelpers {
 
@@ -266,7 +267,9 @@ export class SupabaseHelpers {
     /**
      * Save trending topics
      */
-    static async saveTrendingTopics(topicsData: Database['public']['Tables']['trending_topics']['Insert'][]) {
+    static async saveTrendingTopics(
+      topicsData: Database['public']['Tables']['trending_topics']['Insert'][]
+    ) {
       try {
         const { data, error } = await (supabase.from('trending_topics') as any)
           .insert(topicsData as any)
@@ -313,7 +316,7 @@ export class SupabaseHelpers {
         }
   
         const { data, error } = await query
-          .order('search_volume', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(filters.limit || 50);
   
         if (error) {

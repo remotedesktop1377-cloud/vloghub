@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { SupabaseHelpers } from '../../utils/helperFunctions';
+import { SupabaseHelpers } from '../../utils/SupabaseHelpers';
 import { TrendingTopic } from '../../types/TrendingTopics';
 import { Database } from '../../types/database';
 import { AuthModal } from '../auth/AuthModal';
@@ -42,16 +42,27 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
         setSavedTopics(data);
         
         // Convert Supabase topics to your existing TrendingTopic format
-        const convertedTopics: TrendingTopic[] = data.map(topic => ({
+        const convertedTopics: TrendingTopic[] = data.map((topic: any) => ({
           id: topic.id,
           topic: topic.topic,
-          category: topic.category as any, // You might need to adjust this based on your enum
-          location: topic.location || undefined,
-          searchVolume: topic.search_volume || 0,
-          dateRange: topic.date_range,
-          relatedKeywords: topic.related_keywords || [],
-          createdAt: topic.created_at,
-          updatedAt: topic.updated_at,
+          category: topic.category,
+          value: topic.value ?? topic.search_volume ?? 0,
+          timestamp: topic.timestamp ?? topic.created_at,
+          description: topic.description ?? undefined,
+          source_reference: topic.source_reference ?? undefined,
+          engagement_count: topic.engagement_count ?? undefined,
+          // UI model may include these optionally
+          // Keep backward compatibility
+          ...(
+            topic.location || topic.search_volume || topic.date_range || topic.related_keywords
+              ? {
+                  location: topic.location ?? undefined,
+                  searchVolume: topic.search_volume ?? undefined,
+                  dateRange: topic.date_range ?? undefined,
+                  relatedKeywords: topic.related_keywords ?? undefined,
+                }
+              : {}
+          )
         }));
 
         if (onTopicsLoaded) {
@@ -73,16 +84,16 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
 
     try {
       // Convert your TrendingTopic format to Supabase format
-      const supabaseTopics: Database['public']['Tables']['trending_topics']['Insert'][] = topics.map(topic => ({
-        topic: topic.topic,
-        category: topic.category,
-        location: topic.location || null,
-        search_volume: topic.searchVolume,
-        date_range: topic.dateRange,
-        related_keywords: topic.relatedKeywords,
+      const supabaseTopics: Database['public']['Tables']['trending_topics']['Insert'][] = topics.map((t) => ({
+        topic: t.topic,
+        category: t.category,
+        // Only columns that currently exist in your table
+        location: (t as any).location ?? null,
+        date_range: (t as any).dateRange ?? null,
+        related_keywords: (t as any).relatedKeywords ?? null,
       }));
 
-      const { data, error } = await SupabaseHelpers.saveTrendingTopics(supabaseTopics);
+      const { data, error } = await SupabaseHelpers.saveTrendingTopics(supabaseTopics as any);
       if (data) {
         setSavedTopics(data);
         console.log('Topics saved successfully');
@@ -255,13 +266,14 @@ export const useSupabaseIntegration = () => {
     if (!user) return { error: 'User not authenticated' };
 
     try {
-      const supabaseTopics: Database['public']['Tables']['trending_topics']['Insert'][] = topics.map(topic => ({
-        topic: topic.topic,
-        category: topic.category,
-        location: topic.location || null,
-        search_volume: topic.searchVolume,
-        date_range: topic.dateRange,
-        related_keywords: topic.relatedKeywords,
+      const supabaseTopics: Database['public']['Tables']['trending_topics']['Insert'][] = topics.map((t) => ({
+        topic: t.topic,
+        category: t.category,
+        value: typeof t.value === 'number' ? t.value : 0,
+        timestamp: t.timestamp || new Date().toISOString(),
+        description: t.description ?? null,
+        source_reference: t.source_reference ?? null,
+        engagement_count: t.engagement_count ?? null,
       }));
 
       const result = await SupabaseHelpers.saveTrendingTopics(supabaseTopics);
