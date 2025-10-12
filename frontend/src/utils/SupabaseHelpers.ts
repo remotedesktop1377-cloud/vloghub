@@ -6,7 +6,7 @@
  * Database helper functions for Supabase integration
  */
 
-import { supabase, getCurrentUser } from './supabase';
+import { getSupabase, getCurrentUser } from './supabase';
 import { Database } from '../types/database';
 import { toast, ToastOptions } from 'react-toastify';
 // import removed: TrendingTopic no longer used in helper insert signature
@@ -31,6 +31,7 @@ export class SupabaseHelpers {
         };
 
         // Use upsert to avoid duplicate key errors and to insert-or-update by id
+        const supabase = getSupabase();
         const { data, error } = await (supabase.from('profiles') as any)
           .upsert(payload as any, { onConflict: 'id' })
           .select();
@@ -63,6 +64,7 @@ export class SupabaseHelpers {
           youtube_key: keys.youtube ?? ''
         };
   
+        const supabase = getSupabase();
         const { data, error } = await (supabase.from('profiles') as any)
           .update(updatePayload as any)
           .eq('id', userId)
@@ -89,6 +91,7 @@ export class SupabaseHelpers {
      */
     static async getUserSocialAuthKeys(userId: string) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await supabase
           .from('profiles')
           .select('tiktok_key, instagram_key, facebook_key, youtube_key')
@@ -110,6 +113,7 @@ export class SupabaseHelpers {
      */
     static async getUserProfile(userId: string) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -135,6 +139,7 @@ export class SupabaseHelpers {
      */
     static async saveYouTubeVideo(videoData: Database['public']['Tables']['youtube_videos']['Insert']) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await (supabase.from('youtube_videos') as any)
           .insert(videoData as any)
           .select();
@@ -158,6 +163,7 @@ export class SupabaseHelpers {
      */
     static async saveVideoClip(clipData: Database['public']['Tables']['video_clips']['Insert']) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await (supabase.from('video_clips') as any)
           .insert(clipData as any)
           .select();
@@ -182,6 +188,7 @@ export class SupabaseHelpers {
      */
     static async getUserVideoClips(userId: string, limit: number = 50) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await supabase
           .from('video_clips')
           .select(`
@@ -215,6 +222,7 @@ export class SupabaseHelpers {
      */
     static async saveSearchHistory(searchData: Database['public']['Tables']['search_history']['Insert']) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await (supabase.from('search_history') as any)
           .insert(searchData as any);
   
@@ -239,6 +247,7 @@ export class SupabaseHelpers {
           // No user → nothing to fetch, avoid noisy errors
           return { data: [], error: null } as any;
         }
+        const supabase = getSupabase();
         const { data, error } = await supabase
           .from('search_history')
           .select('*')
@@ -271,6 +280,7 @@ export class SupabaseHelpers {
       topicsData: Database['public']['Tables']['trending_topics']['Insert'][]
     ) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await (supabase.from('trending_topics') as any)
           .insert(topicsData as any)
           .select();
@@ -299,6 +309,7 @@ export class SupabaseHelpers {
       limit?: number;
     } = {}) {
       try {
+        const supabase = getSupabase();
         let query = supabase
           .from('trending_topics')
           .select('*');
@@ -338,6 +349,7 @@ export class SupabaseHelpers {
      */
     static async searchVideoClips(searchQuery: string, userId?: string, limit: number = 20) {
       try {
+        const supabase = getSupabase();
         let query = supabase
           .from('video_clips')
           .select(`
@@ -377,6 +389,7 @@ export class SupabaseHelpers {
      */
     static async deleteVideoClip(clipId: string, userId: string) {
       try {
+        const supabase = getSupabase();
         const { error } = await supabase
           .from('video_clips')
           .delete()
@@ -407,6 +420,7 @@ export class SupabaseHelpers {
       updates: Database['public']['Tables']['video_clips']['Update']
     ) {
       try {
+        const supabase = getSupabase();
         const { data, error } = await (supabase.from('video_clips') as any)
           .update(updates as any)
           .eq('id', clipId)

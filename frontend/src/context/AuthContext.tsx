@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../utils/supabase';
+import { getSupabase } from '../utils/supabase';
 import { SupabaseHelpers } from '../utils/SupabaseHelpers';
 import { toast } from 'react-toastify';
 
@@ -51,6 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Get initial session
     const getInitialSession = async () => {
       try {
+        const supabase = getSupabase();
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -81,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 8000);
 
     // Listen for auth changes
+    const supabase = getSupabase();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session);
@@ -119,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      const supabase = getSupabase();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -139,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
+      const supabase = getSupabase();
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -165,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      const supabase = getSupabase();
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast.error(error.message);
@@ -180,6 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetPassword = async (email: string) => {
     try {
+      const supabase = getSupabase();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
