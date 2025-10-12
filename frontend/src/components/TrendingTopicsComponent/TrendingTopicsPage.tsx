@@ -48,6 +48,10 @@ const TrendingTopics: React.FC = () => {
   const [narrationType, setNarrationType] = useState<'interview' | 'narration'>('narration');
   const [generatingChapters, setGeneratingChapters] = useState(false);
   const [scriptGeneratedOnce, setScriptGeneratedOnce] = useState(false);
+  const [selectedPreviousLocation, setSelectedPreviousLocation] = useState('');
+  const [selectedPreviousLocationType, setSelectedPreviousLocationType] = useState<'global' | 'region' | 'country'>('global');
+  const [selectedPreviousDateRange, setSelectedPreviousDateRange] = useState<string>('');
+  const [selectedPreviousCountry, setSelectedPreviousCountry] = useState<string>('');
 
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
@@ -98,33 +102,36 @@ const TrendingTopics: React.FC = () => {
           : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
       const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
 
-      // Check cache first (unless force refresh is requested)
-      if (!forceRefresh) {
-        const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
-        if (cachedData && isCacheValid(cacheRegion)) {
-          console.log('🟡 Using cached data for:', cacheRegion);
-          setTrendingTopics(cachedData);
-          setLastUpdated(new Date().toISOString()); // Update UI timestamp
-          setError(null);
-          setLoading(false);
-          return;
-        }
-      }
+      // // Check cache first (unless force refresh is requested)
+      // if (!forceRefresh) {
+      //   const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
+      //   if (cachedData && isCacheValid(cacheRegion)) {
+      //     console.log('🟡 Using cached data for:', cacheRegion);
+      //     setTrendingTopics(cachedData);
+      //     setLastUpdated(new Date().toISOString()); // Update UI timestamp
+      //     setError(null);
+      //     setLoading(false);
+      //     return;
+      //   }
+      // }
 
       // Fetch fresh data from API
       console.log('🟢 Fetching fresh data for:', locationKey);
+      setSelectedTopic(null);
+      setHypothesis('');  
+      setTrendingTopics([]);
       const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, dateRange);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
-        // console.log('🟢 Gemini result:', JSON.stringify(geminiResult));
+        console.log('🟢 Trending topics:', JSON.stringify(geminiResult));
 
         // API returns array directly in data field (matching old working structure)
         const geminiData = Array.isArray(geminiResult.data) ? geminiResult.data : [];
         geminiData.sort((a: any, b: any) => b.engagement_count - a.engagement_count);
 
         // Cache the fresh data
-        setCachedData(cacheRegion, geminiData);
+        // setCachedData(cacheRegion, geminiData);
         setTrendingTopics(geminiData);
         setLastUpdated(new Date().toISOString());
 
@@ -151,39 +158,44 @@ const TrendingTopics: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isAllFieldsSelected()) {
-      // Try to load from cache first
-      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
-      const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
+    // Always fetch on any field change and all fields selected
+    if (isAllFieldsSelected() && selectedLocation !== selectedPreviousLocation && selectedLocationType !== selectedPreviousLocationType && selectedDateRange !== selectedPreviousDateRange) {
+      // // Try to load from cache first
+      // const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
+      // const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
 
-      if (cachedData && isCacheValid(cacheRegion)) {
-        console.log('🟡 Using cached data - no API call needed');
-        setTrendingTopics(cachedData);
-        setLastUpdated(new Date().toISOString());
-        setError(null);
-      } else {
-        console.log('🟠 No valid cache found - calling API to fetch fresh data');
-        // Call API when no cached data is available
-        fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
-      }
+      // if (cachedData && isCacheValid(cacheRegion)) {
+      //   console.log('🟡 Using cached data - no API call needed');
+      //   setTrendingTopics(cachedData);
+      //   setLastUpdated(new Date().toISOString());
+      //   setError(null);
+      // } else {
+      // console.log('🟠 No valid cache found - calling API to fetch fresh data');
+      // Call API when no cached data is available
+      fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
+      // }
     }
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
 
   const handleLocationChange = (location: string) => {
+    setSelectedPreviousLocation(selectedLocation);
     setSelectedLocation(location);
   };
 
   const handleLocationTypeChange = (locationType: 'global' | 'region' | 'country') => {
+    setSelectedPreviousLocationType(selectedLocationType);
     setSelectedLocationType(locationType);
     setSelectedLocation('');
     setSelectedCountry('');
   };
 
   const handleDateRangeChange = (dateRange: string) => {
+    setSelectedPreviousDateRange(selectedDateRange);
     setSelectedDateRange(dateRange);
   };
 
   const handleCountryChange = (country: string) => {
+    setSelectedPreviousCountry(selectedCountry);
     setSelectedCountry(country);
   };
 
@@ -283,7 +295,7 @@ const TrendingTopics: React.FC = () => {
     setNarrationType(newNarrationType);
   };
 
-  const wordClickHandler = useCallback(async (w: any) => {
+  const wordClickHandler = async (w: any) => {
     // Safety check - ensure we have trending topics data
     if (!trendingTopics || trendingTopics.length === 0) {
       console.log('❌ No trending topics available for word click');
@@ -305,7 +317,7 @@ const TrendingTopics: React.FC = () => {
       console.log('❌ No matching topic found for:', w.text);
       console.log('❌ Available topics:', trendingTopics.map(t => t.topic));
     }
-  }, [trendingTopics, handleTopicSelect]);
+  };
 
   return (
     <Box className={styles.trendingTopicsContainer}>

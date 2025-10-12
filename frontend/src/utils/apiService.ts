@@ -289,7 +289,7 @@ export class ApiService {
 // Specific API service functions for common operations
 export const apiService = {
   // Trending Topics (Gemini only)
-  getGeminiTrendingTopics: (region: string, dateRange: string = '24h') =>
+  getGeminiTrendingTopics: (region: string, dateRange: string) =>
     ApiService.get(API_ENDPOINTS.GEMINI_TRENDING_TOPICS, { region, dateRange }),
 
   generateScript: (body: {
