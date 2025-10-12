@@ -272,13 +272,13 @@ export function ChapterEditDialog({
                 }
             }}
         >
-            <DialogTitle sx={{
+            <DialogTitle component="div" sx={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 borderBottom: '1px solid rgba(255,255,255,0.1)'
             }}>
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                <Typography variant="h5" component="span" sx={{ fontWeight: 'bold' }}>
                     Edit Chapter {chapterIndex + 1}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>

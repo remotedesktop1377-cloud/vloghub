@@ -496,6 +496,25 @@ export class HelperFunctions {
   }
 
   /**
+   * Clear all secure storage entries and any app-local cached data.
+   * Intended to be called on user sign out to reset to first screen.
+   */
+  static clearSecureStorage(): void {
+    try {
+      const storage = (SecureStorage as any).getInstance() as SecureStorage;
+      storage.clear();
+    } catch (e) {
+      // Fallback: clear secure_* keys directly from localStorage
+      try {
+        const keys = Object.keys(localStorage);
+        keys.forEach((k) => {
+          if (k.startsWith('secure_')) localStorage.removeItem(k);
+        });
+      } catch {}
+    }
+  }
+
+  /**
    * Add a new chapter after a specific index
    */
   static addChapterAfter(

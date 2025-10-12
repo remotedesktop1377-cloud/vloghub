@@ -55,7 +55,6 @@ export const ProfileDropdown: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
-      router.push('/');
     } finally {
       setMenuOpen(false);
     }

@@ -35,7 +35,7 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
     return (
     <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>Sign in to continue</Typography>
+        <Typography variant="h6" component="span" sx={{ fontWeight: 700 }}>Sign in to continue</Typography>
         <IconButton onClick={onClose} size="small" aria-label="Close sign in dialog">
           <CloseIcon />
         </IconButton>

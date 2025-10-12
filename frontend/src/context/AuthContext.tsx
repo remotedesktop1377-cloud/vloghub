@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { User, Session } from '@supabase/supabase-js';
 import { getSupabase } from '../utils/supabase';
 import { SupabaseHelpers } from '../utils/SupabaseHelpers';
+import { HelperFunctions } from '../utils/helperFunctions';
 import { toast } from 'react-toastify';
 
 interface AuthContextType {
@@ -13,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<{ error: any }>;
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
 
@@ -40,12 +41,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!u) return;
         const fullName = (u.user_metadata as any)?.full_name || (u.user_metadata as any)?.name || '';
         const avatarUrl = (u.user_metadata as any)?.avatar_url || (u.user_metadata as any)?.picture || '';
-        await SupabaseHelpers.saveUserProfile({
-          id: u.id,
-          email: u.email || '',
-          full_name: fullName,
-          avatar_url: avatarUrl,
-        });
+        // await SupabaseHelpers.saveUserProfile({
+        //   id: u.id,
+        //   email: u.email || '',
+        //   full_name: fullName,
+        //   avatar_url: avatarUrl,
+        // });
+        router.push('/trending-topics');
       } catch {}
     };
     // Get initial session
@@ -53,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const supabase = getSupabase();
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Error getting session:', error);
         } else {
@@ -85,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const supabase = getSupabase();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session);
+        console.log('Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -94,10 +96,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switch (event) {
           case 'SIGNED_IN':
             toast.success('Successfully signed in!');
+
             await ensureProfile(session?.user ?? null);
+            // Redirect to trending topics after successful sign in
+            try { router.push('/trending-topics'); } catch {}
             break;
           case 'SIGNED_OUT':
             toast.success('Successfully signed out!');
+            console.log('Signed out!');
+            // Redirect to home after sign out
+            try { router.push('/'); } catch {}
             break;
           case 'PASSWORD_RECOVERY':
             toast.success('Password recovery email sent!');
@@ -171,15 +179,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const supabase = getSupabase();
       const { error } = await supabase.auth.signOut();
+
       if (error) {
         toast.error(error.message);
-      } else {
-        // Navigate to home on successful logout
-        router.push('/');
+        console.log('Error signing out:', error);
+        return { error } as any;
       }
+      // Clear local secure storage and caches
+      try { HelperFunctions.clearSecureStorage(); } catch {
+        console.log('Error clearing secure storage:', error);
+      }
+      return { error: null } as any;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast.error(message);
+      return { error } as any;
     }
   };
 

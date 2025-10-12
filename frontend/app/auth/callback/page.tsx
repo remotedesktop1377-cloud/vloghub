@@ -22,11 +22,10 @@ export default function AuthCallback() {
         }
 
         if (data.session) {
+          console.log('Successfully signed in with Google!');
           toast.success('Successfully signed in with Google!');
-          // Redirect to the originally intended page or trending topics
-          const redirectTo = sessionStorage.getItem('authRedirectTo') || '/trending-topics';
-          sessionStorage.removeItem('authRedirectTo');
-          router.push(redirectTo);
+          
+          router.push('/trending-topics');
         } else {
           // No session found, redirect to home
           router.push('/');

@@ -188,7 +188,7 @@ export const ImageViewModal: React.FC<ImageViewModalProps> = ({
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h6" component="h2">
+          <Typography variant="h6" component="span">
             {title}
           </Typography>
           {currentImage.type && (
