@@ -34,7 +34,7 @@ export const ProfileDropdown: React.FC = () => {
       try {
         // Prefer DB keys if present, fall back to local secure storage
         // const { data } = await SupabaseHelpers.getUserSocialAuthKeys(user.id);
-        const local = HelperFunctions.getSocialAuthKeys(user.id);
+        // const local = HelperFunctions.getSocialAuthKeys(user.id);
         const merged = {
           tiktok: '1',
           instagram: '2',
