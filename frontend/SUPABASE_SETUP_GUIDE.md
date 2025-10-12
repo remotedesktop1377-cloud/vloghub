@@ -138,7 +138,7 @@ function MyComponent() {
 
 ### Using Database Helpers
 ```tsx
-import { SupabaseHelpers } from '../utils/helperFunctions';
+import { SupabaseHelpers } from '../utils/SupabaseHelpers';
 import { useAuth } from '../context/AuthContext';
 
 function SaveClip() {
