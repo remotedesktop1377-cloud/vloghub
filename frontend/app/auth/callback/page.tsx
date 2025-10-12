@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../src/utils/supabase';
+import { getSupabase } from '../../../src/utils/supabase';
 import { toast } from 'react-toastify';
 import { Box, Typography, CircularProgress } from '@mui/material';
 
@@ -12,7 +12,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await getSupabase().auth.getSession();
 
         if (error) {
           console.error('Auth callback error:', error);
