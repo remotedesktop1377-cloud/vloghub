@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, IconButton } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, IconButton, CircularProgress, Stack, Divider } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import GoogleIcon from '@mui/icons-material/Google';
 import { getSupabase } from '../utils/supabase';
 import { toast } from 'react-toastify';
 
@@ -32,32 +33,99 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
     }
     };
 
-    return (
-    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
-        <Typography variant="h6" component="span" sx={{ fontWeight: 700 }}>Sign in to continue</Typography>
-        <IconButton onClick={onClose} size="small" aria-label="Close sign in dialog">
+  return (
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      fullWidth
+      maxWidth="xs"
+      PaperProps={{
+        sx: {
+          overflow: 'hidden',
+          borderRadius: 3,
+          boxShadow: 8,
+          bgcolor: 'background.paper',
+          backdropFilter: 'blur(6px)'
+        }
+      }}
+    >
+      {/* Header */}
+      <DialogTitle
+        component="div"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pr: 1,
+          py: 1.5,
+          background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: 'primary.contrastText'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            sx={{
+              width: 28,
+              height: 28,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'rgba(255,255,255,0.18)',
+              borderRadius: '8px'
+            }}
+            aria-hidden
+          >
+            <GoogleIcon fontSize="small" />
+          </Box>
+          <Typography variant="subtitle1" component="span" sx={{ fontWeight: 700, letterSpacing: 0.2 }}>
+            Sign in to VlogHub
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small" aria-label="Close sign in dialog" sx={{ color: 'inherit' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+
+      {/* Content */}
+      <DialogContent sx={{ p: 3 }}>
+        <Stack spacing={5.5} alignItems="stretch">
+
+          <Divider sx={{ my: 3.5 }} />
+
+          {/* Google button */}
           <Button
-            variant="outlined"
             onClick={handleGoogleSignIn}
             disabled={googleLoading}
-            sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center' }}
+            fullWidth
+            variant="contained"
+            color="primary"
+            startIcon={!googleLoading ? <GoogleIcon /> : undefined}
+            sx={{
+              py: 1.2,
+              textTransform: 'none',
+              fontWeight: 600,
+              letterSpacing: 0.2,
+              boxShadow: (theme) => `0 6px 18px ${theme.palette.primary.main}33`
+            }}
+            aria-label="Continue with Google"
           >
-            {googleLoading ? 'Connecting…' : 'Continue with Google'}
+            {googleLoading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={18} color="inherit" />
+                <span>Connecting…</span>
+              </Box>
+            ) : (
+              'Continue with Google'
+            )}
           </Button>
-          <Typography variant="body2" color="text.secondary">
-            By continuing you agree to our Terms and Privacy Policy.
+
+          {/* Terms */}
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+            By continuing you agree to our Terms of Service and Privacy Policy.
           </Typography>
-        </Box>
+        </Stack>
       </DialogContent>
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} color="inherit">Close</Button>
-      </DialogActions>
+      
     </Dialog>
   );
 };
