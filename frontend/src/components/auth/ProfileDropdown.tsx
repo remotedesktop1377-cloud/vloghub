@@ -27,30 +27,30 @@ export const ProfileDropdown: React.FC = () => {
 
   if (!user) return null;
 
-  // Load saved keys for this user
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        // Prefer DB keys if present, fall back to local secure storage
-        const { data } = await SupabaseHelpers.getUserSocialAuthKeys(user.id);
-        const local = HelperFunctions.getSocialAuthKeys(user.id);
-        const merged = {
-          tiktok: (data as any)?.tiktok_key ?? local.tiktok ?? '',
-          instagram: (data as any)?.instagram_key ?? local.instagram ?? '',
-          facebook: (data as any)?.facebook_key ?? local.facebook ?? '',
-          youtube: (data as any)?.youtube_key ?? local.youtube ?? '',
-        };
-        if (mounted) setSocialKeys(merged as any);
-      } catch {
-        if (mounted) {
-          const keys = HelperFunctions.getSocialAuthKeys(user.id);
-          setSocialKeys({ tiktok: keys.tiktok || '', instagram: keys.instagram || '', facebook: keys.facebook || '', youtube: keys.youtube || '' });
-        }
-      }
-    })();
-    return () => { mounted = false; };
-  }, [user?.id]);
+  // // Load saved keys for this user
+  // useEffect(() => {
+  //   let mounted = true;
+  //   (async () => {
+  //     try {
+  //       // Prefer DB keys if present, fall back to local secure storage
+  //       const { data } = await SupabaseHelpers.getUserSocialAuthKeys(user.id);
+  //       const local = HelperFunctions.getSocialAuthKeys(user.id);
+  //       const merged = {
+  //         tiktok: (data as any)?.tiktok_key ?? local.tiktok ?? '',
+  //         instagram: (data as any)?.instagram_key ?? local.instagram ?? '',
+  //         facebook: (data as any)?.facebook_key ?? local.facebook ?? '',
+  //         youtube: (data as any)?.youtube_key ?? local.youtube ?? '',
+  //       };
+  //       if (mounted) setSocialKeys(merged as any);
+  //     } catch {
+  //       if (mounted) {
+  //         const keys = HelperFunctions.getSocialAuthKeys(user.id);
+  //         setSocialKeys({ tiktok: keys.tiktok || '', instagram: keys.instagram || '', facebook: keys.facebook || '', youtube: keys.youtube || '' });
+  //       }
+  //     }
+  //   })();
+  //   return () => { mounted = false; };
+  // }, [user?.id]);
 
   const handleSignOut = async () => {
     try {
