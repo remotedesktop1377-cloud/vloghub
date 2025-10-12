@@ -38,4 +38,4 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Clip editor with timeline
 - Metadata management
 - Transcript viewing
-- Project organization
+- Project organization 
