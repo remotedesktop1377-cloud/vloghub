@@ -7,6 +7,7 @@ import { getSupabase } from '../utils/supabase';
 import { SupabaseHelpers } from '../utils/SupabaseHelpers';
 import { HelperFunctions } from '../utils/helperFunctions';
 import { toast } from 'react-toastify';
+import { ROUTES_KEYS } from '@/data/constants';
 
 interface AuthContextType {
   user: User | null;
@@ -40,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         if (!u) return;
         await SupabaseHelpers.saveUserProfile(u);
-        router.push('/trending-topics');
+        router.push(ROUTES_KEYS.TRENDING_TOPICS);
       } catch {}
     };
     // Get initial session
@@ -92,13 +93,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             await ensureProfile(session?.user ?? null);
             // Redirect to trending topics after successful sign in
-            try { router.push('/trending-topics'); } catch {}
+            try { router.push(ROUTES_KEYS.TRENDING_TOPICS); } catch {}
             break;
           case 'SIGNED_OUT':
             toast.success('Successfully signed out!');
             console.log('Signed out!');
             // Redirect to home after sign out
-            try { router.push('/'); } catch {}
+            try { router.push(ROUTES_KEYS.HOME); } catch {}
             break;
           case 'PASSWORD_RECOVERY':
             toast.success('Password recovery email sent!');

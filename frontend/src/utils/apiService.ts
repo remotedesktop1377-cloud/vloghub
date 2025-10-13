@@ -1,3 +1,4 @@
+import { ROUTES_KEYS } from '@/data/constants';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 
 export interface ApiResponse<T = any> {
@@ -47,14 +48,14 @@ export class ApiService {
         fullUrl = endpoint;
       } else if (baseUrl) {
         // We have a base URL - combine with endpoint
-        if (endpoint.startsWith('/')) {
+        if (endpoint.startsWith('/') || endpoint.startsWith(ROUTES_KEYS.HOME)) {
           fullUrl = baseUrl + endpoint;
         } else {
           fullUrl = baseUrl + '/' + endpoint;
         }
       } else {
         // No base URL - assume endpoint is relative to current domain
-        if (endpoint.startsWith('/')) {
+        if (endpoint.startsWith('/') || endpoint.startsWith(ROUTES_KEYS.HOME)) {
           fullUrl = endpoint;
         } else {
           fullUrl = '/' + endpoint;

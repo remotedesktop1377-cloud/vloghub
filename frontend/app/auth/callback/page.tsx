@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabase } from '../../../src/utils/supabase';
 import { toast } from 'react-toastify';
 import { Box, Typography, CircularProgress } from '@mui/material';
+import { ROUTES_KEYS } from '@/data/constants';
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function AuthCallback() {
         if (error) {
           console.error('Auth callback error:', error);
           toast.error('Authentication failed. Please try again.');
-          router.push('/');
+          router.push(ROUTES_KEYS.HOME);
           return;
         }
 
@@ -25,15 +26,15 @@ export default function AuthCallback() {
           console.log('Successfully signed in with Google!');
           toast.success('Successfully signed in with Google!');
           
-          router.push('/trending-topics');
+          router.push(ROUTES_KEYS.TRENDING_TOPICS);
         } else {
           // No session found, redirect to home
-          router.push('/');
+          router.push(ROUTES_KEYS.HOME);
         }
       } catch (error) {
         console.error('Unexpected auth error:', error);
         toast.error('An unexpected error occurred');
-        router.push('/');
+        router.push(ROUTES_KEYS.HOME);
       }
     };
 
