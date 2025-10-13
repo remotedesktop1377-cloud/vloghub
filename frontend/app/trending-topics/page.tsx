@@ -1,10 +1,10 @@
 'use client';
 
-import { TrendingTopicsWithSupabase } from '../../src/components/TrendingTopicsComponent/TrendingTopicsWithSupabase'
+import TrendingTopics from '@/components/TrendingTopicsComponent/TrendingTopicsPage';
 import { useAuth } from '../../src/context/AuthContext'
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 
-const TrendingTopicsPage = () => {
+const TrendingTopicsRoute = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -18,7 +18,7 @@ const TrendingTopicsPage = () => {
   }
 
   // User is authenticated, show the enhanced trending topics with Supabase integration
-  return <TrendingTopicsWithSupabase />
+  return <TrendingTopics />
 }
 
-export default TrendingTopicsPage;
+export default TrendingTopicsRoute;

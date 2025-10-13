@@ -91,9 +91,9 @@ export const ProfileDropdown: React.FC = () => {
           aria-expanded={menuOpen}
         >
           <div className={styles.avatarCircleSmall}>
-            {user.user_metadata?.avatar_url ? (
+            {user.user_metadata?.picture ? (
               <img 
-                src={user.user_metadata.avatar_url} 
+                src={user.user_metadata.picture} 
                 alt="Profile" 
                 className={styles.avatarImage}
               />
@@ -125,7 +125,7 @@ export const ProfileDropdown: React.FC = () => {
                 <div className={styles.avatarCircle}>
                   {user.user_metadata?.avatar_url ? (
                     <img
-                      src={user.user_metadata.avatar_url}
+                      src={user.user_metadata.picture}
                       alt="Profile"
                       className={styles.avatarImage}
                     />
