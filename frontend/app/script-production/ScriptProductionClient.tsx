@@ -374,7 +374,7 @@ const ScriptProductionClient = () => {
             }
 
             const result = await response.json();
-            console.log('Drive result:', result);
+            // console.log('Drive result:', result);
 
             // get job folder id
             // setJobInfo({ jobId: result.projectFolderId, jobName: jobName });
@@ -544,7 +544,7 @@ const ScriptProductionClient = () => {
                     const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
                     if (needsHighlights) {
                         HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
-                            console.log('chapters with highlights', chapters);
+                            // console.log('chapters with highlights', chapters);
                             uploadToGoogleDrive(chapters);
                             setLoading(false);
                         });

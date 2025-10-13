@@ -116,7 +116,7 @@ const TrendingTopics: React.FC = () => {
       // }
 
       // Fetch fresh data from API
-      console.log('🟢 Fetching fresh data for:', locationKey);
+      // console.log('🟢 Fetching fresh data for:', locationKey);
       setSelectedTopic(null);
       setHypothesis('');  
       setTrendingTopics([]);
@@ -124,7 +124,7 @@ const TrendingTopics: React.FC = () => {
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
-        console.log('🟢 Trending topics:', JSON.stringify(geminiResult));
+        // console.log('🟢 Trending topics:', JSON.stringify(geminiResult));
 
         // API returns array directly in data field (matching old working structure)
         const geminiData = Array.isArray(geminiResult.data) ? geminiResult.data : [];
@@ -201,7 +201,7 @@ const TrendingTopics: React.FC = () => {
 
   const handleRefresh = () => {
     if (isAllFieldsSelected()) {
-      console.log('🟢 Refreshing trending topics for1:', selectedLocation, selectedLocationType, selectedDateRange);
+      // console.log('🟢 Refreshing trending topics for1:', selectedLocation, selectedLocationType, selectedDateRange);
       fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
     } else {
       HelperFunctions.showInfo('Please select all options before refreshing');

@@ -39,14 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const ensureProfile = async (u: User | null | undefined) => {
       try {
         if (!u) return;
-        const fullName = (u.user_metadata as any)?.full_name || (u.user_metadata as any)?.name || '';
-        const avatarUrl = (u.user_metadata as any)?.avatar_url || (u.user_metadata as any)?.picture || '';
-        // await SupabaseHelpers.saveUserProfile({
-        //   id: u.id,
-        //   email: u.email || '',
-        //   full_name: fullName,
-        //   avatar_url: avatarUrl,
-        // });
+        await SupabaseHelpers.saveUserProfile(u);
         router.push('/trending-topics');
       } catch {}
     };
