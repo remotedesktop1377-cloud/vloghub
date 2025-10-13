@@ -24,6 +24,7 @@ import TopicDetailsSection from './TopicDetailsSection';
 import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
 import HeaderSection from './HeaderSection';
+import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
@@ -118,7 +119,7 @@ const TrendingTopics: React.FC = () => {
       // Fetch fresh data from API
       // console.log('🟢 Fetching fresh data for:', locationKey);
       setSelectedTopic(null);
-      setHypothesis('');  
+      setHypothesis('');
       setTrendingTopics([]);
       const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, dateRange);
 
@@ -229,6 +230,14 @@ const TrendingTopics: React.FC = () => {
           ? selectedLocation
           : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
 
+      //push this selectedTopics to the trendingTopics table in supabase
+      const { error } = await SupabaseHelpers.saveTrendingTopic(selectedTopic.topic, hypothesis, location, duration, language, narrationType, new Date().toISOString());
+      if (error) {
+        console.error('Error saving trending topics:', error);
+      } else {
+        console.log('Topics saved successfully');
+      }
+
       const result = await apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
@@ -237,6 +246,7 @@ const TrendingTopics: React.FC = () => {
         language: language,
         narrationType: narrationType,
       });
+
       // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
         setScriptGeneratedOnce(true);
