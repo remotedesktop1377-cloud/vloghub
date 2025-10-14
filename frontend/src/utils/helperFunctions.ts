@@ -743,33 +743,33 @@ export class HelperFunctions {
         return {
           title: 'عنوان',
           hook: 'ہک',
-          mainContent: 'اہم مواد',
+          main_content: 'اہم مواد',
           conclusion: 'نتیجہ',
-          callToAction: 'کارروائی کا مطالبہ'
+          call_to_action: 'کارروائی کا مطالبہ'
         };
       case 'arabic':
         return {
           title: 'عنوان',
           hook: 'خطاب',
-          mainContent: 'المحتوى الرئيسي',
+          main_content: 'المحتوى الرئيسي',
           conclusion: 'خاتمة',
-          callToAction: 'دعوة للعمل'
+          call_to_action: 'دعوة للعمل'
         };
       case 'hindi':
         return {
           title: 'शीर्षक',
           hook: 'हुक',
-          mainContent: 'मुख्य सामग्री',
+          main_content: 'मुख्य सामग्री',
           conclusion: 'निष्कर्ष',
-          callToAction: 'कार्रवाई का आह्वान'
+          call_to_action: 'कार्रवाई का आह्वान'
         };
       default: // english and other languages
         return {
           title: 'TITLE',
           hook: 'HOOK',
-          mainContent: 'MAIN CONTENT',
+          main_content: 'MAIN CONTENT',
           conclusion: 'CONCLUSION',
-          callToAction: 'CALL TO ACTION'
+          call_to_action: 'CALL TO ACTION'
         };
     }
   };

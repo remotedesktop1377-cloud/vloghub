@@ -21,10 +21,10 @@ interface VideoDurationSectionProps {
   onRegenerateAllAssets?: () => void;
   hasChapters?: boolean;
   canGenerate?: boolean;
-  subtitleLanguage?: string;
-  onSubtitleLanguageChange?: (subtitleLanguage: string) => void;
-  narrationType?: 'interview' | 'narration';
-  onNarrationTypeChange?: (narrationType: 'interview' | 'narration') => void;
+  subtitle_language?: string;
+  onsubtitle_languageChange?: (subtitle_language: string) => void;
+  narration_type?: 'interview' | 'narration';
+  onnarration_typeChange?: (narration_type: 'interview' | 'narration') => void;
   generating?: boolean;
   generatedOnce?: boolean;
 }
@@ -40,10 +40,10 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   onRegenerateAllAssets,
   hasChapters = false,
   canGenerate = false,
-  subtitleLanguage = 'english',
-  onSubtitleLanguageChange,
-  narrationType = 'narration',
-  onNarrationTypeChange,
+  subtitle_language = 'english',
+  onsubtitle_languageChange,
+  narration_type = 'narration',
+  onnarration_typeChange,
   generating = false,
   generatedOnce = false,
 }) => {
@@ -95,9 +95,9 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <InputLabel sx={{ fontSize: '1.05rem' }}>Subtitle Language</InputLabel>
             <Select
-              value={subtitleLanguage}
+              value={subtitle_language}
               label="Subtitle Language"
-              onChange={(e) => onSubtitleLanguageChange?.(e.target.value)}
+              onChange={(e) => onsubtitle_languageChange?.(e.target.value)}
               sx={{ '& .MuiSelect-select': { fontSize: '1.05rem' } }}
             >
               {languageOptions.map((option) => (
@@ -112,9 +112,9 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           <FormControl size="small" sx={{ minWidth: 220 }}>
             <RadioGroup
               row
-              value={narrationType}
-              onChange={(e) => onNarrationTypeChange?.(e.target.value as 'interview' | 'narration')}
-              className={styles.narrationTypeRadioGroup}
+              value={narration_type}
+              onChange={(e) => onnarration_typeChange?.(e.target.value as 'interview' | 'narration')}
+              className={styles.narration_typeRadioGroup}
               sx={{
                 '& .MuiFormControlLabel-label': {
                   fontSize: '1.05rem',
@@ -124,15 +124,15 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
             >
               <FormControlLabel
                 value="narration"
-                control={<Radio size="small" className={styles.narrationTypeRadio} />}
+                control={<Radio size="small" className={styles.narration_typeRadio} />}
                 label="Narration"
-                className={styles.narrationTypeLabel}
+                className={styles.narration_typeLabel}
               />
               <FormControlLabel
                 value="interview"
-                control={<Radio size="small" className={styles.narrationTypeRadio} />}
+                control={<Radio size="small" className={styles.narration_typeRadio} />}
                 label="Interview"
-                className={styles.narrationTypeLabel}
+                className={styles.narration_typeLabel}
               />
             </RadioGroup>
           </FormControl>

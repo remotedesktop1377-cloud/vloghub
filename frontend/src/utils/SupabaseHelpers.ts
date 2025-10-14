@@ -10,6 +10,7 @@ import { getSupabase, getCurrentUser } from './supabase';
 import { Database } from '../types/database';
 import { toast, ToastOptions } from 'react-toastify';
 import { User } from '@supabase/supabase-js';
+import { ScriptData } from '@/types/scriptData';
 // import removed: TrendingTopic no longer used in helper insert signature
 
 export class SupabaseHelpers {
@@ -276,7 +277,7 @@ export class SupabaseHelpers {
     region: string,
     duration: string,
     language: string,
-    narrationType: string,
+    narration_type: string,
     created_at: string,
   ) {
 
@@ -287,7 +288,7 @@ export class SupabaseHelpers {
         region: region,
         duration: duration,
         language: language,
-        narrationType: narrationType,
+        narration_type: narration_type,
         created_at: created_at,
       };
       // Use upsert to avoid duplicate key errors and to insert-or-update by id
@@ -304,6 +305,37 @@ export class SupabaseHelpers {
 
       toast.success('Trending topics saved successfully');
       console.log('🟢 Trending topics saved successfully:', data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast.error('An unexpected error occurred');
+      return { data: null, error };
+    }
+  }
+  
+  /**
+   * Save approved script
+   */
+  static async saveApprovedScript(
+    scriptDataPayload: ScriptData
+  ) {
+
+    try {
+      console.log('🟢 Approved Script Payload:', scriptDataPayload);
+      // Use upsert to avoid duplicate key errors and to insert-or-update by id
+      const { data, error } = await SupabaseHelpers.supabase
+        .from('scripts_approved')
+        .upsert(scriptDataPayload as any)
+        .select()
+
+      if (error) {
+        console.error('Error saving Approved Script:', error);
+        toast.error('Failed to save Approved Script');
+        return { data: null, error };
+      }
+
+      toast.success('Approved Script saved successfully');
+      console.log('🟢 Approved Script saved successfully:', data);
       return { data, error: null };
     } catch (error) {
       console.error('Unexpected error:', error);

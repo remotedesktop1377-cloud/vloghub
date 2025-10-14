@@ -122,8 +122,8 @@ The uploaded JSON contains:
     "resolution": "1920x1080",
     "region": "US",
     "language": "en",
-    "subtitleLanguage": "en",
-    "narrationType": "professional"
+    "subtitle_language": "en",
+    "narration_type": "professional"
   },
   "script": [
     {

@@ -11,7 +11,7 @@ const model = genAI.getGenerativeModel({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { topic, hypothesis, details, region, duration, language, narrationType } = body;
+    const { topic, hypothesis, details, region, duration, language, narration_type } = body;
 
     // Validate required fields
     if (!topic || !region || !duration || !language) {
@@ -43,9 +43,9 @@ Create a compelling video script based on the following information:
 6. **Duration Appropriate:** Ensure content fits the ${duration}-minute format
 7. **Language:** ${languageInstructions}
 
-**STYLE:** ${narrationType === 'interview' ? 'Interview (Q/A between host and guest)' : 'Narration (single narrator)'}
+**STYLE:** ${narration_type === 'interview' ? 'Interview (Q/A between host and guest)' : 'Narration (single narrator)'}
 
-For Interview style, write the mainContent as alternating question/answer lines with localized labels and natural questions:
+For Interview style, write the main_content as alternating question/answer lines with localized labels and natural questions:
 - Use localized labels in ${language}: Host and Guest lines must begin with these labels followed by a colon
 - Keep each line short and punchy; make questions derived from the upcoming answer
 - Ensure each question and each answer is on its own line, separated by blank lines between logical blocks
@@ -53,22 +53,22 @@ For Interview style, write the mainContent as alternating question/answer lines 
 For Narration style, write normal paragraphs.
 
 **OUTPUT FORMAT:**
-Return ONLY valid JSON in this exact structure (no markdown, no commentary). For Interview style, the mainContent must already be in Q/A lines as described:
+Return ONLY valid JSON in this exact structure (no markdown, no commentary). For Interview style, the main_content must already be in Q/A lines as described:
 
 {
   "title": "Compelling video title",
   "hook": "First 15 seconds hook text",
-  "mainContent": "Main script content with clear paragraph breaks",
+  "main_content": "Main script content with clear paragraph breaks",
   "conclusion": "Strong conclusion text",
-  "callToAction": "Call to action for likes, comments, subscribe",
-  "estimatedWords": 155,
+  "call_to_action": "Call to action for likes, comments, subscribe",
+  "estimated_words": 155,
 }
 
 **IMPORTANT:** 
 - Return ONLY the JSON object, no additional text
 - Ensure the JSON is valid and complete
-- The mainContent should be the full script text
-- estimatedWords should be the actual word count of the script`;
+- The main_content should be the full script text
+- estimated_words should be the actual word count of the script`;
 
     try {
       const result = await model.generateContent(prompt);
@@ -88,15 +88,15 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary). For
       const parsedData = JSON.parse(jsonMatch[0]);
 
       // Validate required fields
-      if (!parsedData.mainContent || !parsedData.title) {
+      if (!parsedData.main_content || !parsedData.title) {
         throw new Error('Generated script missing required fields');
       }
 
       // Combine all content into the main script
-      let fullScript = `${parsedData.hook || ''}\n\n${parsedData.mainContent || ''}\n\n${parsedData.conclusion || ''}\n\n${parsedData.callToAction || ''}`.trim();
+      let fullScript = `${parsedData.hook || ''}\n\n${parsedData.main_content || ''}\n\n${parsedData.conclusion || ''}\n\n${parsedData.call_to_action || ''}`.trim();
 
       // If interview style requested, ensure interview Q/A formatting with language localization
-      if ((narrationType || '').toLowerCase() === 'interview') {
+      if ((narration_type || '').toLowerCase() === 'interview') {
         const getInterviewLocalization = (lang: string) => {
           const l = (lang || '').toLowerCase();
           if (l.includes('urdu') || l.includes('balochi') || l.includes('punjabi')) {
@@ -148,10 +148,10 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary). For
         script: fullScript,
         title: parsedData.title || 'Untitled Script',
         hook: parsedData.hook || '',
-        mainContent: parsedData.mainContent || '',
+        main_content: parsedData.main_content || '',
         conclusion: parsedData.conclusion || '',
-        callToAction: parsedData.callToAction || '',
-        estimatedWords: parsedData.estimatedWords || 0,
+        call_to_action: parsedData.call_to_action || '',
+        estimated_words: parsedData.estimated_words || 0,
         emotionalTone: parsedData.emotionalTone || 'Engaging',
         pacing: parsedData.pacing || 'Dynamic'
       });

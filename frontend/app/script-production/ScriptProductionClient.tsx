@@ -19,6 +19,7 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    duration,
 } from '@mui/material';
 import {
     ArrowBack as BackIcon,
@@ -46,28 +47,11 @@ import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSectio
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
 import { SUCCESS } from '@/styles/colors';
-import { ROUTES_KEYS } from '@/data/constants';
+import { ROUTES_KEYS, SCRIPT_STATUS } from '@/data/constants';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import CustomAudioPlayer from '@/components/scriptProductionComponents/CustomAudioPlayer';
-
-interface ScriptData {
-    description: string;
-    script: string;
-    topic: string;
-    hypothesis: string;
-    region: string;
-    duration: string;
-    language: string;
-    subtitleLanguage?: string;
-    narrationType?: 'interview' | 'narration';
-    title?: string;
-    hook?: string;
-    mainContent?: string;
-    conclusion?: string;
-    callToAction?: string;
-    words?: number;
-}
-
+import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
+import { ScriptData } from '@/types/scriptData';
 
 const ScriptProductionClient = () => {
 
@@ -113,7 +97,8 @@ const ScriptProductionClient = () => {
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
-    const [uploadingCompleted, setUploadingCompleted] = useState(false);
+    const [uploadNarrationView, setUploadNarrationView] = useState(false);
+    const [uploadNarrationCompleted, setUploadNarrationCompleted] = useState(false);
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
@@ -324,8 +309,8 @@ const ScriptProductionClient = () => {
                     resolution: '1920x1080',
                     region: scriptData?.region || null,
                     language: scriptData?.language || null,
-                    subtitleLanguage: scriptData?.subtitleLanguage || null,
-                    narrationType: scriptData?.narrationType || null,
+                    subtitle_language: scriptData?.subtitle_language || null,
+                    narration_type: scriptData?.narration_type || null,
                     // Project-level settings
                     videoEffects: {
                         transition: projectTransitionId || '',
@@ -413,10 +398,10 @@ const ScriptProductionClient = () => {
     };
 
     // Function to break down script into paragraphs and calculate individual durations
-    const updateParagraphs = (narrationType: "interview" | "narration", scriptData: ScriptData) => {
+    const updateParagraphs = (narration_type: "interview" | "narration", scriptData: ScriptData) => {
         // Split script into paragraphs (split by double newlines or single newlines)
         let scriptParagraphs = [];
-        if (narrationType === "interview") {
+        if (narration_type === "interview") {
             scriptParagraphs = scriptData.script
                 .split('\n')
                 .map(p => p.trim())
@@ -520,9 +505,36 @@ const ScriptProductionClient = () => {
     useEffect(() => {
         if (scriptData) {
             setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
-            updateParagraphs(scriptData.narrationType || "narration", scriptData);
+            updateParagraphs(scriptData.narration_type as "interview" | "narration", scriptData);
         }
     }, [scriptData]);
+
+    // Calculate estimated duration when script data changes
+    useEffect(() => {
+        const createHighlightWords = async () => {
+            const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY, { cache: 'no-store' });
+            const data = await res.json();
+            if (data && data.data) {
+                setDriveLibrary({
+                    backgrounds: Array.isArray(data.data.backgrounds) ? data.data.backgrounds : [],
+                    music: Array.isArray(data.data.music) ? data.data.music : [],
+                    transitions: Array.isArray(data.data.transitions) ? data.data.transitions : [],
+                });
+            }
+
+            const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
+            if (needsHighlights) {
+                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
+                    // console.log('chapters with highlights', chapters);
+                    uploadToGoogleDrive(chapters);
+                    setLoading(false);
+                });
+            } else {
+                setLoading(false);
+            }
+        }
+        createHighlightWords();
+    }, [uploadNarrationCompleted]);
 
     // Fetch Google Drive library once when approved script is present
     // Handle browser back button
@@ -531,26 +543,19 @@ const ScriptProductionClient = () => {
             try {
                 if (isScriptApproved) {
                     setLoading(true);
-                    const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY, { cache: 'no-store' });
-                    const data = await res.json();
-                    if (data && data.data) {
-                        setDriveLibrary({
-                            backgrounds: Array.isArray(data.data.backgrounds) ? data.data.backgrounds : [],
-                            music: Array.isArray(data.data.music) ? data.data.music : [],
-                            transitions: Array.isArray(data.data.transitions) ? data.data.transitions : [],
-                        });
-                    }
-
-                    const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
-                    if (needsHighlights) {
-                        HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
-                            // console.log('chapters with highlights', chapters);
-                            uploadToGoogleDrive(chapters);
-                            setLoading(false);
-                        });
+                    // push this script data to the scripts_approved table in supabase
+                    const data = { ...scriptData, status: SCRIPT_STATUS.APPROVED } as any;
+                    setScriptData(data);
+                    const { error } = await SupabaseHelpers.saveApprovedScript(data);
+                    if (error) {
+                        console.error('Error saving approved script:', error);
                     } else {
-                        setLoading(false);
+                        secure.j.scriptMetadata.remove();
+                        // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
+                        setUploadNarrationView(true);
+                        console.log('Approved script saved successfully');
                     }
+                    setLoading(false);
                 }
             } catch (e) {
                 console.error('Failed to fetch Drive library', e);
@@ -663,14 +668,14 @@ const ScriptProductionClient = () => {
                 if (scriptData.hook && scriptData.hook.trim()) {
                     parts.push(`🎯 ${headers.hook}:\n${scriptData.hook.trim()}`);
                 }
-                if (scriptData.mainContent && scriptData.mainContent.trim()) {
-                    parts.push(`📝 ${headers.mainContent}:\n${scriptData.mainContent.trim()}`);
+                if (scriptData.main_content && scriptData.main_content.trim()) {
+                    parts.push(`📝 ${headers.main_content}:\n${scriptData.main_content.trim()}`);
                 }
                 if (scriptData.conclusion && scriptData.conclusion.trim()) {
                     parts.push(`🏁 ${headers.conclusion}:\n${scriptData.conclusion.trim()}`);
                 }
-                if (scriptData.callToAction && scriptData.callToAction.trim()) {
-                    parts.push(`🚀 ${headers.callToAction}:\n${scriptData.callToAction.trim()}`);
+                if (scriptData.call_to_action && scriptData.call_to_action.trim()) {
+                    parts.push(`🚀 ${headers.call_to_action}:\n${scriptData.call_to_action.trim()}`);
                 }
                 content = parts.filter(Boolean).join('\n\n');
                 if (!content.trim() && scriptData.script) {
@@ -775,7 +780,7 @@ const ScriptProductionClient = () => {
         }
 
         toast.info('Video generation started...');
-        setUploadingCompleted(true);
+        setUploadNarrationCompleted(true);
         setShowBackConfirmation(true);
     };
 
@@ -929,9 +934,9 @@ const ScriptProductionClient = () => {
         const combinedScript = [
             scriptData?.title && `${headers.title}:\n${scriptData?.title}`,
             scriptData?.hook && `${headers.hook}:\n${scriptData?.hook}`,
-            scriptData?.mainContent && `${headers.mainContent}:\n${scriptData?.mainContent}`,
+            scriptData?.main_content && `${headers.main_content}:\n${scriptData?.main_content}`,
             scriptData?.conclusion && `${headers.conclusion}:\n${scriptData?.conclusion}`,
-            scriptData?.callToAction && `${headers.callToAction}:\n${scriptData?.callToAction}`
+            scriptData?.call_to_action && `${headers.call_to_action}:\n${scriptData?.call_to_action}`
         ].filter(Boolean).join('\n\n');
 
         // Update the edited script state
@@ -999,11 +1004,11 @@ const ScriptProductionClient = () => {
                 }
                 currentSection = 'hook';
                 currentContent = '';
-            } else if (line.includes(headers.mainContent)) {
+            } else if (line.includes(headers.main_content)) {
                 if (currentSection && currentContent.trim()) {
                     newScriptData[currentSection] = currentContent.trim();
                 }
-                currentSection = 'mainContent';
+                currentSection = 'main_content';
                 currentContent = '';
             } else if (line.includes(headers.conclusion)) {
                 if (currentSection && currentContent.trim()) {
@@ -1011,11 +1016,11 @@ const ScriptProductionClient = () => {
                 }
                 currentSection = 'conclusion';
                 currentContent = '';
-            } else if (line.includes(headers.callToAction)) {
+            } else if (line.includes(headers.call_to_action)) {
                 if (currentSection && currentContent.trim()) {
                     newScriptData[currentSection] = currentContent.trim();
                 }
-                currentSection = 'callToAction';
+                currentSection = 'call_to_action';
                 currentContent = '';
             } else if (line.trim() && currentSection) {
                 currentContent += line + '\n';
@@ -1032,11 +1037,11 @@ const ScriptProductionClient = () => {
 
     // Function to render script with embedded titles
     const renderScriptWithTitles = () => {
-        const { title, hook, mainContent, conclusion, callToAction } = scriptData || {};
+        const { title, hook, main_content, conclusion, call_to_action } = scriptData || {};
         const headers = HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english');
 
         // If we have script metadata, format it with sections
-        if (title || hook || mainContent || conclusion || callToAction) {
+        if (title || hook || main_content || conclusion || call_to_action) {
             let formattedScript = '';
 
             if (title) {
@@ -1047,16 +1052,16 @@ const ScriptProductionClient = () => {
                 formattedScript += `${headers.hook}:\n${hook}\n\n`;
             }
 
-            if (mainContent) {
-                formattedScript += `${headers.mainContent}:\n${mainContent}\n\n`;
+            if (main_content) {
+                formattedScript += `${headers.main_content}:\n${main_content}\n\n`;
             }
 
             if (conclusion) {
                 formattedScript += `${headers.conclusion}:\n${conclusion}\n\n`;
             }
 
-            if (callToAction) {
-                formattedScript += `${headers.callToAction}:\n${callToAction}\n\n`;
+            if (call_to_action) {
+                formattedScript += `${headers.call_to_action}:\n${call_to_action}\n\n`;
             }
 
             return formattedScript.trim();
@@ -1066,15 +1071,14 @@ const ScriptProductionClient = () => {
         return scriptData?.script || '';
     };
 
-    const handleApproveScript = () => {
+    const handleApproveScript = async () => {
         setIsScriptApproved(true);
-        secure.j.scriptMetadata.remove();
         toast.success('Script approved! Now generating scenes breakdown...');
     };
 
     const handleCancelBack = () => {
         setShowBackConfirmation(false);
-        if (uploadingCompleted) {
+        if (uploadNarrationCompleted) {
             router.replace(ROUTES_KEYS.TRENDING_TOPICS);
         }
     };
@@ -1274,7 +1278,7 @@ const ScriptProductionClient = () => {
 
             const selection = window.getSelection();
             if (selection && selection.toString().trim()) {
-                console.log('Global selection detected:', selection.toString());
+                // console.log('Global selection detected:', selection.toString());
                 // Find which chapter this selection belongs to
                 const range = selection.getRangeAt(0);
                 const textNode = range.startContainer;
@@ -1295,9 +1299,9 @@ const ScriptProductionClient = () => {
                         // Extract only the selected portion of the text
                         const actualSelectedText = textContent.substring(startIndex, endIndex).trim();
 
-                        console.log('Global listener - Full text:', textContent);
-                        console.log('Global listener - Selected range:', startIndex, 'to', endIndex);
-                        console.log('Global listener - Actual selected text:', actualSelectedText);
+                        // console.log('Global listener - Full text:', textContent);
+                        // console.log('Global listener - Selected range:', startIndex, 'to', endIndex);
+                        // console.log('Global listener - Actual selected text:', actualSelectedText);
 
                         if (actualSelectedText.length > 0) {
                             setSelectedText({
@@ -1311,7 +1315,7 @@ const ScriptProductionClient = () => {
                 }
             } else {
                 // Only clear selection after a delay to allow for button clicks
-                console.log('Selection cleared or empty - scheduling clear');
+                // console.log('Selection cleared or empty - scheduling clear');
                 selectionTimeout = setTimeout(() => {
                     if (!isInteractingWithToolbar) {
                         console.log('Clearing selection after timeout');
@@ -1512,7 +1516,7 @@ const ScriptProductionClient = () => {
                             </Box>}
                     </Box>
 
-                    {!isScriptApproved ? (
+                    {!isScriptApproved && (
                         <Paper sx={{
                             flex: 1,
                             display: 'flex',
@@ -1553,15 +1557,15 @@ const ScriptProductionClient = () => {
                                         {/* Main Content Section */}
                                         <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
                                             <Typography variant="h6" sx={{ mb: 1, color: 'secondary.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1, lineHeight: 2.5, ...(getDirectionSx(scriptData?.language || 'english')), textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left', width: '100%' }}>
-                                                📝 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').mainContent}
+                                                📝 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').main_content}
                                             </Typography>
                                             <TextField
                                                 fullWidth
                                                 multiline
                                                 rows={8}
                                                 variant="outlined"
-                                                value={scriptData?.mainContent || ''}
-                                                onChange={(e) => setScriptData(prev => prev ? { ...prev, mainContent: e.target.value } : prev)}
+                                                value={scriptData?.main_content || ''}
+                                                onChange={(e) => setScriptData(prev => prev ? { ...prev, main_content: e.target.value } : prev)}
                                                 placeholder="Enter your main content..."
                                                 sx={{
                                                     '& .MuiInputBase-root': {
@@ -1601,15 +1605,15 @@ const ScriptProductionClient = () => {
                                         {/* Call to Action Section */}
                                         <Paper elevation={2} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, flexShrink: 0 }}>
                                             <Typography variant="h6" sx={{ mb: 1, color: 'warning.main', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1, lineHeight: 2.5, ...(getDirectionSx(scriptData?.language || 'english')), textAlign: isRTLLanguage(scriptData?.language || 'english') ? 'right' : 'left', width: '100%' }}>
-                                                🚀 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').callToAction}
+                                                🚀 {HelperFunctions.getLocalizedSectionHeaders(scriptData?.language || 'english').call_to_action}
                                             </Typography>
                                             <TextField
                                                 fullWidth
                                                 multiline
                                                 rows={3}
                                                 variant="outlined"
-                                                value={scriptData?.conclusion || ''}
-                                                onChange={(e) => setScriptData(prev => prev ? { ...prev, callToAction: e.target.value } : prev)}
+                                                value={scriptData?.call_to_action || ''}
+                                                onChange={(e) => setScriptData(prev => prev ? { ...prev, call_to_action: e.target.value } : prev)}
                                                 placeholder="Enter your call to action..."
                                                 sx={{
                                                     '& .MuiInputBase-root': {
@@ -1655,8 +1659,28 @@ const ScriptProductionClient = () => {
                                 )}
                             </Box>
                         </Paper>
-                    ) : (
+                    )}
+
+                    {
+                        isScriptApproved && uploadNarrationView &&
+                        //show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
                         <Paper sx={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            mb: 1,
+                            paddingBottom: 1,
+                            maxHeight: '85vh',
+                            overflow: 'auto',
+                        }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                                <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Upload Narration</Typography>
+                            </Box>
+                        </Paper>
+                    }
+
+                    {
+                        isScriptApproved && uploadNarrationCompleted && <Paper sx={{
                             flex: 1,
                             display: 'flex',
                             flexDirection: 'column',
@@ -2044,7 +2068,7 @@ const ScriptProductionClient = () => {
                                 </Box>
                             </Box>
                         </Paper>
-                    )}
+                    }
 
                 </Box>
 
@@ -2059,11 +2083,11 @@ const ScriptProductionClient = () => {
                 fullWidth
             >
                 <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
-                    {uploadingCompleted ? 'Uploading Completed' : '⚠️ Are you sure?'}
+                    {uploadNarrationCompleted ? 'Uploading Completed' : '⚠️ Are you sure?'}
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="h5" sx={{ mb: 2, lineHeight: 1.5 }}>
-                        {uploadingCompleted ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
+                        {uploadNarrationCompleted ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
@@ -2072,9 +2096,9 @@ const ScriptProductionClient = () => {
                         variant="outlined"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
-                        {uploadingCompleted ? 'Close' : 'Stay Here'}
+                        {uploadNarrationCompleted ? 'Close' : 'Stay Here'}
                     </Button>
-                    {!uploadingCompleted && <Button
+                    {!uploadNarrationCompleted && <Button
                         onClick={handleConfirmBack}
                         variant="contained"
                         color="warning"

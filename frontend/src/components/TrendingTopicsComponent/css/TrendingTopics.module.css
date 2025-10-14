@@ -244,18 +244,18 @@
   }
 }
 
-.narrationTypeRadioGroup {
+.narration_typeRadioGroup {
   display: flex;
   flex-direction: row;
   gap: 8px;
 }
 
-.narrationTypeLabel {
+.narration_typeLabel {
   font-size: 0.8rem;
   margin-left: 4px;
 }
 
-.narrationTypeRadio {
+.narration_typeRadio {
   padding: 4px;
 }
 

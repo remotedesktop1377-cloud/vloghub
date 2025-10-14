@@ -25,10 +25,10 @@ async function getStaticData() {
       language: 'English',
       title: 'Social affairs',
       hook: 'Hook goes here',
-      mainContent: 'Main content goes here',
+      main_content: 'Main content goes here',
       conclusion: 'Conclusion goes here',
-      callToAction: 'Call to action goes here',
-      estimatedWords: 150,
+      call_to_action: 'Call to action goes here',
+      estimated_words: 150,
     }
 
     return staticData
@@ -42,14 +42,14 @@ async function getStaticData() {
       region: 'Pakistan',
       duration: '1',
       language: 'English',
-      subtitleLanguage: 'English',
-      narrationType: 'narration',
+      subtitle_language: 'English',
+      narration_type: 'narration',
       title: 'Social affairs',
       hook: 'Hook goes here',
-      mainContent: 'Main content goes here',
+      main_content: 'Main content goes here',
       conclusion: 'Conclusion goes here',
-      callToAction: 'Call to action goes here',
-      estimatedWords: 150,
+      call_to_action: 'Call to action goes here',
+      estimated_words: 150,
     }
   }
 }

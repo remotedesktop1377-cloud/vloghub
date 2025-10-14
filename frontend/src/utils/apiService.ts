@@ -299,7 +299,7 @@ export const apiService = {
     region: string;
     duration: string;
     language?: string;
-    narrationType?: 'interview' | 'narration';
+    narration_type?: 'interview' | 'narration';
   }) => ApiService.post(API_ENDPOINTS.GENERATE_SCRIPT, body),
 
   generateImages: (body: {

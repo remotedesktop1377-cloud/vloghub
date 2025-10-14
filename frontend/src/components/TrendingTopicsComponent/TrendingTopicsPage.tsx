@@ -8,7 +8,7 @@ import { TrendingTopic } from '../../types/TrendingTopics';
 import { durationOptions } from '../../data/mockDurationOptions';
 import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
-import { ROUTES_KEYS } from '../../data/constants';
+import { ROUTES_KEYS, SCRIPT_STATUS } from '../../data/constants';
 import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
 import { secure } from '../../utils/helperFunctions';
 
@@ -25,9 +25,12 @@ import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
 import HeaderSection from './HeaderSection';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
+import { useAuth } from '@/context/AuthContext';
+import { ScriptData } from '@/types/scriptData';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const { getCachedData, setCachedData, clearCache, isCacheValid } = useTrendingTopicsCache();
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
@@ -43,10 +46,10 @@ const TrendingTopics: React.FC = () => {
   // Topic Details State
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
   const [hypothesis, setHypothesis] = useState('');
-  const [duration, setDuration] = useState('5');
+  const [duration, setDuration] = useState('1');
   const [language, setLanguage] = useState('english');
-  const [subtitleLanguage, setSubtitleLanguage] = useState('english');
-  const [narrationType, setNarrationType] = useState<'interview' | 'narration'>('narration');
+  const [subtitle_language, setsubtitle_language] = useState('english');
+  const [narration_type, setnarration_type] = useState<'interview' | 'narration'>('narration');
   const [generatingChapters, setGeneratingChapters] = useState(false);
   const [scriptGeneratedOnce, setScriptGeneratedOnce] = useState(false);
   const [selectedPreviousLocation, setSelectedPreviousLocation] = useState('');
@@ -269,7 +272,7 @@ const TrendingTopics: React.FC = () => {
         region: location,
         duration: duration,
         language: language,
-        narrationType: narrationType,
+        narration_type: narration_type,
       });
       // console.log('[Generate] generateScript promise created');
 
@@ -299,7 +302,7 @@ const TrendingTopics: React.FC = () => {
         setScriptGeneratedOnce(true);
 
         // Store additional script metadata for later use
-        const scriptMetadata = {
+        const scriptMetadata: ScriptData = {
           title: result.data.title || 'Untitled Script',
           topic: selectedTopic?.topic || '',
           description: selectedTopic?.description || '',
@@ -307,26 +310,30 @@ const TrendingTopics: React.FC = () => {
           region: location,
           duration: duration,
           language: language,
-          subtitleLanguage: subtitleLanguage,
-          narrationType: narrationType,
-          estimatedWords: result.data.estimatedWords || 0,
+          subtitle_language: subtitle_language,
+          narration_type: narration_type,
+          estimated_words: result.data.estimated_words || 0,
           hook: result.data.hook || '',
-          mainContent: result.data.mainContent || '',
+          main_content: result.data.main_content || '',
           conclusion: result.data.conclusion || '',
-          callToAction: result.data.callToAction || '',
+          call_to_action: result.data.call_to_action || '',
           script: result.data.script || '',
+          user_id: user?.id || '',
+          status: SCRIPT_STATUS.GENERATED, //approved, uploaded, generated
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         };
 
         // Store metadata in secure storage for the script production page
         secure.j.scriptMetadata.set(scriptMetadata);
 
         // Store the script data for the production page
-        const scriptData = {
-          ...scriptMetadata
-        };
+        // const scriptData = {
+        //   ...scriptMetadata
+        // };
 
-        // Store in secure storage as backup
-        secure.j.approvedScript.set(scriptData);
+        // // Store in secure storage as backup
+        // secure.j.approvedScript.set(scriptData);
 
         // Navigate directly to script production page
         router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
@@ -344,12 +351,12 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
-  const handleSubtitleLanguageChange = (newSubtitleLanguage: string) => {
-    setSubtitleLanguage(newSubtitleLanguage);
+  const handlesubtitle_languageChange = (newsubtitle_language: string) => {
+    setsubtitle_language(newsubtitle_language);
   };
 
-  const handleNarrationTypeChange = (newNarrationType: 'interview' | 'narration') => {
-    setNarrationType(newNarrationType);
+  const handlenarration_typeChange = (newnarration_type: 'interview' | 'narration') => {
+    setnarration_type(newnarration_type);
   };
 
   const wordClickHandler = async (w: any) => {
@@ -487,10 +494,10 @@ const TrendingTopics: React.FC = () => {
               hasChapters={false}
               onRegenerateAllAssets={() => { }}
               canGenerate={!!selectedTopic}
-              subtitleLanguage={subtitleLanguage}
-              onSubtitleLanguageChange={handleSubtitleLanguageChange}
-              narrationType={narrationType}
-              onNarrationTypeChange={handleNarrationTypeChange}
+              subtitle_language={subtitle_language}
+              onsubtitle_languageChange={handlesubtitle_languageChange}
+              narration_type={narration_type}
+              onnarration_typeChange={handlenarration_typeChange}
               generating={generatingChapters}
               generatedOnce={scriptGeneratedOnce}
             />

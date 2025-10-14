@@ -15,3 +15,9 @@ export const ROUTES_KEYS = {
   TRENDING_TOPICS: '/trending-topics',
   SCRIPT_PRODUCTION: '/script-production'
 } as const; 
+
+export const SCRIPT_STATUS = {
+  GENERATED: 'generated',
+  APPROVED: 'approved',
+  UPLOADED: 'uploaded'
+} as const; 
