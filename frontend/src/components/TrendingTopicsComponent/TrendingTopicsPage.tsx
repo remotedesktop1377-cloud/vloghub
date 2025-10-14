@@ -50,7 +50,7 @@ const TrendingTopics: React.FC = () => {
   const [generatingChapters, setGeneratingChapters] = useState(false);
   const [scriptGeneratedOnce, setScriptGeneratedOnce] = useState(false);
   const [selectedPreviousLocation, setSelectedPreviousLocation] = useState('');
-  const [selectedPreviousLocationType, setSelectedPreviousLocationType] = useState<'global' | 'region' | 'country'>('global');
+  const [selectedPreviousLocationType, setSelectedPreviousLocationType] = useState<string>('');
   const [selectedPreviousDateRange, setSelectedPreviousDateRange] = useState<string>('');
   const [selectedPreviousCountry, setSelectedPreviousCountry] = useState<string>('');
 
@@ -73,25 +73,49 @@ const TrendingTopics: React.FC = () => {
 
   // Check if all required fields are selected
   const isAllFieldsSelected = () => {
-    // Only date range required now
+    // require all valid fields filled first
     if (!selectedDateRange) return false;
     if (selectedLocationType === 'global') {
-      return true;
-    }
-    if (selectedLocationType === 'region') {
-      return !!selectedLocation;
-    }
-    if (selectedLocationType === 'country') {
-      return !!(selectedCountry && selectedLocation);
+      // for global, just need dateRange
+      if (
+        selectedLocationType !== selectedPreviousLocationType &&
+        selectedDateRange !== selectedPreviousDateRange
+      ) {
+        return true;
+      } else {
+        return false;
+      }
+    } else if (selectedLocationType === 'region') {
+      // require region name (selectedLocation)
+      if (
+        !!selectedLocation &&
+        (selectedLocation !== selectedPreviousLocation &&
+          selectedLocationType !== selectedPreviousLocationType &&
+          selectedDateRange !== selectedPreviousDateRange)
+      ) {
+        return true;
+      } else {
+        return false;
+      }
+    } else if (selectedLocationType === 'country') {
+      // require country and location both
+      if (
+        !!selectedCountry &&
+        !!selectedLocation &&
+        selectedCountry !== selectedPreviousCountry &&
+        selectedLocation !== selectedPreviousLocation &&
+        selectedLocationType !== selectedPreviousLocationType &&
+        selectedDateRange !== selectedPreviousDateRange
+      ) {
+        return true;
+      } else {
+        return false;
+      }
     }
     return false;
   };
 
   const fetchTrendingTopics = async (locationType: string, location: string, dateRange: string, forceRefresh: boolean = false) => {
-    if (!isAllFieldsSelected()) {
-      return; // Don't fetch if not all fields are selected
-    }
-
     try {
       setLoading(true);
       setError(null);
@@ -101,8 +125,8 @@ const TrendingTopics: React.FC = () => {
         : selectedLocationType === 'region'
           ? selectedLocation
           : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
-      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
 
+      // const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
       // // Check cache first (unless force refresh is requested)
       // if (!forceRefresh) {
       //   const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
@@ -160,7 +184,7 @@ const TrendingTopics: React.FC = () => {
 
   useEffect(() => {
     // Always fetch on any field change and all fields selected
-    if (isAllFieldsSelected() && selectedLocation !== selectedPreviousLocation && selectedLocationType !== selectedPreviousLocationType && selectedDateRange !== selectedPreviousDateRange) {
+    if (isAllFieldsSelected()) {
       // // Try to load from cache first
       // const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
       // const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
@@ -173,6 +197,7 @@ const TrendingTopics: React.FC = () => {
       // } else {
       // console.log('🟠 No valid cache found - calling API to fetch fresh data');
       // Call API when no cached data is available
+
       fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
       // }
     }
@@ -201,12 +226,7 @@ const TrendingTopics: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    if (isAllFieldsSelected()) {
-      // console.log('🟢 Refreshing trending topics for1:', selectedLocation, selectedLocationType, selectedDateRange);
-      fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
-    } else {
-      HelperFunctions.showInfo('Please select all options before refreshing');
-    }
+    fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
   };
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
@@ -230,15 +250,20 @@ const TrendingTopics: React.FC = () => {
           ? selectedLocation
           : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
 
-      //push this selectedTopics to the trendingTopics table in supabase
-      const { error } = await SupabaseHelpers.saveTrendingTopic(selectedTopic.topic, hypothesis, location, duration, language, narrationType, new Date().toISOString());
-      if (error) {
-        console.error('Error saving trending topics:', error);
-      } else {
-        console.log('Topics saved successfully');
-      }
+      // Run DB save and script generation in parallel
+      // console.log('[Generate] Initiating saveTrendingTopic and generateScript');
+      const savePromise = SupabaseHelpers.saveTrendingTopic(
+        selectedTopic.topic,
+        hypothesis,
+        location,
+        duration,
+        language,
+        narrationType,
+        new Date().toISOString()
+      );
+      // console.log('[Generate] saveTrendingTopic promise created');
 
-      const result = await apiService.generateScript({
+      const scriptPromise = apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
         region: location,
@@ -246,6 +271,28 @@ const TrendingTopics: React.FC = () => {
         language: language,
         narrationType: narrationType,
       });
+      // console.log('[Generate] generateScript promise created');
+
+      const [saveResult, scriptResult] = await Promise.allSettled([savePromise, scriptPromise]);
+      // console.log('[Generate] Both promises settled');
+
+      // Handle saveTrendingTopic result
+      // console.log('[Generate] saveTrendingTopic settled with status:', saveResult.status);
+      if (saveResult.status === 'fulfilled') {
+        if (saveResult.value?.error) {
+          // console.error('[Generate] Error saving trending topics:', saveResult.value.error);
+          HelperFunctions.showError('Failed to save trending topic');
+        } else {
+          // console.log('[Generate] Trending topic saved successfully');
+          HelperFunctions.showSuccess('Trending topic saved');
+        }
+      } else {
+        // console.error('[Generate] saveTrendingTopic rejected:', saveResult.reason);
+        HelperFunctions.showError('Failed to save trending topic');
+      }
+
+      // Unwrap script generation result
+      const result = scriptResult.status === 'fulfilled' ? scriptResult.value : { success: false, error: 'Script generation failed' } as any;
 
       // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
@@ -289,7 +336,7 @@ const TrendingTopics: React.FC = () => {
         setError(result.error || 'Failed to generate script');
       }
     } catch (err) {
-      console.error('Error generating script:', err);
+      // console.error('Error generating script:', err);
       setError('Failed to generate script. Please try again.');
     } finally {
       // keep overlay until route change completes; do not unset generatingChapters here
