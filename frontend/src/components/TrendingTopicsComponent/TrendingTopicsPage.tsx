@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { HelperFunctions } from '../../utils/helperFunctions';
+import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { TrendingTopic } from '../../types/TrendingTopics';
 
 import { durationOptions } from '../../data/mockDurationOptions';
@@ -32,6 +32,7 @@ const TrendingTopics: React.FC = () => {
   const router = useRouter();
   const { user } = useAuth();
   const { getCachedData, setCachedData, clearCache, isCacheValid } = useTrendingTopicsCache();
+  const lastFetchRef = useRef<{ key: string; ts: number } | null>(null);
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [loading, setLoading] = useState(false);
@@ -118,8 +119,18 @@ const TrendingTopics: React.FC = () => {
     return false;
   };
 
-  const fetchTrendingTopics = async (locationType: string, location: string, dateRange: string, forceRefresh: boolean = false) => {
+  const fetchTrendingTopics = async () => {
     try {
+
+      // Guard: avoid duplicate calls with identical params within a short window (dev StrictMode)
+      const fetchKey = `${selectedLocationType}|${selectedLocation}|${selectedCountry}|${selectedDateRange}`;
+      const now = Date.now();
+      if (lastFetchRef.current && lastFetchRef.current.key === fetchKey && (now - lastFetchRef.current.ts) < 1500) {
+        // console.log('Skipping duplicate fetch for key:', fetchKey);
+        return;
+      }
+      lastFetchRef.current = { key: fetchKey, ts: now };
+
       setLoading(true);
       setError(null);
 
@@ -129,6 +140,7 @@ const TrendingTopics: React.FC = () => {
           ? selectedLocation
           : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
 
+      
       // const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
       // // Check cache first (unless force refresh is requested)
       // if (!forceRefresh) {
@@ -148,7 +160,7 @@ const TrendingTopics: React.FC = () => {
       setSelectedTopic(null);
       setHypothesis('');
       setTrendingTopics([]);
-      const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, dateRange);
+      const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, selectedDateRange);
 
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
@@ -161,16 +173,11 @@ const TrendingTopics: React.FC = () => {
         // Cache the fresh data
         // setCachedData(cacheRegion, geminiData);
         setTrendingTopics(geminiData);
-        setLastUpdated(new Date().toISOString());
-
-        // Show success message only on manual refresh
-        if (forceRefresh) {
-          HelperFunctions.showSuccess('Fresh trending topics loaded!');
-        }
+        // setLastUpdated(new Date().toISOString());
 
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
-        setLastUpdated(new Date().toISOString());
+        // setLastUpdated(new Date().toISOString());
         HelperFunctions.showError('Failed to fetch trending topics');
       }
 
@@ -178,7 +185,7 @@ const TrendingTopics: React.FC = () => {
     } catch (err) {
       console.error('Error fetching trending topics, using mock data:', err);
       setError(null);
-      setLastUpdated(new Date().toISOString());
+      // setLastUpdated(new Date().toISOString());
       HelperFunctions.showError('Error loading trending topics');
     } finally {
       setLoading(false);
@@ -201,10 +208,18 @@ const TrendingTopics: React.FC = () => {
       // console.log('🟠 No valid cache found - calling API to fetch fresh data');
       // Call API when no cached data is available
 
-      fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
+      fetchTrendingTopics();
       // }
     }
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
+
+  useEffect(() => {
+    const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
+    if (scriptMetadata && typeof scriptMetadata === 'object') {
+      console.log('🟢 Script metadata found, redirecting to script production');
+      router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+    }
+  }, []);
 
   const handleLocationChange = (location: string) => {
     setSelectedPreviousLocation(selectedLocation);
@@ -229,7 +244,7 @@ const TrendingTopics: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    fetchTrendingTopics(selectedLocationType, selectedLocation, selectedDateRange, true);
+    fetchTrendingTopics();
   };
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
@@ -253,19 +268,6 @@ const TrendingTopics: React.FC = () => {
           ? selectedLocation
           : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
 
-      // Run DB save and script generation in parallel
-      // console.log('[Generate] Initiating saveTrendingTopic and generateScript');
-      const savePromise = SupabaseHelpers.saveTrendingTopic(
-        selectedTopic.topic,
-        hypothesis,
-        location,
-        duration,
-        language,
-        narrationType,
-        new Date().toISOString()
-      );
-      // console.log('[Generate] saveTrendingTopic promise created');
-
       const scriptPromise = apiService.generateScript({
         topic: selectedTopic.topic,
         hypothesis,
@@ -276,24 +278,8 @@ const TrendingTopics: React.FC = () => {
       });
       // console.log('[Generate] generateScript promise created');
 
-      const [saveResult, scriptResult] = await Promise.allSettled([savePromise, scriptPromise]);
-      // console.log('[Generate] Both promises settled');
-
-      // Handle saveTrendingTopic result
-      // console.log('[Generate] saveTrendingTopic settled with status:', saveResult.status);
-      if (saveResult.status === 'fulfilled') {
-        if (saveResult.value?.error) {
-          // console.error('[Generate] Error saving trending topics:', saveResult.value.error);
-          HelperFunctions.showError('Failed to save trending topic');
-        } else {
-          // console.log('[Generate] Trending topic saved successfully');
-          HelperFunctions.showSuccess('Trending topic saved');
-        }
-      } else {
-        // console.error('[Generate] saveTrendingTopic rejected:', saveResult.reason);
-        HelperFunctions.showError('Failed to save trending topic');
-      }
-
+      const [scriptResult] = await Promise.allSettled([scriptPromise]);
+      
       // Unwrap script generation result
       const result = scriptResult.status === 'fulfilled' ? scriptResult.value : { success: false, error: 'Script generation failed' } as any;
 
@@ -325,15 +311,7 @@ const TrendingTopics: React.FC = () => {
         };
 
         // Store metadata in secure storage for the script production page
-        secure.j.scriptMetadata.set(scriptMetadata);
-
-        // Store the script data for the production page
-        // const scriptData = {
-        //   ...scriptMetadata
-        // };
-
-        // // Store in secure storage as backup
-        // secure.j.approvedScript.set(scriptData);
+        secure.j.scriptMetadata.set(scriptMetadata);        
 
         // Navigate directly to script production page
         router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);

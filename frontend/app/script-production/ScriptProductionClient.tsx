@@ -36,7 +36,7 @@ import {
     PlayArrow as PlayIcon,
     Pause as PauseIcon
 } from '@mui/icons-material';
-import { HelperFunctions } from '@/utils/helperFunctions';
+import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
 import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
@@ -97,8 +97,8 @@ const ScriptProductionClient = () => {
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
     const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
-    const [uploadNarrationView, setUploadNarrationView] = useState(false);
-    const [uploadNarrationCompleted, setUploadNarrationCompleted] = useState(false);
+    const [isHumanNarrationUploaded, setIsHumanNarrationUploaded] = useState(false);
+    const [showNarrationUploadView, setShowNarrationUploadView] = useState(false);
     const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
@@ -460,108 +460,87 @@ const ScriptProductionClient = () => {
     };
 
     useEffect(() => {
-        // Load from secure storage - check metadata first, then approved script
         let storedData = null;
-        let isApproved = false;
 
         // First try to load from metadata (for unapproved scripts)
         try {
-            const storedMetadata = secure.j.scriptMetadata.get();
+            const storedMetadata = SecureStorageHelpers.getScriptMetadata();
             if (storedMetadata && typeof storedMetadata === 'object') {
                 storedData = storedMetadata;
+                setLoading(false);
+                setScriptData(storedData);
+                setEditedScript(storedData.script || '');
+                saveTrendingTopic(storedData);
+
                 // setScriptSectionData(storedMetadata);
-                isApproved = false; // Has metadata, so not approved yet
+            } else {
+                setNoScriptFound(true);
+                setLoading(false);
             }
         } catch (error) {
             console.warn('Error parsing script metadata:', error);
-        }
-
-        // If no metadata, try to load from approved script
-        if (!storedData) {
-            try {
-                const stored = secure.j.approvedScript.get();
-                if (stored) {
-                    storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
-                    isApproved = true; // No metadata but has approved script, so it's approved
-                }
-            } catch (e) {
-                console.error('Failed to parse stored approved script data', e);
-            }
-        }
-        // console.log('storedData', JSON.stringify(storedData));
-        if (storedData) {
             setLoading(false);
-            setScriptData(storedData);
-            setEditedScript(storedData.script || '');
-            setIsScriptApproved(isApproved);
-        } else {
             setNoScriptFound(true);
-            setLoading(false);
         }
 
     }, []);
+
+    const saveTrendingTopic = async (storedData: ScriptData) => {
+        const { error } = await SupabaseHelpers.saveTrendingTopic(
+            storedData.topic,
+            storedData.hypothesis,
+            storedData.region,
+            storedData.duration,
+            storedData.language,
+            storedData.narration_type,
+            storedData.created_at || new Date().toISOString()
+        );
+    
+        if (error) {
+            HelperFunctions.showError('Failed to save trending topic');
+        } else {
+            HelperFunctions.showSuccess('Trending topic saved');
+        }
+    };
 
     // Calculate estimated duration when script data changes
     useEffect(() => {
         if (scriptData) {
             setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
-            updateParagraphs(scriptData.narration_type as "interview" | "narration", scriptData);
+            // updateParagraphs(scriptData.narration_type as "interview" | "narration", scriptData);
         }
     }, [scriptData]);
 
     // Calculate estimated duration when script data changes
-    useEffect(() => {
-        const createHighlightWords = async () => {
-            const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY, { cache: 'no-store' });
-            const data = await res.json();
-            if (data && data.data) {
-                setDriveLibrary({
-                    backgrounds: Array.isArray(data.data.backgrounds) ? data.data.backgrounds : [],
-                    music: Array.isArray(data.data.music) ? data.data.music : [],
-                    transitions: Array.isArray(data.data.transitions) ? data.data.transitions : [],
-                });
-            }
+    // useEffect(() => {
+    //     const createHighlightWords = async () => {
+    //         const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY, { cache: 'no-store' });
+    //         const data = await res.json();
+    //         if (data && data.data) {
+    //             setDriveLibrary({
+    //                 backgrounds: Array.isArray(data.data.backgrounds) ? data.data.backgrounds : [],
+    //                 music: Array.isArray(data.data.music) ? data.data.music : [],
+    //                 transitions: Array.isArray(data.data.transitions) ? data.data.transitions : [],
+    //             });
+    //         }
 
-            const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
-            if (needsHighlights) {
-                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
-                    // console.log('chapters with highlights', chapters);
-                    uploadToGoogleDrive(chapters);
-                    setLoading(false);
-                });
-            } else {
-                setLoading(false);
-            }
-        }
-        createHighlightWords();
-    }, [uploadNarrationCompleted]);
+    //         const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
+    //         if (needsHighlights) {
+    //             HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
+    //                 // console.log('chapters with highlights', chapters);
+    //                 uploadToGoogleDrive(chapters);
+    //                 setLoading(false);
+    //             });
+    //         } else {
+    //             setLoading(false);
+    //         }
+    //     }
+    //     createHighlightWords();
+    // }, [uploadNarrationCompleted]);
 
     // Fetch Google Drive library once when approved script is present
     // Handle browser back button
     useEffect(() => {
-        const run = async () => {
-            try {
-                if (isScriptApproved) {
-                    setLoading(true);
-                    // push this script data to the scripts_approved table in supabase
-                    const data = { ...scriptData, status: SCRIPT_STATUS.APPROVED } as any;
-                    setScriptData(data);
-                    const { error } = await SupabaseHelpers.saveApprovedScript(data);
-                    if (error) {
-                        console.error('Error saving approved script:', error);
-                    } else {
-                        secure.j.scriptMetadata.remove();
-                        // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
-                        setUploadNarrationView(true);
-                        console.log('Approved script saved successfully');
-                    }
-                    setLoading(false);
-                }
-            } catch (e) {
-                console.error('Failed to fetch Drive library', e);
-            }
-        };
-        run();
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (!isScriptApproved) {
                 e.preventDefault();
@@ -594,12 +573,12 @@ const ScriptProductionClient = () => {
         };
     }, [isScriptApproved]);
 
-    useEffect(() => {
-        if (isScriptApproved && chapters && chapters.length > 0) {
-            // save updated chapters
-            secure.j.approvedScript.set({ ...scriptData, chapters });
-        }
-    }, [chapters]);
+    // useEffect(() => {
+    //     if (isScriptApproved && chapters && chapters.length > 0) {
+    //         // save updated chapters
+    //         SecureStorageHelpers.setScriptMetadata({ ...scriptData, chapters });
+    //     }
+    // }, [chapters]);
 
     // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
     const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
@@ -780,7 +759,7 @@ const ScriptProductionClient = () => {
         }
 
         toast.info('Video generation started...');
-        setUploadNarrationCompleted(true);
+        setIsHumanNarrationUploaded(true);
         setShowBackConfirmation(true);
     };
 
@@ -1072,15 +1051,26 @@ const ScriptProductionClient = () => {
     };
 
     const handleApproveScript = async () => {
-        setIsScriptApproved(true);
+        setLoading(true);
+        // push this script data to the scripts_approved table in supabase
+        const data = { ...scriptData, status: SCRIPT_STATUS.APPROVED } as any;
+        setScriptData(data);
+        const { error } = await SupabaseHelpers.saveApprovedScript(data);
+        if (error) {
+            console.error('Error saving approved script:', error);
+        } else {
+            setIsScriptApproved(true);
+            secure.j.scriptMetadata.remove();
+            // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
+            setShowNarrationUploadView(true);
+            // console.log('Approved script saved successfully');
+        }
+        setLoading(false);
         toast.success('Script approved! Now generating scenes breakdown...');
     };
 
     const handleCancelBack = () => {
         setShowBackConfirmation(false);
-        if (uploadNarrationCompleted) {
-            router.replace(ROUTES_KEYS.TRENDING_TOPICS);
-        }
     };
 
     // Handle text selection for highlighting keywords
@@ -1339,6 +1329,7 @@ const ScriptProductionClient = () => {
     const handleConfirmBack = () => {
         // Clear script data from secure storage when leaving
         try {
+            console.warn('auto moving back to trending topics');
             secure.j.approvedScript.remove();
             secure.j.scriptMetadata.remove();
         } catch (error) {
@@ -1662,7 +1653,7 @@ const ScriptProductionClient = () => {
                     )}
 
                     {
-                        isScriptApproved && uploadNarrationView &&
+                        isScriptApproved && showNarrationUploadView &&
                         //show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
                         <Paper sx={{
                             flex: 1,
@@ -1680,7 +1671,7 @@ const ScriptProductionClient = () => {
                     }
 
                     {
-                        isScriptApproved && uploadNarrationCompleted && <Paper sx={{
+                        isScriptApproved && showNarrationUploadView && <Paper sx={{
                             flex: 1,
                             display: 'flex',
                             flexDirection: 'column',
@@ -2083,11 +2074,11 @@ const ScriptProductionClient = () => {
                 fullWidth
             >
                 <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
-                    {uploadNarrationCompleted ? 'Uploading Completed' : '⚠️ Are you sure?'}
+                    {isHumanNarrationUploaded ? 'Uploading Completed' : '⚠️ Are you sure?'}
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="h5" sx={{ mb: 2, lineHeight: 1.5 }}>
-                        {uploadNarrationCompleted ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
+                        {isHumanNarrationUploaded ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
@@ -2096,9 +2087,9 @@ const ScriptProductionClient = () => {
                         variant="outlined"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
-                        {uploadNarrationCompleted ? 'Close' : 'Stay Here'}
+                        {isHumanNarrationUploaded ? 'Close' : 'Stay Here'}
                     </Button>
-                    {!uploadNarrationCompleted && <Button
+                    {!isHumanNarrationUploaded && <Button
                         onClick={handleConfirmBack}
                         variant="contained"
                         color="warning"

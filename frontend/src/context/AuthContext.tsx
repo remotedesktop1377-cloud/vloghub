@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Safety fallback: if auth doesn't resolve within 8s, stop loading to avoid UI lock
     const safetyTimer = setTimeout(() => {
       if (loading) {
-        console.warn('Auth init timeout fallback triggered');
+        // console.warn('Auth init timeout fallback triggered');
         setLoading(false);
         setIsInitialized(true);
       }
@@ -105,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             toast.success('Password recovery email sent!');
             break;
           case 'TOKEN_REFRESHED':
-            console.log('Token refreshed');
+            // console.log('Token refreshed');
             break;
           case 'USER_UPDATED':
             toast.success('Profile updated successfully!');

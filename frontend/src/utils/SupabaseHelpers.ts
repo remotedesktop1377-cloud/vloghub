@@ -45,7 +45,7 @@ export class SupabaseHelpers {
       }
 
       toast.success('Profile saved successfully');
-      console.log('🟢 Profile saved successfully:', data);
+      // console.log('🟢 Profile saved successfully:', data);
       return { data, error: null };
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -291,10 +291,11 @@ export class SupabaseHelpers {
         narration_type: narration_type,
         created_at: created_at,
       };
-      // Use upsert to avoid duplicate key errors and to insert-or-update by id
+      // console.log('🟢 Trending topics payload:', JSON.stringify(payload, null, 2));
+      // Insert per RLS policy (insert allowed for authenticated users)
       const { data, error } = await SupabaseHelpers.supabase
         .from('trending_topics')
-        .upsert(payload as any)
+        .insert(payload as any)
         .select()
 
       if (error) {
@@ -304,7 +305,7 @@ export class SupabaseHelpers {
       }
 
       toast.success('Trending topics saved successfully');
-      console.log('🟢 Trending topics saved successfully:', data);
+      // console.log('🟢 Trending topics saved successfully:', data);
       return { data, error: null };
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -321,12 +322,18 @@ export class SupabaseHelpers {
   ) {
 
     try {
-      console.log('🟢 Approved Script Payload:', scriptDataPayload);
-      // Use upsert to avoid duplicate key errors and to insert-or-update by id
+        const { user_id, ...rest } = scriptDataPayload as any;
+        const payload: ScriptData = {
+        ...rest,
+        created_at: scriptDataPayload.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // console.log('🟢 Approved Script Payload (normalized):', JSON.stringify(payload, null, 2));
+      // Insert (not upsert) to comply with insert-only RLS policy
       const { data, error } = await SupabaseHelpers.supabase
         .from('scripts_approved')
-        .upsert(scriptDataPayload as any)
-        .select()
+        .insert(payload as any)
 
       if (error) {
         console.error('Error saving Approved Script:', error);
@@ -335,7 +342,7 @@ export class SupabaseHelpers {
       }
 
       toast.success('Approved Script saved successfully');
-      console.log('🟢 Approved Script saved successfully:', data);
+      // console.log('🟢 Approved Script saved successfully:', data);
       return { data, error: null };
     } catch (error) {
       console.error('Unexpected error:', error);

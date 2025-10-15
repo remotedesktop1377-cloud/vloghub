@@ -363,3 +363,125 @@ CREATE TRIGGER update_video_projects_updated_at
 CREATE TRIGGER update_project_scenes_updated_at
     BEFORE UPDATE ON public.project_scenes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- SCRIPTS APPROVED: table, triggers, and RLS policies
+-- ============================================================================
+
+-- Table to store approved/generate-ready scripts
+CREATE TABLE IF NOT EXISTS public.scripts_approved (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT,
+    topic TEXT,
+    description TEXT,
+    hypothesis TEXT,
+    region TEXT,
+    duration TEXT,
+    language TEXT,
+    subtitle_language TEXT,
+    narration_type TEXT,
+    estimated_words INTEGER,
+    hook TEXT,
+    main_content TEXT,
+    conclusion TEXT,
+    call_to_action TEXT,
+    script TEXT,
+    user_id UUID REFERENCES public.profiles(id),
+    status TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- If the table already exists with BIGINT id, migrate it to UUID (safe if empty)
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'scripts_approved'
+          AND column_name = 'id' AND data_type = 'bigint'
+    ) THEN
+        -- Drop identity if present, convert to UUID, set default
+        BEGIN
+            ALTER TABLE public.scripts_approved ALTER COLUMN id DROP IDENTITY IF EXISTS;
+        EXCEPTION WHEN undefined_object THEN
+            NULL;
+        END;
+        ALTER TABLE public.scripts_approved ALTER COLUMN id TYPE uuid USING gen_random_uuid();
+        ALTER TABLE public.scripts_approved ALTER COLUMN id SET DEFAULT gen_random_uuid();
+    END IF;
+END $$;
+
+-- enable RLS
+ALTER TABLE public.scripts_approved ENABLE ROW LEVEL SECURITY;
+
+-- Ensure helper to set updated_at exists already (update_updated_at_column)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'update_scripts_approved_updated_at'
+    ) THEN
+        CREATE TRIGGER update_scripts_approved_updated_at
+            BEFORE UPDATE ON public.scripts_approved
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
+
+-- Trigger function to set user_id from auth.uid() when missing
+CREATE OR REPLACE FUNCTION public.set_user_id()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.user_id IS NULL THEN
+        NEW.user_id := auth.uid();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Set user_id automatically on insert
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'scripts_approved_set_user_id'
+    ) THEN
+        CREATE TRIGGER scripts_approved_set_user_id
+            BEFORE INSERT ON public.scripts_approved
+            FOR EACH ROW EXECUTE FUNCTION public.set_user_id();
+    END IF;
+END $$;
+
+-- RLS policies
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scripts_approved' AND policyname = 'insert_own_scripts_approved'
+    ) THEN
+        CREATE POLICY "insert_own_scripts_approved" ON public.scripts_approved
+            AS PERMISSIVE FOR INSERT TO authenticated
+            WITH CHECK (auth.uid() IS NOT NULL);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scripts_approved' AND policyname = 'select_own_scripts_approved'
+    ) THEN
+        CREATE POLICY "select_own_scripts_approved" ON public.scripts_approved
+            AS PERMISSIVE FOR SELECT TO authenticated
+            USING (user_id = auth.uid());
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scripts_approved' AND policyname = 'update_own_scripts_approved'
+    ) THEN
+        CREATE POLICY "update_own_scripts_approved" ON public.scripts_approved
+            AS PERMISSIVE FOR UPDATE TO authenticated
+            USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+    END IF;
+END $$;
+
+-- Index to speed up per-user queries
+CREATE INDEX IF NOT EXISTS idx_scripts_approved_user_id ON public.scripts_approved(user_id);
