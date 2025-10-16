@@ -610,9 +610,9 @@ export class HelperFunctions {
    * Calculate estimated duration based on script content (average reading speed: 150-160 words per minute)
    */
   static calculateDuration(script: string): string {
-    if (!script.trim()) return '0';
+    if (!script?.trim()) return '0';
 
-    const words = script.trim().split(/\s+/).length;
+    const words = script?.trim().split(/\s+/).length;
     const averageWordsPerMinute = 155; // Average speaking/reading speed
     const minutes = words / averageWordsPerMinute;
 

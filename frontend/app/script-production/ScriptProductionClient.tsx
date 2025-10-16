@@ -109,6 +109,7 @@ const ScriptProductionClient = () => {
     const [projectMusic, setProjectMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
     const [projectVideoClip, setProjectVideoClip] = useState<{ name?: string; url: string } | null>(null);
     const [narrationDocLink, setNarrationDocLink] = useState<string | null>(null);
+    const [narrationFile, setNarrationFile] = useState<File | null>(null);
     const [projectTransitionEffects, setProjectTransitionEffects] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -548,7 +549,7 @@ const ScriptProductionClient = () => {
     //         }
     //     }
     //     createHighlightWords();
-    // }, [uploadNarrationCompleted]);
+    // }, [narrationFile]);
 
     // Fetch Google Drive library once when approved script is present
     // Handle browser back button
@@ -645,7 +646,6 @@ const ScriptProductionClient = () => {
     };
 
     const handleDownloadAllNarrations = () => {
-        if (!chapters.length) return;
 
         try {
             // Build script content in the same structured format used in approval
@@ -1403,7 +1403,7 @@ const ScriptProductionClient = () => {
                         <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem', lineHeight: 1.5 }}>
                             Estimated Duration:
-                        </Typography>   
+                        </Typography>
                         <Chip
                             label={estimatedDuration}
                             size="medium"
@@ -1452,6 +1452,20 @@ const ScriptProductionClient = () => {
                         >
                             📋 {scriptData?.title}
                         </Typography>
+
+                        {isScriptApproved && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    startIcon={<DownloadIcon />}
+                                    sx={{ textTransform: 'none', height: CONTROL_HEIGHT }}
+                                    onClick={handleDownloadAllNarrations}
+                                >
+                                    Download Script
+                                </Button>
+                            </Box>
+                        )}
 
                         {!isScriptApproved &&
                             <Box sx={{
@@ -1691,7 +1705,7 @@ const ScriptProductionClient = () => {
                                 <CloudUploadIcon color="primary" sx={{ fontSize: 48 }} />
                                 <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Upload Narration</Typography>
                                 <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                                    Please upload your narration document (PDF or DOC/DOCX).
+                                    Please upload your narration as a plain text file (.txt).
                                 </Typography>
                                 <Button
                                     variant="contained"
@@ -1712,11 +1726,16 @@ const ScriptProductionClient = () => {
                                 <input
                                     id="narration-doc-input"
                                     type="file"
-                                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                    accept=".txt,text/plain"
                                     onChange={async (e) => {
                                         const file = e.target.files && e.target.files[0];
                                         if (!file) return;
                                         try {
+                                            const isTxt = file.type === 'text/plain' || /\.txt$/i.test(file.name);
+                                            if (!isTxt) {
+                                                HelperFunctions.showError('Only .txt files are supported for narration');
+                                                return;
+                                            }
                                             setLoading(true);
                                             const jobName = chapters[0]?.jobName || `job-${HelperFunctions.generateRandomId()}`;
                                             const uploadResult = await HelperFunctions.uploadMediaToDrive(jobName, 'input', file);
@@ -1730,6 +1749,7 @@ const ScriptProductionClient = () => {
                                                 const scriptMetaData = { ...scriptData, narration_doc_link: uploadResult.webViewLink, updated_at: new Date().toISOString() } as any;
                                                 SecureStorageHelpers.setScriptMetadata(scriptMetaData);
                                                 setNarrationDocLink(uploadResult.webViewLink);
+                                                setNarrationFile(file);
                                             }
                                             HelperFunctions.showSuccess('Narration uploaded successfully');
                                         } catch (err) {
@@ -1757,207 +1777,209 @@ const ScriptProductionClient = () => {
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
 
                                 {/* Project-level Settings (moved into dialog) */}
-                                <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Project Settings</Typography>
-                                        <Button variant="contained" size="small" sx={{ textTransform: 'none' }} onClick={() => openProjectSettingsDialog('project')}>Open</Button>
-                                    </Box>
-                                    <Grid container spacing={2} sx={{ display: 'none' }}>
-                                        {/* Transition selector */}
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
-                                            <TextField
-                                                select
-                                                fullWidth
-                                                size="small"
-                                                value={projectTransitionId}
-                                                onChange={(e) => setProjectTransitionId(String(e.target.value))}
-                                                SelectProps={{ native: true }}
-                                                sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
-                                            >
-                                                <option value="">Select transition...</option>
-                                                {predefinedTransitions.map((t) => (
-                                                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
-                                                ))}
-                                            </TextField>
-                                        </Grid>
-
-                                        {/* Logo Overlay (single) */}
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                                <TextField size="small" select label="Position" value={projectLogo?.position || 'top-right'} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
-                                                    <option value="top-left">top-left</option>
-                                                    <option value="top-right">top-right</option>
-                                                    <option value="bottom-left">bottom-left</option>
-                                                    <option value="bottom-right">bottom-right</option>
-                                                </TextField>
-                                                <Button
-                                                    variant="contained"
-                                                    color="secondary"
-                                                    size="small"
-                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'image/*';
-                                                        input.onchange = (e) => {
-                                                            const file = (e.target as HTMLInputElement).files?.[0];
-                                                            if (!file) return;
-                                                            const objectUrl = URL.createObjectURL(file);
-                                                            setProjectLogo({ name: file.name, url: objectUrl, position: projectLogo?.position || 'top-right' });
-                                                        };
-                                                        input.click();
-                                                    }}
-                                                >
-                                                    Upload Logo
-                                                </Button>
-                                                {projectLogo?.url && (
-                                                    <>
-                                                        <Button
-                                                            variant="outlined"
-                                                            size="small"
-                                                            sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                            onClick={() => window.open(projectLogo.url, '_blank')}
-                                                        >
-                                                            Preview
-                                                        </Button>
-                                                        <Button
-                                                            variant="outlined"
-                                                            color="error"
-                                                            size="small"
-                                                            sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                            onClick={() => setProjectLogo(null)}
-                                                        >
-                                                            Remove
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                {projectLogo?.url && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <img
-                                                            src={projectLogo.url}
-                                                            alt={projectLogo.name || 'Logo'}
-                                                            style={{ width: 100, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#111', cursor: 'pointer' }}
-                                                            onClick={() => window.open(projectLogo.url, '_blank')}
-                                                        />
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        </Grid>
-
-                                        {/* Background Music (single) */}
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Background Music</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                {isHumanNarrationUploaded &&
+                                    <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Project Settings</Typography>
+                                            <Button variant="contained" size="small" sx={{ textTransform: 'none' }} onClick={() => openProjectSettingsDialog('project')}>Open</Button>
+                                        </Box>
+                                        <Grid container spacing={2} sx={{ display: 'none' }}>
+                                            {/* Transition selector */}
+                                            <Grid item xs={12} md={6}>
+                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
                                                 <TextField
                                                     select
                                                     fullWidth
-                                                    sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
                                                     size="small"
-                                                    value={(projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
-                                                    onChange={(e) => {
-                                                        const selId = String(e.target.value);
-                                                        setProjectMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: projectMusic?.volume ?? 0.3, autoAdjust: projectMusic?.autoAdjust ?? true, fadeIn: projectMusic?.fadeIn ?? true, fadeOut: projectMusic?.fadeOut ?? true });
-                                                        // Stop currently playing audio when changing selection
-                                                        try { audioRef.current?.pause(); } catch { }
-                                                        setIsMusicPlaying(false);
-                                                        setIsMusicLoading(false);
-                                                        setLastMusicIdLoaded(null);
-                                                    }}
+                                                    value={projectTransitionId}
+                                                    onChange={(e) => setProjectTransitionId(String(e.target.value))}
                                                     SelectProps={{ native: true }}
+                                                    sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
                                                 >
-                                                    <option value="">Select music...</option>
-                                                    {(driveLibrary?.music || []).map((t: any) => (
-                                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                                    <option value="">Select transition...</option>
+                                                    {predefinedTransitions.map((t) => (
+                                                        <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
                                                     ))}
                                                 </TextField>
-                                                <Button
-                                                    variant="contained"
-                                                    color="primary"
-                                                    size="small"
-                                                    disabled={!((projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
-                                                    onClick={handleToggleBackgroundMusic}
-                                                    sx={{ height: CONTROL_HEIGHT, minWidth: 90, textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 1 }}
-                                                >
-                                                    {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
-                                                    {isMusicPlaying ? 'Pause' : 'Play'}
-                                                </Button>
-                                                {/* Volume option removed as per requirement */}
-                                            </Box>
-                                        </Grid>
+                                            </Grid>
 
-                                        {/* Video Clip (single) */}
-                                        <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                                <Button
-                                                    variant="contained"
-                                                    color="secondary"
-                                                    size="small"
-                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'video/*';
-                                                        input.onchange = (e) => {
-                                                            const file = (e.target as HTMLInputElement).files?.[0];
-                                                            if (!file) return;
-                                                            const objectUrl = URL.createObjectURL(file);
-                                                            setProjectVideoClip({ name: file.name, url: objectUrl });
-                                                        };
-                                                        input.click();
-                                                    }}
-                                                >
-                                                    Upload Clip
-                                                </Button>
-                                                <Button
-                                                    variant="outlined"
-                                                    color="error"
-                                                    size="small"
-                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                    onClick={() => setProjectVideoClip(null)}
-                                                >
-                                                    Remove
-                                                </Button>
-                                                {projectVideoClip?.url && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Box sx={{ position: 'relative', width: 160, height: 90 }} onClick={() => { setVideoPreviewUrl(projectVideoClip.url); setVideoPreviewOpen(true); }}>
-                                                            <video
-                                                                src={projectVideoClip.url}
-                                                                muted
-                                                                playsInline
-                                                                loop
-                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: '#000', cursor: 'pointer' }}
+                                            {/* Logo Overlay (single) */}
+                                            <Grid item xs={12} md={6}>
+                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
+                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                    <TextField size="small" select label="Position" value={projectLogo?.position || 'top-right'} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
+                                                        <option value="top-left">top-left</option>
+                                                        <option value="top-right">top-right</option>
+                                                        <option value="bottom-left">bottom-left</option>
+                                                        <option value="bottom-right">bottom-right</option>
+                                                    </TextField>
+                                                    <Button
+                                                        variant="contained"
+                                                        color="secondary"
+                                                        size="small"
+                                                        sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                        onClick={() => {
+                                                            const input = document.createElement('input');
+                                                            input.type = 'file';
+                                                            input.accept = 'image/*';
+                                                            input.onchange = (e) => {
+                                                                const file = (e.target as HTMLInputElement).files?.[0];
+                                                                if (!file) return;
+                                                                const objectUrl = URL.createObjectURL(file);
+                                                                setProjectLogo({ name: file.name, url: objectUrl, position: projectLogo?.position || 'top-right' });
+                                                            };
+                                                            input.click();
+                                                        }}
+                                                    >
+                                                        Upload Logo
+                                                    </Button>
+                                                    {projectLogo?.url && (
+                                                        <>
+                                                            <Button
+                                                                variant="outlined"
+                                                                size="small"
+                                                                sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                                onClick={() => window.open(projectLogo.url, '_blank')}
+                                                            >
+                                                                Preview
+                                                            </Button>
+                                                            <Button
+                                                                variant="outlined"
+                                                                color="error"
+                                                                size="small"
+                                                                sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                                onClick={() => setProjectLogo(null)}
+                                                            >
+                                                                Remove
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    {projectLogo?.url && (
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <img
+                                                                src={projectLogo.url}
+                                                                alt={projectLogo.name || 'Logo'}
+                                                                style={{ width: 100, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#111', cursor: 'pointer' }}
+                                                                onClick={() => window.open(projectLogo.url, '_blank')}
                                                             />
-                                                            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                                                                <Box sx={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <PlayIcon sx={{ color: '#fff' }} fontSize="small" />
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            </Grid>
+
+                                            {/* Background Music (single) */}
+                                            <Grid item xs={12} md={6}>
+                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Background Music</Typography>
+                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                    <TextField
+                                                        select
+                                                        fullWidth
+                                                        sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
+                                                        size="small"
+                                                        value={(projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
+                                                        onChange={(e) => {
+                                                            const selId = String(e.target.value);
+                                                            setProjectMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: projectMusic?.volume ?? 0.3, autoAdjust: projectMusic?.autoAdjust ?? true, fadeIn: projectMusic?.fadeIn ?? true, fadeOut: projectMusic?.fadeOut ?? true });
+                                                            // Stop currently playing audio when changing selection
+                                                            try { audioRef.current?.pause(); } catch { }
+                                                            setIsMusicPlaying(false);
+                                                            setIsMusicLoading(false);
+                                                            setLastMusicIdLoaded(null);
+                                                        }}
+                                                        SelectProps={{ native: true }}
+                                                    >
+                                                        <option value="">Select music...</option>
+                                                        {(driveLibrary?.music || []).map((t: any) => (
+                                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                                        ))}
+                                                    </TextField>
+                                                    <Button
+                                                        variant="contained"
+                                                        color="primary"
+                                                        size="small"
+                                                        disabled={!((projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
+                                                        onClick={handleToggleBackgroundMusic}
+                                                        sx={{ height: CONTROL_HEIGHT, minWidth: 90, textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 1 }}
+                                                    >
+                                                        {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
+                                                        {isMusicPlaying ? 'Pause' : 'Play'}
+                                                    </Button>
+                                                    {/* Volume option removed as per requirement */}
+                                                </Box>
+                                            </Grid>
+
+                                            {/* Video Clip (single) */}
+                                            <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
+                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
+                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                    <Button
+                                                        variant="contained"
+                                                        color="secondary"
+                                                        size="small"
+                                                        sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                        onClick={() => {
+                                                            const input = document.createElement('input');
+                                                            input.type = 'file';
+                                                            input.accept = 'video/*';
+                                                            input.onchange = (e) => {
+                                                                const file = (e.target as HTMLInputElement).files?.[0];
+                                                                if (!file) return;
+                                                                const objectUrl = URL.createObjectURL(file);
+                                                                setProjectVideoClip({ name: file.name, url: objectUrl });
+                                                            };
+                                                            input.click();
+                                                        }}
+                                                    >
+                                                        Upload Clip
+                                                    </Button>
+                                                    <Button
+                                                        variant="outlined"
+                                                        color="error"
+                                                        size="small"
+                                                        sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                        onClick={() => setProjectVideoClip(null)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                    {projectVideoClip?.url && (
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <Box sx={{ position: 'relative', width: 160, height: 90 }} onClick={() => { setVideoPreviewUrl(projectVideoClip.url); setVideoPreviewOpen(true); }}>
+                                                                <video
+                                                                    src={projectVideoClip.url}
+                                                                    muted
+                                                                    playsInline
+                                                                    loop
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: '#000', cursor: 'pointer' }}
+                                                                />
+                                                                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                                                    <Box sx={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                        <PlayIcon sx={{ color: '#fff' }} fontSize="small" />
+                                                                    </Box>
                                                                 </Box>
                                                             </Box>
-                                                        </Box>
 
-                                                    </Box>
-                                                )}
-                                            </Box>
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            </Grid>
+                                            {/* Video Effects (project-level) */}
+                                            <Grid xs={12} sx={{ mt: 2, pl: 2 }}>
+                                                <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
+                                                <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+                                                    <EffectsPanel
+                                                        selectedEffects={projectTransitionEffects}
+                                                        onEffectToggle={(id: string) => {
+                                                            setProjectTransitionEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+                                                        }}
+                                                        onApplyToAllScenes={(effects: string[]) => {
+                                                            setProjectTransitionEffects(effects);
+                                                        }}
+                                                    />
+                                                </Box>
+                                            </Grid>
                                         </Grid>
-                                        {/* Video Effects (project-level) */}
-                                        <Grid xs={12} sx={{ mt: 2, pl: 2 }}>
-                                            <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
-                                            <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
-                                                <EffectsPanel
-                                                    selectedEffects={projectTransitionEffects}
-                                                    onEffectToggle={(id: string) => {
-                                                        setProjectTransitionEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-                                                    }}
-                                                    onApplyToAllScenes={(effects: string[]) => {
-                                                        setProjectTransitionEffects(effects);
-                                                    }}
-                                                />
-                                            </Box>
-                                        </Grid>
-                                    </Grid>
-                                </Paper>
+                                    </Paper>
+                                }
 
                                 {chapters.length > 0 && (
                                     <ChaptersSection
@@ -2039,7 +2061,7 @@ const ScriptProductionClient = () => {
                                 )}
 
                                 {/* Production Actions - Only show when script is approved */}
-                                <Box sx={{ mt: 2 }}>
+                                {isHumanNarrationUploaded && <Box sx={{ mt: 2 }}>
                                     <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5 }}>
                                         🎬 Production Actions
                                     </Typography>
@@ -2055,7 +2077,7 @@ const ScriptProductionClient = () => {
                                                 disabled={!chapters.length}
                                                 sx={{ mb: 1, fontSize: '1rem', lineHeight: 1.5 }}
                                             >
-                                                Download Narrations
+                                                Download Script
                                             </Button>
                                         </Grid>
 
@@ -2131,6 +2153,7 @@ const ScriptProductionClient = () => {
 
                                     </Grid>
                                 </Box>
+                                }
                             </Box>
                         </Paper>
                     }
@@ -2392,6 +2415,7 @@ const ScriptProductionClient = () => {
                     </Grid>
                 </DialogContent>
             </Dialog>
+
             {/* Video Preview Dialog */}
             <Dialog
                 open={videoPreviewOpen}
