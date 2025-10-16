@@ -308,6 +308,7 @@ const TrendingTopics: React.FC = () => {
           status: SCRIPT_STATUS.GENERATED, //approved, uploaded, generated
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          narration_doc_link: '',
         };
 
         // Store metadata in secure storage for the script production page

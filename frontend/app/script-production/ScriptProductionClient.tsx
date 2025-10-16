@@ -36,6 +36,7 @@ import {
     PlayArrow as PlayIcon,
     Pause as PauseIcon
 } from '@mui/icons-material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
 import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
@@ -107,6 +108,7 @@ const ScriptProductionClient = () => {
     const [projectTransitionId, setProjectTransitionId] = useState<string>('');
     const [projectMusic, setProjectMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
     const [projectVideoClip, setProjectVideoClip] = useState<{ name?: string; url: string } | null>(null);
+    const [narrationDocLink, setNarrationDocLink] = useState<string | null>(null);
     const [projectTransitionEffects, setProjectTransitionEffects] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -418,7 +420,7 @@ const ScriptProductionClient = () => {
 
         // If chapters with images already exist in approvedScript, reuse them
         try {
-            const stored = secure.j.approvedScript.get();
+            const stored = SecureStorageHelpers.getApprovedScript();
             const storedData = typeof stored === 'string' ? JSON.parse(stored) : stored;
             if (storedData && Array.isArray(storedData.chapters) && storedData.chapters.length === paragraphsWithTimeRanges.length) {
                 const normalizedFromStorage: Chapter[] = storedData.chapters.map((ch: any, index: number) => ({
@@ -467,10 +469,20 @@ const ScriptProductionClient = () => {
             const storedMetadata = SecureStorageHelpers.getScriptMetadata();
             if (storedMetadata && typeof storedMetadata === 'object') {
                 storedData = storedMetadata;
-                setLoading(false);
-                setScriptData(storedData);
-                setEditedScript(storedData.script || '');
-                saveTrendingTopic(storedData);
+                if (storedData.status === SCRIPT_STATUS.APPROVED) {
+                    setIsScriptApproved(true);
+                    setShowNarrationUploadView(true);
+
+                    if (storedData.narration_doc_link) {
+                        setNarrationDocLink(storedData.narration_doc_link);
+                        setIsHumanNarrationUploaded(true);
+                    }
+                } else {
+                    setLoading(false);
+                    setScriptData(storedData);
+                    setEditedScript(storedData.script || '');
+                    saveTrendingTopic(storedData);
+                }
 
                 // setScriptSectionData(storedMetadata);
             } else {
@@ -495,7 +507,7 @@ const ScriptProductionClient = () => {
             storedData.narration_type,
             storedData.created_at || new Date().toISOString()
         );
-    
+
         if (error) {
             HelperFunctions.showError('Failed to save trending topic');
         } else {
@@ -759,7 +771,7 @@ const ScriptProductionClient = () => {
         }
 
         toast.info('Video generation started...');
-        setIsHumanNarrationUploaded(true);
+
         setShowBackConfirmation(true);
     };
 
@@ -928,7 +940,7 @@ const ScriptProductionClient = () => {
                 script: combinedScript
             };
             setScriptData(updatedScriptData);
-            secure.j.approvedScript.set(updatedScriptData);
+            SecureStorageHelpers.setScriptMetadata(updatedScriptData);
         }
 
         setIsEditingScript(false);
@@ -941,7 +953,7 @@ const ScriptProductionClient = () => {
 
         // Reset script section data to original values from secure storage
         try {
-            const storedMetadata = secure.j.scriptMetadata.get();
+            const storedMetadata = SecureStorageHelpers.getScriptMetadata();
             if (storedMetadata && typeof storedMetadata === 'object') {
                 setScriptData(storedMetadata);
             } else {
@@ -1060,7 +1072,8 @@ const ScriptProductionClient = () => {
             console.error('Error saving approved script:', error);
         } else {
             setIsScriptApproved(true);
-            secure.j.scriptMetadata.remove();
+            const approvedData = { ...scriptData, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
+            SecureStorageHelpers.setScriptMetadata(approvedData);
             // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
             setShowNarrationUploadView(true);
             // console.log('Approved script saved successfully');
@@ -1330,8 +1343,8 @@ const ScriptProductionClient = () => {
         // Clear script data from secure storage when leaving
         try {
             console.warn('auto moving back to trending topics');
-            secure.j.approvedScript.remove();
-            secure.j.scriptMetadata.remove();
+            SecureStorageHelpers.removeApprovedScript();
+            SecureStorageHelpers.removeScriptMetadata();
         } catch (error) {
             console.warn('Error clearing script cache:', error);
         }
@@ -1384,18 +1397,21 @@ const ScriptProductionClient = () => {
                 </Box>
 
                 {/* Duration Display */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem', lineHeight: 1.5 }}>
-                        Estimated Duration:
-                    </Typography>
-                    <Chip
-                        label={estimatedDuration}
-                        size="medium"
-                        color="success"
-                        sx={{ fontSize: '1rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
-                    />
-                </Box>
+                {
+                    isScriptApproved && narrationDocLink &&
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
+                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem', lineHeight: 1.5 }}>
+                            Estimated Duration:
+                        </Typography>   
+                        <Chip
+                            label={estimatedDuration}
+                            size="medium"
+                            color="success"
+                            sx={{ fontSize: '1rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
+                        />
+                    </Box>
+                }
             </Box>
 
             <Box sx={{ flex: 1, overflow: 'auto', px: 3 }}>
@@ -1664,8 +1680,66 @@ const ScriptProductionClient = () => {
                             maxHeight: '85vh',
                             overflow: 'auto',
                         }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Box
+                                sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, alignItems: 'center', justifyContent: 'center', minHeight: 220, textAlign: 'center', cursor: 'pointer' }}
+                                onClick={() => {
+                                    try { (document.getElementById('narration-doc-input') as HTMLInputElement)?.click(); } catch { }
+                                }}
+                                role="button"
+                                aria-label="Upload narration document"
+                            >
+                                <CloudUploadIcon color="primary" sx={{ fontSize: 48 }} />
                                 <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Upload Narration</Typography>
+                                <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                                    Please upload your narration document (PDF or DOC/DOCX).
+                                </Typography>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    size="small"
+                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (narrationDocLink) {
+                                            window.open(narrationDocLink, '_blank');
+                                            return;
+                                        }
+                                        try { (document.getElementById('narration-doc-input') as HTMLInputElement)?.click(); } catch { }
+                                    }}
+                                >
+                                    {narrationDocLink ? 'View Doc' : 'Browse'}
+                                </Button>
+                                <input
+                                    id="narration-doc-input"
+                                    type="file"
+                                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                    onChange={async (e) => {
+                                        const file = e.target.files && e.target.files[0];
+                                        if (!file) return;
+                                        try {
+                                            setLoading(true);
+                                            const jobName = chapters[0]?.jobName || `job-${HelperFunctions.generateRandomId()}`;
+                                            const uploadResult = await HelperFunctions.uploadMediaToDrive(jobName, 'input', file);
+                                            setLoading(false);
+                                            if (!uploadResult.success) {
+                                                HelperFunctions.showError('Failed to upload narration');
+                                                return;
+                                            }
+                                            setIsHumanNarrationUploaded(true);
+                                            if (uploadResult.webViewLink) {
+                                                const scriptMetaData = { ...scriptData, narration_doc_link: uploadResult.webViewLink, updated_at: new Date().toISOString() } as any;
+                                                SecureStorageHelpers.setScriptMetadata(scriptMetaData);
+                                                setNarrationDocLink(uploadResult.webViewLink);
+                                            }
+                                            HelperFunctions.showSuccess('Narration uploaded successfully');
+                                        } catch (err) {
+                                            setLoading(false);
+                                            HelperFunctions.showError('Failed to upload narration');
+                                        }
+                                    }}
+                                    style={{ display: 'none' }}
+                                />
+                                {/* Removed explicit link; button shows 'View Doc' after upload */}
                             </Box>
                         </Paper>
                     }

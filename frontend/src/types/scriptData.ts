@@ -18,4 +18,5 @@ export interface ScriptData {
     status: string;
     created_at: string;
     updated_at: string;
+    narration_doc_link: string;
 }
