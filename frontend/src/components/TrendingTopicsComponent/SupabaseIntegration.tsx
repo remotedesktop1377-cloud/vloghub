@@ -76,33 +76,6 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
     }
   };
 
-  const saveTrendingTopics = async (topics: TrendingTopic[]) => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    try {
-      // Convert your TrendingTopic format to Supabase format
-      const supabaseTopics: Database['public']['Tables']['trending_topics']['Insert'][] = topics.map((t) => ({
-        topic: t.topic,
-        category: t.category,
-        // Only columns that currently exist in your table
-        location: (t as any).location ?? null,
-        date_range: (t as any).dateRange ?? null,
-        related_keywords: (t as any).relatedKeywords ?? null,
-      }));
-
-      const { data, error } = await SupabaseHelpers.saveTrendingTopics(supabaseTopics as any);
-      if (data) {
-        setSavedTopics(data);
-        console.log('Topics saved successfully');
-      }
-    } catch (error) {
-      console.error('Error saving trending topics:', error);
-    }
-  };
-
   const saveSearchHistory = async (query: string, resultsCount: number = 0) => {
     if (!user) return;
 
@@ -262,27 +235,6 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
 export const useSupabaseIntegration = () => {
   const { user } = useAuth();
 
-  const saveTrendingTopics = async (topics: TrendingTopic[]) => {
-    if (!user) return { error: 'User not authenticated' };
-
-    try {
-      const supabaseTopics: Database['public']['Tables']['trending_topics']['Insert'][] = topics.map((t) => ({
-        topic: t.topic,
-        category: t.category,
-        value: typeof t.value === 'number' ? t.value : 0,
-        timestamp: t.timestamp || new Date().toISOString(),
-        description: t.description ?? null,
-        source_reference: t.source_reference ?? null,
-        engagement_count: t.engagement_count ?? null,
-      }));
-
-      const result = await SupabaseHelpers.saveTrendingTopics(supabaseTopics);
-      return result;
-    } catch (error) {
-      return { error };
-    }
-  };
-
   const saveSearch = async (query: string, filters: any = {}, resultsCount: number = 0) => {
     if (!user) return { error: 'User not authenticated' };
 
@@ -315,7 +267,6 @@ export const useSupabaseIntegration = () => {
   return {
     user,
     isAuthenticated: !!user,
-    saveTrendingTopics,
     saveSearch,
     getSearchHistory,
   };
