@@ -2108,7 +2108,7 @@ const ScriptProductionClient = () => {
 
                                     {/* Other Actions */}
                                     <Grid container spacing={2}>
-                                        <Grid item xs={12}>
+                                        {/* <Grid item xs={12}>
                                             <Button
                                                 variant="outlined"
                                                 fullWidth
@@ -2119,7 +2119,7 @@ const ScriptProductionClient = () => {
                                             >
                                                 Download Script
                                             </Button>
-                                        </Grid>
+                                        </Grid> */}
 
                                         <Grid item xs={12}>
                                             <Box sx={{ position: 'relative' }}>
