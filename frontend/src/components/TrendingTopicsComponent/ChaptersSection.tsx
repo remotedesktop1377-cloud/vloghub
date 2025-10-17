@@ -1467,10 +1467,34 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                         </Typography>
                                                       </>
                                                     ) : (
-                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1rem' }}>
-                                                        {/* Click to add media */}
-                                                        No Media added
-                                                      </Typography>
+                                                      <>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1rem', mb: 0.5 }}>
+                                                          No Media added
+                                                        </Typography>
+                                                        <Button
+                                                          size="small"
+                                                          variant="outlined"
+                                                          sx={{ fontSize: '0.9rem', py: 0.3, px: 1, minHeight: 'auto' }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const ch = chapters[index];
+                                                            const highlighted = Array.isArray((ch as any).highlightedKeywords)
+                                                              ? ((ch as any).highlightedKeywords as string[]).filter(k => typeof k === 'string' && k.trim())
+                                                              : [];
+                                                            const selected = Array.isArray((ch as any).keywordsSelected)
+                                                              ? ((ch as any).keywordsSelected as any[]).map(entry => (entry?.modifiedKeyword || entry?.suggestedKeyword)).filter((k: any) => typeof k === 'string' && k.trim())
+                                                              : [];
+                                                            const keywords = Array.from(new Set([...(highlighted || []), ...(selected || [])]));
+                                                            if (typeof window !== 'undefined') {
+                                                              (window as any).__keywordSuggestions = { keyword: keywords[0] || '', keywords };
+                                                            }
+                                                            onMediaManagementChapterIndex(index);
+                                                            onMediaManagementOpen(true);
+                                                          }}
+                                                        >
+                                                          Find Images
+                                                        </Button>
+                                                      </>
                                                     )}
                                                   </Box>
                                                 )}

@@ -126,6 +126,19 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const currentLoading = activeTab === 'google' ? googleLoading : envatoLoading;
     const currentError = activeTab === 'google' ? googleError : envatoError;
 
+    // Prefill search input with a brief summary from the scene narration
+    useEffect(() => {
+        if (!chapterNarration) return;
+        if (searchQuery && searchQuery.trim().length > 0) return; // don't override user input
+        const summary = chapterNarration
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split(' ')
+            // .slice(0, 12)
+            .join(' ');
+        if (summary) setSearchQuery(summary);
+    }, [chapterNarration]);
+
     // Search Google Images
     const searchGoogleImages = async (query: string, suggestions: string[] = []) => {
         setGoogleLoading(true);
@@ -425,6 +438,12 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         }
     }, [chapterNarration]);
 
+    useEffect(() => {
+        if (predefinedTransitions.length > 0) {
+            setSelectedTransitionsEffects([predefinedTransitions[0]]);
+        }
+    }, []);
+
     const handleSearch = () => {
         if (searchQuery.trim()) {
             if (activeTab === 'google') {
@@ -463,7 +482,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         if (isSelected) {
             // Unselect if already selected
             setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
-            setSelectedTransitionsEffects([]);
+            setSelectedTransitionsEffects([predefinedTransitions[0]]);
         } else {
             // Enforce single selection across all sources
             setSelectedBySource({
@@ -472,7 +491,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 envatoClips: new Set(sourceKey === 'envatoClips' ? [imageUrl] : []),
                 upload: new Set(sourceKey === 'upload' ? [imageUrl] : [])
             });
-            setSelectedTransitionsEffects([]);
+            setSelectedTransitionsEffects([predefinedTransitions[0]]);
         }
     };
 
@@ -846,8 +865,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                 <AutoAwesomeIcon sx={{ fontSize: 18 }} />
                                 {activeTab === 'google' ? 'Meaningful queries:' : 'Meaningful words:'}
                             </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', width: '100%' }}>
                                     {(activeTab === 'google' ? googleSuggestions : envatoKeywords).map((suggestion, index) => (
                                         <Chip
                                             key={index}
@@ -866,15 +885,20 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 }
                                             }}
                                             sx={{
-                                                mr: 1,
                                                 cursor: 'pointer',
                                                 fontSize: '1rem',
                                                 color: 'text.secondary',
-                                                height: 36,
+                                                height: 'auto',
+                                                alignItems: 'flex-start',
+                                                maxWidth: '100%',
                                                 '& .MuiChip-label': {
                                                     fontSize: '1rem',
                                                     fontWeight: 500,
-                                                    lineHeight: 1.5
+                                                    lineHeight: 1.5,
+                                                    whiteSpace: 'normal',
+                                                    overflow: 'visible',
+                                                    textOverflow: 'unset',
+                                                    display: 'block'
                                                 },
                                                 '&:hover': {
                                                     backgroundColor: 'action.hover',
@@ -885,10 +909,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         />
                                     ))}
                                 </Box>
-
                                 {/* Selection Actions */}
                                 {currentImages.length > 0 && (
-                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
+                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end', mt: 1, width: '100%' }}>
                                         <Button
                                             size="large"
                                             variant="contained"

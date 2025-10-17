@@ -37,6 +37,7 @@ import {
     Pause as PauseIcon
 } from '@mui/icons-material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
 import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
@@ -127,6 +128,7 @@ const ScriptProductionClient = () => {
         'reality_shift',
         'quantum_fade_to_black'
     ];
+
     const CONTROL_HEIGHT = 44;
     const [jobInfo, setJobInfo] = useState<{ jobId?: string, jobName?: string } | null>(null);
     // Chapter edit dialog states
@@ -1213,7 +1215,7 @@ const ScriptProductionClient = () => {
             script: parsed?.script ?? base.script ?? '',
             updated_at: new Date().toISOString(),
         } as ScriptData;
-        console.log('Parsed narration (script preview):', merged.script);
+        // console.log('Parsed narration (script preview):', merged.script);
         setScriptData(merged);
 
         updateParagraphs(merged.narration_type as "interview" | "narration", merged);
@@ -1817,10 +1819,9 @@ const ScriptProductionClient = () => {
 
                                 {/* Project-level Settings (moved into dialog) */}
                                 {isHumanNarrationUploaded &&
-                                    <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Project Settings</Typography>
-                                            <Button variant="contained" size="small" sx={{ textTransform: 'none' }} onClick={() => openProjectSettingsDialog('project')}>Open</Button>
+                                    <Paper sx={{ p: 2, mb: 2, }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end' }}>
+                                            <Button variant="contained" size="small" sx={{ textTransform: 'none' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
                                         </Box>
                                         <Grid container spacing={2} sx={{ display: 'none' }}>
                                             {/* Transition selector */}
@@ -2210,11 +2211,11 @@ const ScriptProductionClient = () => {
                 fullWidth
             >
                 <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
-                    {isHumanNarrationUploaded ? 'Uploading Completed' : '⚠️ Are you sure?'}
+                    {chromaKeyFile !== null ? 'Uploading Completed' : '⚠️ Are you sure?'}
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="h5" sx={{ mb: 2, lineHeight: 1.5 }}>
-                        {isHumanNarrationUploaded ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
+                        {chromaKeyFile !== null ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
@@ -2223,15 +2224,15 @@ const ScriptProductionClient = () => {
                         variant="outlined"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
-                        {isHumanNarrationUploaded ? 'Close' : 'Stay Here'}
+                        {chromaKeyFile !== null ? 'Close' : 'Stay Here'}
                     </Button>
-                    {!isHumanNarrationUploaded && <Button
+                    {<Button
                         onClick={handleConfirmBack}
                         variant="contained"
                         color="warning"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
-                        Discard Script
+                        {chromaKeyFile !== null ? 'Okay' : 'Discard Script'}
                     </Button>}
                 </DialogActions>
             </Dialog>
@@ -2251,8 +2252,8 @@ const ScriptProductionClient = () => {
                     }
                 }}
             >
-                <DialogTitle id="project-settings-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="h6">Project Settings {projectSettingsContext.mode === 'scene' ? `(Scene ${(projectSettingsContext.sceneIndex || 0) + 1})` : ''}</Typography>
+                <DialogTitle id="project-settings-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="h6" component="div">Project Settings {projectSettingsContext.mode === 'scene' ? `(Scene ${(projectSettingsContext.sceneIndex || 0) + 1})` : ''}</Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <Button onClick={closeProjectSettingsDialog} variant="outlined" size="small" sx={{ textTransform: 'none' }}>✕ Close</Button>
                         <Button onClick={applyProjectSettingsDialog} variant="contained" size="small" disabled={false} sx={{ textTransform: 'none' }}>✔ Done</Button>

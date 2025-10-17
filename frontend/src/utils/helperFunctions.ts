@@ -197,7 +197,7 @@ export class HelperFunctions {
       const call_to_action = sections['call to action'] || sections['call_to_action'] || '';
 
       const script = [hook, main_content, conclusion, call_to_action].filter(Boolean).join('\n\n');
-      console.log('script', script);
+      // console.log('script', script);
 
       return { title, hook, main_content, conclusion, call_to_action, script } as Partial<ScriptData>;
     } catch (e) {
