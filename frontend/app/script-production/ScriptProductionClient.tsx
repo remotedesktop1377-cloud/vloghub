@@ -2219,13 +2219,13 @@ const ScriptProductionClient = () => {
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
-                    <Button
+                    {chromaKeyFile === null && <Button
                         onClick={handleCancelBack}
                         variant="outlined"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
-                        {chromaKeyFile !== null ? 'Close' : 'Stay Here'}
-                    </Button>
+                        {'Stay Here'}
+                    </Button>}
                     {<Button
                         onClick={handleConfirmBack}
                         variant="contained"

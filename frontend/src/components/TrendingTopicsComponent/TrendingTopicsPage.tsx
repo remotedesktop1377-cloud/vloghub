@@ -127,6 +127,7 @@ const TrendingTopics: React.FC = () => {
       const now = Date.now();
       if (lastFetchRef.current && lastFetchRef.current.key === fetchKey && (now - lastFetchRef.current.ts) < 1500) {
         // console.log('Skipping duplicate fetch for key:', fetchKey);
+        setLoading(false);
         return;
       }
       lastFetchRef.current = { key: fetchKey, ts: now };
@@ -207,7 +208,7 @@ const TrendingTopics: React.FC = () => {
       // } else {
       // console.log('🟠 No valid cache found - calling API to fetch fresh data');
       // Call API when no cached data is available
-
+      setLoading(true);
       fetchTrendingTopics();
       // }
     }
