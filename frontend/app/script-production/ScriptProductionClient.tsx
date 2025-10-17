@@ -144,6 +144,49 @@ const ScriptProductionClient = () => {
     // Seed snapshot for change detection
     const projectSettingsSeedRef = useRef<{ transition?: string; music?: any; logo?: any; clip?: any; effects?: string[] } | null>(null);
 
+
+
+    useEffect(() => {
+        let storedData = null;
+
+        // First try to load from metadata (for unapproved scripts)
+        try {
+            const storedMetadata = SecureStorageHelpers.getScriptMetadata();
+            if (storedMetadata && typeof storedMetadata === 'object') {
+                storedData = storedMetadata;
+                if (storedData.status === SCRIPT_STATUS.APPROVED) {
+                    setIsScriptApproved(true);
+                    setShowNarrationUploadView(true);
+
+                    if (storedData.narration_doc_link) {
+                        setNarrationDocLink(storedData.narration_doc_link);
+                        setIsHumanNarrationUploaded(true);
+
+                        if (storedData.uploadedFile) {
+                            setNarrationFile(storedData.uploadedFile);
+                            parseAndUpdateScriptData(storedData.uploadedFile);
+                        }
+                    }
+                } else {
+                    setLoading(false);
+                    setScriptData(storedData);
+                    setEditedScript(storedData.script || '');
+                    saveTrendingTopic(storedData);
+                }
+
+                // setScriptSectionData(storedMetadata);
+            } else {
+                setNoScriptFound(true);
+                setLoading(false);
+            }
+        } catch (error) {
+            console.warn('Error parsing script metadata:', error);
+            setLoading(false);
+            setNoScriptFound(true);
+        }
+
+    }, []);
+
     const openProjectSettingsDialog = (mode: 'project' | 'scene', sceneIndex?: number) => {
         setProjectSettingsContext({ mode, sceneIndex });
         if (mode === 'scene' && typeof sceneIndex === 'number') {
@@ -462,42 +505,6 @@ const ScriptProductionClient = () => {
         setChapters(chaptersAsRequired);
     };
 
-    useEffect(() => {
-        let storedData = null;
-
-        // First try to load from metadata (for unapproved scripts)
-        try {
-            const storedMetadata = SecureStorageHelpers.getScriptMetadata();
-            if (storedMetadata && typeof storedMetadata === 'object') {
-                storedData = storedMetadata;
-                if (storedData.status === SCRIPT_STATUS.APPROVED) {
-                    setIsScriptApproved(true);
-                    setShowNarrationUploadView(true);
-
-                    if (storedData.narration_doc_link) {
-                        setNarrationDocLink(storedData.narration_doc_link);
-                        setIsHumanNarrationUploaded(true);
-                    }
-                } else {
-                    setLoading(false);
-                    setScriptData(storedData);
-                    setEditedScript(storedData.script || '');
-                    saveTrendingTopic(storedData);
-                }
-
-                // setScriptSectionData(storedMetadata);
-            } else {
-                setNoScriptFound(true);
-                setLoading(false);
-            }
-        } catch (error) {
-            console.warn('Error parsing script metadata:', error);
-            setLoading(false);
-            setNoScriptFound(true);
-        }
-
-    }, []);
-
     const saveTrendingTopic = async (storedData: ScriptData) => {
         const { error } = await SupabaseHelpers.saveTrendingTopic(
             storedData.topic,
@@ -520,7 +527,6 @@ const ScriptProductionClient = () => {
     useEffect(() => {
         if (scriptData) {
             setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
-            // updateParagraphs(scriptData.narration_type as "interview" | "narration", scriptData);
         }
     }, [scriptData]);
 
@@ -586,12 +592,25 @@ const ScriptProductionClient = () => {
         };
     }, [isScriptApproved]);
 
-    // useEffect(() => {
-    //     if (isScriptApproved && chapters && chapters.length > 0) {
-    //         // save updated chapters
-    //         SecureStorageHelpers.setScriptMetadata({ ...scriptData, chapters });
-    //     }
-    // }, [chapters]);
+    useEffect(() => {
+        if (isScriptApproved && chapters && chapters.length > 0) {
+
+            const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
+            if (needsHighlights) {
+                setLoading(true);
+                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
+                    // console.log('chapters with highlights', chapters);
+                    // uploadToGoogleDrive(chapters);
+                    setLoading(false);
+                    // save updated chapters
+                    SecureStorageHelpers.setScriptMetadata({ ...scriptData, chapters, updated_at: new Date().toISOString() });
+                });
+            } else {
+                setLoading(false);
+            }
+
+        }
+    }, [chapters]);
 
     // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
     const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
@@ -1065,19 +1084,19 @@ const ScriptProductionClient = () => {
     const handleApproveScript = async () => {
         setLoading(true);
         // push this script data to the scripts_approved table in supabase
-        const data = { ...scriptData, status: SCRIPT_STATUS.APPROVED } as any;
-        setScriptData(data);
-        const { error } = await SupabaseHelpers.saveApprovedScript(data);
-        if (error) {
-            console.error('Error saving approved script:', error);
-        } else {
-            setIsScriptApproved(true);
-            const approvedData = { ...scriptData, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
-            SecureStorageHelpers.setScriptMetadata(approvedData);
-            // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
-            setShowNarrationUploadView(true);
-            // console.log('Approved script saved successfully');
-        }
+        const approvedData = { ...scriptData, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
+        setScriptData(approvedData);
+        SecureStorageHelpers.setScriptMetadata(approvedData);
+
+        // const { error } = await SupabaseHelpers.saveApprovedScript(data);
+        // if (error) {
+        //     console.error('Error saving approved script:', error);
+        // } else {
+        setIsScriptApproved(true);
+        // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
+        setShowNarrationUploadView(true);
+        // console.log('Approved script saved successfully');
+        // }
         setLoading(false);
         toast.success('Script approved! Now generating scenes breakdown...');
     };
@@ -1178,6 +1197,26 @@ const ScriptProductionClient = () => {
         });
         setChapters(updatedChapters);
         setSelectedText(null);
+    };
+
+    const parseAndUpdateScriptData = async (file: File) => {
+        // parse this file, merge into current scriptData, log, then generate paragraphs
+        const parsed = await HelperFunctions.parseNarrationFile(file);
+        const base = scriptData || ({} as ScriptData);
+        const merged: ScriptData = {
+            ...base,
+            title: parsed?.title ?? base.title ?? '',
+            hook: parsed?.hook ?? base.hook ?? '',
+            main_content: parsed?.main_content ?? base.main_content ?? '',
+            conclusion: parsed?.conclusion ?? base.conclusion ?? '',
+            call_to_action: parsed?.call_to_action ?? base.call_to_action ?? '',
+            script: parsed?.script ?? base.script ?? '',
+            updated_at: new Date().toISOString(),
+        } as ScriptData;
+        console.log('Parsed narration (script preview):', merged.script);
+        setScriptData(merged);
+
+        updateParagraphs(merged.narration_type as "interview" | "narration", merged);
     };
 
     // Add keyword to highlighted list
@@ -1321,7 +1360,7 @@ const ScriptProductionClient = () => {
                 // console.log('Selection cleared or empty - scheduling clear');
                 selectionTimeout = setTimeout(() => {
                     if (!isInteractingWithToolbar) {
-                        console.log('Clearing selection after timeout');
+                        // console.log('Clearing selection after timeout');
                         setSelectedText(null);
                     } else {
                         console.log('Not clearing selection - user is interacting with toolbar');
@@ -1683,7 +1722,7 @@ const ScriptProductionClient = () => {
                     )}
 
                     {
-                        isScriptApproved && showNarrationUploadView &&
+                        isScriptApproved && showNarrationUploadView && chapters.length === 0 &&
                         //show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
                         <Paper sx={{
                             flex: 1,
@@ -1721,13 +1760,13 @@ const ScriptProductionClient = () => {
                                         try { (document.getElementById('narration-doc-input') as HTMLInputElement)?.click(); } catch { }
                                     }}
                                 >
-                                    {narrationDocLink ? 'View Doc' : 'Browse'}
+                                    {narrationDocLink ? 'View Script Narration' : 'Upload Script Narration'}
                                 </Button>
                                 <input
                                     id="narration-doc-input"
                                     type="file"
                                     accept=".txt,text/plain"
-                                    onChange={async (e) => {
+                                    onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
                                         const file = e.target.files && e.target.files[0];
                                         if (!file) return;
                                         try {
@@ -1746,12 +1785,12 @@ const ScriptProductionClient = () => {
                                             }
                                             setIsHumanNarrationUploaded(true);
                                             if (uploadResult.webViewLink) {
-                                                const scriptMetaData = { ...scriptData, narration_doc_link: uploadResult.webViewLink, updated_at: new Date().toISOString() } as any;
+                                                const scriptMetaData = { ...scriptData, narration_doc_link: uploadResult.webViewLink, uploadedFile: file, updated_at: new Date().toISOString() } as any;
                                                 SecureStorageHelpers.setScriptMetadata(scriptMetaData);
                                                 setNarrationDocLink(uploadResult.webViewLink);
                                                 setNarrationFile(file);
+                                                parseAndUpdateScriptData(file);
                                             }
-                                            HelperFunctions.showSuccess('Narration uploaded successfully');
                                         } catch (err) {
                                             setLoading(false);
                                             HelperFunctions.showError('Failed to upload narration');
@@ -2061,7 +2100,7 @@ const ScriptProductionClient = () => {
                                 )}
 
                                 {/* Production Actions - Only show when script is approved */}
-                                {isHumanNarrationUploaded && <Box sx={{ mt: 2 }}>
+                                {isHumanNarrationUploaded && scriptData?.script && chapters.length > 0 && <Box sx={{ mt: 2 }}>
                                     <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5 }}>
                                         🎬 Production Actions
                                     </Typography>

@@ -14,22 +14,32 @@ export interface LocationData {
 }
 
 export const locationData: LocationData = {
+  // regions: [
+  //   { value: 'africa', label: 'Africa', flag: '', type: 'region' },
+  //   { value: 'asia', label: 'Asia', flag: '', type: 'region' },
+  //   { value: 'europe', label: 'Europe', flag: '🇪🇺', type: 'region' },
+  //   { value: 'north-america', label: 'North America', flag: '', type: 'region' },
+  //   { value: 'south-america', label: 'South America', flag: '', type: 'region' },
+  //   { value: 'oceania', label: 'Oceania', flag: '', type: 'region' },
+  //   { value: 'middle-east', label: 'Middle East', flag: '', type: 'region' },
+  //   { value: 'southeast-asia', label: 'Southeast Asia', flag: '', type: 'region' },
+  //   { value: 'central-asia', label: 'Central Asia', flag: '', type: 'region' },
+  //   { value: 'east-asia', label: 'East Asia', flag: '', type: 'region' },
+  //   { value: 'south-asia', label: 'South Asia', flag: '', type: 'region' },
+  //   { value: 'western-europe', label: 'Western Europe', flag: '', type: 'region' },
+  //   { value: 'eastern-europe', label: 'Eastern Europe', flag: '', type: 'region' },
+  //   { value: 'northern-europe', label: 'Northern Europe', flag: '', type: 'region' },
+  //   { value: 'southern-europe', label: 'Southern Europe', flag: '', type: 'region' },
+  // ],
+
   regions: [
-    { value: 'africa', label: 'Africa', flag: '', type: 'region' },
-    { value: 'asia', label: 'Asia', flag: '', type: 'region' },
+    { value: 'africa', label: 'Africa', flag: '🌍', type: 'region' },
+    { value: 'asia', label: 'Asia', flag: '🌏', type: 'region' },
     { value: 'europe', label: 'Europe', flag: '🇪🇺', type: 'region' },
-    { value: 'north-america', label: 'North America', flag: '', type: 'region' },
-    { value: 'south-america', label: 'South America', flag: '', type: 'region' },
-    { value: 'oceania', label: 'Oceania', flag: '', type: 'region' },
-    { value: 'middle-east', label: 'Middle East', flag: '', type: 'region' },
-    { value: 'southeast-asia', label: 'Southeast Asia', flag: '', type: 'region' },
-    { value: 'central-asia', label: 'Central Asia', flag: '', type: 'region' },
-    { value: 'east-asia', label: 'East Asia', flag: '', type: 'region' },
-    { value: 'south-asia', label: 'South Asia', flag: '', type: 'region' },
-    { value: 'western-europe', label: 'Western Europe', flag: '', type: 'region' },
-    { value: 'eastern-europe', label: 'Eastern Europe', flag: '', type: 'region' },
-    { value: 'northern-europe', label: 'Northern Europe', flag: '', type: 'region' },
-    { value: 'southern-europe', label: 'Southern Europe', flag: '', type: 'region' },
+    { value: 'north-america', label: 'North America', flag: '🌎', type: 'region' },
+    { value: 'south-america', label: 'South America', flag: '🦜', type: 'region' },
+    { value: 'middle-east', label: 'Middle East', flag: '🕌', type: 'region' },
+    { value: 'oceania', label: 'Oceania', flag: '🏝️', type: 'region' },
   ],
 
   cities: [

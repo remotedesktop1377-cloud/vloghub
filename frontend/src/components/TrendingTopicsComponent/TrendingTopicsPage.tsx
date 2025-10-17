@@ -312,7 +312,7 @@ const TrendingTopics: React.FC = () => {
         };
 
         // Store metadata in secure storage for the script production page
-        secure.j.scriptMetadata.set(scriptMetadata);        
+        SecureStorageHelpers.setScriptMetadata(scriptMetadata);        
 
         // Navigate directly to script production page
         router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);

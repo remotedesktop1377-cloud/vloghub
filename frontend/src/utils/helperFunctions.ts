@@ -1,4 +1,5 @@
 import { Chapter } from '../types/chapters';
+import { ScriptData } from '../types/scriptData';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 
@@ -178,6 +179,86 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 };
 
 export class HelperFunctions {
+
+  /**
+   * Parse a narration .txt file and return extracted fields.
+   * Recognizes headers like TITLE, HOOK, MAIN CONTENT, CONCLUSION, CALL TO ACTION.
+   */
+  static async parseNarrationFile(file: File): Promise<Partial<ScriptData>> {
+    try {
+      const text = await HelperFunctions.readFileAsText(file);
+      const normalized = text.replace(/\r\n?/g, '\n');
+      const sections = HelperFunctions.extractSections(normalized);
+
+      const title = sections['title'] || '';
+      const hook = sections['hook'] || '';
+      const main_content = sections['main content'] || sections['main_content'] || '';
+      const conclusion = sections['conclusion'] || '';
+      const call_to_action = sections['call to action'] || sections['call_to_action'] || '';
+
+      const script = [hook, main_content, conclusion, call_to_action].filter(Boolean).join('\n\n');
+      console.log('script', script);
+
+      return { title, hook, main_content, conclusion, call_to_action, script } as Partial<ScriptData>;
+    } catch (e) {
+      console.error('parseNarrationFile failed', e);
+      HelperFunctions.showError('Failed to parse narration file');
+      return {} as Partial<ScriptData>;
+    }
+  }
+
+  private static readFileAsText(file: File): Promise<string> {
+    if (typeof (file as any).text === 'function') {
+      return (file as any).text();
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(String(e.target?.result || ''));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(file);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  private static extractSections(input: string): Record<string, string> {
+    const lines = input.split('\n');
+    const sections: Record<string, string> = {};
+    let currentKey: string | null = null;
+    let buffer: string[] = [];
+
+    const commit = () => {
+      if (currentKey !== null) {
+        sections[currentKey] = buffer.join('\n').trim();
+      }
+      buffer = [];
+    };
+
+    // Be lenient: allow any leading symbols/emojis, capture ALL-CAPS words before the colon
+    const headerRegex = /^\s*[^A-Za-z0-9]*\s*([A-Z][A-Z ]+?)\s*:\s*$/;
+
+    for (const rawLine of lines) {
+      const line = rawLine.trimEnd();
+      const m = line.match(headerRegex);
+      if (m) {
+        commit();
+        currentKey = m[1].toLowerCase();
+        continue;
+      }
+      buffer.push(rawLine);
+    }
+    commit();
+
+    const normalized: Record<string, string> = {};
+    Object.keys(sections).forEach((k) => {
+      const nk = k.replace(/\s+/g, ' ').replace(/_/g, ' ').trim();
+      normalized[nk] = sections[k];
+    });
+    return normalized;
+  }
+
   /**
    * Get saved social auth keys for a user (stored securely in local storage)
    */
