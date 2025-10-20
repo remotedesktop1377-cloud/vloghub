@@ -81,7 +81,7 @@ const EFFECT_NAME_MAP: Record<string, string> = {
 };
 
 interface ChaptersSectionProps {
-  jobInfo: { jobId?: string, jobName?: string } | null;
+  jobId: string;
   chapters: Chapter[];
   chaptersGenerated: boolean;
   generatingChapters: boolean;
@@ -160,7 +160,7 @@ interface ChaptersSectionProps {
 }
 
 const ChaptersSection: React.FC<ChaptersSectionProps> = ({
-  jobInfo,
+  jobId,
   chapters,
   chaptersGenerated,
   generatingChapters,
@@ -547,7 +547,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     });
                                                                     onChaptersUpdate(updated);
                                                                     setVolumeOpenIndex(null);
-                                                                    HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music changed');
+                                                                    HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music changed');
                                                                   }}
                                                                   disabled={false}
                                                                   sx={{
@@ -617,7 +617,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                             return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                           });
                                                                           onChaptersUpdate(updated);
-                                                                          HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music volume updated');
+                                                                          HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music volume updated');
                                                                         }}
                                                                         sx={{ height: 120, ml: 1 }}
                                                                       />
@@ -642,7 +642,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onChaptersUpdate(updated);
-                                                                      HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music auto-adjust toggled');
+                                                                      HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music auto-adjust toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Auto Adjust</Button></span>
@@ -662,7 +662,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onChaptersUpdate(updated);
-                                                                      HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music fade-in toggled');
+                                                                      HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music fade-in toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Fade In</Button></span>
@@ -681,7 +681,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onChaptersUpdate(updated);
-                                                                      HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music fade-out toggled');
+                                                                      HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music fade-out toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Fade Out</Button></span>
@@ -703,7 +703,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: applied } } as any;
                                                                     });
                                                                     onChaptersUpdate(updated);
-                                                                    HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music applied');
+                                                                    HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music applied');
                                                                   }}
                                                                 >Apply Music</Button>
 
@@ -720,7 +720,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: pruned } } as any;
                                                                     });
                                                                     onChaptersUpdate(updated);
-                                                                    HelperFunctions.persistSceneUpdate(jobInfo, updated, index, 'Music removed');
+                                                                    HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music removed');
                                                                   }}
                                                                 >Remove</Button>
                                                               </Box>
@@ -755,7 +755,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             ? { ...ch, highlightedKeywords: [] }
                                                             : ch
                                                         ));
-                                                        HelperFunctions.persistSceneUpdate(jobInfo, chapters, index, 'All keywords cleared');
+                                                        HelperFunctions.persistSceneUpdate(jobId, chapters, index, 'All keywords cleared');
                                                         if (typeof window !== 'undefined' && (window as any).toast) {
                                                           HelperFunctions.showSuccess('Cleared all keywords');
                                                         }
@@ -874,7 +874,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               };
                                                             });
                                                             onChaptersUpdate(updatedChapters);
-                                                            HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, `Keyword removed`);
+                                                            HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, `Keyword removed`);
                                                             if (typeof window !== 'undefined' && (window as any).toast) {
                                                               HelperFunctions.showSuccess(`Removed "${keyword}" and its images`);
                                                             }
@@ -904,35 +904,35 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       transitionEffects: Array.isArray(ve.transitionEffects) && ve.transitionEffects.length > 0 ? ve.transitionEffects : (projectSettings.transitionEffects || []),
                                                     } as typeof projectSettings;
                                                     return (
-                                                    <Box sx={{ mt: 1 }}>
-                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                                        <span>Media Selected:</span>
-                                                        {typeof onOpenProjectSettingsDialog === 'function' && (
-                                                          <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontSize: '0.9rem', height: 28 }} onClick={(e) => { e.stopPropagation(); onOpenProjectSettingsDialog(index); }}>Edit media for this Scene</Button>
-                                                        )}
-                                                      </Typography>
-                                                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                        {effective.transition && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(effective.transition).replace(/_/g,' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
-                                                        )}
-                                                        {effective.musicId && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: SUCCESS.light, color: 'text.white', border: `1px solid ${SUCCESS.main}` }}>
-                                                            Music: {((driveMusic as Array<{ id: string; name: string }> | undefined) || []).find(m => m.id === effective.musicId)?.name || effective.musicId}
-                                                          </Box>
-                                                        )}
-                                                        {effective.logo?.url && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>Logo: {effective.logo.name || 'Selected'}</Box>
-                                                        )}
-                                                        {effective.clip?.url && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: WARNING.light, color: 'text.white', border: `1px solid ${WARNING.main}` }}>Clip: {effective.clip.name || 'Selected'}</Box>
-                                                        )}
-                                                        {Array.isArray(effective.transitionEffects) && effective.transitionEffects.length > 0 && (
-                                                          <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PURPLE.light, color: 'text.white', border: `1px solid ${PURPLE.main}` }}>
-                                                            Effects: {effective.transitionEffects.map((id) => EFFECT_NAME_MAP[id] || id).join(', ')}
-                                                          </Box>
-                                                        )}
+                                                      <Box sx={{ mt: 1 }}>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                                          <span>Media Selected:</span>
+                                                          {typeof onOpenProjectSettingsDialog === 'function' && (
+                                                            <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontSize: '0.9rem', height: 28 }} onClick={(e) => { e.stopPropagation(); onOpenProjectSettingsDialog(index); }}>Edit media for this Scene</Button>
+                                                          )}
+                                                        </Typography>
+                                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                                          {effective.transition && (
+                                                            <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(effective.transition).replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
+                                                          )}
+                                                          {effective.musicId && (
+                                                            <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: SUCCESS.light, color: 'text.white', border: `1px solid ${SUCCESS.main}` }}>
+                                                              Music: {((driveMusic as Array<{ id: string; name: string }> | undefined) || []).find(m => m.id === effective.musicId)?.name || effective.musicId}
+                                                            </Box>
+                                                          )}
+                                                          {effective.logo?.url && (
+                                                            <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>Logo: {effective.logo.name || 'Selected'}</Box>
+                                                          )}
+                                                          {effective.clip?.url && (
+                                                            <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: WARNING.light, color: 'text.white', border: `1px solid ${WARNING.main}` }}>Clip: {effective.clip.name || 'Selected'}</Box>
+                                                          )}
+                                                          {Array.isArray(effective.transitionEffects) && effective.transitionEffects.length > 0 && (
+                                                            <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PURPLE.light, color: 'text.white', border: `1px solid ${PURPLE.main}` }}>
+                                                              Effects: {effective.transitionEffects.map((id) => EFFECT_NAME_MAP[id] || id).join(', ')}
+                                                            </Box>
+                                                          )}
+                                                        </Box>
                                                       </Box>
-                                                    </Box>
                                                     );
                                                   })()}
                                                 </Box>
@@ -1174,7 +1174,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   return ch;
                                                                 });
                                                                 onChaptersUpdate(updatedChapters);
-                                                                HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, 'Media deleted');
+                                                                HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1285,7 +1285,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   return ch;
                                                                 });
                                                                 onChaptersUpdate(updatedChapters);
-                                                                HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, 'Media deleted');
+                                                                HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1393,7 +1393,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                 };
                                                               });
                                                               onChaptersUpdate(updatedChapters);
-                                                              HelperFunctions.persistSceneUpdate(jobInfo, updatedChapters, index, 'Media deleted');
+                                                              HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, 'Media deleted');
                                                             }}
                                                           >
                                                             <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1912,7 +1912,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                     //   console.log('Media added to chapter:', JSON.stringify(updated[chapterIdx]));
                     // } catch {}
                     onChaptersUpdate(updated);
-                    HelperFunctions.persistSceneUpdate(jobInfo, updated, chapterIdx, 'Media added');
+                    HelperFunctions.persistSceneUpdate(jobId, updated, chapterIdx, 'Media added');
                     if (typeof window !== 'undefined') {
                       (window as any).__keywordSuggestions = undefined;
                     }

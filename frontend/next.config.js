@@ -14,10 +14,9 @@ const nextConfig = {
     return [];
   },
   webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-    };
+    config.externals.push({
+      "@ffmpeg-installer/ffmpeg": "@ffmpeg-installer/ffmpeg",
+    });
     return config;
   },
 };

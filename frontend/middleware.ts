@@ -43,6 +43,7 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    // Exclude API routes from middleware to prevent interfering with large uploads
+    '/((?!_next/static|_next/image|favicon.ico|public/|api/).*)',
   ],
 };

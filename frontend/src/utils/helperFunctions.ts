@@ -414,10 +414,10 @@ export class HelperFunctions {
    * Upload a media file (e.g., chroma key or any video) to Google Drive under the given job folder and target subfolder.
    * Returns Drive identifiers on success.
    */
-  static async uploadMediaToDrive(jobName: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
+  static async uploadMediaToDrive(jobId: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
     try {
       const form = new FormData();
-      form.append('jobName', jobName);
+      form.append('jobName', jobId);
       form.append('targetFolder', targetFolder || 'input');
       form.append('file', file);
 
@@ -446,7 +446,7 @@ export class HelperFunctions {
    * Persist a chapter scene change to Drive and show toast feedback
    */
   static async persistSceneUpdate(
-    jobInfo: { jobId?: string; jobName?: string } | null | undefined,
+    jobId: string,
     chapters: Chapter[],
     chapterIndex: number,
     successMessage: string = 'Scene updated on Drive'
@@ -455,10 +455,10 @@ export class HelperFunctions {
       const chapter = chapters?.[chapterIndex];
       if (!chapter) return;
       const sceneId = String((chapter as any).id || '');
-      const jobId = String((chapter as any).jobId || jobInfo?.jobId || '');
-      const jobName = String((chapter as any).jobName || jobInfo?.jobName || '');
+      const job_id = String((chapter as any).jobId || jobId || '');
+      // const jobName = String((chapter as any).jobName || jobInfo?.jobName || '');
       if (!jobId || !sceneId) return;
-      const ok = await HelperFunctions.updateChapterSceneOnDrive(jobName, jobId, sceneId, chapter);
+      const ok = await HelperFunctions.updateChapterSceneOnDrive(job_id, job_id, sceneId, chapter);
       if (ok) {
         HelperFunctions.showSuccess(successMessage);
       } else {

@@ -3,8 +3,12 @@ import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
 import { Readable } from 'stream';
+// @ts-ignore - use runtime types for busboy
+import Busboy from 'busboy';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxRequestBodySize = '200mb';
 
 async function findOrCreateFolder(drive: any, name: string, parentId: string) {
     const q = [
@@ -41,13 +45,52 @@ async function findOrCreateFolder(drive: any, name: string, parentId: string) {
 
 export async function POST(request: NextRequest) {
     try {
-        const form = await request.formData();
-        const jobName = String(form.get('jobName') || '').trim();
-        const targetFolder = String(form.get('targetFolder') || 'input').trim();
-        const file = form.get('file') as unknown as File | null;
+        // Stream-parse multipart to handle large files
+        const contentType = request.headers.get('content-type') || '';
+        if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
+            return NextResponse.json({ error: 'Content-Type must be multipart/form-data' }, { status: 400 });
+        }
 
-        if (!jobName || !file) {
+        const bb = Busboy({ headers: { 'content-type': contentType } , defParamCharset: 'utf8', preservePath: true});
+        let jobName = '';
+        let targetFolder = 'input';
+        let fileBufferPromise: Promise<{ buffer: Buffer; filename: string; mimeType: string } | null> | null = null as any;
+
+        const done = new Promise<void>((resolve, reject) => {
+            bb.on('field', (name: string, val: string) => {
+                if (name === 'jobName') jobName = String(val).trim();
+                if (name === 'targetFolder') targetFolder = String(val).trim() || 'input';
+            });
+
+            bb.on('file', (name: string, fileStream: NodeJS.ReadableStream, info: { filename: string; mimeType: string }) => {
+                const chunks: Buffer[] = [];
+                const { filename, mimeType } = info;
+                fileStream.on('data', (data: Buffer) => chunks.push(data));
+                fileStream.on('limit', () => reject(new Error('File too large')));
+                fileStream.on('end', () => {
+                    const buffer = Buffer.concat(chunks);
+                    fileBufferPromise = Promise.resolve({ buffer, filename, mimeType });
+                });
+            });
+
+            bb.on('error', reject);
+            bb.on('finish', resolve);
+        });
+
+        const body = request.body;
+        if (!body) return NextResponse.json({ error: 'Empty body' }, { status: 400 });
+        // Pipe the web ReadableStream into Busboy as a Node stream to avoid truncation issues
+        const nodeStream = Readable.fromWeb(body as any);
+        nodeStream.on('error', (err) => bb.emit('error', err as any));
+        nodeStream.pipe(bb, { end: true });
+
+        await done;
+        if (!jobName || !fileBufferPromise) {
             return NextResponse.json({ error: 'jobName and file are required' }, { status: 400 });
+        }
+        const fileData: { buffer: Buffer; filename: string; mimeType: string } | null = await fileBufferPromise as any;
+        if (!fileData) {
+            return NextResponse.json({ error: 'File not received' }, { status: 400 });
         }
 
         const credentialsPath = path.join(process.cwd(), 'src', 'config', 'gen-lang-client-0211941879-57f306607431.json');
@@ -74,11 +117,9 @@ export async function POST(request: NextRequest) {
         }
         const target = { id: currentParent } as any;
 
-        const arrayBuffer = await (file as any).arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const stream = Readable.from(buffer);
-        const fileFileName = (file as any).name || 'video.mp4';
-        const mimeType = (file as any).type || 'video/mp4';
+        const stream = Readable.from(fileData.buffer);
+        const fileFileName = fileData.filename || 'video.mp4';
+        const mimeType = fileData.mimeType || 'video/mp4';
 
         const uploaded = await drive.files.create({
             requestBody: { name: fileFileName, parents: [target.id], mimeType },

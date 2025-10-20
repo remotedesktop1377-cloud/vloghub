@@ -46,6 +46,7 @@ import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import { Chapter } from '@/types/chapters';
 import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
 import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
+import ChromaKeyUpload from '@/components/scriptProductionComponents/ChromaKeyUpload';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
 import { SUCCESS } from '@/styles/colors';
@@ -73,9 +74,7 @@ const ScriptProductionClient = () => {
     // Production states
     const [chapters, setChapters] = useState<Chapter[]>([]);
     const [chromaKeyFile, setChromaKeyFile] = useState<File | null>(null);
-    const [chromaKeyUrl, setChromaKeyUrl] = useState<string | null>(null);
     const [uploadingChromaKey, setUploadingChromaKey] = useState(false);
-    const [chromaKeyUploadProgress, setChromaKeyUploadProgress] = useState(0);
 
     // Chapter editing states
     const [editingChapter, setEditingChapter] = useState<number | null>(null);
@@ -118,6 +117,7 @@ const ScriptProductionClient = () => {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [lastMusicIdLoaded, setLastMusicIdLoaded] = useState<string | null>(null);
+
     const predefinedTransitions = [
         'quantum_dissolve',
         'particle_burst',
@@ -130,7 +130,7 @@ const ScriptProductionClient = () => {
     ];
 
     const CONTROL_HEIGHT = 44;
-    const [jobInfo, setJobInfo] = useState<{ jobId?: string, jobName?: string } | null>(null);
+    const [jobId, setJobId] = useState<string>('');
     // Chapter edit dialog states
     const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
     const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
@@ -145,8 +145,7 @@ const ScriptProductionClient = () => {
     const [tmpEffects, setTmpEffects] = useState<string[]>([]);
     // Seed snapshot for change detection
     const projectSettingsSeedRef = useRef<{ transition?: string; music?: any; logo?: any; clip?: any; effects?: string[] } | null>(null);
-
-
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         let storedData = null;
@@ -157,6 +156,7 @@ const ScriptProductionClient = () => {
             if (storedMetadata && typeof storedMetadata === 'object') {
                 storedData = storedMetadata;
                 if (storedData.status === SCRIPT_STATUS.APPROVED) {
+                    setJobId(storedData.jobId);
                     setIsScriptApproved(true);
                     setShowNarrationUploadView(true);
 
@@ -166,7 +166,7 @@ const ScriptProductionClient = () => {
 
                         if (storedData.uploadedFile) {
                             setNarrationFile(storedData.uploadedFile);
-                            parseAndUpdateScriptData(storedData.uploadedFile);
+                            parseAndUpdateScriptData(storedData.script);
                         }
                     }
                 } else {
@@ -249,7 +249,7 @@ const ScriptProductionClient = () => {
             setChapters(updated);
             try {
                 for (let i = 0; i < updated.length; i++) {
-                    await HelperFunctions.persistSceneUpdate(jobInfo, updated, i, 'Project settings applied to all scenes');
+                    await HelperFunctions.persistSceneUpdate(jobId, updated, i, 'Project settings applied to all scenes');
                 }
             } catch { }
         } else if (projectSettingsContext.mode === 'scene' && typeof projectSettingsContext.sceneIndex === 'number') {
@@ -270,7 +270,7 @@ const ScriptProductionClient = () => {
             setChapters(updated);
             try {
                 setProjectSettingsDialogOpen(false);
-                await HelperFunctions.persistSceneUpdate(jobInfo, updated, idx, 'Project settings applied to scene');
+                await HelperFunctions.persistSceneUpdate(jobId, updated, idx, 'Project settings applied to scene');
             } catch {
                 setProjectSettingsDialogOpen(false);
             }
@@ -315,31 +315,31 @@ const ScriptProductionClient = () => {
     };
 
     // Function to upload JSON to Google Drive
-    const uploadToGoogleDrive = async (chapters: Chapter[]) => {
+    const uploadToGoogleDrive = async () => {
         setLoading(true);
         try {
             // Ensure each chapter has assets.images populated with all selected sources
-            // const chaptersForUpload: Chapter[] = chapters.map((ch) => {
-            //     const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
-            //     const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
-            //     const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
-            //     const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
-            //     const combined = Array.from(new Set([
-            //         ...existingImages,
-            //         ...googleImages,
-            //         ...envatoImages,
-            //         ...keywordImages,
-            //     ].filter(Boolean)));
-            //     return {
-            //         ...ch,
-            //         assets: {
-            //             ...ch.assets,
-            //             images: combined,
-            //             imagesGoogle: googleImages,
-            //             imagesEnvato: envatoImages,
-            //         }
-            //     } as Chapter;
-            // });        
+            const chaptersForUpload: Chapter[] = chapters.map((ch) => {
+                const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
+                const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
+                const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
+                const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
+                const combined = Array.from(new Set([
+                    ...existingImages,
+                    ...googleImages,
+                    ...envatoImages,
+                    ...keywordImages,
+                ].filter(Boolean)));
+                return {
+                    ...ch,
+                    assets: {
+                        ...ch.assets,
+                        images: combined,
+                        imagesGoogle: googleImages,
+                        imagesEnvato: envatoImages,
+                    }
+                } as Chapter;
+            });
 
             const now = new Date();
             const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
@@ -407,10 +407,7 @@ const ScriptProductionClient = () => {
             }
 
             const result = await response.json();
-            // console.log('Drive result:', result);
-
-            // get job folder id
-            // setJobInfo({ jobId: result.projectFolderId, jobName: jobName });
+            console.log('Drive result:', result);
 
             // Store scene folder mapping for future updates
             // const sceneFolderMap: Record<string, string> = {};
@@ -420,22 +417,23 @@ const ScriptProductionClient = () => {
             //     });
             // }
 
-            const jobId = result.projectFolderId;
+            // const jobId = result.projectFolderId;
 
-            // Update chapters with their corresponding folder IDs
-            const updatedChapters = chapters.map((chapter, index) => {
-                const sceneId = `scene-${index + 1}`;
-                // const folderId = sceneFolderMap[sceneId];
-                return {
-                    ...chapter,
-                    // id: folderId || chapter.id, // Replace with folder ID if available
-                    jobId: jobId,
-                    jobName: jobName,
-                };
-            });
-            setChapters(updatedChapters);
+            // // Update chapters with their corresponding folder IDs
+            // const updatedChapters = chapters.map((chapter, index) => {
+            //     const sceneId = `scene-${index + 1}`;
+            //     // const folderId = sceneFolderMap[sceneId];
+            //     return {
+            //         ...chapter,
+            //         // id: folderId || chapter.id, // Replace with folder ID if available
+            //         jobId: jobId,
+            //         jobName: jobName,
+            //     };
+            // });
+            // setChapters(updatedChapters);
 
             setLoading(false);
+            setShowBackConfirmation(true);
 
         } catch (e: any) {
             console.error(e);
@@ -532,33 +530,6 @@ const ScriptProductionClient = () => {
         }
     }, [scriptData]);
 
-    // Calculate estimated duration when script data changes
-    // useEffect(() => {
-    //     const createHighlightWords = async () => {
-    //         const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY, { cache: 'no-store' });
-    //         const data = await res.json();
-    //         if (data && data.data) {
-    //             setDriveLibrary({
-    //                 backgrounds: Array.isArray(data.data.backgrounds) ? data.data.backgrounds : [],
-    //                 music: Array.isArray(data.data.music) ? data.data.music : [],
-    //                 transitions: Array.isArray(data.data.transitions) ? data.data.transitions : [],
-    //             });
-    //         }
-
-    //         const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
-    //         if (needsHighlights) {
-    //             HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
-    //                 // console.log('chapters with highlights', chapters);
-    //                 uploadToGoogleDrive(chapters);
-    //                 setLoading(false);
-    //             });
-    //         } else {
-    //             setLoading(false);
-    //         }
-    //     }
-    //     createHighlightWords();
-    // }, [narrationFile]);
-
     // Fetch Google Drive library once when approved script is present
     // Handle browser back button
     useEffect(() => {
@@ -602,7 +573,6 @@ const ScriptProductionClient = () => {
                 setLoading(true);
                 HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
                     // console.log('chapters with highlights', chapters);
-                    // uploadToGoogleDrive(chapters);
                     setLoading(false);
                     // save updated chapters
                     SecureStorageHelpers.setScriptMetadata({ ...scriptData, chapters, updated_at: new Date().toISOString() });
@@ -714,86 +684,6 @@ const ScriptProductionClient = () => {
         } catch (error) {
             toast.error('Failed to download narrations');
         }
-    };
-
-    const handleUploadChromaKey = () => {
-        // Create a file input for chroma key upload
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'video/*';
-        input.onchange = async (e) => {
-            const files = (e.target as HTMLInputElement).files;
-            if (files && files.length > 0) {
-                const file = files[0];
-
-                try {
-                    setUploadingChromaKey(true);
-                    setChromaKeyUploadProgress(0);
-
-                    // Simulate upload progress
-                    const progressInterval = setInterval(() => {
-                        setChromaKeyUploadProgress(prev => {
-                            if (prev >= 90) {
-                                clearInterval(progressInterval);
-                                return 90;
-                            }
-                            return prev + 10;
-                        });
-                    }, 100);
-
-                    // Create object URL for the file
-                    const url = URL.createObjectURL(file);
-                    setChromaKeyFile(file);
-                    setChromaKeyUrl(url);
-
-                    // Complete the progress
-                    setTimeout(() => {
-                        setChromaKeyUploadProgress(100);
-                        setUploadingChromaKey(false);
-                        toast.success('Chroma key uploaded successfully!');
-                    }, 1000);
-
-                } catch (error) {
-                    setUploadingChromaKey(false);
-                    setChromaKeyUploadProgress(0);
-                    toast.error('Failed to upload chroma key');
-                }
-            }
-        };
-        input.click();
-    };
-
-    const handleGenerateVideo = async () => {
-        if (!chapters.length) {
-            toast.error('No chapters available for video generation');
-            return;
-        }
-
-        // Upload chroma key first using dedicated API
-        if (chromaKeyFile) {
-            try {
-                setLoading(true);
-                const jobName = chapters[0].jobName || `job-${HelperFunctions.generateRandomId()}`;
-                const uploadResult = await HelperFunctions.uploadMediaToDrive(jobName, 'input', chromaKeyFile);
-                setLoading(false);
-                if (!uploadResult.success) {
-                    toast.error('Chroma key upload failed');
-                    setLoading(false);
-                    return;
-                }
-            } catch (e: any) {
-                toast.error(`Chroma key upload failed: ${e?.message || 'Unknown error'}`);
-                setLoading(false);
-                return;
-            }
-        } else {
-            toast.error('Please upload a chroma key before generating video');
-            return;
-        }
-
-        toast.info('Video generation started...');
-
-        setShowBackConfirmation(true);
     };
 
     // Chapter Management Functions
@@ -1085,8 +975,13 @@ const ScriptProductionClient = () => {
 
     const handleApproveScript = async () => {
         setLoading(true);
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
+        const jobId = `job-${HelperFunctions.generateRandomId()}-${timestamp}`;
+        setJobId(jobId);
+
         // push this script data to the scripts_approved table in supabase
-        const approvedData = { ...scriptData, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
+        const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
         setScriptData(approvedData);
         SecureStorageHelpers.setScriptMetadata(approvedData);
 
@@ -1201,22 +1096,17 @@ const ScriptProductionClient = () => {
         setSelectedText(null);
     };
 
-    const parseAndUpdateScriptData = async (file: File) => {
+    const parseAndUpdateScriptData = async (script: string) => {
         // parse this file, merge into current scriptData, log, then generate paragraphs
-        const parsed = await HelperFunctions.parseNarrationFile(file);
         const base = scriptData || ({} as ScriptData);
         const merged: ScriptData = {
             ...base,
-            title: parsed?.title ?? base.title ?? '',
-            hook: parsed?.hook ?? base.hook ?? '',
-            main_content: parsed?.main_content ?? base.main_content ?? '',
-            conclusion: parsed?.conclusion ?? base.conclusion ?? '',
-            call_to_action: parsed?.call_to_action ?? base.call_to_action ?? '',
-            script: parsed?.script ?? base.script ?? '',
+            script: script,
             updated_at: new Date().toISOString(),
         } as ScriptData;
         // console.log('Parsed narration (script preview):', merged.script);
         setScriptData(merged);
+        SecureStorageHelpers.setScriptMetadata(merged);
 
         updateParagraphs(merged.narration_type as "interview" | "narration", merged);
     };
@@ -1735,72 +1625,20 @@ const ScriptProductionClient = () => {
                             maxHeight: '85vh',
                             overflow: 'auto',
                         }}>
-                            <Box
-                                sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, alignItems: 'center', justifyContent: 'center', minHeight: 220, textAlign: 'center', cursor: 'pointer' }}
-                                onClick={() => {
-                                    try { (document.getElementById('narration-doc-input') as HTMLInputElement)?.click(); } catch { }
-                                }}
-                                role="button"
-                                aria-label="Upload narration document"
-                            >
-                                <CloudUploadIcon color="primary" sx={{ fontSize: 48 }} />
-                                <Typography variant="h6" sx={{ color: 'primary.main', fontSize: '1.25rem' }}>Upload Narration</Typography>
-                                <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                                    Please upload your narration as a plain text file (.txt).
-                                </Typography>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    size="small"
-                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (narrationDocLink) {
-                                            window.open(narrationDocLink, '_blank');
-                                            return;
-                                        }
-                                        try { (document.getElementById('narration-doc-input') as HTMLInputElement)?.click(); } catch { }
+                            <Box sx={{ p: 2 }}>
+                                <ChromaKeyUpload
+                                    jobId={jobId || 'job-chroma-key'}
+                                    onUploadComplete={(transcribe: string) => {
+                                        console.log("transcribe text: ", transcribe)
+                                        // update the ScriptData with transcribe text as script                                     
+                                        setIsHumanNarrationUploaded(true);
+                                        parseAndUpdateScriptData(transcribe);
                                     }}
-                                >
-                                    {narrationDocLink ? 'View Script Narration' : 'Upload Script Narration'}
-                                </Button>
-                                <input
-                                    id="narration-doc-input"
-                                    type="file"
-                                    accept=".txt,text/plain"
-                                    onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
-                                        const file = e.target.files && e.target.files[0];
-                                        if (!file) return;
-                                        try {
-                                            const isTxt = file.type === 'text/plain' || /\.txt$/i.test(file.name);
-                                            if (!isTxt) {
-                                                HelperFunctions.showError('Only .txt files are supported for narration');
-                                                return;
-                                            }
-                                            setLoading(true);
-                                            const jobName = chapters[0]?.jobName || `job-${HelperFunctions.generateRandomId()}`;
-                                            const uploadResult = await HelperFunctions.uploadMediaToDrive(jobName, 'input', file);
-                                            setLoading(false);
-                                            if (!uploadResult.success) {
-                                                HelperFunctions.showError('Failed to upload narration');
-                                                return;
-                                            }
-                                            setIsHumanNarrationUploaded(true);
-                                            if (uploadResult.webViewLink) {
-                                                const scriptMetaData = { ...scriptData, narration_doc_link: uploadResult.webViewLink, uploadedFile: file, updated_at: new Date().toISOString() } as any;
-                                                SecureStorageHelpers.setScriptMetadata(scriptMetaData);
-                                                setNarrationDocLink(uploadResult.webViewLink);
-                                                setNarrationFile(file);
-                                                parseAndUpdateScriptData(file);
-                                            }
-                                        } catch (err) {
-                                            setLoading(false);
-                                            HelperFunctions.showError('Failed to upload narration');
-                                        }
+                                    onUploadStart={() => {
+                                        setUploadingChromaKey(true);
                                     }}
-                                    style={{ display: 'none' }}
+                                // disabled={uploadingChromaKey}
                                 />
-                                {/* Removed explicit link; button shows 'View Doc' after upload */}
                             </Box>
                         </Paper>
                     }
@@ -2023,7 +1861,7 @@ const ScriptProductionClient = () => {
 
                                 {chapters.length > 0 && (
                                     <ChaptersSection
-                                        jobInfo={jobInfo}
+                                        jobId={jobId}
                                         chaptersGenerated={true}
                                         generatingChapters={false}
                                         chapters={chapters}
@@ -2101,98 +1939,37 @@ const ScriptProductionClient = () => {
                                 )}
 
                                 {/* Production Actions - Only show when script is approved */}
-                                {isHumanNarrationUploaded && scriptData?.script && chapters.length > 0 && <Box sx={{ mt: 2 }}>
-                                    <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5 }}>
-                                        🎬 Production Actions
-                                    </Typography>
+                                {isHumanNarrationUploaded && scriptData?.script && chapters.length > 0 &&
+                                    <Box sx={{ mt: 2 }}>
+                                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5 }}>
+                                            🎬 Production Actions
+                                        </Typography>
 
-                                    {/* Other Actions */}
-                                    <Grid container spacing={2}>
-                                        {/* <Grid item xs={12}>
-                                            <Button
-                                                variant="outlined"
-                                                fullWidth
-                                                startIcon={<DownloadIcon />}
-                                                onClick={handleDownloadAllNarrations}
-                                                disabled={!chapters.length}
-                                                sx={{ mb: 1, fontSize: '1rem', lineHeight: 1.5 }}
-                                            >
-                                                Download Script
-                                            </Button>
-                                        </Grid> */}
+                                        {/* Other Actions */}
+                                        <Grid container spacing={2}>
 
-                                        <Grid item xs={12}>
-                                            <Box sx={{ position: 'relative' }}>
+                                            <Grid item xs={12}>
                                                 <Button
-                                                    variant="outlined"
+                                                    variant="contained"
                                                     fullWidth
-                                                    startIcon={<UploadIcon />}
-                                                    onClick={handleUploadChromaKey}
-                                                    disabled={!chapters.length || uploadingChromaKey}
-                                                    sx={{ mb: 1, fontSize: '1rem', lineHeight: 1.5 }}
+                                                    startIcon={<VideoIcon />}
+                                                    onClick={() => uploadToGoogleDrive()}
+                                                    disabled={!chapters.length}
+                                                    sx={{
+                                                        bgcolor: SUCCESS.main,
+                                                        '&:hover': { bgcolor: SUCCESS.dark },
+                                                        mb: 1,
+                                                        fontSize: '1rem',
+                                                        lineHeight: 1.5
+                                                    }}
+                                                    title={!chromaKeyFile ? 'Upload chroma key first' : ''}
                                                 >
-                                                    {uploadingChromaKey ? 'Uploading...' : (chromaKeyFile ? 'Replace Chroma Key' : 'Upload Chroma Key')}
+                                                    Generate Video
                                                 </Button>
+                                            </Grid>
 
-                                                {/* Upload Progress */}
-                                                {uploadingChromaKey && (
-                                                    <LinearProgress
-                                                        variant="determinate"
-                                                        value={chromaKeyUploadProgress}
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            bottom: 0,
-                                                            left: 0,
-                                                            right: 0,
-                                                            height: 2,
-                                                            borderRadius: 0
-                                                        }}
-                                                    />
-                                                )}
-
-                                                {/* Chroma Key Status */}
-                                                {chromaKeyFile && !uploadingChromaKey && (
-                                                    <Chip
-                                                        label={chromaKeyFile.name.length > 20 ? `${chromaKeyFile.name.substring(0, 20)}...` : chromaKeyFile.name}
-                                                        size="small"
-                                                        color="success"
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            top: -8,
-                                                            right: 8,
-                                                            fontSize: '0.6rem',
-                                                            height: 18,
-                                                            '& .MuiChip-label': {
-                                                                px: 0.5
-                                                            }
-                                                        }}
-                                                    />
-                                                )}
-                                            </Box>
                                         </Grid>
-
-                                        <Grid item xs={12}>
-                                            <Button
-                                                variant="contained"
-                                                fullWidth
-                                                startIcon={<VideoIcon />}
-                                                onClick={handleGenerateVideo}
-                                                disabled={!chapters.length || !chromaKeyFile || uploadingChromaKey}
-                                                sx={{
-                                                    bgcolor: SUCCESS.main,
-                                                    '&:hover': { bgcolor: SUCCESS.dark },
-                                                    mb: 1,
-                                                    fontSize: '1rem',
-                                                    lineHeight: 1.5
-                                                }}
-                                                title={!chromaKeyFile ? 'Upload chroma key first' : ''}
-                                            >
-                                                Generate Video
-                                            </Button>
-                                        </Grid>
-
-                                    </Grid>
-                                </Box>
+                                    </Box>
                                 }
                             </Box>
                         </Paper>
