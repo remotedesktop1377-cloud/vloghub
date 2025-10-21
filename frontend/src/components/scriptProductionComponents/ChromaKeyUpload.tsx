@@ -20,19 +20,19 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { HelperFunctions } from '../../utils/helperFunctions';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 
 interface ChromaKeyUploadProps {
     jobId: string;
-    onUploadComplete: (transcriptionData: string) => void;
-    onUploadStart: () => void;
+    onUploadComplete: (driveUrl: string, transcriptionData: string) => void;
+    onUploadFailed: (errorMessage: string) => void;
     disabled?: boolean;
 }
 
 const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     jobId,
     onUploadComplete,
-    onUploadStart,
-    disabled = false
+    onUploadFailed,
 }) => {
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -53,12 +53,12 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     setUploadProgress(5);
 
                     // 1) Upload to Drive first
-                    const upload = await HelperFunctions.uploadMediaToDrive(jobId, 'NarratorVideo', file);
+                    const upload = await HelperFunctions.uploadMediaToDrive(jobId, 'narrator-chroma-key', file);
 
                     if (!upload?.success || !upload?.fileId) {
-                        toast.error('Failed to upload video to Drive');
                         setUploading(false);
                         setError('Failed to upload video to Drive');
+                        onUploadFailed('Failed to upload video to Drive');
                         return;
                     } else {
 
@@ -67,7 +67,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                         const driveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
 
                         // 2) Call transcribe with URL (small JSON payload)
-                        const res = await fetch('/api/transcribe', {
+                        const res = await fetch(API_ENDPOINTS.TRANSCRIBE_VIDEO, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ url: driveUrl, fileName: file.name })
@@ -79,11 +79,12 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                             toast.error(data?.error || 'Transcription failed');
                             setUploading(false);
                             setError(data?.error || 'Transcription failed');
+                            onUploadFailed('Transcription failed');
                             return;
                         }
 
                         toast.success('Upload and transcription complete');
-                        onUploadComplete(data.text || '');
+                        onUploadComplete(driveUrl, data.text || '');
                     }
 
                 } catch (error) {
@@ -99,17 +100,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
     return (
         <Card sx={{ width: '100%', maxWidth: 600, mx: 'auto' }}>
-            <CardContent>
-                <Box sx={{ textAlign: 'center', mb: 3 }}>
-                    <VideoIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-                    <Typography variant="h6" sx={{ mb: 1 }}>
-                        Upload Script Narration (Chroma Key Video)
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Upload your chroma key video for script narration. Supported formats: MP4, AVI, MOV, MKV, WebM (max 500MB)
-                    </Typography>
-                </Box>
-
+            <CardContent sx={{ minHeight: '200px' }}>
                 {/* Upload Area */}
                 <Box
                     sx={{
@@ -119,12 +110,12 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                         p: 3,
                         textAlign: 'center',
                         backgroundColor: 'primary.light',
-                        opacity: disabled ? 0.6 : 1,
-                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: uploading ? 0.6 : 1,
+                        cursor: uploading ? 'not-allowed' : 'pointer',
                         transition: 'all 0.3s ease',
                         '&:hover': {
-                            backgroundColor: disabled ? 'primary.light' : 'primary.main',
-                            color: disabled ? 'inherit' : 'white',
+                            backgroundColor: uploading ? 'primary.light' : 'primary.main',
+                            color: uploading ? 'inherit' : 'white',
                         }
                     }}
                     onClick={handleUploadChromaKey}

@@ -40,6 +40,7 @@ import {
   SkipNext as SkipNextIcon,
   SkipPrevious as SkipPreviousIcon
 } from '@mui/icons-material';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Chapter } from '../../types/chapters';
 import { HelperFunctions } from '../../utils/helperFunctions';
@@ -328,7 +329,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 </Box>
 
                                 {/* Narration Content - centered with integrated left strip number */}
-                                <Box sx={{ width: '100%', height: '100%', minHeight: '120px', }}>
+                                <Box sx={{ width: '100%', height: '100%', minHeight: '120px' }}>
                                   <Box
                                     data-chapter-index={index}
                                     sx={{
@@ -336,6 +337,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       height: '100%',
                                       bgcolor: 'rgba(29,161,242,0.08)',
                                     }}>
+
                                     <Box sx={{
                                       width: 100,
                                       color: INFO.main,
@@ -347,6 +349,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       fontWeight: '500',
                                       flexShrink: 0
                                     }}>
+                                      {typeof onOpenProjectSettingsDialog === 'function' && (
+                                        <Button sx={{ marginBottom: 10 }} onClick={(e) => { e.stopPropagation(); onOpenProjectSettingsDialog(index); }}><SettingsIcon /></Button>
+                                      )}
                                       <Box sx={{ fontSize: '1.2rem', fontWeight: '500' }}>
                                         {index + 1}
                                       </Box>
@@ -503,7 +508,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       </Typography>
                                                     </Box>
 
-                                                    {false && Array.isArray(((chapters[index] as any).videoEffects?.backgroundMusic)) && ((chapters[index] as any).videoEffects.backgroundMusic as any[]).length > 0 && (
+                                                    {Array.isArray(((chapters[index] as any).videoEffects?.backgroundMusic)) && ((chapters[index] as any).videoEffects.backgroundMusic as any[]).length > 0 && (
                                                       <Box sx={{ width: '100%' }}>
                                                         {(((chapters[index] as any).videoEffects.backgroundMusic) as any[]).map((bm: any, bmIdx: number) => {
                                                           const getDriveIdFromLink = (link: string): string => {
@@ -906,10 +911,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     return (
                                                       <Box sx={{ mt: 1 }}>
                                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                                          <span>Media Selected:</span>
-                                                          {typeof onOpenProjectSettingsDialog === 'function' && (
-                                                            <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontSize: '0.9rem', height: 28 }} onClick={(e) => { e.stopPropagation(); onOpenProjectSettingsDialog(index); }}>Edit media for this Scene</Button>
-                                                          )}
+                                                          {effective.transition || effective.musicId || effective.logo?.url || effective.clip?.url
+                                                            || (Array.isArray(effective.transitionEffects) && effective.transitionEffects.length > 0) && <span>Selected Media:</span>}
                                                         </Typography>
                                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                           {effective.transition && (

@@ -272,7 +272,7 @@ export class HelperFunctions {
     } catch (e) {
       console.warn('getSocialAuthKeys failed', e);
     }
-    return { };
+    return {};
   }
 
   /**
@@ -421,7 +421,7 @@ export class HelperFunctions {
       form.append('targetFolder', targetFolder || 'input');
       form.append('file', file);
 
-      const res = await fetch('/api/google-drive-media-upload', { method: 'POST', body: form });
+      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data?.error || data?.details || 'Media upload failed');
@@ -430,6 +430,50 @@ export class HelperFunctions {
     } catch (e: any) {
       console.error('uploadMediaToDrive error', e);
       return { success: false };
+    }
+  }
+
+  static async uploadContentToDrive(form: FormData): Promise<{ success: boolean; result: any }> {
+    try {
+      const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_UPLOAD, {
+        method: 'POST',
+        body: form,
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        return { success: false, result: err?.error || err?.details || 'Failed to upload to Google Drive' };
+      }
+
+      const result = await response.json();
+      console.log('Drive result:', result);
+      return { success: true, result: result };
+    } catch (e: any) {
+      console.error('uploadContentToDrive error', e);
+      return { success: false, result: e?.message || 'Unknown error' };
+    }
+  }
+
+  static async generateAFolderOnDrive(jobId: string): Promise<{ success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string }> {
+    try {
+      const form = new FormData();
+      form.append('jobName', jobId);
+      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_GENERATE_FOLDER, { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || data?.details || 'Failed to generate a folder on Drive');
+      }
+      
+      // Handle the API response structure: { success: boolean, result: {...}, message: string }
+      if (data.success && data.result) {
+        return { success: true, result: data.result, message: data.message };
+      } else {
+        return { success: false, result: null, message: data.message || 'Failed to generate folder' };
+      }
+    } catch (e: any) {
+      console.error('generateAFolderOnDrive error', e);
+      return { success: false, result: null, message: e?.message || 'Unknown error' };
     }
   }
 
@@ -591,7 +635,7 @@ export class HelperFunctions {
         keys.forEach((k) => {
           if (k.startsWith('secure_')) localStorage.removeItem(k);
         });
-      } catch {}
+      } catch { }
     }
   }
 
@@ -866,7 +910,7 @@ export class HelperFunctions {
     let bestChapters: Chapter[] = chapters;
     try {
       const payload = chapters.map(c => ({ id: c.id, narration: c.narration }));
-      const res = await fetch('/api/gemini-highlight-keywords', {
+      const res = await fetch(API_ENDPOINTS.GEMINI_HIGHLIGHT_KEYWORDS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chapters: payload })

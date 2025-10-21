@@ -18,5 +18,6 @@ export interface ScriptData {
     status: string;
     created_at: string;
     updated_at: string;
-    narration_doc_link: string;
+    narrator_chroma_key_link: string;
+    transcription: string;
 }

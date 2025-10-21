@@ -141,7 +141,7 @@ const TrendingTopics: React.FC = () => {
           ? selectedLocation
           : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
 
-      
+
       // const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
       // // Check cache first (unless force refresh is requested)
       // if (!forceRefresh) {
@@ -280,7 +280,7 @@ const TrendingTopics: React.FC = () => {
       // console.log('[Generate] generateScript promise created');
 
       const [scriptResult] = await Promise.allSettled([scriptPromise]);
-      
+
       // Unwrap script generation result
       const result = scriptResult.status === 'fulfilled' ? scriptResult.value : { success: false, error: 'Script generation failed' } as any;
 
@@ -309,11 +309,12 @@ const TrendingTopics: React.FC = () => {
           status: SCRIPT_STATUS.GENERATED, //approved, uploaded, generated
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          narration_doc_link: '',
+          narrator_chroma_key_link: '',
+          transcription: '',
         };
 
         // Store metadata in secure storage for the script production page
-        SecureStorageHelpers.setScriptMetadata(scriptMetadata);        
+        SecureStorageHelpers.setScriptMetadata(scriptMetadata);
 
         // Navigate directly to script production page
         router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);

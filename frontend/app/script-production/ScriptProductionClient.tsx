@@ -108,8 +108,7 @@ const ScriptProductionClient = () => {
     const [projectTransitionId, setProjectTransitionId] = useState<string>('');
     const [projectMusic, setProjectMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
     const [projectVideoClip, setProjectVideoClip] = useState<{ name?: string; url: string } | null>(null);
-    const [narrationDocLink, setNarrationDocLink] = useState<string | null>(null);
-    const [narrationFile, setNarrationFile] = useState<File | null>(null);
+    const [narratorChromaKeyLink, setNarratorChromaKeyLink] = useState<string | null>(null);
     const [projectTransitionEffects, setProjectTransitionEffects] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -117,6 +116,7 @@ const ScriptProductionClient = () => {
     const [isMusicPlaying, setIsMusicPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [lastMusicIdLoaded, setLastMusicIdLoaded] = useState<string | null>(null);
+    const [completeProjectUploaded, setCompleteProjectUploaded] = useState(false);
 
     const predefinedTransitions = [
         'quantum_dissolve',
@@ -145,7 +145,6 @@ const ScriptProductionClient = () => {
     const [tmpEffects, setTmpEffects] = useState<string[]>([]);
     // Seed snapshot for change detection
     const projectSettingsSeedRef = useRef<{ transition?: string; music?: any; logo?: any; clip?: any; effects?: string[] } | null>(null);
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         let storedData = null;
@@ -159,15 +158,12 @@ const ScriptProductionClient = () => {
                     setJobId(storedData.jobId);
                     setIsScriptApproved(true);
                     setShowNarrationUploadView(true);
-
-                    if (storedData.narration_doc_link) {
-                        setNarrationDocLink(storedData.narration_doc_link);
+                    debugger;
+                    if (storedData.transcription && storedData.narrator_chroma_key_link) {
+                        setNarratorChromaKeyLink(storedData.narrator_chroma_key_link);
+                        setShowNarrationUploadView(false);
                         setIsHumanNarrationUploaded(true);
-
-                        if (storedData.uploadedFile) {
-                            setNarrationFile(storedData.uploadedFile);
-                            parseAndUpdateScriptData(storedData.script);
-                        }
+                        updateParagraphs(storedData);
                     }
                 } else {
                     setLoading(false);
@@ -175,8 +171,6 @@ const ScriptProductionClient = () => {
                     setEditedScript(storedData.script || '');
                     saveTrendingTopic(storedData);
                 }
-
-                // setScriptSectionData(storedMetadata);
             } else {
                 setNoScriptFound(true);
                 setLoading(false);
@@ -315,7 +309,7 @@ const ScriptProductionClient = () => {
     };
 
     // Function to upload JSON to Google Drive
-    const uploadToGoogleDrive = async () => {
+    const uploadCompleteProjectToDrive = async () => {
         setLoading(true);
         try {
             // Ensure each chapter has assets.images populated with all selected sources
@@ -341,15 +335,9 @@ const ScriptProductionClient = () => {
                 } as Chapter;
             });
 
-            const now = new Date();
-            const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
-
-            const jobName = `job-${HelperFunctions.generateRandomId()}-${timestamp}`;
-            const fileName = `project-config.json`;
-
             const scriptProductionJSON = {
                 project: {
-                    jobName: jobName,
+                    jobName: jobId,
                     topic: scriptData?.topic || null,
                     title: scriptData?.title || null,
                     description: scriptData?.description || null,
@@ -359,6 +347,8 @@ const ScriptProductionClient = () => {
                     language: scriptData?.language || null,
                     subtitle_language: scriptData?.subtitle_language || null,
                     narration_type: scriptData?.narration_type || null,
+                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link || null,
+                    transcription: scriptData?.transcription || null,
                     // Project-level settings
                     videoEffects: {
                         transition: projectTransitionId || '',
@@ -387,27 +377,22 @@ const ScriptProductionClient = () => {
             };
 
             const form = new FormData();
-            form.append('jobName', jobName);
-            form.append('fileName', fileName);
+            form.append('jobName', jobId);
+            form.append('fileName', `project-config.json`);
             form.append('jsonData', JSON.stringify(scriptProductionJSON));
 
-            // Add chroma key file if available
-            if (chromaKeyFile) {
-                form.append('file', chromaKeyFile);
+            // // Add chroma key file if available
+            // if (chromaKeyFile) {
+            //     form.append('file', chromaKeyFile);
+            // }
+
+            const uploadResult = await HelperFunctions.uploadContentToDrive(form);
+            if (!uploadResult.success) {
+                toast.error(uploadResult.result || 'Failed to upload to Google Drive');
+                return;
             }
-
-            const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_UPLOAD, {
-                method: 'POST',
-                body: form,
-            });
-
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                throw new Error(err.details || err.error || 'Failed to upload to Google Drive');
-            }
-
-            const result = await response.json();
-            console.log('Drive result:', result);
+            console.log('Drive result:', uploadResult.result);
+            setCompleteProjectUploaded(true);
 
             // Store scene folder mapping for future updates
             // const sceneFolderMap: Record<string, string> = {};
@@ -444,16 +429,16 @@ const ScriptProductionClient = () => {
     };
 
     // Function to break down script into paragraphs and calculate individual durations
-    const updateParagraphs = (narration_type: "interview" | "narration", scriptData: ScriptData) => {
+    const updateParagraphs = (scriptData: ScriptData) => {
         // Split script into paragraphs (split by double newlines or single newlines)
         let scriptParagraphs = [];
-        if (narration_type === "interview") {
-            scriptParagraphs = scriptData.script
+        if (scriptData?.narration_type === "interview") {
+            scriptParagraphs = scriptData.transcription
                 .split('\n')
                 .map(p => p.trim())
                 .filter(p => p.length > 0);
         } else {
-            scriptParagraphs = scriptData.script
+            scriptParagraphs = scriptData.transcription
                 .split(/\n\s*\n/)
                 .map(p => p.trim())
                 .filter(p => p.length > 0);
@@ -491,8 +476,8 @@ const ScriptProductionClient = () => {
         // Map to Chapter[] with required fields
         const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
             id: `scene-${index + 1}`,
-            jobId: '',
-            jobName: '',
+            jobId: jobId || '',
+            jobName: jobId || '',
             narration: p.text,
             duration: p.duration,
             words: p.words,
@@ -782,7 +767,7 @@ const ScriptProductionClient = () => {
         try {
             setImagesLoading(true);
             const visuals = aiPrompt;
-            const res = await fetch('/api/generate-images', {
+            const res = await fetch(API_ENDPOINTS.GENERATE_IMAGES, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visuals })
             });
             const data = await res.json();
@@ -977,14 +962,20 @@ const ScriptProductionClient = () => {
         setLoading(true);
         const now = new Date();
         const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
-        const jobId = `job-${HelperFunctions.generateRandomId()}-${timestamp}`;
+        const jobId = `job-${timestamp}`;
         setJobId(jobId);
 
+        const uploadResult: { success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string } = await HelperFunctions.generateAFolderOnDrive(jobId);
+        if (!uploadResult.success || !uploadResult.result) {
+            setLoading(false);
+            toast.error(uploadResult.message || 'Failed to generate a folder on Google Drive');
+            return;
+        }
+        console.log('Drive result:', uploadResult.result);
         // push this script data to the scripts_approved table in supabase
         const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
         setScriptData(approvedData);
         SecureStorageHelpers.setScriptMetadata(approvedData);
-
         // const { error } = await SupabaseHelpers.saveApprovedScript(data);
         // if (error) {
         //     console.error('Error saving approved script:', error);
@@ -996,6 +987,7 @@ const ScriptProductionClient = () => {
         // }
         setLoading(false);
         toast.success('Script approved! Now generating scenes breakdown...');
+
     };
 
     const handleCancelBack = () => {
@@ -1094,21 +1086,6 @@ const ScriptProductionClient = () => {
         });
         setChapters(updatedChapters);
         setSelectedText(null);
-    };
-
-    const parseAndUpdateScriptData = async (script: string) => {
-        // parse this file, merge into current scriptData, log, then generate paragraphs
-        const base = scriptData || ({} as ScriptData);
-        const merged: ScriptData = {
-            ...base,
-            script: script,
-            updated_at: new Date().toISOString(),
-        } as ScriptData;
-        // console.log('Parsed narration (script preview):', merged.script);
-        setScriptData(merged);
-        SecureStorageHelpers.setScriptMetadata(merged);
-
-        updateParagraphs(merged.narration_type as "interview" | "narration", merged);
     };
 
     // Add keyword to highlighted list
@@ -1329,7 +1306,7 @@ const ScriptProductionClient = () => {
 
                 {/* Duration Display */}
                 {
-                    isScriptApproved && narrationDocLink &&
+                    isScriptApproved && narratorChromaKeyLink &&
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.05rem', lineHeight: 1.5 }}>
@@ -1367,7 +1344,7 @@ const ScriptProductionClient = () => {
                         // flexDirection: isRTLLanguage('urdu') ? 'row-reverse' : 'row',
                         width: '100%'
                     }}>
-                        <Typography
+                        {!scriptData?.transcription && <Typography
                             variant="h4"
                             sx={{
                                 color: 'primary.main',
@@ -1382,15 +1359,12 @@ const ScriptProductionClient = () => {
                             }}
                         >
                             📋 {scriptData?.title}
-                        </Typography>
+                        </Typography>}
 
-                        {isScriptApproved && (
+                        {isScriptApproved && !scriptData?.transcription && (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                <Button
-                                    variant="contained"
-                                    size="small"
+                                <Button variant="contained" size="small" sx={{ textTransform: 'none' }}
                                     startIcon={<DownloadIcon />}
-                                    sx={{ textTransform: 'none', height: CONTROL_HEIGHT }}
                                     onClick={handleDownloadAllNarrations}
                                 >
                                     Download Script
@@ -1398,7 +1372,7 @@ const ScriptProductionClient = () => {
                             </Box>
                         )}
 
-                        {!isScriptApproved &&
+                        {!isScriptApproved && !scriptData?.transcription &&
                             <Box sx={{
                                 bgcolor: 'background.paper',
                                 display: 'flex',
@@ -1468,14 +1442,14 @@ const ScriptProductionClient = () => {
                             </Box>}
                     </Box>
 
-                    {!isScriptApproved && (
+                    {!isScriptApproved && !scriptData?.transcription && (
                         <Paper sx={{
                             flex: 1,
                             display: 'flex',
                             flexDirection: 'column',
                             mb: 1,
                             paddingBottom: 1,
-                            maxHeight: '85vh',
+                            // maxHeight: '85vh',
                             overflow: 'auto',
                         }}>
                             {/* Script content area - flexible */}
@@ -1613,366 +1587,370 @@ const ScriptProductionClient = () => {
                         </Paper>
                     )}
 
-                    {
-                        isScriptApproved && showNarrationUploadView && chapters.length === 0 &&
+                    {isScriptApproved && showNarrationUploadView && chapters.length === 0 &&
                         //show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
                         <Paper sx={{
                             flex: 1,
                             display: 'flex',
                             flexDirection: 'column',
-                            mb: 1,
-                            paddingBottom: 1,
-                            maxHeight: '85vh',
-                            overflow: 'auto',
+                            // mb: 1,
+                            // paddingBottom: 1,
+                            // maxHeight: '85vh',
+                            // overflow: 'auto',
                         }}>
                             <Box sx={{ p: 2 }}>
                                 <ChromaKeyUpload
                                     jobId={jobId || 'job-chroma-key'}
-                                    onUploadComplete={(transcribe: string) => {
-                                        console.log("transcribe text: ", transcribe)
+                                    onUploadComplete={(driveUrl: string, transcription: string) => {
+                                        console.log("transcription text: ", transcription)
                                         // update the ScriptData with transcribe text as script                                     
                                         setIsHumanNarrationUploaded(true);
-                                        parseAndUpdateScriptData(transcribe);
+                                        setShowNarrationUploadView(false);
+                                        setNarratorChromaKeyLink(driveUrl);
+
+                                        const updatedScriptData = {
+                                            ...scriptData,
+                                            narrator_chroma_key_link: driveUrl,
+                                            transcription: transcription,
+                                            updated_at: new Date().toISOString(),
+                                        } as ScriptData;
+                                        setScriptData(updatedScriptData);
+                                        SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+
+                                        updateParagraphs(updatedScriptData);
                                     }}
-                                    onUploadStart={() => {
-                                        setUploadingChromaKey(true);
+                                    onUploadFailed={(errorMessage: string) => {
+                                        toast.error(errorMessage);
+                                        console.error("errorMessage: ", errorMessage);
                                     }}
-                                // disabled={uploadingChromaKey}
                                 />
                             </Box>
                         </Paper>
                     }
 
-                    {
-                        isScriptApproved && showNarrationUploadView && <Paper sx={{
-                            flex: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            mb: 1,
-                            paddingBottom: 1,
-                            maxHeight: '85vh',
-                            overflow: 'auto',
-                        }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    {isScriptApproved && chapters.length > 0 && scriptData?.transcription && <Paper sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        mb: 1,
+                        paddingBottom: 1,
+                        // maxHeight: '85vh',
+                        overflow: 'auto',
+                    }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
 
-                                {/* Project-level Settings (moved into dialog) */}
-                                {isHumanNarrationUploaded &&
-                                    <Paper sx={{ p: 2, mb: 2, }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end' }}>
-                                            <Button variant="contained" size="small" sx={{ textTransform: 'none' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
-                                        </Box>
-                                        <Grid container spacing={2} sx={{ display: 'none' }}>
-                                            {/* Transition selector */}
-                                            <Grid item xs={12} md={6}>
-                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
-                                                <TextField
-                                                    select
-                                                    fullWidth
-                                                    size="small"
-                                                    value={projectTransitionId}
-                                                    onChange={(e) => setProjectTransitionId(String(e.target.value))}
-                                                    SelectProps={{ native: true }}
-                                                    sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
-                                                >
-                                                    <option value="">Select transition...</option>
-                                                    {predefinedTransitions.map((t) => (
-                                                        <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
-                                                    ))}
-                                                </TextField>
-                                            </Grid>
+                            {/* Project-level Settings (moved into dialog) */}
+                            <Paper sx={{ p: 2, mb: 2, }}>
+                                <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end' }}>
+                                    <Button variant="contained" size="small" sx={{ textTransform: 'none' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
+                                </Box>
+                                <Grid container spacing={2} sx={{ display: 'none' }}>
+                                    {/* Transition selector */}
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
+                                        <TextField
+                                            select
+                                            fullWidth
+                                            size="small"
+                                            value={projectTransitionId}
+                                            onChange={(e) => setProjectTransitionId(String(e.target.value))}
+                                            SelectProps={{ native: true }}
+                                            sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
+                                        >
+                                            <option value="">Select transition...</option>
+                                            {predefinedTransitions.map((t) => (
+                                                <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
+                                            ))}
+                                        </TextField>
+                                    </Grid>
 
-                                            {/* Logo Overlay (single) */}
-                                            <Grid item xs={12} md={6}>
-                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
-                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                                    <TextField size="small" select label="Position" value={projectLogo?.position || 'top-right'} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
-                                                        <option value="top-left">top-left</option>
-                                                        <option value="top-right">top-right</option>
-                                                        <option value="bottom-left">bottom-left</option>
-                                                        <option value="bottom-right">bottom-right</option>
-                                                    </TextField>
+                                    {/* Logo Overlay (single) */}
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
+                                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                            <TextField size="small" select label="Position" value={projectLogo?.position || 'top-right'} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
+                                                <option value="top-left">top-left</option>
+                                                <option value="top-right">top-right</option>
+                                                <option value="bottom-left">bottom-left</option>
+                                                <option value="bottom-right">bottom-right</option>
+                                            </TextField>
+                                            <Button
+                                                variant="contained"
+                                                color="secondary"
+                                                size="small"
+                                                sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                onClick={() => {
+                                                    const input = document.createElement('input');
+                                                    input.type = 'file';
+                                                    input.accept = 'image/*';
+                                                    input.onchange = (e) => {
+                                                        const file = (e.target as HTMLInputElement).files?.[0];
+                                                        if (!file) return;
+                                                        const objectUrl = URL.createObjectURL(file);
+                                                        setProjectLogo({ name: file.name, url: objectUrl, position: projectLogo?.position || 'top-right' });
+                                                    };
+                                                    input.click();
+                                                }}
+                                            >
+                                                Upload Logo
+                                            </Button>
+                                            {projectLogo?.url && (
+                                                <>
                                                     <Button
-                                                        variant="contained"
-                                                        color="secondary"
+                                                        variant="outlined"
                                                         size="small"
                                                         sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                        onClick={() => {
-                                                            const input = document.createElement('input');
-                                                            input.type = 'file';
-                                                            input.accept = 'image/*';
-                                                            input.onchange = (e) => {
-                                                                const file = (e.target as HTMLInputElement).files?.[0];
-                                                                if (!file) return;
-                                                                const objectUrl = URL.createObjectURL(file);
-                                                                setProjectLogo({ name: file.name, url: objectUrl, position: projectLogo?.position || 'top-right' });
-                                                            };
-                                                            input.click();
-                                                        }}
+                                                        onClick={() => window.open(projectLogo.url, '_blank')}
                                                     >
-                                                        Upload Logo
-                                                    </Button>
-                                                    {projectLogo?.url && (
-                                                        <>
-                                                            <Button
-                                                                variant="outlined"
-                                                                size="small"
-                                                                sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                                onClick={() => window.open(projectLogo.url, '_blank')}
-                                                            >
-                                                                Preview
-                                                            </Button>
-                                                            <Button
-                                                                variant="outlined"
-                                                                color="error"
-                                                                size="small"
-                                                                sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                                onClick={() => setProjectLogo(null)}
-                                                            >
-                                                                Remove
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                    {projectLogo?.url && (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <img
-                                                                src={projectLogo.url}
-                                                                alt={projectLogo.name || 'Logo'}
-                                                                style={{ width: 100, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#111', cursor: 'pointer' }}
-                                                                onClick={() => window.open(projectLogo.url, '_blank')}
-                                                            />
-                                                        </Box>
-                                                    )}
-                                                </Box>
-                                            </Grid>
-
-                                            {/* Background Music (single) */}
-                                            <Grid item xs={12} md={6}>
-                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Background Music</Typography>
-                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                                    <TextField
-                                                        select
-                                                        fullWidth
-                                                        sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
-                                                        size="small"
-                                                        value={(projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
-                                                        onChange={(e) => {
-                                                            const selId = String(e.target.value);
-                                                            setProjectMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: projectMusic?.volume ?? 0.3, autoAdjust: projectMusic?.autoAdjust ?? true, fadeIn: projectMusic?.fadeIn ?? true, fadeOut: projectMusic?.fadeOut ?? true });
-                                                            // Stop currently playing audio when changing selection
-                                                            try { audioRef.current?.pause(); } catch { }
-                                                            setIsMusicPlaying(false);
-                                                            setIsMusicLoading(false);
-                                                            setLastMusicIdLoaded(null);
-                                                        }}
-                                                        SelectProps={{ native: true }}
-                                                    >
-                                                        <option value="">Select music...</option>
-                                                        {(driveLibrary?.music || []).map((t: any) => (
-                                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                                        ))}
-                                                    </TextField>
-                                                    <Button
-                                                        variant="contained"
-                                                        color="primary"
-                                                        size="small"
-                                                        disabled={!((projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
-                                                        onClick={handleToggleBackgroundMusic}
-                                                        sx={{ height: CONTROL_HEIGHT, minWidth: 90, textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 1 }}
-                                                    >
-                                                        {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
-                                                        {isMusicPlaying ? 'Pause' : 'Play'}
-                                                    </Button>
-                                                    {/* Volume option removed as per requirement */}
-                                                </Box>
-                                            </Grid>
-
-                                            {/* Video Clip (single) */}
-                                            <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
-                                                <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
-                                                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                                    <Button
-                                                        variant="contained"
-                                                        color="secondary"
-                                                        size="small"
-                                                        sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                        onClick={() => {
-                                                            const input = document.createElement('input');
-                                                            input.type = 'file';
-                                                            input.accept = 'video/*';
-                                                            input.onchange = (e) => {
-                                                                const file = (e.target as HTMLInputElement).files?.[0];
-                                                                if (!file) return;
-                                                                const objectUrl = URL.createObjectURL(file);
-                                                                setProjectVideoClip({ name: file.name, url: objectUrl });
-                                                            };
-                                                            input.click();
-                                                        }}
-                                                    >
-                                                        Upload Clip
+                                                        Preview
                                                     </Button>
                                                     <Button
                                                         variant="outlined"
                                                         color="error"
                                                         size="small"
                                                         sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                        onClick={() => setProjectVideoClip(null)}
+                                                        onClick={() => setProjectLogo(null)}
                                                     >
                                                         Remove
                                                     </Button>
-                                                    {projectVideoClip?.url && (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <Box sx={{ position: 'relative', width: 160, height: 90 }} onClick={() => { setVideoPreviewUrl(projectVideoClip.url); setVideoPreviewOpen(true); }}>
-                                                                <video
-                                                                    src={projectVideoClip.url}
-                                                                    muted
-                                                                    playsInline
-                                                                    loop
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: '#000', cursor: 'pointer' }}
-                                                                />
-                                                                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                                                                    <Box sx={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                        <PlayIcon sx={{ color: '#fff' }} fontSize="small" />
-                                                                    </Box>
-                                                                </Box>
-                                                            </Box>
-
-                                                        </Box>
-                                                    )}
-                                                </Box>
-                                            </Grid>
-                                            {/* Video Effects (project-level) */}
-                                            <Grid xs={12} sx={{ mt: 2, pl: 2 }}>
-                                                <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
-                                                <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
-                                                    <EffectsPanel
-                                                        selectedEffects={projectTransitionEffects}
-                                                        onEffectToggle={(id: string) => {
-                                                            setProjectTransitionEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-                                                        }}
-                                                        onApplyToAllScenes={(effects: string[]) => {
-                                                            setProjectTransitionEffects(effects);
-                                                        }}
+                                                </>
+                                            )}
+                                            {projectLogo?.url && (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <img
+                                                        src={projectLogo.url}
+                                                        alt={projectLogo.name || 'Logo'}
+                                                        style={{ width: 100, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#111', cursor: 'pointer' }}
+                                                        onClick={() => window.open(projectLogo.url, '_blank')}
                                                     />
                                                 </Box>
-                                            </Grid>
-                                        </Grid>
-                                    </Paper>
-                                }
+                                            )}
+                                        </Box>
+                                    </Grid>
 
-                                {chapters.length > 0 && (
-                                    <ChaptersSection
-                                        jobId={jobId}
-                                        chaptersGenerated={true}
-                                        generatingChapters={false}
-                                        chapters={chapters}
-                                        editingChapter={editingChapter}
-                                        editHeading={editHeading}
-                                        editNarration={editNarration}
-                                        selectedChapterIndex={selectedChapterIndex}
-                                        rightTabIndex={rightTabIndex}
-                                        aiImagesEnabled={aiImagesEnabled}
-                                        imagesLoading={imagesLoading}
-                                        generatedImages={generatedImages}
-                                        aiPrompt={aiPrompt}
-                                        pickerOpen={pickerOpen}
-                                        pickerChapterIndex={pickerChapterIndex}
-                                        pickerNarrations={pickerNarrations}
-                                        pickerLoading={pickerLoading}
-                                        uploadedImages={uploadedImages}
-                                        isDraggingUpload={isDraggingUpload}
-                                        chapterImagesMap={chapterImagesMap}
-                                        selectedText={selectedText}
-                                        onChaptersUpdate={setChapters}
-                                        onAddChapterAfter={handleAddChapterAfter}
-                                        onDeleteChapter={handleDeleteChapter}
-                                        onSaveEdit={handleSaveEdit}
-                                        onCancelEdit={handleCancelEdit}
-                                        onEditHeadingChange={setEditHeading}
-                                        onEditNarrationChange={setEditNarration}
-                                        onStartEdit={handleEditChapter}
-                                        onDragEnd={handleDragEnd}
-                                        onSelectChapter={selectChapter}
-                                        onRightTabChange={setRightTabIndex}
-                                        onAIPromptChange={setAiPrompt}
-                                        onUseAIChange={setAiImagesEnabled}
-                                        onGenerateImages={handleGenerateImages}
-                                        onImageSelect={handleImageSelect}
-                                        onImageDeselect={handleImageDeselect}
-                                        onDownloadImage={handleDownloadImage}
-                                        onTriggerFileUpload={handleTriggerFileUpload}
-                                        onUploadFiles={handleUploadFiles}
-                                        onPickerOpen={setPickerOpen}
-                                        onPickerChapterIndex={setPickerChapterIndex}
-                                        onPickerLoading={setPickerLoading}
-                                        onPickerNarrations={setPickerNarrations}
-                                        onChapterImagesMapChange={setChapterImagesMap}
-                                        onGeneratedImagesChange={setGeneratedImages}
-                                        onRightTabIndexChange={setRightTabIndex}
-                                        mediaManagementOpen={mediaManagementOpen}
-                                        mediaManagementChapterIndex={mediaManagementChapterIndex}
-                                        onMediaManagementOpen={setMediaManagementOpen}
-                                        onMediaManagementChapterIndex={setMediaManagementChapterIndex}
-                                        onTextSelection={handleTextSelection}
-                                        onAddKeyword={addKeyword}
-                                        onClearSelection={() => handleClearSelection()}
-                                        onToolbarInteraction={setIsInteractingWithToolbar}
-                                        language={scriptData?.language || 'english'}
-                                        onGoogleImagePreview={(imageUrl) => {
-                                            // Open the image in a new tab for preview
-                                            window.open(imageUrl, '_blank');
-                                        }}
-                                        chapterEditDialogOpen={chapterEditDialogOpen}
-                                        onChapterEditDialogOpen={setChapterEditDialogOpen}
-                                        onChapterEditDialogChapterIndex={setChapterEditDialogChapterIndex}
-                                        driveBackgrounds={driveLibrary?.backgrounds}
-                                        driveMusic={driveLibrary?.music}
-                                        driveTransitions={predefinedTransitions.map((t) => ({ id: t, name: t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) }))}
-                                        projectSettings={{
-                                            transition: projectTransitionId,
-                                            musicId: (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '',
-                                            logo: projectLogo,
-                                            clip: projectVideoClip,
-                                            transitionEffects: projectTransitionEffects,
-                                        }}
-                                        onOpenProjectSettingsDialog={(sceneIndex: number) => openProjectSettingsDialog('scene', sceneIndex)}
-                                    />
-                                )}
+                                    {/* Background Music (single) */}
+                                    <Grid item xs={12} md={6}>
+                                        <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Background Music</Typography>
+                                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                            <TextField
+                                                select
+                                                fullWidth
+                                                sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
+                                                size="small"
+                                                value={(projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
+                                                onChange={(e) => {
+                                                    const selId = String(e.target.value);
+                                                    setProjectMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: projectMusic?.volume ?? 0.3, autoAdjust: projectMusic?.autoAdjust ?? true, fadeIn: projectMusic?.fadeIn ?? true, fadeOut: projectMusic?.fadeOut ?? true });
+                                                    // Stop currently playing audio when changing selection
+                                                    try { audioRef.current?.pause(); } catch { }
+                                                    setIsMusicPlaying(false);
+                                                    setIsMusicLoading(false);
+                                                    setLastMusicIdLoaded(null);
+                                                }}
+                                                SelectProps={{ native: true }}
+                                            >
+                                                <option value="">Select music...</option>
+                                                {(driveLibrary?.music || []).map((t: any) => (
+                                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                                ))}
+                                            </TextField>
+                                            <Button
+                                                variant="contained"
+                                                color="primary"
+                                                size="small"
+                                                disabled={!((projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
+                                                onClick={handleToggleBackgroundMusic}
+                                                sx={{ height: CONTROL_HEIGHT, minWidth: 90, textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 1 }}
+                                            >
+                                                {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
+                                                {isMusicPlaying ? 'Pause' : 'Play'}
+                                            </Button>
+                                            {/* Volume option removed as per requirement */}
+                                        </Box>
+                                    </Grid>
 
-                                {/* Production Actions - Only show when script is approved */}
-                                {isHumanNarrationUploaded && scriptData?.script && chapters.length > 0 &&
-                                    <Box sx={{ mt: 2 }}>
-                                        <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5 }}>
-                                            🎬 Production Actions
-                                        </Typography>
+                                    {/* Video Clip (single) */}
+                                    <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
+                                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                            <Button
+                                                variant="contained"
+                                                color="secondary"
+                                                size="small"
+                                                sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                onClick={() => {
+                                                    const input = document.createElement('input');
+                                                    input.type = 'file';
+                                                    input.accept = 'video/*';
+                                                    input.onchange = (e) => {
+                                                        const file = (e.target as HTMLInputElement).files?.[0];
+                                                        if (!file) return;
+                                                        const objectUrl = URL.createObjectURL(file);
+                                                        setProjectVideoClip({ name: file.name, url: objectUrl });
+                                                    };
+                                                    input.click();
+                                                }}
+                                            >
+                                                Upload Clip
+                                            </Button>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                size="small"
+                                                sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
+                                                onClick={() => setProjectVideoClip(null)}
+                                            >
+                                                Remove
+                                            </Button>
+                                            {projectVideoClip?.url && (
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Box sx={{ position: 'relative', width: 160, height: 90 }} onClick={() => { setVideoPreviewUrl(projectVideoClip.url); setVideoPreviewOpen(true); }}>
+                                                        <video
+                                                            src={projectVideoClip.url}
+                                                            muted
+                                                            playsInline
+                                                            loop
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: '#000', cursor: 'pointer' }}
+                                                        />
+                                                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                                            <Box sx={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <PlayIcon sx={{ color: '#fff' }} fontSize="small" />
+                                                            </Box>
+                                                        </Box>
+                                                    </Box>
 
-                                        {/* Other Actions */}
-                                        <Grid container spacing={2}>
+                                                </Box>
+                                            )}
+                                        </Box>
+                                    </Grid>
+                                    {/* Video Effects (project-level) */}
+                                    <Grid xs={12} sx={{ mt: 2, pl: 2 }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
+                                        <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
+                                            <EffectsPanel
+                                                selectedEffects={projectTransitionEffects}
+                                                onEffectToggle={(id: string) => {
+                                                    setProjectTransitionEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+                                                }}
+                                                onApplyToAllScenes={(effects: string[]) => {
+                                                    setProjectTransitionEffects(effects);
+                                                }}
+                                            />
+                                        </Box>
+                                    </Grid>
+                                </Grid>
+                            </Paper>
 
-                                            <Grid item xs={12}>
-                                                <Button
-                                                    variant="contained"
-                                                    fullWidth
-                                                    startIcon={<VideoIcon />}
-                                                    onClick={() => uploadToGoogleDrive()}
-                                                    disabled={!chapters.length}
-                                                    sx={{
-                                                        bgcolor: SUCCESS.main,
-                                                        '&:hover': { bgcolor: SUCCESS.dark },
-                                                        mb: 1,
-                                                        fontSize: '1rem',
-                                                        lineHeight: 1.5
-                                                    }}
-                                                    title={!chromaKeyFile ? 'Upload chroma key first' : ''}
-                                                >
-                                                    Generate Video
-                                                </Button>
-                                            </Grid>
+                            <ChaptersSection
+                                jobId={jobId}
+                                chaptersGenerated={true}
+                                generatingChapters={false}
+                                chapters={chapters}
+                                editingChapter={editingChapter}
+                                editHeading={editHeading}
+                                editNarration={editNarration}
+                                selectedChapterIndex={selectedChapterIndex}
+                                rightTabIndex={rightTabIndex}
+                                aiImagesEnabled={aiImagesEnabled}
+                                imagesLoading={imagesLoading}
+                                generatedImages={generatedImages}
+                                aiPrompt={aiPrompt}
+                                pickerOpen={pickerOpen}
+                                pickerChapterIndex={pickerChapterIndex}
+                                pickerNarrations={pickerNarrations}
+                                pickerLoading={pickerLoading}
+                                uploadedImages={uploadedImages}
+                                isDraggingUpload={isDraggingUpload}
+                                chapterImagesMap={chapterImagesMap}
+                                selectedText={selectedText}
+                                onChaptersUpdate={setChapters}
+                                onAddChapterAfter={handleAddChapterAfter}
+                                onDeleteChapter={handleDeleteChapter}
+                                onSaveEdit={handleSaveEdit}
+                                onCancelEdit={handleCancelEdit}
+                                onEditHeadingChange={setEditHeading}
+                                onEditNarrationChange={setEditNarration}
+                                onStartEdit={handleEditChapter}
+                                onDragEnd={handleDragEnd}
+                                onSelectChapter={selectChapter}
+                                onRightTabChange={setRightTabIndex}
+                                onAIPromptChange={setAiPrompt}
+                                onUseAIChange={setAiImagesEnabled}
+                                onGenerateImages={handleGenerateImages}
+                                onImageSelect={handleImageSelect}
+                                onImageDeselect={handleImageDeselect}
+                                onDownloadImage={handleDownloadImage}
+                                onTriggerFileUpload={handleTriggerFileUpload}
+                                onUploadFiles={handleUploadFiles}
+                                onPickerOpen={setPickerOpen}
+                                onPickerChapterIndex={setPickerChapterIndex}
+                                onPickerLoading={setPickerLoading}
+                                onPickerNarrations={setPickerNarrations}
+                                onChapterImagesMapChange={setChapterImagesMap}
+                                onGeneratedImagesChange={setGeneratedImages}
+                                onRightTabIndexChange={setRightTabIndex}
+                                mediaManagementOpen={mediaManagementOpen}
+                                mediaManagementChapterIndex={mediaManagementChapterIndex}
+                                onMediaManagementOpen={setMediaManagementOpen}
+                                onMediaManagementChapterIndex={setMediaManagementChapterIndex}
+                                onTextSelection={handleTextSelection}
+                                onAddKeyword={addKeyword}
+                                onClearSelection={() => handleClearSelection()}
+                                onToolbarInteraction={setIsInteractingWithToolbar}
+                                language={scriptData?.language || 'english'}
+                                onGoogleImagePreview={(imageUrl) => {
+                                    // Open the image in a new tab for preview
+                                    window.open(imageUrl, '_blank');
+                                }}
+                                chapterEditDialogOpen={chapterEditDialogOpen}
+                                onChapterEditDialogOpen={setChapterEditDialogOpen}
+                                onChapterEditDialogChapterIndex={setChapterEditDialogChapterIndex}
+                                driveBackgrounds={driveLibrary?.backgrounds}
+                                driveMusic={driveLibrary?.music}
+                                driveTransitions={predefinedTransitions.map((t) => ({ id: t, name: t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) }))}
+                                projectSettings={{
+                                    transition: projectTransitionId,
+                                    musicId: (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '',
+                                    logo: projectLogo,
+                                    clip: projectVideoClip,
+                                    transitionEffects: projectTransitionEffects,
+                                }}
+                                onOpenProjectSettingsDialog={(sceneIndex: number) => openProjectSettingsDialog('scene', sceneIndex)}
+                            />
 
-                                        </Grid>
-                                    </Box>
-                                }
+                            {/* Production Actions - Only show when script is approved */}
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5 }}>
+                                    🎬 Production Actions
+                                </Typography>
+
+                                {/* Other Actions */}
+                                <Grid container spacing={2}>
+
+                                    <Grid item xs={12}>
+                                        <Button
+                                            variant="contained"
+                                            fullWidth
+                                            startIcon={<VideoIcon />}
+                                            onClick={() => uploadCompleteProjectToDrive()}
+                                            disabled={!chapters.length}
+                                            sx={{
+                                                bgcolor: SUCCESS.main,
+                                                '&:hover': { bgcolor: SUCCESS.dark },
+                                                mb: 1,
+                                                fontSize: '1rem',
+                                                lineHeight: 1.5
+                                            }}
+                                            title={!chromaKeyFile ? 'Upload chroma key first' : ''}
+                                        >
+                                            Generate Video
+                                        </Button>
+                                    </Grid>
+
+                                </Grid>
                             </Box>
-                        </Paper>
+                        </Box>
+                    </Paper>
                     }
 
                 </Box>
@@ -1988,15 +1966,15 @@ const ScriptProductionClient = () => {
                 fullWidth
             >
                 <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
-                    {chromaKeyFile !== null ? 'Uploading Completed' : '⚠️ Are you sure?'}
+                    {completeProjectUploaded ? 'Uploading Completed' : '⚠️ Are you sure?'}
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="h5" sx={{ mb: 2, lineHeight: 1.5 }}>
-                        {chromaKeyFile !== null ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
+                        {completeProjectUploaded ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
-                    {chromaKeyFile === null && <Button
+                    {completeProjectUploaded === false && <Button
                         onClick={handleCancelBack}
                         variant="outlined"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
@@ -2009,7 +1987,7 @@ const ScriptProductionClient = () => {
                         color="warning"
                         sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                     >
-                        {chromaKeyFile !== null ? 'Okay' : 'Discard Script'}
+                        {completeProjectUploaded === false ? 'Okay' : 'Discard Script'}
                     </Button>}
                 </DialogActions>
             </Dialog>
