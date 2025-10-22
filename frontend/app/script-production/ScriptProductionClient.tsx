@@ -1625,7 +1625,7 @@ const ScriptProductionClient = () => {
                                     }}
                                     onUploadFailed={(errorMessage: string) => {
                                         toast.error(errorMessage);
-                                        console.error("errorMessage: ", errorMessage);
+                                        console.log("errorMessage: ", errorMessage);
                                     }}
                                 />
                             </Box>
