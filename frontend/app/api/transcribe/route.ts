@@ -41,6 +41,181 @@ const getFfprobePath = () => {
   return 'ffprobe';
 };
 
+// Helper function to format time range
+const formatTimeRange = (startTime: number, endTime: number): string => {
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+};
+
+// Semantic segmentation using LLM
+const performSemanticSegmentation = async (transcription: string, language: string) => {
+  // Check if Gemini API key is available
+  if (!process.env.GEMINI_API_KEY) {
+    console.error('GEMINI_API_KEY not found in environment variables');
+    throw new Error('Gemini API key not configured');
+  }
+  
+  const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_PRO });
+
+  // Check if transcription is too short for semantic segmentation
+  const wordCount = transcription.trim().split(/\s+/).length;
+  if (wordCount < 50) {
+    console.log('Transcription too short for semantic segmentation:', wordCount, 'words');
+    throw new Error('Transcription too short for semantic segmentation');
+  }
+
+  const segmentationPrompt = `You are an expert at semantic segmentation of transcribed speech. 
+Analyze the following ${language} transcription and break it into meaningful scenes based on topic shifts, thematic changes, and natural speech boundaries.
+
+For each scene, provide:
+1. A concise title (2-6 words)
+2. A brief summary (1-2 sentences)
+3. The exact text content
+4. Extracts EXACT words and phrases from the text content that are most useful for visual search
+
+Return ONLY valid JSON in this exact format:
+{
+  "scenes": [
+    {
+      "title": "Scene Title",
+      "summary": "Brief summary of this scene",
+      "text": "Exact text content for this scene"
+      "highlightedKeywords": ["exact word", "exact phrase"]
+    }
+  ]
+}
+
+Guidelines:
+- Create 3-8 scenes depending on content length
+- Each scene should be 30-200 words
+- Break at natural topic transitions
+- Preserve the original language and meaning
+- Ensure scenes flow logically
+- For shorter content, create fewer but meaningful scenes
+
+Transcription:
+${transcription}`;
+
+  try {
+    console.log('Calling Gemini for semantic segmentation...');
+    const result = await model.generateContent(segmentationPrompt);
+    const response = result.response.text();
+
+    // Extract JSON from response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('No JSON found in response:', response);
+      throw new Error('No valid JSON found in response');
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    const scenes = Array.isArray(parsed?.scenes) ? parsed.scenes : [];
+
+    if (scenes.length === 0) {
+      console.error('No scenes found in parsed response:', parsed);
+      throw new Error('No scenes found in response');
+    }
+
+    console.log('Semantic segmentation successful:', scenes.length, 'scenes');
+    return scenes;
+  } catch (error) {
+    console.error('Semantic segmentation error:', error);
+    throw error;
+  }
+};
+
+// Helper function to process transcription into scenes using semantic segmentation
+const processTranscriptionIntoScenes = async (transcription: string, language: string) => {
+  console.log('Starting semantic segmentation for language:', language);
+
+  // First, try semantic segmentation
+  try {
+    const semanticScenes = await performSemanticSegmentation(transcription, language);
+    if (semanticScenes && semanticScenes.length > 0) {
+      console.log('Semantic segmentation successful:', semanticScenes.length, 'scenes');
+      // Convert semantic scenes to our format with timing
+      return calculateSequentialTimeRanges(semanticScenes.map((scene: any) => scene.text));
+    }
+  } catch (error) {
+    console.error('Semantic segmentation failed, falling back to heuristic:', error);
+    // Check if it's a network error
+    if (error instanceof Error && error.message.includes('fetch failed')) {
+      console.log('Network error detected, using heuristic segmentation');
+    }
+  }
+
+  // Fallback to heuristic segmentation
+  console.log('Using heuristic segmentation as fallback');
+  let scriptParagraphs: string[] = [];
+
+  // Different splitting logic based on language
+  if (language === 'ur' || language === 'ar' || language === 'hi') {
+    // For RTL languages, split by single newlines
+    scriptParagraphs = transcription
+      .split('\n')
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+  } else {
+    // For LTR languages, split by double newlines or single newlines
+    scriptParagraphs = transcription
+      .split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+  }
+
+  // If no paragraphs found, treat entire text as one scene
+  if (scriptParagraphs.length === 0) {
+    scriptParagraphs = [transcription.trim()];
+  }
+
+  // Calculate timing for each scene
+  return calculateSequentialTimeRanges(scriptParagraphs);
+};
+
+// Calculate sequential time ranges for scenes
+const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
+  if (scriptParagraphs.length === 0) return [];
+
+  // Estimate total duration based on word count (average speaking rate: 150 words per minute)
+  const totalWords = scriptParagraphs.reduce((sum, paragraph) => {
+    return sum + paragraph.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }, 0);
+
+  const estimatedDurationSeconds = Math.max(60, Math.round((totalWords / 150) * 60)); // At least 1 minute
+  console.log(`Estimated total duration: ${estimatedDurationSeconds} seconds for ${totalWords} words`);
+
+  let currentTime = 0; // Start from 0 seconds
+
+  return scriptParagraphs.map((paragraph, index) => {
+    const words = paragraph.trim().split(/\s+/).filter(word => word.length > 0).length;
+
+    // Calculate proportional duration based on word count
+    const durationInSeconds = totalWords > 0
+      ? Math.round((words / totalWords) * estimatedDurationSeconds)
+      : Math.round(estimatedDurationSeconds / scriptParagraphs.length);
+
+    const startTime = currentTime;
+    const endTime = currentTime + durationInSeconds;
+
+    // Update current time for next paragraph
+    currentTime = endTime;
+
+    return {
+      id: `scene-${index + 1}`,
+      text: paragraph,
+      duration: formatTimeRange(startTime, endTime),
+      words,
+      startTime,
+      endTime,
+      durationInSeconds
+    };
+  });
+};
+
 export async function POST(req: Request) {
   try {
     console.log('Starting /api/transcribe');
@@ -310,6 +485,11 @@ export async function POST(req: Request) {
 
       const text = result.response.text();
 
+      // Process transcription into scenes using semantic segmentation
+      console.log('Processing transcription into scenes...');
+      const scenes = await processTranscriptionIntoScenes(text, scriptLanguage);
+      console.log('Scenes processed:', scenes.length);
+
       // Cleanup
       fs.unlinkSync(inputPath);
       if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
@@ -320,7 +500,8 @@ export async function POST(req: Request) {
         language: scriptLanguage,
         fileName: incomingFileName,
         audioSizeMB: audioSizeInMB.toFixed(2),
-        compressed: compressionUsed
+        compressed: compressionUsed,
+        scenes: scenes
       });
     } catch (geminiError: any) {
       console.error('Gemini API error:', geminiError);
@@ -335,6 +516,12 @@ export async function POST(req: Request) {
         return NextResponse.json({
           error: 'Audio file is too large for processing. Please use a shorter video or compress it first.'
         }, { status: 413 });
+      }
+
+      if (geminiError.message?.includes('fetch failed')) {
+        return NextResponse.json({
+          error: 'Network error occurred during transcription. Please check your internet connection and try again.'
+        }, { status: 503 });
       }
 
       return NextResponse.json({
