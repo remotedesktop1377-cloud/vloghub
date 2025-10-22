@@ -275,7 +275,8 @@ export async function POST(req: Request) {
     const audioBytes = audioBuffer.toString("base64");
 
     // Send to Gemini model for transcription
-    const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL });
+    const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_PRO });
+    console.log('Using Gemini model:', model.model);
 
     // Create language-specific transcription prompt
     const languagePrompts: Record<string, string> = {

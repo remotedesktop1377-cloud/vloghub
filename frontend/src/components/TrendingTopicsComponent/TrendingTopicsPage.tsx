@@ -190,8 +190,6 @@ const TrendingTopics: React.FC = () => {
       setLoading(false);
       // setLastUpdated(new Date().toISOString());
       HelperFunctions.showError('Error loading trending topics');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -380,7 +378,7 @@ const TrendingTopics: React.FC = () => {
 
   return (
     <Box className={styles.trendingTopicsContainer}>
-      {(loading || generatingChapters || (!Array.isArray(trendingTopics) || trendingTopics.length === 0)) && (
+      {(loading || generatingChapters) && (
         <LoadingOverlay
           title={dialogTitle}
           desc={dialogDescription}
@@ -405,7 +403,7 @@ const TrendingTopics: React.FC = () => {
 
       {
         /* Cloud View - Centered word cloud with permanent details panel on right */
-        Array.isArray(trendingTopics) && trendingTopics.length > 0 && (
+        Array.isArray(trendingTopics) && trendingTopics.length > 0 ? (
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', gap: 3 }}>
               {/* Centered Word Cloud Container */}
@@ -435,7 +433,28 @@ const TrendingTopics: React.FC = () => {
 
             </Box>
           </Box>
-        )
+        ) :
+          <Box sx={{
+            textAlign: 'center',
+            minHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            py: 4,
+            px: 2,
+            backgroundColor: 'background.paper',
+            borderRadius: 1,
+            border: '1px dashed',
+            borderColor: 'divider'
+          }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
+              Please select all options to view trending topics
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+              Choose a location type, location, and time range to get started
+            </Typography>
+          </Box>
       }
 
       {/* Topic Details Section */}
@@ -475,8 +494,6 @@ const TrendingTopics: React.FC = () => {
           </Box>
         </Box>
       )}
-
-
 
     </Box>
   );

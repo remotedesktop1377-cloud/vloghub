@@ -24,4 +24,13 @@ export interface ScriptData {
     narrator_chroma_key_link: string;
     transcription: string;
     chapters?: Chapter[];
+    scenes?: Array<{
+        id: string;
+        text: string;
+        duration: string;
+        words: number;
+        startTime: number;
+        endTime: number;
+        durationInSeconds: number;
+    }>;
 }

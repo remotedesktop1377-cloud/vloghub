@@ -32,7 +32,7 @@ import { API_ENDPOINTS } from '@/config/apiEndpoints';
 interface ChromaKeyUploadProps {
     jobId: string;
     scriptLanguage: string;
-    onUploadComplete: (driveUrl: string, transcriptionData: string) => void;
+    onUploadComplete: (driveUrl: string, transcriptionData: any) => void;
     onUploadFailed: (errorMessage: string) => void;
 }
 
@@ -129,6 +129,8 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     return;
                 }
                 currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
+                // currentDriveUrl = 'https://drive.google.com/uc?id=1lDQe0CXoeiFbcfM6DdnpMK-rNNKHusAt'; // long
+                // currentDriveUrl = 'https://drive.google.com/uc?id=1dh2NClbUC5pZw-qlNs0Td2-yaB_4HySo'; // short
                 setDriveUrl(currentDriveUrl);
             }
             setUploadProgress(40);
@@ -142,12 +144,12 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     body: JSON.stringify({ url: currentDriveUrl, fileName: file?.name || '', scriptLanguage: scriptLanguage })
                 });
                 setUploadProgress(85);
-                const data = await res.json();
+                const transcriptionData = await res.json();
                 if (!res.ok) {
                     setUploading(false);
                     setCurrentStep('idle');
-                    console.log("transcription failed: ", data?.error);
-                    setError(`Transcription failed: ${data?.error || 'Unknown error'}`);
+                    console.log("transcription failed: ", transcriptionData?.error);
+                    setError(`Transcription failed: ${transcriptionData?.error || 'Unknown error'}`);
                     setErrorType('transcribe');
                     onUploadFailed('Transcription failed');
                     return;
@@ -157,7 +159,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 setCurrentStep('completed');
                 setUploading(false);
                 toast.success('Upload and transcription complete');
-                onUploadComplete(currentDriveUrl, data.text || '');
+                onUploadComplete(currentDriveUrl, transcriptionData);
             }
 
         } catch (error) {
