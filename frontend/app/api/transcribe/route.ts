@@ -16,7 +16,7 @@ let ffmpegStaticPath: string = '' as any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   ffmpegStaticPath = require('ffmpeg-static');
-} catch {}
+} catch { }
 
 const getFfmpegPath = () => {
   if (process.env.FFMPEG_PATH && process.env.FFMPEG_PATH.trim()) {
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
     const contentType = req.headers.get('content-type') || '';
     console.log('Processing content-type:', contentType);
-    
+
     if (contentType.includes('multipart/form-data')) {
       try {
         console.log('Attempting to parse FormData...');
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
           incomingBuffer = Buffer.from(await file.arrayBuffer());
           console.log('File buffer created, size:', incomingBuffer.length);
         }
-        
+
         // Extract scriptLanguage from FormData
         const languageField = formData.get('scriptLanguage') as string | null;
         if (languageField) {
@@ -100,14 +100,14 @@ export async function POST(req: Request) {
           scriptLanguage = json.scriptLanguage || scriptLanguage;
           console.log('Downloading from URL:', url);
           console.log('Script language from JSON URL:', scriptLanguage);
-          
+
           // Handle Google Drive URLs - use Drive API for authenticated download
           if (url.includes('drive.google.com')) {
             const fileIdMatch = url.match(/[?&]id=([^&]+)/);
             if (fileIdMatch) {
               const fileId = fileIdMatch[1];
               console.log('Using Google Drive API for file ID:', fileId);
-              
+
               // Set up Google Drive API client
               const credentialsPath = path.join(process.cwd(), 'src', 'config', 'gen-lang-client-0211941879-57f306607431.json');
               const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
@@ -117,13 +117,13 @@ export async function POST(req: Request) {
                 scopes: ['https://www.googleapis.com/auth/drive.readonly'],
               });
               const drive = google.drive({ version: 'v3', auth: jwtClient });
-              
+
               // Download file using Drive API
               const response = await drive.files.get({
                 fileId: fileId,
                 alt: 'media'
               }, { responseType: 'arraybuffer' });
-              
+
               incomingBuffer = Buffer.from(response.data as ArrayBuffer);
               incomingFileName = json.fileName || incomingFileName;
               console.log('Downloaded via Drive API, size:', incomingBuffer.length);
@@ -162,22 +162,38 @@ export async function POST(req: Request) {
     const outputPath = path.join(uploadsDir, "output_audio.wav");
     fs.writeFileSync(inputPath, buffer);
 
+    // Check file size before processing
+    const fileSizeInMB = buffer.length / (1024 * 1024);
+    console.log(`Processing file: ${incomingFileName}, Size: ${fileSizeInMB.toFixed(2)} MB`);
+
+    // Warn if file is very large
+    if (fileSizeInMB > 100) {
+      console.warn(`Large file detected: ${fileSizeInMB.toFixed(2)} MB. This may take longer to process.`);
+    }
+
     // Extract audio using FFmpeg (library API with explicit binary path)
     const ffmpegBin = getFfmpegPath();
     const ffprobeBin = getFfprobePath();
     try {
       (ffmpeg as any).setFfmpegPath(ffmpegBin);
       (ffmpeg as any).setFfprobePath(ffprobeBin);
-    } catch {}
+    } catch { }
+
+    // Extract audio using FFmpeg - no duration limits, we want the full transcription
+    console.log(`Extracting audio from ${fileSizeInMB.toFixed(2)} MB video file`);
+    const audioQuality = fileSizeInMB > 100 ? 'low' : 'high';
 
     await new Promise<void>((resolve, reject) => {
       ffmpeg(inputPath)
         .noVideo()
         .audioCodec('pcm_s16le')
-        .audioFrequency(44100)
-        .audioChannels(2)
+        .audioFrequency(audioQuality === 'low' ? 22050 : 44100) // Lower sample rate for large files
+        .audioChannels(audioQuality === 'low' ? 2 : 1) //1. Mono for large files to reduce size  and use same audio channel for compression  //2. Stereo for initial extraction
         .format('wav')
-        .on('end', () => resolve())
+        .on('end', () => {
+          console.log('Audio extraction completed');
+          resolve();
+        })
         .on('error', (err: any) => {
           console.error('FFmpeg error (transcribe):', err);
           reject(err);
@@ -185,8 +201,78 @@ export async function POST(req: Request) {
         .save(outputPath);
     });
 
-    // Read audio file
-    const audioBytes = fs.readFileSync(outputPath).toString("base64");
+    // Read audio file and check size
+    let audioBuffer = fs.readFileSync(outputPath);
+    let audioSizeInMB = audioBuffer.length / (1024 * 1024);
+    console.log(`Initial extracted audio size: ${audioSizeInMB.toFixed(2)} MB`);
+
+    // Compress audio if it's too large
+    const maxAudioSizeMB = 500; // Target size for Gemini API
+    const compressedOutputPath = path.join(uploadsDir, "compressed_audio.wav");
+    let compressionUsed = false;
+
+    if (audioSizeInMB > maxAudioSizeMB) {
+      console.log(`Audio file too large (${audioSizeInMB.toFixed(2)} MB), compressing...`);
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          ffmpeg(outputPath)
+            .audioCodec('pcm_s16le')
+            .audioFrequency(16000) // Very low sample rate for compression
+            .audioChannels(1) // Mono
+            .audioBitrate('64k') // Low bitrate
+            .format('wav')
+            .on('end', () => {
+              console.log('Audio compression completed');
+              resolve();
+            })
+            .on('error', (err: any) => {
+              console.error('Audio compression error:', err);
+              reject(err);
+            })
+            .save(compressedOutputPath);
+        });
+
+        // Check compressed file size
+        const compressedBuffer = fs.readFileSync(compressedOutputPath);
+        const compressedSizeInMB = compressedBuffer.length / (1024 * 1024);
+        console.log(`Compressed audio size: ${compressedSizeInMB.toFixed(2)} MB`);
+
+        // Use compressed file if it's smaller
+        if (compressedSizeInMB < audioSizeInMB) {
+          audioBuffer = compressedBuffer;
+          audioSizeInMB = compressedSizeInMB;
+          compressionUsed = true;
+          console.log(`Using compressed audio (${audioSizeInMB.toFixed(2)} MB)`);
+
+          // Clean up original file
+          fs.unlinkSync(outputPath);
+        } else {
+          console.log('Compression did not reduce size significantly, using original');
+          fs.unlinkSync(compressedOutputPath);
+        }
+      } catch (compressionError) {
+        console.error('Compression failed, using original file:', compressionError);
+        // Clean up compressed file if it exists
+        if (fs.existsSync(compressedOutputPath)) {
+          fs.unlinkSync(compressedOutputPath);
+        }
+      }
+    }
+
+    // Final size check
+    if (audioSizeInMB > maxAudioSizeMB) {
+      console.error(`Audio file still too large after compression: ${audioSizeInMB.toFixed(2)} MB (max: ${maxAudioSizeMB} MB)`);
+      // Cleanup
+      fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      if (fs.existsSync(compressedOutputPath)) fs.unlinkSync(compressedOutputPath);
+      return NextResponse.json({
+        error: `Audio file is too large (${audioSizeInMB.toFixed(2)} MB) even after compression. Please use a shorter video. Maximum supported size is ${maxAudioSizeMB} MB.`
+      }, { status: 413 });
+    }
+
+    const audioBytes = audioBuffer.toString("base64");
 
     // Send to Gemini model for transcription
     const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL });
@@ -208,29 +294,52 @@ export async function POST(req: Request) {
     const transcriptionPrompt = languagePrompts[scriptLanguage] || languagePrompts['en'];
     console.log('Using transcription prompt for language:', scriptLanguage);
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType: "audio/wav",
-          data: audioBytes,
+    try {
+      const result = await model.generateContent([
+        {
+          inlineData: {
+            mimeType: "audio/wav",
+            data: audioBytes,
+          },
         },
-      },
-      {
-        text: transcriptionPrompt,
-      },
-    ]);
+        {
+          text: transcriptionPrompt,
+        },
+      ]);
 
-    const text = result.response.text();
+      const text = result.response.text();
 
-    // Cleanup
-    fs.unlinkSync(inputPath);
-    fs.unlinkSync(outputPath);
+      // Cleanup
+      fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      if (fs.existsSync(compressedOutputPath)) fs.unlinkSync(compressedOutputPath);
 
-    return NextResponse.json({ 
-      text, 
-      language: scriptLanguage,
-      fileName: incomingFileName 
-    });
+      return NextResponse.json({
+        text,
+        language: scriptLanguage,
+        fileName: incomingFileName,
+        audioSizeMB: audioSizeInMB.toFixed(2),
+        compressed: compressionUsed
+      });
+    } catch (geminiError: any) {
+      console.error('Gemini API error:', geminiError);
+
+      // Cleanup on error
+      fs.unlinkSync(inputPath);
+      if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      if (fs.existsSync(compressedOutputPath)) fs.unlinkSync(compressedOutputPath);
+
+      // Provide more specific error messages
+      if (geminiError.message?.includes('string longer than')) {
+        return NextResponse.json({
+          error: 'Audio file is too large for processing. Please use a shorter video or compress it first.'
+        }, { status: 413 });
+      }
+
+      return NextResponse.json({
+        error: `Transcription failed: ${geminiError.message || 'Unknown error'}`
+      }, { status: 500 });
+    }
   } catch (error: any) {
     console.error("Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

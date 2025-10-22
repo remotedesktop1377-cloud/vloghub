@@ -118,17 +118,6 @@ const ScriptProductionClient = () => {
     const [lastMusicIdLoaded, setLastMusicIdLoaded] = useState<string | null>(null);
     const [completeProjectUploaded, setCompleteProjectUploaded] = useState(false);
 
-    const predefinedTransitions = [
-        'quantum_dissolve',
-        'particle_burst',
-        'quantum_tunnel',
-        'digital_matrix',
-        'data_stream',
-        'holographic_dissolve',
-        'reality_shift',
-        'quantum_fade_to_black'
-    ];
-
     const CONTROL_HEIGHT = 44;
     const [jobId, setJobId] = useState<string>('');
     // Chapter edit dialog states
@@ -145,6 +134,17 @@ const ScriptProductionClient = () => {
     const [tmpEffects, setTmpEffects] = useState<string[]>([]);
     // Seed snapshot for change detection
     const projectSettingsSeedRef = useRef<{ transition?: string; music?: any; logo?: any; clip?: any; effects?: string[] } | null>(null);
+
+    const predefinedTransitions = [
+        'quantum_dissolve',
+        'particle_burst',
+        'quantum_tunnel',
+        'digital_matrix',
+        'data_stream',
+        'holographic_dissolve',
+        'reality_shift',
+        'quantum_fade_to_black'
+    ];
 
     useEffect(() => {
         let storedData = null;
