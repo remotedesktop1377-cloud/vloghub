@@ -320,6 +320,7 @@ const TrendingTopics: React.FC = () => {
           updated_at: new Date().toISOString(),
           narrator_chroma_key_link: '',
           transcription: '',
+          videoBackground: null,
         };
 
         // Store metadata in secure storage for the script production page
