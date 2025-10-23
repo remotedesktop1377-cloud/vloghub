@@ -1,4 +1,5 @@
 import { Chapter } from "./chapters";
+import { BackgroundType } from "./backgroundType";
 
 export interface ScriptData {
     jobId?: string;
@@ -23,6 +24,7 @@ export interface ScriptData {
     updated_at: string;
     narrator_chroma_key_link: string;
     transcription: string;
+    videoBackground: BackgroundType;
     chapters?: Chapter[];
     scenes?: Array<{
         id: string;

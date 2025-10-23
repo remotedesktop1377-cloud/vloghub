@@ -55,6 +55,7 @@ import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import CustomAudioPlayer from '@/components/scriptProductionComponents/CustomAudioPlayer';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { ScriptData } from '@/types/scriptData';
+import { BackgroundType } from '@/types/backgroundType';
 
 const ScriptProductionClient = () => {
 
@@ -1660,15 +1661,17 @@ const ScriptProductionClient = () => {
                                 <ChromaKeyUpload
                                     jobId={jobId || 'job-chroma-key'}
                                     scriptLanguage={scriptData?.language || 'english'}
-                                    onUploadComplete={(driveUrl: string, transcriptionData: any) => {
+                                    onUploadComplete={(driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
                                         // console.log("transcription text: ", transcription)
-                                        // update the ScriptData with transcribe text as script                                     
+                                        // update the ScriptData with transcribe text as script     
+                                        console.log("backgroundType: ", backgroundType);
                                         setIsHumanNarrationUploaded(true);
                                         setShowNarrationUploadView(false);
                                         setNarratorChromaKeyLink(driveUrl);
 
                                         const updatedScriptData = {
                                             ...scriptData,
+                                            videoBackground: backgroundType,
                                             status: SCRIPT_STATUS.UPLOADED,
                                             narrator_chroma_key_link: driveUrl,
                                             transcription: transcriptionData.text,

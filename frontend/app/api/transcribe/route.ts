@@ -334,7 +334,7 @@ export async function POST(req: Request) {
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
     const inputPath = path.join(uploadsDir, incomingFileName);
-    const outputPath = path.join(uploadsDir, "output_audio.wav");
+    const outputPath = path.join(uploadsDir, "output_audio.mp3");
     fs.writeFileSync(inputPath, buffer);
 
     // Check file size before processing
@@ -354,17 +354,18 @@ export async function POST(req: Request) {
       (ffmpeg as any).setFfprobePath(ffprobeBin);
     } catch { }
 
-    // Extract audio using FFmpeg - no duration limits, we want the full transcription
+    // Extract audio using FFmpeg - use compressed format for efficiency
     console.log(`Extracting audio from ${fileSizeInMB.toFixed(2)} MB video file`);
     const audioQuality = fileSizeInMB > 100 ? 'low' : 'high';
 
     await new Promise<void>((resolve, reject) => {
       ffmpeg(inputPath)
         .noVideo()
-        .audioCodec('pcm_s16le')
-        .audioFrequency(audioQuality === 'low' ? 22050 : 44100) // Lower sample rate for large files
-        .audioChannels(audioQuality === 'low' ? 2 : 1) //1. Mono for large files to reduce size  and use same audio channel for compression  //2. Stereo for initial extraction
-        .format('wav')
+        .audioCodec('libmp3lame') // Use MP3 compression instead of uncompressed PCM
+        .audioFrequency(audioQuality === 'low' ? 16000 : 22050) // Lower sample rates for speech
+        .audioChannels(1) // Always use mono for speech transcription
+        .audioBitrate(audioQuality === 'low' ? '64k' : '128k') // Compressed bitrate
+        .format('mp3') // Use MP3 format for compression
         .on('end', () => {
           console.log('Audio extraction completed');
           resolve();
@@ -381,28 +382,28 @@ export async function POST(req: Request) {
     let audioSizeInMB = audioBuffer.length / (1024 * 1024);
     console.log(`Initial extracted audio size: ${audioSizeInMB.toFixed(2)} MB`);
 
-    // Compress audio if it's too large
+    // Additional compression if still too large (rare case with MP3)
     const maxAudioSizeMB = 500; // Target size for Gemini API
-    const compressedOutputPath = path.join(uploadsDir, "compressed_audio.wav");
+    const compressedOutputPath = path.join(uploadsDir, "compressed_audio.mp3");
     let compressionUsed = false;
 
     if (audioSizeInMB > maxAudioSizeMB) {
-      console.log(`Audio file too large (${audioSizeInMB.toFixed(2)} MB), compressing...`);
+      console.log(`Audio file still too large (${audioSizeInMB.toFixed(2)} MB), applying additional compression...`);
 
       try {
         await new Promise<void>((resolve, reject) => {
           ffmpeg(outputPath)
-            .audioCodec('pcm_s16le')
+            .audioCodec('libmp3lame')
             .audioFrequency(16000) // Very low sample rate for compression
             .audioChannels(1) // Mono
-            .audioBitrate('64k') // Low bitrate
-            .format('wav')
+            .audioBitrate('32k') // Very low bitrate for extreme compression
+            .format('mp3')
             .on('end', () => {
-              console.log('Audio compression completed');
+              console.log('Additional audio compression completed');
               resolve();
             })
             .on('error', (err: any) => {
-              console.error('Audio compression error:', err);
+              console.error('Additional audio compression error:', err);
               reject(err);
             })
             .save(compressedOutputPath);
@@ -411,23 +412,23 @@ export async function POST(req: Request) {
         // Check compressed file size
         const compressedBuffer = fs.readFileSync(compressedOutputPath);
         const compressedSizeInMB = compressedBuffer.length / (1024 * 1024);
-        console.log(`Compressed audio size: ${compressedSizeInMB.toFixed(2)} MB`);
+        console.log(`Additional compressed audio size: ${compressedSizeInMB.toFixed(2)} MB`);
 
         // Use compressed file if it's smaller
         if (compressedSizeInMB < audioSizeInMB) {
           audioBuffer = compressedBuffer;
           audioSizeInMB = compressedSizeInMB;
           compressionUsed = true;
-          console.log(`Using compressed audio (${audioSizeInMB.toFixed(2)} MB)`);
+          console.log(`Using additional compressed audio (${audioSizeInMB.toFixed(2)} MB)`);
 
           // Clean up original file
           fs.unlinkSync(outputPath);
         } else {
-          console.log('Compression did not reduce size significantly, using original');
+          console.log('Additional compression did not reduce size significantly, using original');
           fs.unlinkSync(compressedOutputPath);
         }
       } catch (compressionError) {
-        console.error('Compression failed, using original file:', compressionError);
+        console.error('Additional compression failed, using original file:', compressionError);
         // Clean up compressed file if it exists
         if (fs.existsSync(compressedOutputPath)) {
           fs.unlinkSync(compressedOutputPath);
@@ -474,7 +475,7 @@ export async function POST(req: Request) {
       const result = await model.generateContent([
         {
           inlineData: {
-            mimeType: "audio/wav",
+            mimeType: "audio/mp3",
             data: audioBytes,
           },
         },
