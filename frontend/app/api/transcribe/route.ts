@@ -48,10 +48,11 @@ export async function POST(req: Request) {
     console.log('Content-Length:', req.headers.get('content-length'));
 
     // Accept both multipart/form-data and JSON payloads
-    // JSON shape supported: { base64: string, mimeType?: string, fileName?: string } OR { url: string }
+    // JSON shape supported: { base64: string, mimeType?: string, fileName?: string, scriptLanguage?: string } OR { url: string, scriptLanguage?: string }
     let incomingFile: File | null = null;
     let incomingBuffer: Buffer | null = null;
     let incomingFileName = `input-${Date.now()}.mp4`;
+    let scriptLanguage = 'en'; // Default to English
 
     const contentType = req.headers.get('content-type') || '';
     console.log('Processing content-type:', contentType);
@@ -69,6 +70,13 @@ export async function POST(req: Request) {
           incomingBuffer = Buffer.from(await file.arrayBuffer());
           console.log('File buffer created, size:', incomingBuffer.length);
         }
+        
+        // Extract scriptLanguage from FormData
+        const languageField = formData.get('scriptLanguage') as string | null;
+        if (languageField) {
+          scriptLanguage = languageField;
+          console.log('Script language from FormData:', scriptLanguage);
+        }
       } catch (e) {
         console.log('FormData parsing failed:', e);
         // Fallthrough to JSON parsing
@@ -84,10 +92,14 @@ export async function POST(req: Request) {
           const b64 = String(json.base64).replace(/^data:[^;]+;base64,/, '');
           incomingBuffer = Buffer.from(b64, 'base64');
           incomingFileName = json.fileName || incomingFileName;
+          scriptLanguage = json.scriptLanguage || scriptLanguage;
           console.log('Base64 buffer created, size:', incomingBuffer.length);
+          console.log('Script language from JSON:', scriptLanguage);
         } else if (json?.url) {
           const url = String(json.url);
+          scriptLanguage = json.scriptLanguage || scriptLanguage;
           console.log('Downloading from URL:', url);
+          console.log('Script language from JSON URL:', scriptLanguage);
           
           // Handle Google Drive URLs - use Drive API for authenticated download
           if (url.includes('drive.google.com')) {
@@ -179,12 +191,32 @@ export async function POST(req: Request) {
     // Send to Gemini model for transcription
     const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL });
 
+    // Create language-specific transcription prompt
+    const languagePrompts: Record<string, string> = {
+      'en': 'Transcribe this audio to English text. Provide accurate transcription with proper punctuation and capitalization.',
+      'ur': 'Transcribe this audio to Urdu text. Provide accurate transcription in Urdu script with proper punctuation.',
+      'ar': 'Transcribe this audio to Arabic text. Provide accurate transcription in Arabic script with proper punctuation.',
+      'hi': 'Transcribe this audio to Hindi text. Provide accurate transcription in Devanagari script with proper punctuation.',
+      'es': 'Transcribe this audio to Spanish text. Provide accurate transcription with proper punctuation and capitalization.',
+      'fr': 'Transcribe this audio to French text. Provide accurate transcription with proper punctuation and capitalization.',
+      'de': 'Transcribe this audio to German text. Provide accurate transcription with proper punctuation and capitalization.',
+      'zh': 'Transcribe this audio to Chinese text. Provide accurate transcription in Chinese characters.',
+      'ja': 'Transcribe this audio to Japanese text. Provide accurate transcription in Japanese characters.',
+      'ko': 'Transcribe this audio to Korean text. Provide accurate transcription in Korean characters.',
+    };
+
+    const transcriptionPrompt = languagePrompts[scriptLanguage] || languagePrompts['en'];
+    console.log('Using transcription prompt for language:', scriptLanguage);
+
     const result = await model.generateContent([
       {
         inlineData: {
           mimeType: "audio/wav",
           data: audioBytes,
         },
+      },
+      {
+        text: transcriptionPrompt,
       },
     ]);
 
@@ -194,7 +226,11 @@ export async function POST(req: Request) {
     fs.unlinkSync(inputPath);
     fs.unlinkSync(outputPath);
 
-    return NextResponse.json({ text });
+    return NextResponse.json({ 
+      text, 
+      language: scriptLanguage,
+      fileName: incomingFileName 
+    });
   } catch (error: any) {
     console.error("Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

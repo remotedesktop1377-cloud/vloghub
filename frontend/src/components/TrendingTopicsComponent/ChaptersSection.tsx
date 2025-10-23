@@ -43,7 +43,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Chapter } from '../../types/chapters';
-import { HelperFunctions } from '../../utils/helperFunctions';
+import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
 import { MediaPlayer } from '../videoEffects/MediaPlayer';
 import { useImageViewer, formatChapterImages } from '../../hooks/useImageViewer';
@@ -405,6 +405,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     idx === index ? { ...ch, duration: e.target.value } : ch
                                                   );
                                                   onChaptersUpdate(updatedChapters);
+                                                  SecureStorageHelpers.setScriptMetadata({ ...SecureStorageHelpers.getScriptMetadata(), chapters: updatedChapters });
                                                 }}
                                                 placeholder="e.g., 30s, 1m 30s, 2m"
                                                 sx={{
@@ -1832,10 +1833,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                     // console.log('Chapter modified (onChapterUpdate):', JSON.stringify(updatedChapters[chapterIndex]));
                     const sceneId = updatedChapters[chapterIndex].id || '';
                     const jobId = updatedChapters[chapterIndex].jobId || '';
-                    const jobName = updatedChapters[chapterIndex].jobName || '';
                     if (jobId && sceneId) {
                       const modifiedChapter = updatedChapters[chapterIndex];
-                      HelperFunctions.updateChapterSceneOnDrive(jobName || '', jobId || '', sceneId, modifiedChapter).then((ok) => {
+                      HelperFunctions.updateChapterSceneOnDrive(jobId || '', jobId || '', sceneId, modifiedChapter).then((ok) => {
                         if (!ok) {
                           console.error('Failed to update scene on Drive');
                           try { (window as any).toast?.error('Failed to update scene on Drive'); } catch { }

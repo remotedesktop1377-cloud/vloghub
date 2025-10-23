@@ -35,7 +35,7 @@ const TrendingTopics: React.FC = () => {
   const lastFetchRef = useRef<{ key: string; ts: number } | null>(null);
 
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedLocationType, setSelectedLocationType] = useState<'global' | 'region' | 'country'>('global');
@@ -57,6 +57,8 @@ const TrendingTopics: React.FC = () => {
   const [selectedPreviousLocationType, setSelectedPreviousLocationType] = useState<string>('');
   const [selectedPreviousDateRange, setSelectedPreviousDateRange] = useState<string>('');
   const [selectedPreviousCountry, setSelectedPreviousCountry] = useState<string>('');
+  const [dialogTitle, setDialogTitle] = useState<string>('');
+  const [dialogDescription, setDialogDescription] = useState<string>('');
 
   // Function to clear cache for current location and date range
   const clearCurrentLocationCache = () => {
@@ -127,13 +129,9 @@ const TrendingTopics: React.FC = () => {
       const now = Date.now();
       if (lastFetchRef.current && lastFetchRef.current.key === fetchKey && (now - lastFetchRef.current.ts) < 1500) {
         // console.log('Skipping duplicate fetch for key:', fetchKey);
-        setLoading(false);
         return;
       }
       lastFetchRef.current = { key: fetchKey, ts: now };
-
-      setLoading(true);
-      setError(null);
 
       const locationKey = selectedLocationType === 'global'
         ? selectedLocationType
@@ -161,8 +159,12 @@ const TrendingTopics: React.FC = () => {
       setSelectedTopic(null);
       setHypothesis('');
       setTrendingTopics([]);
+      setLoading(true);
+      setDialogTitle('Please wait');
+      setDialogDescription('We are finding the trending topics for you...');
       const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, selectedDateRange);
 
+      setLoading(false);
       // Handle Gemini results
       if (geminiResult.success && geminiResult.data) {
         // console.log('🟢 Trending topics:', JSON.stringify(geminiResult));
@@ -182,10 +184,10 @@ const TrendingTopics: React.FC = () => {
         HelperFunctions.showError('Failed to fetch trending topics');
       }
 
-      setError(null);
     } catch (err) {
       console.error('Error fetching trending topics, using mock data:', err);
       setError(null);
+      setLoading(false);
       // setLastUpdated(new Date().toISOString());
       HelperFunctions.showError('Error loading trending topics');
     } finally {
@@ -208,19 +210,28 @@ const TrendingTopics: React.FC = () => {
       // } else {
       // console.log('🟠 No valid cache found - calling API to fetch fresh data');
       // Call API when no cached data is available
-      setLoading(true);
-      fetchTrendingTopics();
+
+      const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
+      if (scriptMetadata && typeof scriptMetadata === 'object') {
+        console.log('🟢 Script metadata found, redirecting to script production');
+        router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+        return;
+      } else {
+        fetchTrendingTopics();
+        setDialogTitle('Please wait');
+        setDialogDescription('We are finding the trending topics for you...');
+      }
       // }
     }
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
 
-  useEffect(() => {
-    const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
-    if (scriptMetadata && typeof scriptMetadata === 'object') {
-      console.log('🟢 Script metadata found, redirecting to script production');
-      router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
-    }
-  }, []);
+  // useEffect(() => {
+  //   const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
+  //   if (scriptMetadata && typeof scriptMetadata === 'object') {
+  //     console.log('🟢 Script metadata found, redirecting to script production');
+  //     router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+  //   }
+  // }, []);
 
   const handleLocationChange = (location: string) => {
     setSelectedPreviousLocation(selectedLocation);
@@ -261,7 +272,8 @@ const TrendingTopics: React.FC = () => {
 
     try {
       setGeneratingChapters(true);
-      setError(null);
+      setDialogTitle('Generating Script');
+      setDialogDescription('Please wait while we generate the script for you...');
 
       const location = selectedLocationType === 'global'
         ? selectedLocationType
@@ -283,7 +295,6 @@ const TrendingTopics: React.FC = () => {
 
       // Unwrap script generation result
       const result = scriptResult.status === 'fulfilled' ? scriptResult.value : { success: false, error: 'Script generation failed' } as any;
-
       // console.log('🟢 Script generation result:', selectedLocationType === 'global' ? selectedLocationType : selectedLocationType === 'region' ? selectedLocation : selectedLocation + ', ' + selectedCountry);
       if (result.success && result.data?.script) {
         setScriptGeneratedOnce(true);
@@ -318,16 +329,19 @@ const TrendingTopics: React.FC = () => {
 
         // Navigate directly to script production page
         router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+        setGeneratingChapters(false);
 
-        setError(null);
       } else {
         setError(result.error || 'Failed to generate script');
+        setGeneratingChapters(false);
       }
     } catch (err) {
       // console.error('Error generating script:', err);
       setError('Failed to generate script. Please try again.');
+      setGeneratingChapters(false);
     } finally {
       // keep overlay until route change completes; do not unset generatingChapters here
+      setGeneratingChapters(false);
       setTimeout(() => setGeneratingChapters(false), 3000);
     }
   };
@@ -366,10 +380,10 @@ const TrendingTopics: React.FC = () => {
 
   return (
     <Box className={styles.trendingTopicsContainer}>
-      {(loading || generatingChapters) && (
+      {(loading || generatingChapters || (!Array.isArray(trendingTopics) || trendingTopics.length === 0)) && (
         <LoadingOverlay
-          title={loading ? 'Please wait' : 'Generating Script'}
-          desc={loading ? 'We are finding the trending topics for you...' : 'Please wait we are generating the script for you...'}
+          title={dialogTitle}
+          desc={dialogDescription}
         />
       )}
 
@@ -388,31 +402,6 @@ const TrendingTopics: React.FC = () => {
         loading={loading}
         lastUpdated={lastUpdated}
       />
-
-      {/* Show message when not all fields are selected */}
-      {(!Array.isArray(trendingTopics) || trendingTopics.length === 0) && (
-        <Box sx={{
-          textAlign: 'center',
-          minHeight: '400px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          py: 4,
-          px: 2,
-          backgroundColor: 'background.paper',
-          borderRadius: 1,
-          border: '1px dashed',
-          borderColor: 'divider'
-        }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontSize: '1.25rem', fontWeight: 600 }}>
-            Please select all options to view trending topics
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
-            Choose a location type, location, and time range to get started
-          </Typography>
-        </Box>
-      )}
 
       {
         /* Cloud View - Centered word cloud with permanent details panel on right */

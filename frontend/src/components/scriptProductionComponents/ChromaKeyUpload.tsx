@@ -24,6 +24,7 @@ import { API_ENDPOINTS } from '@/config/apiEndpoints';
 
 interface ChromaKeyUploadProps {
     jobId: string;
+    scriptLanguage: string;
     onUploadComplete: (driveUrl: string, transcriptionData: string) => void;
     onUploadFailed: (errorMessage: string) => void;
     disabled?: boolean;
@@ -31,6 +32,7 @@ interface ChromaKeyUploadProps {
 
 const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     jobId,
+    scriptLanguage,
     onUploadComplete,
     onUploadFailed,
 }) => {
@@ -53,7 +55,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     setUploadProgress(5);
 
                     // 1) Upload to Drive first
-                    const upload = await HelperFunctions.uploadMediaToDrive(jobId, 'narrator-chroma-key', file);
+                    const upload = await HelperFunctions.uploadMediaToDrive(jobId, 'input', file);
 
                     if (!upload?.success || !upload?.fileId) {
                         setUploading(false);
@@ -70,7 +72,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                         const res = await fetch(API_ENDPOINTS.TRANSCRIBE_VIDEO, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ url: driveUrl, fileName: file.name })
+                            body: JSON.stringify({ url: driveUrl, fileName: file.name, scriptLanguage: scriptLanguage })
                         });
 
                         setUploadProgress(85);

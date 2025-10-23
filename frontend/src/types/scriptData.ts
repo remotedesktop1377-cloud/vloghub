@@ -1,4 +1,7 @@
+import { Chapter } from "./chapters";
+
 export interface ScriptData {
+    jobId?: string;
     title: string;
     topic: string;
     description: string;
@@ -20,4 +23,5 @@ export interface ScriptData {
     updated_at: string;
     narrator_chroma_key_link: string;
     transcription: string;
+    chapters?: Chapter[];
 }
