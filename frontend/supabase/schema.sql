@@ -18,11 +18,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     instagram_key TEXT,
     facebook_key TEXT,
     youtube_key TEXT,
-    -- Optional social handles/identifiers
-    tiktok_handle TEXT,
-    instagram_handle TEXT,
-    facebook_page TEXT,
-    youtube_channel TEXT,
     -- JSON preferences blob (notifications, theme, etc.)
     preferences JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -40,11 +35,10 @@ ALTER TABLE public.profiles
     ADD COLUMN IF NOT EXISTS instagram_key TEXT,
     ADD COLUMN IF NOT EXISTS facebook_key TEXT,
     ADD COLUMN IF NOT EXISTS youtube_key TEXT,
-    ADD COLUMN IF NOT EXISTS tiktok_handle TEXT,
-    ADD COLUMN IF NOT EXISTS instagram_handle TEXT,
-    ADD COLUMN IF NOT EXISTS facebook_page TEXT,
-    ADD COLUMN IF NOT EXISTS youtube_channel TEXT,
-    ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'::jsonb;
+    ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'::jsonb,
+    ADD COLUMN IF NOT EXISTS logo_url TEXT,
+    ADD COLUMN IF NOT EXISTS logo_filename TEXT,
+    ADD COLUMN IF NOT EXISTS selected_background JSONB;
 
 -- Create youtube_videos table
 CREATE TABLE IF NOT EXISTS public.youtube_videos (

@@ -25,6 +25,17 @@ export interface ScriptData {
     narrator_chroma_key_link: string;
     transcription: string;
     videoBackground: BackgroundType | null;
+    userLogo?: {
+        url: string;
+        fileName: string;
+        uploadedAt: string;
+    };
+    selectedBackground?: {
+        id: string;
+        name: string;
+        url: string;
+        thumbnailUrl?: string;
+    };
     chapters?: Chapter[];
     scenes?: Array<{
         id: string;

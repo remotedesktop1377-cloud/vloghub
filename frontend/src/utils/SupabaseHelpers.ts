@@ -60,30 +60,39 @@ export class SupabaseHelpers {
    */
   static async saveUserSocialAuthKeys(userId: string, keys: { tiktok?: string; instagram?: string; facebook?: string; youtube?: string }) {
     try {
+      console.log('SupabaseHelpers: Keys to save:', keys);
+
       const updatePayload: any = {
         tiktok_key: keys.tiktok ?? '',
         instagram_key: keys.instagram ?? '',
         facebook_key: keys.facebook ?? '',
-        youtube_key: keys.youtube ?? ''
+        youtube_key: keys.youtube ?? '',
+        updated_at: new Date().toISOString()
       };
 
       const { data, error } = await (SupabaseHelpers.supabase.from('profiles') as any)
         .update(updatePayload as any)
-        .eq('id', userId)
-        .select('id, tiktok_key, instagram_key, facebook_key, youtube_key')
-        .single();
+        .eq('id', userId);
 
       if (error) {
-        console.error('Error saving social keys:', error);
-        toast.error('Failed to save social auth keys');
+        console.log('SupabaseHelpers: Error saving social keys:', error);
+        console.log('SupabaseHelpers: Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+
+        toast.error(`Failed to save social auth keys: ${error.message}`);
         return { data: null, error };
       }
 
-      toast.success('Social auth keys saved to profile');
+      console.log('SupabaseHelpers: Social keys saved successfully:', data);
+      toast.success('Social auth keys saved successfully');
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
-      toast.error('An unexpected error occurred');
+      console.error('SupabaseHelpers: Unexpected error saving social keys:', error);
+      toast.error('An unexpected error occurred while saving social keys');
       return { data: null, error };
     }
   }
@@ -110,26 +119,227 @@ export class SupabaseHelpers {
   }
 
   /**
-   * Get user profile from Supabase
+   * Test if the logos bucket exists and is accessible
    */
-  static async getUserProfile(userId: string) {
+  static async testLogosBucket(): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('Testing logos bucket access...');
+
+      // Try to list files in the logos bucket
+      const { data, error } = await SupabaseHelpers.supabase.storage
+        .from('logos')
+        .list('', { limit: 1 });
+
+      if (error) {
+        console.error('Bucket test error:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('Bucket test successful:', data);
+      return { success: true };
+    } catch (error) {
+      console.error('Bucket test exception:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Upload logo to Supabase storage and update profile
+   */
+  static async uploadLogoToProfile(userId: string, file: File): Promise<{ success: boolean; url?: string; fileName?: string }> {
+    try {
+      console.log('SupabaseHelpers: Starting logo upload for user:', userId, 'File:', file.name);
+
+      // First test if the bucket exists
+      console.log('SupabaseHelpers: Testing bucket access...');
+      const bucketTest = await SupabaseHelpers.testLogosBucket();
+      if (!bucketTest.success) {
+        console.error('SupabaseHelpers: Bucket test failed:', bucketTest.error);
+        toast.error(`Storage bucket not accessible: ${bucketTest.error}`);
+        return { success: false };
+      }
+      console.log('SupabaseHelpers: Bucket test passed');
+
+      // Upload file to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/logo-${Date.now()}.${fileExt}`;
+
+      console.log('SupabaseHelpers: Uploading to bucket "logos" with filename:', fileName);
+
+      // Add a timeout to the upload operation
+      const uploadPromise = SupabaseHelpers.supabase.storage
+        .from('logos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timeout')), 25000); // 25 second timeout
+      });
+
+      const { data: uploadData, error: uploadError } = await Promise.race([
+        uploadPromise,
+        timeoutPromise
+      ]) as any;
+
+      if (uploadError) {
+        console.error('SupabaseHelpers: Upload error:', uploadError);
+        console.error('SupabaseHelpers: Error details:', {
+          message: uploadError.message
+        });
+
+        // Check if it's a bucket not found error
+        if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('bucket')) {
+          toast.error('Logo storage not configured. Please contact support.');
+          return { success: false };
+        }
+
+        toast.error(`Failed to upload logo: ${uploadError.message}`);
+        return { success: false };
+      }
+
+      console.log('SupabaseHelpers: Upload successful, getting public URL...');
+
+      // Get public URL
+      const { data: urlData } = SupabaseHelpers.supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName);
+
+      const logoUrl = urlData.publicUrl;
+      console.log('SupabaseHelpers: Public URL generated:', logoUrl);
+
+      // Update profile with logo URL
+      console.log('SupabaseHelpers: Updating profile with logo URL...');
+      const { error: updateError } = await (SupabaseHelpers.supabase.from('profiles') as any)
+        .update({
+          logo_url: logoUrl,
+          logo_filename: file.name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('SupabaseHelpers: Profile update error:', updateError);
+        toast.error('Failed to save logo to profile');
+        return { success: false };
+      }
+
+      console.log('SupabaseHelpers: Profile updated successfully');
+      toast.success('Logo uploaded successfully');
+      return {
+        success: true,
+        url: logoUrl,
+        fileName: file.name
+      };
+    } catch (error) {
+      console.error('SupabaseHelpers: Unexpected error uploading logo:', error);
+      if (error instanceof Error && error.message === 'Upload timeout') {
+        toast.error('Logo upload timed out. Please check your connection and try again.');
+      } else {
+        toast.error('An unexpected error occurred');
+      }
+      return { success: false };
+    }
+  }
+
+  /**
+   * Remove logo from profile and storage
+   */
+  static async removeLogoFromProfile(fileName: string, url: string, userId: string): Promise<{ success: boolean }> {
+    try {
+
+      // Remove from storage if exists
+      if (url) {
+        // Extract the file path from the URL or use the fileName
+        const filePath = url.includes('/storage/v1/object/public/logos/')
+          ? url.split('/storage/v1/object/public/logos/')[1]
+          : `${userId}/logo-${fileName}`;
+
+        const { error: deleteError } = await SupabaseHelpers.supabase.storage
+          .from('logos')
+          .remove([filePath]);
+
+        if (deleteError) {
+          console.error('Error deleting logo from storage:', deleteError);
+          // Continue with profile update even if storage deletion fails
+          // Don't show error to user if it's just a bucket not found issue
+          if (!deleteError.message?.includes('Bucket not found')) {
+            console.warn('Storage deletion failed, but continuing with profile update');
+          }
+        }
+      }
+
+      // Update profile to remove logo
+      const { error: updateError } = await (SupabaseHelpers.supabase.from('profiles') as any)
+        .update({
+          logo_url: null,
+          logo_filename: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        toast.error('Failed to remove logo from profile');
+        return { success: false };
+      }
+
+      toast.success('Logo removed successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected error removing logo:', error);
+      toast.error('An unexpected error occurred');
+      return { success: false };
+    }
+  }
+
+  /**
+   * Update selected background in profile
+   */
+  static async updateSelectedBackground(userId: string, background: any): Promise<{ success: boolean }> {
+    try {
+      const { error } = await (SupabaseHelpers.supabase.from('profiles') as any)
+        .update({
+          selected_background: background,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating background:', error);
+        toast.error('Failed to save background selection');
+        return { success: false };
+      }
+
+      toast.success('Background selected successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Unexpected error updating background:', error);
+      toast.error('An unexpected error occurred');
+      return { success: false };
+    }
+  }
+
+  /**
+   * Get user profile with logo and background
+   */
+  static async getUserProfileWithAssets(userId: string) {
     try {
       const { data, error } = await SupabaseHelpers.supabase
         .from('profiles')
-        .select('*')
+        .select('*, logo_url, logo_filename, selected_background')
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-        console.error('Error fetching profile:', error);
-        toast.error('Failed to fetch user profile');
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile with assets:', error);
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
       console.error('Unexpected error:', error);
-      toast.error('An unexpected error occurred');
       return { data: null, error };
     }
   }
@@ -313,7 +523,7 @@ export class SupabaseHelpers {
       return { data: null, error };
     }
   }
-  
+
   /**
    * Save approved script
    */
@@ -322,8 +532,8 @@ export class SupabaseHelpers {
   ) {
 
     try {
-        const { user_id, ...rest } = scriptDataPayload as any;
-        const payload: ScriptData = {
+      const { user_id, ...rest } = scriptDataPayload as any;
+      const payload: ScriptData = {
         ...rest,
         created_at: scriptDataPayload.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),

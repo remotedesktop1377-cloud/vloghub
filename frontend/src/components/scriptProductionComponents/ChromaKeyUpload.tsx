@@ -275,10 +275,10 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                             <Box>
                                 <UploadIcon sx={{ fontSize: 48, mb: 2 }} />
                                 <Typography variant="body1" sx={{ mb: 1 }}>
-                                    Click to upload chroma key video
+                                    Click to upload Narrator's video
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    or drag and drop your video file here
+                                    or drag and drop your Narrator's video file here
                                 </Typography>
                             </Box>
                         )}

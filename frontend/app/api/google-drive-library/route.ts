@@ -51,15 +51,24 @@ async function listCategory(drive: any, folderId: string): Promise<any[]> {
     pageSize: 1000,
   });
   const files = Array.isArray(res.data.files) ? res.data.files : [];
-  return files.map((f: any) => ({
-    id: f.id,
-    name: f.name,
-    mimeType: f.mimeType,
-    webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
-    webContentLink: `https://drive.google.com/uc?id=${f.id}&export=download`,
-    thumbnailLink: f.thumbnailLink || null,
-    iconLink: f.iconLink || null,
-  }));
+  return files.map((f: any) => {
+    // For videos, we need to use a different URL format
+    const isVideo = f.mimeType && f.mimeType.startsWith('video/');
+    const webContentLink = isVideo 
+      ? `https://drive.google.com/uc?id=${f.id}` // Direct streaming URL for videos
+      : `https://drive.google.com/uc?id=${f.id}&export=download`; // Download URL for other files
+    
+    return {
+      id: f.id,
+      name: f.name,
+      mimeType: f.mimeType,
+      webViewLink: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
+      webContentLink: webContentLink,
+      thumbnailLink: f.thumbnailLink || null,
+      iconLink: f.iconLink || null,
+      isVideo: isVideo,
+    };
+  });
 }
 
 export async function GET(req: NextRequest) {
