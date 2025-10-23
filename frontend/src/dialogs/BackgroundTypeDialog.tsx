@@ -73,18 +73,18 @@ const BackgroundTypeDialog: React.FC<BackgroundTypeDialogProps> = ({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                pb: 1
+                pb: 1,
+                fontWeight: 'bold',
+                fontSize: '1.5rem'
             }}>
-                <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                    Select Background Type
-                </Typography>
+                Select Background Type
                 <IconButton onClick={onClose} size="small">
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
 
             <DialogContent sx={{ pt: 2 }}>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, fontSize: '1.25rem' }}>
                     Please select the type of background in your video to help us process it correctly:
                 </Typography>
 
@@ -110,10 +110,10 @@ const BackgroundTypeDialog: React.FC<BackgroundTypeDialogProps> = ({
                                             {type.icon}
                                         </Box>
                                         <Box sx={{ flexGrow: 1 }}>
-                                            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1, fontSize: '1.5rem' }}>
                                                 {type.title}
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
+                                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.25rem' }}>
                                                 {type.description}
                                             </Typography>
                                         </Box>

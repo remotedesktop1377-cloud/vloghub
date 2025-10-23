@@ -1054,7 +1054,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                 borderLeftColor: 'divider'
                                               }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.05rem' }}>
+                                                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.25rem' }}>
                                                     📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.images ? 1 : 0)})
                                                   </Typography>
                                                   {/* <Button
@@ -1466,19 +1466,19 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     {generatingChapters ? (
                                                       <>
                                                         <CircularProgress size={16} sx={{ mb: 0.5 }} />
-                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1rem' }}>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.25rem' }}>
                                                           Generating AI image...
                                                         </Typography>
                                                       </>
                                                     ) : (
                                                       <>
-                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1rem', mb: 0.5 }}>
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.25rem', mb: 0.5 }}>
                                                           No Media added
                                                         </Typography>
                                                         <Button
                                                           size="small"
                                                           variant="outlined"
-                                                          sx={{ fontSize: '0.9rem', py: 0.3, px: 1, minHeight: 'auto' }}
+                                                          sx={{ fontSize: '1.25rem', py: 0.3, px: 1, minHeight: 'auto', textTransform: 'none' }}
                                                           onClick={(e) => {
                                                             e.stopPropagation();
                                                             const ch = chapters[index];

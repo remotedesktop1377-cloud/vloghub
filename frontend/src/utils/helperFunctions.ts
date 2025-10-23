@@ -916,8 +916,8 @@ export class HelperFunctions {
         body: JSON.stringify({ chapters: payload })
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to get highlighted keywords');
+        HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, chaptersUpdated);
+        return;
       }
       const data = await res.json();
       const map: Record<string, string[]> = {};
