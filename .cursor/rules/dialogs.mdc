@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Keep all the Dialogs in the frontend/src/dialogs directory 

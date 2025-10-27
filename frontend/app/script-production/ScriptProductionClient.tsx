@@ -56,6 +56,7 @@ import CustomAudioPlayer from '@/components/scriptProductionComponents/CustomAud
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { ScriptData } from '@/types/scriptData';
 import { BackgroundType } from '@/types/backgroundType';
+import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
 
 const ScriptProductionClient = () => {
 
@@ -2026,39 +2027,12 @@ const ScriptProductionClient = () => {
             </Box>
 
             {/* Back Confirmation Dialog */}
-            <Dialog
+            <BackConfirmationDialog
                 open={showBackConfirmation}
                 onClose={handleCancelBack}
-                aria-labelledby="back-confirmation-dialog-title"
-                maxWidth="sm"
-                fullWidth
-            >
-                <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
-                    {completeProjectUploaded ? 'Uploading Completed' : '⚠️ Are you sure?'}
-                </DialogTitle>
-                <DialogContent>
-                    <Typography variant="h5" sx={{ mb: 2, lineHeight: 1.5 }}>
-                        {completeProjectUploaded ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ p: 2, gap: 1 }}>
-                    {completeProjectUploaded === false && <Button
-                        onClick={handleCancelBack}
-                        variant="outlined"
-                        sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
-                    >
-                        {'Stay Here'}
-                    </Button>}
-                    {<Button
-                        onClick={handleConfirmBack}
-                        variant="contained"
-                        color="warning"
-                        sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
-                    >
-                        {completeProjectUploaded ? 'Okay' : 'Discard Script'}
-                    </Button>}
-                </DialogActions>
-            </Dialog>
+                onConfirm={handleConfirmBack}
+                isComplete={completeProjectUploaded}
+            />
 
             {/* Project Settings Dialog */}
             <Dialog
