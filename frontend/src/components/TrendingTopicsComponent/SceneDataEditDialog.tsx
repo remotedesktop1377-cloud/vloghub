@@ -38,20 +38,20 @@ import {
     Visibility as EyeIcon,
     Settings as SettingsIcon
 } from '@mui/icons-material';
-import { Chapter, VideoClip, LogoOverlay, BackgroundMusic } from '../../types/chapters';
+import { SceneData, VideoClip, LogoOverlay, BackgroundMusic } from '../../types/sceneData';
 import { HelperFunctions } from '../../utils/helperFunctions';
 import { EffectsPanel } from '../videoEffects/EffectsPanel';
 import { TransitionSelector } from '../videoEffects/TransitionSelector';
 import { MediaPlayer } from '../videoEffects/MediaPlayer';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../styles/colors';
 
-interface ChapterEditDialogProps {
+interface SceneDataEditDialogProps {
     open: boolean;
-    chapter: Chapter | null;
-    chapterIndex: number;
+    SceneData: SceneData | null;
+    SceneDataIndex: number;
     language: string;
     onClose: () => void;
-    onSave: (chapterIndex: number, updatedChapter: Chapter) => void;
+    onSave: (SceneDataIndex: number, updatedSceneData: SceneData) => void;
 }
 
 const predefinedTransitions = [
@@ -88,46 +88,45 @@ const preStoredMusic = [
     { id: 'minimal_1', name: 'Clean Minimal', genre: 'Minimal', url: '/music/minimal_1.mp3' }
 ];
 
-export function ChapterEditDialog({
+export function SceneDataEditDialog({
     open,
-    chapter,
-    chapterIndex,
+    SceneData,
+    SceneDataIndex,
     language,
     onClose,
     onSave
-}: ChapterEditDialogProps) {
+}: SceneDataEditDialogProps) {
     const [activeTab, setActiveTab] = useState(0);
-    const [editData, setEditData] = useState<Chapter | null>(null);
-    const [showPreview, setShowPreview] = useState(false);
+    const [editData, setEditData] = useState<SceneData | null>(null);
 
     useEffect(() => {
-        if (chapter) {
+        if (SceneData) {
             setEditData({
-                ...chapter,
+                ...SceneData,
                 videoEffects: {
-                    clips: chapter.videoEffects?.clips || [],
-                    logos: chapter.videoEffects?.logos || [],
-                    backgroundMusic: Array.isArray(chapter.videoEffects?.backgroundMusic)
-                        ? chapter.videoEffects?.backgroundMusic
-                        : (chapter.videoEffects?.backgroundMusic
-                            ? [chapter.videoEffects.backgroundMusic as unknown as BackgroundMusic]
+                    clips: SceneData.videoEffects?.clips || [],
+                    logos: SceneData.videoEffects?.logos || [],
+                    backgroundMusic: Array.isArray(SceneData.videoEffects?.backgroundMusic)
+                        ? SceneData.videoEffects?.backgroundMusic
+                        : (SceneData.videoEffects?.backgroundMusic
+                            ? [SceneData.videoEffects.backgroundMusic as unknown as BackgroundMusic]
                             : []),
-                    transition: chapter.videoEffects?.transition || 'quantum_dissolve',
-                    transitionEffects: chapter.videoEffects?.transitionEffects || []
+                    transition: SceneData.videoEffects?.transition || 'quantum_dissolve',
+                    transitionEffects: SceneData.videoEffects?.transitionEffects || []
                 }
             });
         }
-    }, [chapter]);
+    }, [SceneData]);
 
     const handleSave = () => {
         if (editData) {
-            onSave(chapterIndex, editData);
+            onSave(SceneDataIndex, editData);
             onClose();
         }
     };
 
     const handleCancel = () => {
-        setEditData(chapter);
+        setEditData(SceneData);
         onClose();
     };
 
@@ -279,7 +278,7 @@ export function ChapterEditDialog({
                 borderBottom: '1px solid rgba(255,255,255,0.1)'
             }}>
                 <Typography variant="h5" component="span" sx={{ fontWeight: 'bold' }}>
-                    Edit Chapter {chapterIndex + 1}
+                    Edit SceneData {SceneDataIndex + 1}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button

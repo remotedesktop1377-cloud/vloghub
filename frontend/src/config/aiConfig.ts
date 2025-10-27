@@ -22,7 +22,7 @@ export const AI_CONFIG = {
     MAX_TOPIC_SUGGESTIONS: 5,
     MAX_HYPOTHESIS_SUGGESTIONS: 5,
     TARGET_WORDS: 160,
-    MAX_CHAPTERS: 10,
+    MAX_SceneData: 10,
     MAX_IMAGES: 5,
   },
   

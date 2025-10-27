@@ -1,7 +1,8 @@
-import { Chapter } from '../types/chapters';
+import { SceneData } from '../types/sceneData';
 import { ScriptData } from '../types/scriptData';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { now } from 'lodash';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -151,7 +152,9 @@ export const SecureStorageHelpers = {
   /**
    * Set approved script in secure storage
    */
-  setApprovedScript: (scriptData: any) => secure.j.approvedScript.set(scriptData),
+  setApprovedScript: (scriptData: any) => {
+    secure.j.approvedScript.set(scriptData);
+  },
 
   /**
    * Remove approved script from secure storage
@@ -233,6 +236,55 @@ export class HelperFunctions {
     return false;
   };
 
+  static handleDownloadAllNarrations = (scriptData: ScriptData) => {
+
+    try {
+      // Build script content in the same structured format used in approval
+      let content = '';
+      if (scriptData) {
+        const parts: string[] = [];
+        const headers = HelperFunctions.getLocalizedSectionHeaders(scriptData.language || 'english');
+        if (scriptData.title && scriptData.title.trim()) {
+          parts.push(`📋 ${headers.title}:\n${scriptData.title.trim()}`);
+        }
+        if (scriptData.hook && scriptData.hook.trim()) {
+          parts.push(`🎯 ${headers.hook}:\n${scriptData.hook.trim()}`);
+        }
+        if (scriptData.main_content && scriptData.main_content.trim()) {
+          parts.push(`📝 ${headers.main_content}:\n${scriptData.main_content.trim()}`);
+        }
+        if (scriptData.conclusion && scriptData.conclusion.trim()) {
+          parts.push(`🏁 ${headers.conclusion}:\n${scriptData.conclusion.trim()}`);
+        }
+        if (scriptData.call_to_action && scriptData.call_to_action.trim()) {
+          parts.push(`🚀 ${headers.call_to_action}:\n${scriptData.call_to_action.trim()}`);
+        }
+        content = parts.filter(Boolean).join('\n\n');
+        if (!content.trim() && scriptData.script) {
+          content = scriptData.script;
+        }
+      }
+
+      if (!content.trim()) {
+        toast.error('No script content to download');
+        return;
+      }
+
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeTopic = (scriptData?.topic || 'script').toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
+      a.href = url;
+      a.download = `${safeTopic || 'script'}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Script downloaded successfully');
+    } catch (error) {
+      toast.error('Failed to download narrations');
+    }
+  };
 
   /**
    * Parse a narration .txt file and return extracted fields.
@@ -363,30 +415,30 @@ export class HelperFunctions {
   }
 
   /**
-   * Merge a chapter's assets with any media referenced in keywordsSelected.
+   * Merge a SceneData's assets with any media referenced in keywordsSelected.
    * Ensures assets.images includes low/high media URLs without duplicates.
    */
-  static ensureAssetsContainKeywordMedia(chapter: Chapter): Chapter {
-    const existingImages = Array.isArray(chapter.assets?.images) ? (chapter.assets!.images as string[]) : [];
-    const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected((chapter as any).keywordsSelected);
+  static ensureAssetsContainKeywordMedia(sceneData: SceneData): SceneData {
+    const existingImages = Array.isArray(sceneData.assets?.images) ? (sceneData.assets!.images as string[]) : [];
+    const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected((sceneData as any).keywordsSelected);
     const merged = Array.from(new Set([...(existingImages || []), ...keywordImages].filter(Boolean)));
     return {
-      ...chapter,
+      ...sceneData,
       assets: {
-        ...(chapter.assets || {} as any),
+        ...(sceneData.assets || {} as any),
         images: merged
       } as any
-    } as Chapter;
+    } as SceneData;
   }
 
   /**
    * Update a single scene JSON on the server/Drive and ensure assets are synced.
    * Returns true on success.
    */
-  static async updateChapterSceneOnDrive(jobName: string, jobId: string, sceneId: string, chapter: Chapter): Promise<boolean> {
+  static async updateSceneDataceneOnDrive(jobName: string, jobId: string, sceneId: string, sceneData: SceneData): Promise<boolean> {
     try {
-      const chapterWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(chapter);
-      const ve: any = (chapterWithAssets as any).videoEffects || {};
+      const SceneDataWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(sceneData);
+      const ve: any = (SceneDataWithAssets as any).videoEffects || {};
       const sceneSettings = {
         transition: ve.transition || '',
         backgroundMusic: ve.backgroundMusic && typeof ve.backgroundMusic === 'object'
@@ -398,20 +450,20 @@ export class HelperFunctions {
       };
 
       // Build assets with logo image and video clip included
-      const existingImages: string[] = Array.isArray(chapterWithAssets.assets?.images) ? (chapterWithAssets.assets!.images as string[]) : [];
+      const existingImages: string[] = Array.isArray(SceneDataWithAssets.assets?.images) ? (SceneDataWithAssets.assets!.images as string[]) : [];
       const logoUrl: string | undefined = ve?.logo?.url;
       const mergedImages = Array.from(new Set<string>([
         ...existingImages,
         ...(logoUrl ? [logoUrl] : []),
       ].filter(Boolean) as string[]));
 
-      const existingVideos: string[] = Array.isArray((chapterWithAssets as any).assets?.videos) ? ((chapterWithAssets as any).assets.videos as string[]) : [];
+      const existingVideos: string[] = Array.isArray((SceneDataWithAssets as any).assets?.videos) ? ((SceneDataWithAssets as any).assets.videos as string[]) : [];
       let mergedVideos = existingVideos;
       const clipUrl: string | undefined = ve?.clip?.url;
       if (clipUrl) {
         try {
           // Upload clip to Drive/videos for this scene folder path and use returned link
-          const jobFolderName = chapterWithAssets.jobName || jobName || `job-${HelperFunctions.generateRandomId()}`;
+          const jobFolderName = SceneDataWithAssets.jobName || jobName || `job-${HelperFunctions.generateRandomId()}`;
           const uploadResult = await HelperFunctions.uploadMediaToDrive(jobFolderName, `${sceneId}/videos`, await HelperFunctions.fetchBlobAsFile(clipUrl, ve?.clip?.name || 'clip.mp4'));
           if (uploadResult && uploadResult.success && uploadResult.fileId) {
             mergedVideos = Array.from(new Set<string>([...existingVideos, `https://drive.google.com/uc?id=${uploadResult.fileId}`]));
@@ -423,15 +475,15 @@ export class HelperFunctions {
         }
       }
       const scene = {
-        id: chapterWithAssets.id,
-        narration: chapterWithAssets.narration,
-        duration: chapterWithAssets.duration,
-        durationInSeconds: (chapterWithAssets as any).durationInSeconds,
-        words: (chapterWithAssets as any).words,
-        startTime: (chapterWithAssets as any).startTime,
-        endTime: (chapterWithAssets as any).endTime,
-        highlightedKeywords: chapterWithAssets.highlightedKeywords || [],
-        keywordsSelected: Array.isArray((chapterWithAssets as any).keywordsSelected) ? (chapterWithAssets as any).keywordsSelected : [],
+        id: SceneDataWithAssets.id,
+        narration: SceneDataWithAssets.narration,
+        duration: SceneDataWithAssets.duration,
+        durationInSeconds: (SceneDataWithAssets as any).durationInSeconds,
+        words: (SceneDataWithAssets as any).words,
+        startTime: (SceneDataWithAssets as any).startTime,
+        endTime: (SceneDataWithAssets as any).endTime,
+        highlightedKeywords: SceneDataWithAssets.highlightedKeywords || [],
+        keywordsSelected: Array.isArray((SceneDataWithAssets as any).keywordsSelected) ? (SceneDataWithAssets as any).keywordsSelected : [],
         assets: {
           images: mergedImages,
           ...(mergedVideos.length > 0 ? { videos: mergedVideos } : {}),
@@ -459,7 +511,7 @@ export class HelperFunctions {
       }
       return true;
     } catch (e) {
-      console.error('updateChapterSceneOnDrive error', e);
+      console.error('updateSceneDataceneOnDrive error', e);
       return false;
     }
   }
@@ -541,22 +593,22 @@ export class HelperFunctions {
   }
 
   /**
-   * Persist a chapter scene change to Drive and show toast feedback
+   * Persist a SceneData scene change to Drive and show toast feedback
    */
   static async persistSceneUpdate(
     jobId: string,
-    chapters: Chapter[],
-    chapterIndex: number,
+    scenesData: SceneData[],
+    SceneDataIndex: number,
     successMessage: string = 'Scene updated on Drive'
   ): Promise<void> {
     try {
-      const chapter = chapters?.[chapterIndex];
-      if (!chapter) return;
-      const sceneId = String((chapter as any).id || '');
-      const job_id = String((chapter as any).jobId || jobId || '');
-      // const jobName = String((chapter as any).jobName || jobInfo?.jobName || '');
+      const sceneData = scenesData?.[SceneDataIndex];
+      if (!sceneData) return;
+      const sceneId = String((sceneData as any).id || '');
+      const job_id = String((sceneData as any).jobId || jobId || '');
+      // const jobName = String((SceneData as any).jobName || jobInfo?.jobName || '');
       if (!jobId || !sceneId) return;
-      const ok = await HelperFunctions.updateChapterSceneOnDrive(job_id, job_id, sceneId, chapter);
+      const ok = await HelperFunctions.updateSceneDataceneOnDrive(job_id, job_id, sceneId, sceneData);
       if (ok) {
         HelperFunctions.showSuccess(successMessage);
       } else {
@@ -694,14 +746,14 @@ export class HelperFunctions {
   }
 
   /**
-   * Add a new chapter after a specific index
+   * Add a new SceneData after a specific index
    */
-  static addChapterAfter(
+  static addSceneDataAfter(
     index: number,
-    chapters: Chapter[],
-    setChapters: (chapters: Chapter[]) => void
+    SceneData: SceneData[],
+    setSceneData: (SceneData: SceneData[]) => void
   ): void {
-    const newChapter: Chapter = {
+    const newSceneData: SceneData = {
       id: Date.now().toString(),
       narration: '',
       duration: '',
@@ -714,55 +766,55 @@ export class HelperFunctions {
       }
     }
 
-    const updatedChapters = [...chapters];
-    updatedChapters.splice(index + 1, 0, newChapter);
-    setChapters(updatedChapters);
+    const updatedSceneData = [...SceneData];
+    updatedSceneData.splice(index + 1, 0, newSceneData);
+    setSceneData(updatedSceneData);
   }
 
   /**
-   * Delete a chapter at a specific index
+   * Delete a SceneData at a specific index
    */
-  static deleteChapter(
+  static deleteSceneData(
     index: number,
-    chapters: Chapter[],
-    setChapters: (chapters: Chapter[]) => void
+    SceneData: SceneData[],
+    setSceneData: (SceneData: SceneData[]) => void
   ): void {
-    const updatedChapters = chapters.filter((_, i) => i !== index);
-    setChapters(updatedChapters);
+    const updatedSceneData = SceneData.filter((_, i) => i !== index);
+    setSceneData(updatedSceneData);
   }
 
   /**
-   * Save edited chapter
+   * Save edited SceneData
    */
   static saveEdit(
     index: number,
-    chapters: Chapter[],
-    setChapters: (chapters: Chapter[]) => void,
+    SceneData: SceneData[],
+    setSceneData: (SceneData: SceneData[]) => void,
     editHeading: string,
     editNarration: string,
-    setEditingChapter: (index: number | null) => void
+    setEditingSceneData: (index: number | null) => void
   ): void {
-    const updatedChapters = [...chapters];
+    const updatedSceneData = [...SceneData];
 
-    updatedChapters[index] = {
-      ...updatedChapters[index],
+    updatedSceneData[index] = {
+      ...updatedSceneData[index],
       // update the model change here as well
-      duration: updatedChapters[index].duration,
-      assets: updatedChapters[index].assets,
+      duration: updatedSceneData[index].duration,
+      assets: updatedSceneData[index].assets,
     };
-    setChapters(updatedChapters);
-    setEditingChapter(null);
+    setSceneData(updatedSceneData);
+    setEditingSceneData(null);
   }
 
   /**
-   * Cancel chapter editing
+   * Cancel SceneData editing
    */
   static cancelEdit(
-    setEditingChapter: (index: number | null) => void,
+    setEditingSceneData: (index: number | null) => void,
     setEditHeading: (heading: string) => void,
     setEditNarration: (narration: string) => void
   ): void {
-    setEditingChapter(null);
+    setEditingSceneData(null);
     setEditHeading('');
     setEditNarration('');
   }
@@ -870,8 +922,18 @@ export class HelperFunctions {
     return Math.random().toString(36).substring(2, length + 2);
   }
 
+
   /**
-   * Extract image URLs from a chapter's keywordsSelected map.
+   * Generate unique job ID
+   */
+  static generateJobId(): string {
+    const now = new Date();
+    return `job-${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
+  }
+
+
+  /**
+   * Extract image URLs from a SceneData's keywordsSelected map.
    * Accepts shapes like: { keyword: ["https://...", "..."], other: "https://..." }
    */
   static extractImageUrlsFromKeywordsSelected(keywordsSelected: unknown): string[] {
@@ -954,23 +1016,23 @@ export class HelperFunctions {
   };
 
   /**
-   * Call Gemini endpoint to get highlighted keywords for chapters and merge into chapters array
+   * Call Gemini endpoint to get highlighted keywords for SceneData and merge into SceneData array
    */
   static async fetchAndApplyHighlightedKeywords(
-    chapters: Chapter[],
-    setChapters: (chapters: Chapter[]) => void,
-    chaptersUpdated: (chapters: Chapter[]) => void
+    scenesData: SceneData[],
+    setSceneData: (scenesData: SceneData[]) => void,
+    SceneDataUpdated: (scenesData: SceneData[]) => void
   ): Promise<void> {
-    let bestChapters: Chapter[] = chapters;
+    let bestSceneData: SceneData[] = scenesData;
     try {
-      const payload = chapters.map(c => ({ id: c.id, narration: c.narration }));
+      const payload = scenesData.map(c => ({ id: c.id, narration: c.narration }));
       const res = await fetch(API_ENDPOINTS.GEMINI_HIGHLIGHT_KEYWORDS, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapters: payload })
+        body: JSON.stringify({ scenesData: payload })
       });
       if (!res.ok) {
-        HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, chaptersUpdated);
+        HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setSceneData, SceneDataUpdated);
         return;
       }
       const data = await res.json();
@@ -982,19 +1044,19 @@ export class HelperFunctions {
           if (id) map[id] = kws;
         }
       }
-      const updated = chapters.map(ch => ({
+      const updated = scenesData.map(ch => ({
         ...ch,
         highlightedKeywords: map[ch.id] && map[ch.id].length > 0 ? map[ch.id] : (ch.highlightedKeywords || [])
       }));
-      setChapters(updated);
-      bestChapters = updated;
+      setSceneData(updated);
+      bestSceneData = updated;
     } catch (e) {
       console.error('highlight extraction failed', e);
       HelperFunctions.showError(e instanceof Error ? e.message : 'Failed to extract highlighted keywords');
     } finally {
-      // Ensure callback is invoked even on failure, with best available chapters
+      // Ensure callback is invoked even on failure, with best available SceneData
       try {
-        chaptersUpdated(bestChapters);
+        SceneDataUpdated(bestSceneData);
       } catch { }
     }
   }

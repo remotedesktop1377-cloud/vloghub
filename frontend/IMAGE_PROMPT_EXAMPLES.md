@@ -2,7 +2,7 @@
 
 This document shows how the enhanced image prompt system generates detailed, specific prompts for better AI image generation using generic, adaptable templates.
 
-## Example Chapter: Leadership and Legacy
+## Example SceneData: Leadership and Legacy
 
 ### Input Data:
 - **Visual Guidance**: "Historic footage style, urban landscapes, crowd gatherings"
@@ -14,7 +14,7 @@ This document shows how the enhanced image prompt system generates detailed, spe
 A photorealistic, documentary-style image of leadership figures or influential people presenting or speaking in a historic or traditional environment. Visual elements include: Historic footage style, urban landscapes, crowd gatherings. The mood is inspiring, professional, with professional composition and broadcast quality. 16:9 aspect ratio, high resolution, crisp details, appropriate lighting for the scene. No text overlay in the image. Focus on visual storytelling that supports the narrative themes and content.
 ```
 
-## Example Chapter: Educational Innovation
+## Example SceneData: Educational Innovation
 
 ### Input Data:
 - **Visual Guidance**: "Modern classroom settings, collaborative learning, technology integration"
@@ -62,7 +62,7 @@ A clean, professional, well-lit image of students or academics studying, learnin
 
 ### Old Simple Prompt:
 ```
-High-quality thumbnail frame for a YouTube Video Chapter short. Scene 1: Archival footage vibes, Pakistan cityscapes, crowd shots. Cinematic, 16:9, crisp details, realistic lighting, broadcast quality. No text overlay baked into the image.
+High-quality thumbnail frame for a YouTube Video SceneData short. Scene 1: Archival footage vibes, Pakistan cityscapes, crowd shots. Cinematic, 16:9, crisp details, realistic lighting, broadcast quality. No text overlay baked into the image.
 ```
 
 ### New Enhanced Prompt:
@@ -83,7 +83,7 @@ The enhanced prompts should generate:
 ## Usage in Application:
 
 The enhanced prompt system automatically:
-1. Analyzes the chapter's narration for key concepts
+1. Analyzes the SceneData's narration for key concepts
 2. Determines appropriate art style and mood
 3. Constructs detailed, specific prompts
 4. Sends enhanced prompts to Gemini image generation API

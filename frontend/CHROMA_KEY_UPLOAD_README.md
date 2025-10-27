@@ -28,8 +28,8 @@ The "Upload Script Narration" feature has been updated to support chroma key vid
 ### In Script Production Client
 The chroma key upload component is integrated into the script production workflow:
 
-1. **When no chapters exist**: Shows the upload component in the main area
-2. **When chapters exist**: Shows the upload component above the chapters section
+1. **When no SceneData exist**: Shows the upload component in the main area
+2. **When SceneData exist**: Shows the upload component above the SceneData section
 3. **After upload**: Hides the upload component and shows success status
 
 ### Component Props
@@ -66,7 +66,7 @@ interface ChromaKeyUploadProps {
 
 ### Script Production Workflow
 1. User generates or uploads script
-2. System creates chapters
+2. System creates SceneData
 3. User uploads chroma key video for narration
 4. Video is processed and uploaded to Google Drive
 5. User can proceed with video generation

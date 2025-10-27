@@ -311,7 +311,7 @@ export const apiService = {
   }) => ApiService.post(API_ENDPOINTS.GENERATE_IMAGES, body),
 
   // Highlights extraction (Gemini)
-  getChapterHighlights: (chapters: Array<{ id: string; narration: string }>) =>
-    ApiService.post(API_ENDPOINTS.GEMINI_HIGHLIGHT_KEYWORDS, { chapters }),
+  getSceneDataHighlights: (SceneData: Array<{ id: string; narration: string }>) =>
+    ApiService.post(API_ENDPOINTS.GEMINI_HIGHLIGHT_KEYWORDS, { SceneData }),
 
 }; 

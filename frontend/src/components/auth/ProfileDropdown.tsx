@@ -60,26 +60,26 @@ export const ProfileDropdown: React.FC = () => {
         }
 
         // Load backgrounds
-        setLoadingBackgrounds(true);
-        try {
-          const backgroundsList = await profileService.fetchBackgrounds();
-          if (mounted) {
-            setBackgrounds(backgroundsList);
-            console.log('Loaded backgrounds:', backgroundsList);
-            if (backgroundsList.length === 0) {
-              toast.warning('No backgrounds found. Please check your Google Drive configuration.');
-            }
-          }
-        } catch (error) {
-          console.error('Error loading backgrounds:', error);
-          if (mounted) {
-            toast.error('Failed to load backgrounds. Please check your configuration.');
-          }
-        } finally {
-          if (mounted) {
-            setLoadingBackgrounds(false);
-          }
-        }
+        // setLoadingBackgrounds(true);
+        // try {
+        //   const backgroundsList = await profileService.fetchBackgrounds();
+        //   if (mounted) {
+        //     setBackgrounds(backgroundsList);
+        //     console.log('Loaded backgrounds:', backgroundsList);
+        //     if (backgroundsList.length === 0) {
+        //       toast.warning('No backgrounds found. Please check your Google Drive configuration.');
+        //     }
+        //   }
+        // } catch (error) {
+        //   console.error('Error loading backgrounds:', error);
+        //   if (mounted) {
+        //     toast.error('Failed to load backgrounds. Please check your configuration.');
+        //   }
+        // } finally {
+        //   if (mounted) {
+        //     setLoadingBackgrounds(false);
+        //   }
+        // }
       } catch {
         if (mounted) {
           const keys = HelperFunctions.getSocialAuthKeys(user.id);

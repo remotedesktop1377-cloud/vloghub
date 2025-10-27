@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_CONFIG } from '@/config/aiConfig';
+import { SceneData } from '@/types/sceneData';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
@@ -11,10 +12,9 @@ const model = genAI.getGenerativeModel({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { chapters } = body as { chapters: Array<{ id: string; narration: string }> };
-
-    if (!Array.isArray(chapters) || chapters.length === 0) {
-      return NextResponse.json({ error: 'chapters array required' }, { status: 400 });
+    const { scenesData } = body as { scenesData: SceneData[] };
+    if (!Array.isArray(scenesData) || scenesData.length === 0) {
+      return NextResponse.json({ error: 'scenesData array required' }, { status: 400 });
     }
 
     const prompt = `You are an assistant that extracts EXACT words and phrases from narration paragraphs.
@@ -34,7 +34,7 @@ Return ONLY valid JSON in this exact format:
 }
 
 Paragraphs:
-${chapters.map((c, i) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
+${scenesData.map((c: SceneData, i: number) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
 
     const result = await model.generateContent(prompt);
     const response = result.response;
@@ -51,9 +51,9 @@ ${chapters.map((c, i) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
     const results = Array.isArray(parsed?.results) ? parsed.results : [];
 
     const normalized = results.map((r: any) => {
-      const chapterId = String(r?.id ?? '');
-      const chapter = chapters.find(c => c.id === chapterId);
-      const narrationText = chapter?.narration?.toLowerCase() || '';
+      const sceneDataId = String(r?.id ?? '');
+      const sceneData = scenesData.find((c: SceneData) => c.id === sceneDataId);
+      const narrationText = sceneData?.narration?.toLowerCase() || '';
       
       const validKeywords = Array.isArray(r?.highlightedKeywords)
         ? r.highlightedKeywords
@@ -67,7 +67,7 @@ ${chapters.map((c, i) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
         : [];
       
       return {
-        id: chapterId,
+        id: sceneDataId,
         highlightedKeywords: validKeywords
       };
     });

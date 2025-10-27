@@ -24,8 +24,8 @@ frontend/
 │       │   └── route.ts          # Script generation API
 │       ├── gemini-trending-topics/
 │       │   └── route.ts          # Trending topics API
-│       ├── generate-chapters/
-│       │   └── route.ts          # Chapter generation API
+│       ├── generate-SceneData/
+│       │   └── route.ts          # SceneData generation API
 │       └── generate-images/
 │           └── route.ts          # Image generation API
 ├── src/                          # ✅ Components and utilities
@@ -53,7 +53,7 @@ frontend/
 |-------------------|------------------|--------|
 | `pages/api/generate-script.ts` | `app/api/generate-script/route.ts` | ✅ Migrated |
 | `pages/api/gemini-trending-topics.ts` | `app/api/gemini-trending-topics/route.ts` | ✅ Migrated |
-| `pages/api/generate-chapters.ts` | `app/api/generate-chapters/route.ts` | ✅ Migrated |
+| `pages/api/generate-SceneData.ts` | `app/api/generate-SceneData/route.ts` | ✅ Migrated |
 | `pages/api/generate-images.ts` | `app/api/generate-images/route.ts` | ✅ Migrated |
 
 ### **3. Key Architectural Changes**
@@ -171,7 +171,7 @@ npm run dev
 ### **3. Test API Routes**
 - **`/api/generate-script`** → POST request for script generation
 - **`/api/gemini-trending-topics`** → GET request for trending topics
-- **`/api/generate-chapters`** → POST request for chapter generation
+- **`/api/generate-SceneData`** → POST request for SceneData generation
 - **`/api/generate-images`** → POST request for image generation
 
 ### **4. Verify Performance**

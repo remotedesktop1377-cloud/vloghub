@@ -2,7 +2,7 @@
 
 ## 🐛 Problem Description
 
-Users encountered a JavaScript error: **"Cannot read properties of undefined (reading 'includes')"** when the image generation system tried to process chapter data. This error occurred when string properties were undefined or null, causing `.includes()` method calls to fail.
+Users encountered a JavaScript error: **"Cannot read properties of undefined (reading 'includes')"** when the image generation system tried to process SceneData data. This error occurred when string properties were undefined or null, causing `.includes()` method calls to fail.
 
 ## 🔍 Root Cause Analysis
 
@@ -13,9 +13,9 @@ The error was caused by insufficient null/undefined checks in the image prompt g
    - `visual_guidance` parameter could be undefined
    - No safety checks before string operations
 
-2. **`chapterImageGenerator.ts`** - Direct property access without validation:
-   - `chapter.narration.split(' ')` when `narration` could be undefined
-   - `chapter.visual_guidance` usage without null checks
+2. **`SceneDataImageGenerator.ts`** - Direct property access without validation:
+   - `SceneData.narration.split(' ')` when `narration` could be undefined
+   - `SceneData.visual_guidance` usage without null checks
 
 ## ✅ Solutions Implemented
 
@@ -71,18 +71,18 @@ const artStyle = getArtStyle(safeVisualGuidance, safeNarration);
 // ... all operations use safe values
 ```
 
-### **2. Enhanced Null Safety in `chapterImageGenerator.ts`**
+### **2. Enhanced Null Safety in `SceneDataImageGenerator.ts`**
 
 #### **Safe String Operations**
 ```typescript
 // Before: Direct split operation
-const keyWords = chapter.narration.split(' ').slice(0, 8).join(' ');
-const simplePrompt = `${chapter.visual_guidance} - ${keyWords}...`;
+const keyWords = SceneData.narration.split(' ').slice(0, 8).join(' ');
+const simplePrompt = `${SceneData.visual_guidance} - ${keyWords}...`;
 
 // After: Safe operations with fallbacks
-const safeNarration = chapter.narration || '';
+const safeNarration = SceneData.narration || '';
 const keyWords = safeNarration.split(' ').slice(0, 8).join(' ');
-const simplePrompt = `${chapter.visual_guidance || 'Visual guidance'} - ${keyWords}...`;
+const simplePrompt = `${SceneData.visual_guidance || 'Visual guidance'} - ${keyWords}...`;
 ```
 
 ## 🧪 Testing Strategy
@@ -96,8 +96,8 @@ const simplePrompt = `${chapter.visual_guidance || 'Visual guidance'} - ${keyWor
 - ✅ Valid strings
 
 ### **Edge Cases Handled**
-- ✅ Completely empty chapter objects
-- ✅ Partial chapter data
+- ✅ Completely empty SceneData objects
+- ✅ Partial SceneData data
 - ✅ Non-string data types
 - ✅ Very short narrations (< 8 words)
 
@@ -149,7 +149,7 @@ const simplePrompt = `${chapter.visual_guidance || 'Visual guidance'} - ${keyWor
 
 ### **Future Considerations**
 - Consider migrating to TypeScript strict null checks
-- Implement schema validation for chapter data
+- Implement schema validation for SceneData data
 - Add runtime type checking for API responses
 - Create unit tests for edge cases
 
@@ -160,6 +160,6 @@ const simplePrompt = `${chapter.visual_guidance || 'Visual guidance'} - ${keyWor
 
 ---
 
-This fix ensures robust handling of undefined/null data in the image generation pipeline while maintaining full functionality and providing sensible defaults. The application now gracefully handles missing or incomplete chapter data without crashing. 🛡️✨
+This fix ensures robust handling of undefined/null data in the image generation pipeline while maintaining full functionality and providing sensible defaults. The application now gracefully handles missing or incomplete SceneData data without crashing. 🛡️✨
 
 

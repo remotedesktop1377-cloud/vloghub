@@ -57,11 +57,11 @@ interface ImageResult {
 }
 
 interface ImageSearchProps {
-    chapterNarration: string;
+    SceneDataNarration: string;
     onImageSelect: (imageUrl: string) => void;
     onImagePreview: (imageUrl: string) => void;
-    chapterIndex: number;
-    onChapterUpdate: (chapterIndex: number, updatedChapter: any) => void;
+    SceneDataIndex: number;
+    onSceneDataUpdate: (SceneDataIndex: number, updatedSceneData: any) => void;
     onDone: () => void;
     existingImageUrls?: string[];
     onClearSelection?: () => void;
@@ -77,11 +77,11 @@ interface ImageSearchProps {
 type TabValue = 'google' | 'envato' | 'envatoClips' | 'youtube' | 'upload';
 
 const ImageSearch: React.FC<ImageSearchProps> = ({
-    chapterNarration,
+    SceneDataNarration,
     onImageSelect,
     onImagePreview,
-    chapterIndex,
-    onChapterUpdate,
+    SceneDataIndex,
+    onSceneDataUpdate,
     onDone,
     existingImageUrls = [],
     onClearSelection,
@@ -128,16 +128,16 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
     // Prefill search input with a brief summary from the scene narration
     useEffect(() => {
-        if (!chapterNarration) return;
+        if (!SceneDataNarration) return;
         if (searchQuery && searchQuery.trim().length > 0) return; // don't override user input
-        const summary = chapterNarration
+        const summary = SceneDataNarration
             .replace(/\s+/g, ' ')
             .trim()
             .split(' ')
             // .slice(0, 12)
             .join(' ');
         if (summary) setSearchQuery(summary);
-    }, [chapterNarration]);
+    }, [SceneDataNarration]);
 
     // Search Google Images
     const searchGoogleImages = async (query: string, suggestions: string[] = []) => {
@@ -405,7 +405,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         return Array.from(new Set(tokens)).slice(0, 10);
     };
 
-    // Auto-generate suggestions from chapter narration and auto-search
+    // Auto-generate suggestions from SceneData narration and auto-search
     useEffect(() => {
         // If explicit suggestion keywords provided, use them first
         if (autoSearchOnMount && suggestionKeywords && suggestionKeywords.length > 0 && !hasInitialSearch.current) {
@@ -421,9 +421,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             return;
         }
 
-        if (chapterNarration && !hasInitialSearch.current) {
-            const gSuggestions = generateGoogleQueries(chapterNarration);
-            const eKeywords = generateEnvatoWords(chapterNarration);
+        if (SceneDataNarration && !hasInitialSearch.current) {
+            const gSuggestions = generateGoogleQueries(SceneDataNarration);
+            const eKeywords = generateEnvatoWords(SceneDataNarration);
             setGoogleSuggestions(gSuggestions);
             setEnvatoKeywords(eKeywords);
 
@@ -436,7 +436,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 searchEnvatoClips(ek);
             }
         }
-    }, [chapterNarration]);
+    }, [SceneDataNarration]);
 
     useEffect(() => {
         if (predefinedTransitions.length > 0) {
@@ -470,9 +470,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         if (newQuery.trim()) {
             setGoogleSuggestions(generateGoogleQueries(newQuery));
             setEnvatoKeywords(generateEnvatoWords(newQuery));
-        } else if (chapterNarration) {
-            setGoogleSuggestions(generateGoogleQueries(chapterNarration));
-            setEnvatoKeywords(generateEnvatoWords(chapterNarration));
+        } else if (SceneDataNarration) {
+            setGoogleSuggestions(generateGoogleQueries(SceneDataNarration));
+            setEnvatoKeywords(generateEnvatoWords(SceneDataNarration));
         }
     };
 
@@ -532,7 +532,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             const isEnvato = selectedBySource.envato.size === 1 && selectedBySource.envato.has(selectedUrl);
             const isEnvatoClip = selectedBySource.envatoClips.size === 1 && selectedBySource.envatoClips.has(selectedUrl);
             const isUpload = selectedBySource.upload.size === 1 && selectedBySource.upload.has(selectedUrl);
-            const updatedChapter: any = {
+            const updatedSceneData: any = {
                 assets: {
                     images: [selectedUrl],
                     imagesGoogle: isGoogle ? [selectedUrl] : [],
@@ -540,18 +540,18 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 }
             };
             if (currentKeywordForMapping) {
-                updatedChapter.keywordsSelectedMerge = {
+                updatedSceneData.keywordsSelectedMerge = {
                     [currentKeywordForMapping]: [selectedUrl]
                 };
                 const typed = (searchQuery || '').trim();
                 if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
-                    updatedChapter.modifiedKeywordForMapping = typed;
+                    updatedSceneData.modifiedKeywordForMapping = typed;
                 }
             }
-            // // Persist effects into chapter videoEffects
+            // // Persist effects into SceneData videoEffects
             // if (selectedTransitionsEffects && selectedTransitionsEffects.length > 0) {
-            //     updatedChapter.videoEffects = {
-            //         ...(updatedChapter.videoEffects || {}),
+            //     updatedSceneData.videoEffects = {
+            //         ...(updatedSceneData.videoEffects || {}),
             //         effects: selectedTransitionsEffects
             //     };
             // }
@@ -582,12 +582,12 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     transitionsEffects: [...selectedTransitionsEffects]
                 };
 
-                updatedChapter.keywordsSelected = [keywordEntry];
+                updatedSceneData.keywordsSelected = [keywordEntry];
             } catch (_e) {
                 // Non-fatal; continue
             }
-            onChapterUpdate(chapterIndex, updatedChapter);
-            HelperFunctions.showSuccess('1 image selected for chapter');
+            onSceneDataUpdate(SceneDataIndex, updatedSceneData);
+            HelperFunctions.showSuccess('1 image selected for SceneData');
             if (onDoneWithSelected) {
                 const typed = (searchQuery || '').trim();
                 const mk = (currentKeywordForMapping && typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) ? typed : undefined;
@@ -627,7 +627,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         setUploadedFiles(prev => [...prev, newFile]);
 
         try {
-            const updatedChapter: any = {
+            const updatedSceneData: any = {
                 assets: {
                     images: [fileUrl],
                     imagesGoogle: [],
@@ -636,16 +636,16 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             };
             if (currentKeywordForMapping) {
                 const typed = (searchQuery || '').trim();
-                updatedChapter.keywordsSelectedMerge = {
+                updatedSceneData.keywordsSelectedMerge = {
                     [currentKeywordForMapping]: [fileUrl]
                 };
                 if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
-                    updatedChapter.modifiedKeywordForMapping = typed;
+                    updatedSceneData.modifiedKeywordForMapping = typed;
                 }
             }
-            onChapterUpdate(chapterIndex, updatedChapter);
+            onSceneDataUpdate(SceneDataIndex, updatedSceneData);
             setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
-            HelperFunctions.showSuccess('File uploaded and added to chapter');
+            HelperFunctions.showSuccess('File uploaded and added to SceneData');
         } catch (e) {
             HelperFunctions.showError('Failed to upload file');
         }
@@ -1203,7 +1203,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                                     const selectedUrl = image.url;
                                                                     // ensure consistent single-selection across tabs
                                                                     handleImageSelect(selectedUrl);
-                                                                    const updatedChapter: any = {
+                                                                    const updatedSceneData: any = {
                                                                         assets: {
                                                                             images: [selectedUrl],
                                                                             imagesGoogle: [],
@@ -1212,17 +1212,17 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                                     };
                                                                     if (currentKeywordForMapping) {
                                                                         const typed = (searchQuery || '').trim();
-                                                                        updatedChapter.keywordsSelectedMerge = {
+                                                                        updatedSceneData.keywordsSelectedMerge = {
                                                                             [currentKeywordForMapping]: [selectedUrl]
                                                                         };
                                                                         if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
-                                                                            updatedChapter.modifiedKeywordForMapping = typed;
+                                                                            updatedSceneData.modifiedKeywordForMapping = typed;
                                                                         }
                                                                     }
-                                                                    onChapterUpdate(chapterIndex, updatedChapter);
+                                                                    onSceneDataUpdate(SceneDataIndex, updatedSceneData);
                                                                     // notify parent selection if needed
                                                                     try { onImageSelect(selectedUrl); } catch { }
-                                                                    HelperFunctions.showSuccess('Added video link to chapter');
+                                                                    HelperFunctions.showSuccess('Added video link to SceneData');
                                                                 } catch (e) {
                                                                     HelperFunctions.showError('Failed to add video link');
                                                                 }
@@ -1401,7 +1401,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                     Search for Images in {activeTab === 'google' ? 'Google' : 'Envato Images'}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, mx: 'auto' }}>
-                                    Enter a search query to find relevant images for your chapter.
+                                    Enter a search query to find relevant images for your SceneData.
                                     {activeTab === 'google' ?
                                         ' Google provides free images from across the web.' :
                                         ' Envato Images provides premium stock images, graphics, and templates.'

@@ -479,3 +479,51 @@ END $$;
 
 -- Index to speed up per-user queries
 CREATE INDEX IF NOT EXISTS idx_scripts_approved_user_id ON public.scripts_approved(user_id);
+
+-- ============================================================================
+-- TRANSCRIPTION JOBS: Track ongoing transcription operations
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.transcription_jobs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    job_id TEXT UNIQUE NOT NULL,
+    job_name TEXT,
+    drive_url TEXT,
+    file_name TEXT,
+    script_language TEXT,
+    status TEXT DEFAULT 'pending',
+    stage TEXT,
+    progress INTEGER DEFAULT 0,
+    message TEXT,
+    error TEXT,
+    transcription_data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.transcription_jobs ENABLE ROW LEVEL SECURITY;
+
+-- Policies: Users can only access their own transcription jobs
+CREATE POLICY "Users can view own transcription jobs" ON public.transcription_jobs
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own transcription jobs" ON public.transcription_jobs
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own transcription jobs" ON public.transcription_jobs
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own transcription jobs" ON public.transcription_jobs
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_transcription_jobs_user_id ON public.transcription_jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_transcription_jobs_job_id ON public.transcription_jobs(job_id);
+CREATE INDEX IF NOT EXISTS idx_transcription_jobs_status ON public.transcription_jobs(status);
+
+-- Updated_at trigger
+CREATE TRIGGER update_transcription_jobs_updated_at
+    BEFORE UPDATE ON public.transcription_jobs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

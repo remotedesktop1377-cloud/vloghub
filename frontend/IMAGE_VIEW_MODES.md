@@ -2,7 +2,7 @@
 
 ## 🖼️ Enhanced Image Viewing System
 
-The YouTube Clip Searcher now features a comprehensive image viewing system with multiple view modes for chapter images. This system provides users with flexible ways to view, manage, and interact with both AI-generated and uploaded images.
+The YouTube Clip Searcher now features a comprehensive image viewing system with multiple view modes for SceneData images. This system provides users with flexible ways to view, manage, and interact with both AI-generated and uploaded images.
 
 ## 🎯 Features Overview
 
@@ -23,13 +23,13 @@ The YouTube Clip Searcher now features a comprehensive image viewing system with
 ### **Opening Image Viewer**
 
 #### **Method 1: Click on Individual Images**
-- Click any chapter image thumbnail to open the viewer
+- Click any SceneData image thumbnail to open the viewer
 - Generated AI images and uploaded images both supported
 - Starts in Preview mode by default
 
 #### **Method 2: Use the View All Button**
-- Click the 👁️ preview icon next to "Chapter Images" count
-- Opens viewer with all images for that chapter
+- Click the 👁️ preview icon next to "SceneData Images" count
+- Opens viewer with all images for that SceneData
 - Perfect for browsing multiple images quickly
 
 ### **View Mode Controls**
@@ -117,7 +117,7 @@ interface ImageData {
 }
 ```
 
-## 📊 Chapter Integration
+## 📊 SceneData Integration
 
 ### **Image Sources**
 1. **AI Generated Images** 🤖
@@ -132,9 +132,9 @@ interface ImageData {
    - Standard blue border in thumbnail view
 
 ### **Image Management**
-- **View All Button**: Quick access to all chapter images
+- **View All Button**: Quick access to all SceneData images
 - **Delete Functionality**: Remove unwanted images (preserved)
-- **Image Counter**: Shows total number of images per chapter
+- **Image Counter**: Shows total number of images per SceneData
 - **Smart Navigation**: Automatically handles image order (AI first, then uploads)
 
 ## 🎯 User Benefits
@@ -147,7 +147,7 @@ interface ImageData {
 ### **For Editors**
 - **Zoom Detail**: Inspect image quality and details before final selection
 - **Download Options**: Save high-quality images for external use
-- **Efficient Workflow**: Quick navigation between images across chapters
+- **Efficient Workflow**: Quick navigation between images across SceneData
 
 ### **For Reviewers**
 - **Context Viewing**: See AI prompts to understand image generation
@@ -181,6 +181,6 @@ Potential future features that could be added:
 
 ---
 
-This enhanced image viewing system transforms how users interact with chapter images, providing professional-grade viewing capabilities while maintaining ease of use. The three view modes cater to different use cases, from quick browsing to detailed inspection, making the content creation workflow more efficient and enjoyable. 🎬✨
+This enhanced image viewing system transforms how users interact with SceneData images, providing professional-grade viewing capabilities while maintaining ease of use. The three view modes cater to different use cases, from quick browsing to detailed inspection, making the content creation workflow more efficient and enjoyable. 🎬✨
 
 

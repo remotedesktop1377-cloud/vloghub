@@ -50,7 +50,7 @@ const TrendingTopics: React.FC = () => {
   const [language, setLanguage] = useState('english');
   const [subtitle_language, setsubtitle_language] = useState('english');
   const [narration_type, setnarration_type] = useState<'interview' | 'narration'>('narration');
-  const [generatingChapters, setGeneratingChapters] = useState(false);
+  const [generatingSceneData, setGeneratingSceneData] = useState(false);
   const [scriptGeneratedOnce, setScriptGeneratedOnce] = useState(false);
   const [selectedPreviousLocation, setSelectedPreviousLocation] = useState('');
   const [selectedPreviousLocationType, setSelectedPreviousLocationType] = useState<string>('');
@@ -153,7 +153,7 @@ const TrendingTopics: React.FC = () => {
     }
 
     try {
-      setGeneratingChapters(true);
+      setGeneratingSceneData(true);
       setDialogTitle('Generating Script');
       setDialogDescription('Please wait while we generate the script for you...');
 
@@ -212,20 +212,20 @@ const TrendingTopics: React.FC = () => {
 
         // Navigate directly to script production page
         router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
-        setGeneratingChapters(false);
+        setGeneratingSceneData(false);
 
       } else {
         setError(result.error || 'Failed to generate script');
-        setGeneratingChapters(false);
+        setGeneratingSceneData(false);
       }
     } catch (err) {
       // console.error('Error generating script:', err);
       setError('Failed to generate script. Please try again.');
-      setGeneratingChapters(false);
+      setGeneratingSceneData(false);
     } finally {
-      // keep overlay until route change completes; do not unset generatingChapters here
-      setGeneratingChapters(false);
-      setTimeout(() => setGeneratingChapters(false), 3000);
+      // keep overlay until route change completes; do not unset generatingSceneData here
+      setGeneratingSceneData(false);
+      setTimeout(() => setGeneratingSceneData(false), 3000);
     }
   };
 
@@ -285,7 +285,7 @@ const TrendingTopics: React.FC = () => {
 
   return (
     <Box className={styles.trendingTopicsContainer}>
-      {(loading || generatingChapters) && (
+      {(loading || generatingSceneData) && (
         <LoadingOverlay
           title={dialogTitle}
           desc={dialogDescription}
@@ -387,15 +387,15 @@ const TrendingTopics: React.FC = () => {
               language={language}
               onLanguageChange={setLanguage}
               languageOptions={languageOptions}
-              onGenerateChapters={handleGenerateScript}
-              hasChapters={false}
+              onGenerateSceneData={handleGenerateScript}
+              hasSceneData={false}
               onRegenerateAllAssets={() => { }}
               canGenerate={!!selectedTopic}
               subtitle_language={subtitle_language}
               onsubtitle_languageChange={handlesubtitle_languageChange}
               narration_type={narration_type}
               onnarration_typeChange={handlenarration_typeChange}
-              generating={generatingChapters}
+              generating={generatingSceneData}
               generatedOnce={scriptGeneratedOnce}
             />
 

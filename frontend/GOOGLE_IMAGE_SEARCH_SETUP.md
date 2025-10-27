@@ -94,7 +94,7 @@ POST /api/google-image-search
 
 ### 🔍 **Google Image Search**
 - Search for images using Google's Custom Search API
-- Auto-generates search queries from chapter narration
+- Auto-generates search queries from SceneData narration
 - Supports pagination for large result sets
 
 ### 🖼️ **Image Preview**
@@ -105,7 +105,7 @@ POST /api/google-image-search
 ### ✅ **Multi-Select**
 - Select multiple images with checkboxes
 - Select all/deselect all functionality
-- Batch add selected images to chapters
+- Batch add selected images to SceneData
 
 ### 📊 **Image Information**
 - Display image dimensions, file size, and format
@@ -113,18 +113,18 @@ POST /api/google-image-search
 - Download images directly to local storage
 
 ### 🎯 **Smart Search**
-- Automatically uses chapter narration as initial search query
+- Automatically uses SceneData narration as initial search query
 - Allows manual search query input
 - Error handling and loading states
 
 ## Usage
 
 1. **Navigate to Script Production** - Go to the script production page
-2. **Open Media Management** - Click on the media management button for any chapter
+2. **Open Media Management** - Click on the media management button for any SceneData
 3. **Select Google Search Tab** - Click on the "Google Search" tab
-4. **Search Images** - The search will automatically use your chapter narration, or enter a custom search term
+4. **Search Images** - The search will automatically use your SceneData narration, or enter a custom search term
 5. **Select Images** - Click on images to select them, or use the select all/deselect all buttons
-6. **Add to Chapter** - Click "Add X Images" to add selected images to your chapter
+6. **Add to SceneData** - Click "Add X Images" to add selected images to your SceneData
 
 ## Troubleshooting
 

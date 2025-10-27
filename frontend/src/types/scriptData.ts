@@ -1,4 +1,4 @@
-import { Chapter } from "./chapters";
+import { SceneData } from "./sceneData";
 import { BackgroundType } from "./backgroundType";
 
 export interface ScriptData {
@@ -36,14 +36,5 @@ export interface ScriptData {
         url: string;
         thumbnailUrl?: string;
     };
-    chapters?: Chapter[];
-    scenes?: Array<{
-        id: string;
-        text: string;
-        duration: string;
-        words: number;
-        startTime: number;
-        endTime: number;
-        durationInSeconds: number;
-    }>;
+    scenesData?: SceneData[];
 }

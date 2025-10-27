@@ -27,7 +27,7 @@ import {
     Upload as UploadIcon,
     VideoCall as VideoIcon,
     Refresh as RefreshIcon,
-    Movie as ChapterIcon,
+    Movie as SceneDataIcon,
     AccessTime as TimeIcon,
     Edit as EditIcon,
     Check as CheckIcon,
@@ -43,9 +43,9 @@ import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
-import { Chapter } from '@/types/chapters';
+import { SceneData } from '@/types/sceneData';
 import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
-import ChaptersSection from '@/components/TrendingTopicsComponent/ChaptersSection';
+import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
 import ChromaKeyUpload from '@/components/scriptProductionComponents/ChromaKeyUpload';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
@@ -58,12 +58,14 @@ import { ScriptData } from '@/types/scriptData';
 import { BackgroundType } from '@/types/backgroundType';
 import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
 import ProjectSettingsDialog from '@/dialogs/ProjectSettingsDialog';
+import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 
 const ScriptProductionClient = () => {
 
     const router = useRouter();
     const [scriptData, setScriptData] = useState<ScriptData | null>(null);
     const [noScriptFound, setNoScriptFound] = useState<boolean>(false);
+    const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
     // Script approval states
     const [isScriptApproved, setIsScriptApproved] = useState(false);
@@ -75,35 +77,35 @@ const ScriptProductionClient = () => {
     const [showBackConfirmation, setShowBackConfirmation] = useState(false);
 
     // Production states
-    const [chapters, setChapters] = useState<Chapter[]>([]);
+    const [scenesData, setScenesData] = useState<SceneData[]>([]);
     const [chromaKeyFile, setChromaKeyFile] = useState<File | null>(null);
     const [uploadingChromaKey, setUploadingChromaKey] = useState(false);
 
-    // Chapter editing states
-    const [editingChapter, setEditingChapter] = useState<number | null>(null);
+    // SceneData editing states
+    const [editingSceneData, setEditingSceneData] = useState<number | null>(null);
     const [editHeading, setEditHeading] = useState('');
     const [editNarration, setEditNarration] = useState('');
 
     // Image management states
-    const [selectedChapterIndex, setSelectedChapterIndex] = useState(0);
+    const [selectedSceneDataIndex, setSelectedSceneDataIndex] = useState(0);
     const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-    const [chapterImagesMap, setChapterImagesMap] = useState<Record<number, string[]>>({});
+    const [SceneDataImagesMap, setScenesDataImagesMap] = useState<Record<number, string[]>>({});
     const [uploadedImages, setUploadedImages] = useState<string[]>([]);
     const [aiImagesEnabled, setAiImagesEnabled] = useState(false);
     const [rightTabIndex, setRightTabIndex] = useState(0);
     const [imagesLoading, setImagesLoading] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
     const [pickerOpen, setPickerOpen] = useState(false);
-    const [pickerChapterIndex, setPickerChapterIndex] = useState<number | null>(null);
+    const [pickerSceneDataIndex, setPickerSceneDataIndex] = useState<number | null>(null);
     const [pickerNarrations, setPickerNarrations] = useState<string[]>([]);
     const [pickerLoading, setPickerLoading] = useState(false);
     const [isDraggingUpload, setIsDraggingUpload] = useState(false);
     const [mediaManagementOpen, setMediaManagementOpen] = useState(false);
-    const [mediaManagementChapterIndex, setMediaManagementChapterIndex] = useState<number | null>(null);
+    const [mediaManagementSceneDataIndex, setMediaManagementSceneDataIndex] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
-    const [isHumanNarrationUploaded, setIsHumanNarrationUploaded] = useState(false);
-    const [showNarrationUploadView, setShowNarrationUploadView] = useState(false);
-    const [selectedText, setSelectedText] = useState<{ chapterIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
+    const [isNarratorVideoUploaded, setIsNarratorVideoUploaded] = useState(false);
+    const [isNarrationUploadView, setIsNarrationUploadView] = useState(false);
+    const [selectedText, setSelectedText] = useState<{ SceneDataIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
     // Project-level settings
@@ -123,9 +125,9 @@ const ScriptProductionClient = () => {
 
     const CONTROL_HEIGHT = 44;
     const [jobId, setJobId] = useState<string>('');
-    // Chapter edit dialog states
-    const [chapterEditDialogOpen, setChapterEditDialogOpen] = useState(false);
-    const [chapterEditDialogChapterIndex, setChapterEditDialogChapterIndex] = useState<number | null>(null);
+    // SceneData edit dialog states
+    const [SceneDataEditDialogOpen, setScenesDataEditDialogOpen] = useState(false);
+    const [SceneDataEditDialogSceneDataIndex, setScenesDataEditDialogSceneDataIndex] = useState<number | null>(null);
     // Project Settings Dialog state
     const [projectSettingsDialogOpen, setProjectSettingsDialogOpen] = useState(false);
     const [projectSettingsContext, setProjectSettingsContext] = useState<{ mode: 'project' | 'scene'; sceneIndex?: number }>({ mode: 'project' });
@@ -158,30 +160,33 @@ const ScriptProductionClient = () => {
             if (storedMetadata && typeof storedMetadata === 'object') {
                 storedData = storedMetadata;
                 setScriptData(storedData);
-                if (storedData.status === SCRIPT_STATUS.APPROVED || storedData.transcription) {
+                if (storedData.status === SCRIPT_STATUS.APPROVED || storedData.status === SCRIPT_STATUS.UPLOADED) {
                     setJobId(storedData.jobId);
                     setIsScriptApproved(true);
-                    setShowNarrationUploadView(true);
-                    if (storedData.status === SCRIPT_STATUS.UPLOADED && storedData.transcription && storedData.narrator_chroma_key_link) {
+                    setIsNarrationUploadView(true);
+                }
+
+                if (storedData.status === SCRIPT_STATUS.UPLOADED && storedData.narrator_chroma_key_link) {
+                    setIsNarrationUploadView(false);
+                    setIsNarratorVideoUploaded(true);
+
+                    if (storedData.transcription) {
                         setNarratorChromaKeyLink(storedData.narrator_chroma_key_link);
-                        setShowNarrationUploadView(false);
-                        setIsHumanNarrationUploaded(true);
                         updateParagraphs(storedData);
                     }
-                } else {
-                    setLoading(false);
-                    setScriptData(storedData);
-                    setEditedScript(storedData.script || '');
-                    saveTrendingTopic(storedData);
                 }
             } else {
                 setNoScriptFound(true);
                 setLoading(false);
             }
+
+            // Mark initial loading as complete
+            setIsInitialLoading(false);
         } catch (error) {
             console.warn('Error parsing script metadata:', error);
             setLoading(false);
             setNoScriptFound(true);
+            setIsInitialLoading(false);
         }
 
     }, []);
@@ -228,16 +233,16 @@ const ScriptProductionClient = () => {
     }, []);
 
     useEffect(() => {
-        if (scriptData?.transcription && chapters && chapters.length > 0) {
+        if (scriptData?.transcription && scenesData && scenesData.length > 0) {
 
-            const needsHighlights = chapters.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
+            const needsHighlights = scenesData.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
             if (needsHighlights) {
                 setLoading(true);
-                HelperFunctions.fetchAndApplyHighlightedKeywords(chapters, setChapters, (chapters) => {
-                    // console.log('chapters with highlights', chapters);
+                HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setScenesData, (scenesData) => {
+                    // console.log('SceneData with highlights', SceneData);
                     setLoading(false);
-                    // save updated chapters
-                    const updatedScriptData = { ...scriptData, chapters, updated_at: new Date().toISOString() } as ScriptData;
+                    // save updated SceneData
+                    const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
                     setScriptData(updatedScriptData);
                     SecureStorageHelpers.setScriptMetadata(updatedScriptData);
                 });
@@ -246,7 +251,7 @@ const ScriptProductionClient = () => {
             }
 
         }
-    }, [chapters]);
+    }, [scenesData]);
 
     // Global selection listener
     React.useEffect(() => {
@@ -261,19 +266,19 @@ const ScriptProductionClient = () => {
             const selection = window.getSelection();
             if (selection && selection.toString().trim()) {
                 // console.log('Global selection detected:', selection.toString());
-                // Find which chapter this selection belongs to
+                // Find which SceneData this selection belongs to
                 const range = selection.getRangeAt(0);
                 const textNode = range.startContainer;
 
                 if (textNode.nodeType === Node.TEXT_NODE) {
-                    // Try to find the chapter by traversing up the DOM
+                    // Try to find the SceneData by traversing up the DOM
                     let element = textNode.parentElement;
-                    while (element && !element.getAttribute('data-chapter-index')) {
+                    while (element && !element.getAttribute('data-scenedata-index')) {
                         element = element.parentElement;
                     }
 
                     if (element) {
-                        const chapterIndex = parseInt(element.getAttribute('data-chapter-index') || '0');
+                        const SceneDataIndex = parseInt(element.getAttribute('data-scenedata-index') || '0');
                         const textContent = textNode.textContent || '';
                         const startIndex = range.startOffset;
                         const endIndex = range.endOffset;
@@ -287,7 +292,7 @@ const ScriptProductionClient = () => {
 
                         if (actualSelectedText.length > 0) {
                             setSelectedText({
-                                chapterIndex,
+                                SceneDataIndex,
                                 text: actualSelectedText,
                                 startIndex,
                                 endIndex
@@ -321,7 +326,7 @@ const ScriptProductionClient = () => {
     const openProjectSettingsDialog = (mode: 'project' | 'scene', sceneIndex?: number) => {
         setProjectSettingsContext({ mode, sceneIndex });
         if (mode === 'scene' && typeof sceneIndex === 'number') {
-            const ch = chapters[sceneIndex];
+            const ch = scenesData[sceneIndex];
             const ve: any = (ch as any)?.videoEffects || {};
             const seedTransition = ve.transition || projectTransitionId || '';
             const seedMusic = ve.backgroundMusic ? { ...ve.backgroundMusic } : (projectMusic ? { ...projectMusic } : null);
@@ -364,7 +369,7 @@ const ScriptProductionClient = () => {
             setProjectLogo(tmpLogo ? { ...tmpLogo } : null);
             setProjectVideoClip(tmpClip ? { ...tmpClip } : null);
             setProjectTransitionEffects([...(tmpEffects || [])]);
-            const updated = chapters.map((ch) => ({
+            const updated = scenesData.map((ch) => ({
                 ...(ch as any),
                 videoEffects: {
                     ...(ch as any).videoEffects,
@@ -375,7 +380,7 @@ const ScriptProductionClient = () => {
                     transitionEffects: tmpEffects || [],
                 }
             }));
-            setChapters(updated);
+            setScenesData(updated);
             try {
                 for (let i = 0; i < updated.length; i++) {
                     await HelperFunctions.persistSceneUpdate(jobId, updated, i, 'Project settings applied to all scenes');
@@ -384,7 +389,7 @@ const ScriptProductionClient = () => {
         } else if (projectSettingsContext.mode === 'scene' && typeof projectSettingsContext.sceneIndex === 'number') {
             const idx = projectSettingsContext.sceneIndex;
             const seed = projectSettingsSeedRef.current;
-            const updated = chapters.map((ch, i) => {
+            const updated = scenesData.map((ch, i) => {
                 if (i !== idx) return ch;
                 const currentVE: any = (ch as any).videoEffects || {};
                 // Only replace fields that changed compared to seed
@@ -396,7 +401,7 @@ const ScriptProductionClient = () => {
                 if (!seed || JSON.stringify(seed.effects || []) !== JSON.stringify(tmpEffects || [])) nextVE.transitionEffects = tmpEffects || [];
                 return ({ ...(ch as any), videoEffects: nextVE });
             });
-            setChapters(updated);
+            setScenesData(updated);
             try {
                 setProjectSettingsDialogOpen(false);
                 await HelperFunctions.persistSceneUpdate(jobId, updated, idx, 'Project settings applied to scene');
@@ -447,8 +452,8 @@ const ScriptProductionClient = () => {
     const uploadCompleteProjectToDrive = async () => {
         setLoading(true);
         try {
-            // Ensure each chapter has assets.images populated with all selected sources
-            const chaptersForUpload: Chapter[] = chapters.map((ch) => {
+            // Ensure each SceneData has assets.images populated with all selected sources
+            const SceneDataForUpload: SceneData[] = scenesData.map((ch) => {
                 const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
                 const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
                 const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
@@ -467,7 +472,7 @@ const ScriptProductionClient = () => {
                         imagesGoogle: googleImages,
                         imagesEnvato: envatoImages,
                     }
-                } as Chapter;
+                } as SceneData;
             });
 
             const scriptProductionJSON = {
@@ -493,20 +498,20 @@ const ScriptProductionClient = () => {
                         transitionEffects: projectTransitionEffects,
                     },
                 },
-                // Use chaptersForUpload to ensure merged images are included
-                script: chapters.map(chapter => ({
+                // Use SceneDataForUpload to ensure merged images are included
+                script: scenesData.map(sceneData => ({
                     jobId: '',
-                    id: chapter.id,
-                    narration: chapter.narration,
-                    duration: chapter.duration,
-                    durationInSeconds: chapter.durationInSeconds,
-                    words: chapter.words,
-                    startTime: chapter.startTime,
-                    endTime: chapter.endTime,
-                    highlightedKeywords: chapter.highlightedKeywords || [],
-                    keywordsSelected: Array.isArray(chapter.keywordsSelected) ? chapter.keywordsSelected : [],
+                    id: sceneData.id,
+                    narration: sceneData.narration,
+                    duration: sceneData.duration,
+                    durationInSeconds: sceneData.durationInSeconds,
+                    words: sceneData.words,
+                    startTime: sceneData.startTime,
+                    endTime: sceneData.endTime,
+                    highlightedKeywords: sceneData.highlightedKeywords || [],
+                    keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
                     assets: {
-                        images: chapter.assets?.images || [],
+                        images: sceneData.assets?.images || [],
                     },
                 })),
             };
@@ -539,18 +544,18 @@ const ScriptProductionClient = () => {
 
             // const jobId = result.projectFolderId;
 
-            // // Update chapters with their corresponding folder IDs
-            // const updatedChapters = chapters.map((chapter, index) => {
+            // // Update SceneData with their corresponding folder IDs
+            // const updatedSceneData = SceneData.map((SceneData, index) => {
             //     const sceneId = `scene-${index + 1}`;
             //     // const folderId = sceneFolderMap[sceneId];
             //     return {
-            //         ...chapter,
-            //         // id: folderId || chapter.id, // Replace with folder ID if available
+            //         ...SceneData,
+            //         // id: folderId || SceneData.id, // Replace with folder ID if available
             //         jobId: jobId,
             //         jobName: jobName,
             //     };
             // });
-            // setChapters(updatedChapters);
+            // setScenesData(updatedSceneData);
 
             setLoading(false);
             setShowBackConfirmation(true);
@@ -566,42 +571,42 @@ const ScriptProductionClient = () => {
     // Function to break down script into paragraphs and calculate individual durations
     const updateParagraphs = (scriptData: ScriptData) => {
         // Check if we have scenes data from the new transcribe API
-        if (scriptData?.scenes && Array.isArray(scriptData.scenes) && scriptData.scenes.length > 0) {
-            console.log('Using scenes data from transcribe API:', scriptData.scenes.length, 'scenes');
+        if (scriptData?.scenesData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length > 0) {
+            console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
 
-            // If chapters with images already exist in approvedScript, reuse them
+            // If SceneData with images already exist in approvedScript, reuse them
             try {
-                if (scriptData && Array.isArray(scriptData.chapters) && scriptData.chapters.length === scriptData.scenes!.length) {
-                    const normalizedFromStorage: Chapter[] = scriptData.chapters.map((ch: any, index: number) => ({
-                        id: ch.id || scriptData.scenes![index]?.id || `scene-${index + 1}`,
+                if (scriptData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length === scriptData.scenesData!.length) {
+                    const normalizedFromStorage: SceneData[] = scriptData.scenesData.map((ch: any, index: number) => ({
+                        id: ch.id || scriptData.scenesData![index]?.id || `scene-${index + 1}`,
                         jobId: ch.jobId || '',
                         jobName: ch.jobName || '',
-                        narration: ch.narration || scriptData.scenes![index]?.text || '',
-                        duration: ch.duration || scriptData.scenes![index]?.duration || '',
-                        words: ch.words ?? scriptData.scenes![index]?.words ?? 0,
-                        startTime: ch.startTime ?? scriptData.scenes![index]?.startTime ?? 0,
-                        endTime: ch.endTime ?? scriptData.scenes![index]?.endTime ?? 0,
-                        durationInSeconds: ch.durationInSeconds ?? scriptData.scenes![index]?.durationInSeconds ?? 0,
+                        narration: ch.narration || scriptData.scenesData![index]?.narration || '',
+                        duration: ch.duration || scriptData.scenesData![index]?.duration || '',
+                        words: ch.words ?? scriptData.scenesData![index]?.words ?? 0,
+                        startTime: ch.startTime ?? scriptData.scenesData![index]?.startTime ?? 0,
+                        endTime: ch.endTime ?? scriptData.scenesData![index]?.endTime ?? 0,
+                        durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,
                         highlightedKeywords: ch.highlightedKeywords ?? [],
                         keywordsSelected: ch.keywordsSelected ?? {},
                         assets: {
                             images: ch.assets?.images || [],
                         }
                     }));
-                    console.log('Using existing chapters with scenes data:', normalizedFromStorage.length);
-                    setChapters(normalizedFromStorage);
+                    console.log('Using existing SceneData with scenes data:', normalizedFromStorage.length);
+                    setScenesData(normalizedFromStorage);
                     return;
                 }
             } catch (error) {
-                console.error('Error processing existing chapters with scenes:', error);
+                console.error('Error processing existing SceneData with scenes:', error);
             }
 
-            // Map scenes data to Chapter[] with required fields
-            const chaptersFromScenes: Chapter[] = scriptData.scenes!.map((scene: any, index: number) => ({
+            // Map scenes data to SceneData[] with required fields
+            const SceneDataFromScenes: SceneData[] = scriptData.scenesData!.map((scene: any, index: number) => ({
                 id: scene.id || `scene-${index + 1}`,
                 jobId: jobId || '',
                 jobName: jobId || '',
-                narration: scene.text || '',
+                narration: scene.narration || '',
                 duration: scene.duration || '',
                 words: scene.words || 0,
                 startTime: scene.startTime || 0,
@@ -611,220 +616,40 @@ const ScriptProductionClient = () => {
                 assets: { image: null, audio: null, video: null, images: [], imagesGoogle: [], imagesEnvato: [] }
             }));
 
-            console.log('Created chapters from scenes data:', chaptersFromScenes.length);
-            setChapters(chaptersFromScenes);
+            console.log('Created SceneData from scenes data:', SceneDataFromScenes.length);
+            setScenesData(SceneDataFromScenes);
             return;
         }
 
         // Fallback to old method if no scenes data available
         console.log('No scenes data found, using legacy paragraph splitting');
-
-        // Split script into paragraphs (split by double newlines or single newlines)
-        let scriptParagraphs = [];
-        if (scriptData?.narration_type === "interview") {
-            scriptParagraphs = scriptData.transcription
-                .split('\n')
-                .map(p => p.trim())
-                .filter(p => p.length > 0);
-        } else {
-            scriptParagraphs = scriptData.transcription
-                .split(/\n\s*\n/)
-                .map(p => p.trim())
-                .filter(p => p.length > 0);
-        }
-
-        // Calculate sequential time allocation for paragraphs
-        const paragraphsWithTimeRanges = calculateSequentialTimeRanges(scriptParagraphs);
-
-        // If chapters with images already exist in approvedScript, reuse them
-        try {
-            if (scriptData && Array.isArray(scriptData.chapters) && scriptData.chapters.length === paragraphsWithTimeRanges.length) {
-                const normalizedFromStorage: Chapter[] = scriptData.chapters.map((ch: any, index: number) => ({
-                    id: ch.id || `scene-${index + 1}`,
-                    jobId: ch.jobId || '',
-                    jobName: ch.jobName || '',
-                    narration: ch.narration || paragraphsWithTimeRanges[index].text,
-                    duration: ch.duration || paragraphsWithTimeRanges[index].duration,
-                    words: ch.words ?? paragraphsWithTimeRanges[index].words,
-                    startTime: ch.startTime ?? paragraphsWithTimeRanges[index].startTime,
-                    endTime: ch.endTime ?? paragraphsWithTimeRanges[index].endTime,
-                    durationInSeconds: ch.durationInSeconds ?? paragraphsWithTimeRanges[index].durationInSeconds,
-                    highlightedKeywords: ch.highlightedKeywords ?? paragraphsWithTimeRanges[index].highlightedKeywords,
-                    keywordsSelected: ch.keywordsSelected ?? {},
-                    assets: {
-                        images: ch.assets?.images || [],
-                    }
-                }));
-                console.log('Using existing chapters with legacy data:', normalizedFromStorage.length);
-                setChapters(normalizedFromStorage);
-                return;
-            }
-        } catch { }
-
-        // Map to Chapter[] with required fields
-        const chaptersAsRequired: Chapter[] = paragraphsWithTimeRanges.map((p, index) => ({
-            id: `scene-${index + 1}`,
-            jobId: jobId || '',
-            jobName: jobId || '',
-            narration: p.text,
-            duration: p.duration,
-            words: p.words,
-            startTime: p.startTime,
-            endTime: p.endTime,
-            durationInSeconds: p.durationInSeconds,
-            keywordsSelected: [],
-            assets: { image: null, audio: null, video: null, images: [], imagesGoogle: [], imagesEnvato: [] }
-        }));
-
-        console.log('Created chapters from legacy data:', chaptersAsRequired.length);
-        setChapters(chaptersAsRequired);
     };
 
-    const saveTrendingTopic = async (storedData: ScriptData) => {
-        const { error } = await SupabaseHelpers.saveTrendingTopic(
-            storedData.topic,
-            storedData.hypothesis,
-            storedData.region,
-            storedData.duration,
-            storedData.language,
-            storedData.narration_type,
-            storedData.created_at || new Date().toISOString()
-        );
-
-        if (error) {
-            HelperFunctions.showError('Failed to save trending topic');
-        } else {
-            HelperFunctions.showSuccess('Trending topic saved');
-        }
+    // SceneData Management Functions
+    const handleAddSceneDataAfter = (index: number) => {
+        HelperFunctions.addSceneDataAfter(index, scenesData, setScenesData);
     };
 
-    // Calculate sequential time ranges for paragraphs (0-20s, 20-40s, etc.)
-    const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
-        if (scriptParagraphs.length === 0) return [];
-
-        // Get the intended duration from scriptData (convert to seconds)
-        const intendedDurationMinutes = parseFloat(scriptData?.duration || '1');
-        const intendedDurationSeconds = intendedDurationMinutes * 60;
-
-        // Calculate total words in all paragraphs
-        const totalWords = scriptParagraphs.reduce((sum, paragraph) => {
-            return sum + paragraph.trim().split(/\s+/).filter(word => word.length > 0).length;
-        }, 0);
-
-        let currentTime = 0; // Start from 0 seconds
-
-        return scriptParagraphs.map((paragraph, index) => {
-            const words = paragraph.trim().split(/\s+/).filter(word => word.length > 0).length;
-
-            // Calculate proportional duration based on word count and intended total duration
-            const durationInSeconds = totalWords > 0
-                ? Math.round((words / totalWords) * intendedDurationSeconds)
-                : Math.round(intendedDurationSeconds / scriptParagraphs.length);
-
-            const startTime = currentTime;
-            const endTime = currentTime + durationInSeconds;
-
-            // Update current time for next paragraph
-            currentTime = endTime;
-            return {
-                text: paragraph,
-                duration: formatTimeRange(startTime, endTime),
-                words,
-                startTime,
-                endTime,
-                durationInSeconds,
-                highlightedKeywords: []
-            };
-        });
+    const handleDeleteSceneData = (index: number) => {
+        HelperFunctions.deleteSceneData(index, scenesData, setScenesData);
     };
 
-    // Format time range (e.g., "0-20s", "20-40s")
-    const formatTimeRange = (startSeconds: number, endSeconds: number): string => {
-        const formatTime = (seconds: number) => {
-            if (seconds < 60) return `${seconds}s`;
-            const minutes = Math.floor(seconds / 60);
-            const remainingSeconds = seconds % 60;
-            return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-        };
-
-        return `${formatTime(startSeconds)} - ${formatTime(endSeconds)}`;
-    };
-
-    const handleDownloadAllNarrations = () => {
-
-        try {
-            // Build script content in the same structured format used in approval
-            let content = '';
-            if (scriptData) {
-                const parts: string[] = [];
-                const headers = HelperFunctions.getLocalizedSectionHeaders(scriptData.language || 'english');
-                if (scriptData.title && scriptData.title.trim()) {
-                    parts.push(`📋 ${headers.title}:\n${scriptData.title.trim()}`);
-                }
-                if (scriptData.hook && scriptData.hook.trim()) {
-                    parts.push(`🎯 ${headers.hook}:\n${scriptData.hook.trim()}`);
-                }
-                if (scriptData.main_content && scriptData.main_content.trim()) {
-                    parts.push(`📝 ${headers.main_content}:\n${scriptData.main_content.trim()}`);
-                }
-                if (scriptData.conclusion && scriptData.conclusion.trim()) {
-                    parts.push(`🏁 ${headers.conclusion}:\n${scriptData.conclusion.trim()}`);
-                }
-                if (scriptData.call_to_action && scriptData.call_to_action.trim()) {
-                    parts.push(`🚀 ${headers.call_to_action}:\n${scriptData.call_to_action.trim()}`);
-                }
-                content = parts.filter(Boolean).join('\n\n');
-                if (!content.trim() && scriptData.script) {
-                    content = scriptData.script;
-                }
-            }
-
-            if (!content.trim()) {
-                toast.error('No script content to download');
-                return;
-            }
-
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const safeTopic = (scriptData?.topic || 'script').toLowerCase().replace(/[^a-z0-9-_]+/g, '-');
-            a.href = url;
-            a.download = `${safeTopic || 'script'}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast.success('Script downloaded successfully');
-        } catch (error) {
-            toast.error('Failed to download narrations');
-        }
-    };
-
-    // Chapter Management Functions
-    const handleAddChapterAfter = (index: number) => {
-        HelperFunctions.addChapterAfter(index, chapters, setChapters);
-    };
-
-    const handleDeleteChapter = (index: number) => {
-        HelperFunctions.deleteChapter(index, chapters, setChapters);
-    };
-
-    const handleEditChapter = (index: number) => {
-        // setEditingChapter(index);
-        // setEditHeading(chapters[index].on_screen_text || '');
-        // setEditNarration(chapters[index].narration || '');
+    const handleEditSceneData = (index: number) => {
+        // setEditingSceneData(index);
+        // setEditHeading(SceneData[index].on_screen_text || '');
+        // setEditNarration(SceneData[index].narration || '');
     };
 
     const handleSaveEdit = () => {
-        if (editingChapter !== null) {
-            HelperFunctions.saveEdit(editingChapter, chapters, setChapters, editHeading, editNarration, setEditingChapter);
+        if (editingSceneData !== null) {
+            HelperFunctions.saveEdit(editingSceneData, scenesData, setScenesData, editHeading, editNarration, setEditingSceneData);
             setEditHeading('');
             setEditNarration('');
         }
     };
 
     const handleCancelEdit = () => {
-        HelperFunctions.cancelEdit(setEditingChapter, setEditHeading, setEditNarration);
+        HelperFunctions.cancelEdit(setEditingSceneData, setEditHeading, setEditNarration);
     };
 
     const handleDragEnd = (result: DropResult) => {
@@ -833,42 +658,42 @@ const ScriptProductionClient = () => {
         const { source, destination } = result;
         if (source.index === destination.index) return;
 
-        // Reorder chapters
-        const updatedChapters = Array.from(chapters);
-        const [reorderedChapter] = updatedChapters.splice(source.index, 1);
-        updatedChapters.splice(destination.index, 0, reorderedChapter);
-        setChapters(updatedChapters);
+        // Reorder SceneData
+        const updatedSceneData = Array.from(scenesData);
+        const [reorderedSceneData] = updatedSceneData.splice(source.index, 1);
+        updatedSceneData.splice(destination.index, 0, reorderedSceneData);
+        setScenesData(updatedSceneData);
 
-        // Reorder chapter images map to follow the chapters
-        const updatedChapterImagesMap: Record<number, string[]> = {};
+        // Reorder SceneData images map to follow the SceneData
+        const updatedSceneDataImagesMap: Record<number, string[]> = {};
 
         // Create a temporary mapping of old indices to their images
         const tempImageMap: Record<number, string[]> = {};
-        Object.keys(chapterImagesMap).forEach(key => {
-            tempImageMap[parseInt(key)] = chapterImagesMap[parseInt(key)];
+        Object.keys(SceneDataImagesMap).forEach(key => {
+            tempImageMap[parseInt(key)] = SceneDataImagesMap[parseInt(key)];
         });
 
-        // Reorder the images based on the new chapter order
-        updatedChapters.forEach((chapter, newIndex) => {
-            // Find the original index of this chapter
-            const originalIndex = chapters.findIndex(c => c.id === chapter.id);
+        // Reorder the images based on the new SceneData order
+        updatedSceneData.forEach((sceneData, newIndex) => {
+            // Find the original index of this SceneData
+            const originalIndex = scenesData.findIndex(c => c.id === sceneData.id);
             if (originalIndex !== -1 && tempImageMap[originalIndex]) {
-                updatedChapterImagesMap[newIndex] = tempImageMap[originalIndex];
+                updatedSceneDataImagesMap[newIndex] = tempImageMap[originalIndex];
             }
         });
 
-        setChapterImagesMap(updatedChapterImagesMap);
+        setScenesDataImagesMap(updatedSceneDataImagesMap);
 
-        // Update selected chapter index if needed
-        if (selectedChapterIndex === source.index) {
-            setSelectedChapterIndex(destination.index);
-        } else if (selectedChapterIndex >= Math.min(source.index, destination.index) &&
-            selectedChapterIndex <= Math.max(source.index, destination.index)) {
+        // Update selected SceneData index if needed
+        if (selectedSceneDataIndex === source.index) {
+            setSelectedSceneDataIndex(destination.index);
+        } else if (selectedSceneDataIndex >= Math.min(source.index, destination.index) &&
+            selectedSceneDataIndex <= Math.max(source.index, destination.index)) {
             // Adjust selected index if it's in the affected range
-            if (source.index < destination.index && selectedChapterIndex > source.index) {
-                setSelectedChapterIndex(selectedChapterIndex - 1);
-            } else if (source.index > destination.index && selectedChapterIndex < source.index) {
-                setSelectedChapterIndex(selectedChapterIndex + 1);
+            if (source.index < destination.index && selectedSceneDataIndex > source.index) {
+                setSelectedSceneDataIndex(selectedSceneDataIndex - 1);
+            } else if (source.index > destination.index && selectedSceneDataIndex < source.index) {
+                setSelectedSceneDataIndex(selectedSceneDataIndex + 1);
             }
         }
     };
@@ -886,7 +711,7 @@ const ScriptProductionClient = () => {
         setUploadedImages((prev) => [...imgs, ...prev]);
         // Mirror AI Generation flow: send to Stock Media single view with the first image
         const first = imgs[0];
-        setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+        setScenesDataImagesMap(prev => ({ ...prev, [selectedSceneDataIndex]: [first, ...(prev[selectedSceneDataIndex] || [])] }));
 
         setGeneratedImages([first]);
         setAiImagesEnabled(true);
@@ -901,16 +726,16 @@ const ScriptProductionClient = () => {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visuals })
             });
             const data = await res.json();
-            const imgs: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : [fallbackImages[selectedChapterIndex % fallbackImages.length]];
+            const imgs: string[] = Array.isArray(data?.images) && data.images.length > 0 ? data.images : [fallbackImages[selectedSceneDataIndex % fallbackImages.length]];
             const first = imgs[0];
-            setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+            setScenesDataImagesMap(prev => ({ ...prev, [selectedSceneDataIndex]: [first, ...(prev[selectedSceneDataIndex] || [])] }));
             setGeneratedImages([first]);
             setAiImagesEnabled(true);
             setRightTabIndex(0);
         } catch (e) {
             console.error('AI generate failed', e);
-            const first = fallbackImages[selectedChapterIndex % fallbackImages.length];
-            setChapterImagesMap(prev => ({ ...prev, [selectedChapterIndex]: [first, ...(prev[selectedChapterIndex] || [])] }));
+            const first = fallbackImages[selectedSceneDataIndex % fallbackImages.length];
+            setScenesDataImagesMap(prev => ({ ...prev, [selectedSceneDataIndex]: [first, ...(prev[selectedSceneDataIndex] || [])] }));
             setGeneratedImages([first]);
             setRightTabIndex(0);
         } finally {
@@ -934,10 +759,10 @@ const ScriptProductionClient = () => {
         HelperFunctions.triggerFileUpload();
     };
 
-    const selectChapter = (idx: number) => {
-        setSelectedChapterIndex(idx);
+    const selectSceneData = (idx: number) => {
+        setSelectedSceneDataIndex(idx);
         if (aiImagesEnabled) {
-            const imgs = chapterImagesMap[idx] || [];
+            const imgs = SceneDataImagesMap[idx] || [];
             const fallback = [fallbackImages[idx % fallbackImages.length]];
             setGeneratedImages(imgs.length > 0 ? [imgs[0]] : fallback);
         } else {
@@ -1090,9 +915,7 @@ const ScriptProductionClient = () => {
 
     const handleApproveScript = async () => {
         setLoading(true);
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
-        const jobId = `job-${timestamp}`;
+        const jobId = HelperFunctions.generateJobId();
         setJobId(jobId);
 
         const uploadResult: { success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string } = await HelperFunctions.generateAFolderOnDrive(jobId);
@@ -1112,7 +935,7 @@ const ScriptProductionClient = () => {
         // } else {
         setIsScriptApproved(true);
         // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
-        setShowNarrationUploadView(true);
+        setIsNarrationUploadView(true);
         // console.log('Approved script saved successfully');
         // }
         setLoading(false);
@@ -1125,8 +948,8 @@ const ScriptProductionClient = () => {
     };
 
     // Handle text selection for highlighting keywords
-    const handleTextSelection = (chapterIndex: number, event: React.MouseEvent) => {
-        // console.log('handleTextSelection called for chapter:', chapterIndex);
+    const handleTextSelection = (SceneDataIndex: number, event: React.MouseEvent) => {
+        // console.log('handleTextSelection called for SceneData:', SceneDataIndex);
 
         // Use a shorter delay to capture the selection more accurately
         setTimeout(() => {
@@ -1171,7 +994,7 @@ const ScriptProductionClient = () => {
 
                     if (actualSelectedText.length > 0) {
                         setSelectedText({
-                            chapterIndex,
+                            SceneDataIndex,
                             text: actualSelectedText,
                             startIndex,
                             endIndex
@@ -1181,7 +1004,7 @@ const ScriptProductionClient = () => {
                     // Different text nodes - use the selection text directly
                     // console.log('Different text nodes - using selection text directly');
                     setSelectedText({
-                        chapterIndex,
+                        SceneDataIndex,
                         text: selectedText,
                         startIndex: 0,
                         endIndex: selectedText.length
@@ -1191,7 +1014,7 @@ const ScriptProductionClient = () => {
                 // Selection spans across elements - use the selection text directly
                 // console.log('Selection spans elements - using selection text directly');
                 setSelectedText({
-                    chapterIndex,
+                    SceneDataIndex,
                     text: selectedText,
                     startIndex: 0,
                     endIndex: selectedText.length
@@ -1203,18 +1026,18 @@ const ScriptProductionClient = () => {
         }, 50); // Even shorter delay for more accurate capture
     };
 
-    // Save highlighted keywords to chapter
-    const saveHighlightedKeywords = (chapterIndex: number, keywords: string[]) => {
-        const updatedChapters = chapters.map((chapter, index) => {
-            if (index === chapterIndex) {
+    // Save highlighted keywords to SceneData
+    const saveHighlightedKeywords = (SceneDataIndex: number, keywords: string[]) => {
+        const updatedSceneData = scenesData.map((sceneData, index) => {
+            if (index === SceneDataIndex) {
                 return {
-                    ...chapter,
+                    ...sceneData,
                     highlightedKeywords: keywords
                 };
             }
-            return chapter;
+            return sceneData;
         });
-        setChapters(updatedChapters);
+        setScenesData(updatedSceneData);
         setSelectedText(null);
     };
 
@@ -1222,8 +1045,8 @@ const ScriptProductionClient = () => {
     const addKeyword = () => {
         if (!selectedText) return;
 
-        const chapter = chapters[selectedText.chapterIndex];
-        const currentKeywords = chapter.highlightedKeywords || [];
+        const SceneData = scenesData[selectedText.SceneDataIndex];
+        const currentKeywords = SceneData.highlightedKeywords || [];
         const selectedTextLower = selectedText.text.toLowerCase().trim();
 
         // Check if the exact text is already a keyword
@@ -1268,7 +1091,7 @@ const ScriptProductionClient = () => {
 
         // Add the new keyword
         const newKeywords = [...currentKeywords, selectedText.text];
-        saveHighlightedKeywords(selectedText.chapterIndex, newKeywords);
+        saveHighlightedKeywords(selectedText.SceneDataIndex, newKeywords);
         toast.success(`Added "${selectedText.text}" to keywords`);
 
         // Open media selector with this keyword as suggestion
@@ -1276,7 +1099,7 @@ const ScriptProductionClient = () => {
             if (typeof window !== 'undefined') {
                 (window as any).__keywordSuggestions = { keyword: selectedText.text, keywords: [selectedText.text] };
             }
-            setMediaManagementChapterIndex(selectedText.chapterIndex);
+            setMediaManagementSceneDataIndex(selectedText.SceneDataIndex);
             setMediaManagementOpen(true);
         } catch { }
 
@@ -1291,7 +1114,7 @@ const ScriptProductionClient = () => {
             // Only clear if not clicking on the toolbar or text selection area
             const target = event.target as HTMLElement;
             const isToolbar = target.closest('[data-toolbar="keyword-toolbar"]');
-            const isTextArea = target.closest('[data-chapter-index]');
+            const isTextArea = target.closest('[data-scenedata-index]');
             const isKeywordBadge = target.closest('[data-keyword-badge]');
 
             if (!isToolbar && !isTextArea && !isKeywordBadge) {
@@ -1367,7 +1190,7 @@ const ScriptProductionClient = () => {
 
                 {/* Duration Display */}
                 {
-                    isScriptApproved && narratorChromaKeyLink &&
+                    !isInitialLoading && isScriptApproved && narratorChromaKeyLink &&
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.25rem', lineHeight: 1.5 }}>
@@ -1393,19 +1216,23 @@ const ScriptProductionClient = () => {
                     overflow: 'hidden',
                 }}>
 
+                    {isInitialLoading && (
+                        <AppLoadingOverlay />
+                    )}
+
                     {/* Header section - fixed */}
-                    <Box sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexShrink: 0,
-                        mt: 2.5,
-                        mb: 2.5,
-                        ...(getDirectionSx(scriptData?.language || 'english')),
-                        // flexDirection: isRTLLanguage('urdu') ? 'row-reverse' : 'row',
-                        width: '100%'
-                    }}>
-                        {!scriptData?.transcription &&
+                    {!isInitialLoading && !scriptData?.transcription && (
+                        <Box sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexShrink: 0,
+                            mt: 2.5,
+                            mb: 2.5,
+                            ...(getDirectionSx(scriptData?.language || 'english')),
+                            // flexDirection: isRTLLanguage('urdu') ? 'row-reverse' : 'row',
+                            width: '100%'
+                        }}>
                             <Typography
                                 variant="h4"
                                 sx={{
@@ -1421,90 +1248,114 @@ const ScriptProductionClient = () => {
                                 }}
                             >
                                 📋 {scriptData?.title}
-                            </Typography>}
-
-                        {isScriptApproved && !scriptData?.transcription && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }}
-                                    startIcon={<DownloadIcon />}
-                                    onClick={handleDownloadAllNarrations}
-                                >
-                                    Download Script
-                                </Button>
-                            </Box>
-                        )}
-
-                        {!isScriptApproved && !scriptData?.transcription &&
-                            <Box sx={{
-                                bgcolor: 'background.paper',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexShrink: 0
-                            }}>
-                                <Box sx={{ display: 'flex', gap: 1, mr: 1 }}>
-
-                                    {!isEditingScript && !isScriptApproved ? (
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Button
-                                                variant="outlined"
-                                                size="large"
-                                                startIcon={<EditIcon />}
-                                                onClick={handleStartEditingScript}
-                                                sx={{ textTransform: 'none', px: 2, py: 1, lineHeight: 1.5, gap: 1 }}
-                                            >
-                                                Edit Script
-                                            </Button>
-
-                                            <Button
-                                                onClick={handleApproveScript}
-                                                variant="contained"
-                                                color="primary"
-                                                size="large"
-                                                startIcon={<CheckIcon />}
-                                                sx={{
-                                                    py: 1,
-                                                    px: 2,
-                                                    gap: 1,
-                                                    fontSize: '1.05rem',
-                                                    bgcolor: 'success.main',
-                                                    textTransform: 'none',
-                                                    lineHeight: 1.5,
-                                                    '&:hover': { bgcolor: 'success.dark' }
-                                                }}
-                                            >
-                                                Approve
-                                            </Button>
-                                        </Box>
-                                    ) : (
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Button
-                                                variant="outlined"
-                                                size="large"
-                                                startIcon={<SaveIcon />}
-                                                onClick={handleSaveScript}
-                                                sx={{ textTransform: 'none', px: 2, py: 1, lineHeight: 1.5 }}
-                                            >
-                                                Save Changes
-                                            </Button>
-
-                                            <Button
-                                                variant="outlined"
-                                                size="large"
-                                                color="secondary"
-                                                startIcon={<CancelIcon />}
-                                                onClick={handleCancelEditingScript}
-                                                sx={{ textTransform: 'none', px: 2, py: 1, lineHeight: 1.5 }}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </Box>
-                                    )}
+                            </Typography>
+                            {isScriptApproved && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                    <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }}
+                                        startIcon={<DownloadIcon />}
+                                        onClick={() => HelperFunctions.handleDownloadAllNarrations(scriptData as ScriptData)}
+                                    >
+                                        Download Script
+                                    </Button>
                                 </Box>
-                            </Box>}
-                    </Box>
+                            )}
 
-                    {!isScriptApproved && !scriptData?.transcription && (
+                            {!isScriptApproved && (
+                                <Box sx={{
+                                    bgcolor: 'background.paper',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    <Box sx={{ display: 'flex', gap: 1, mr: 1 }}>
+
+                                        {!isEditingScript && !isScriptApproved ? (
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="large"
+                                                    startIcon={<EditIcon />}
+                                                    onClick={handleStartEditingScript}
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        px: 2,
+                                                        py: 1.5,
+                                                        lineHeight: 1.5,
+                                                        gap: 1,
+                                                        fontSize: '1rem',
+                                                        width: '100%'
+                                                    }}
+                                                >
+                                                    Edit Script
+                                                </Button>
+
+                                                <Button
+                                                    onClick={handleApproveScript}
+                                                    variant="contained"
+                                                    color="primary"
+                                                    size="large"
+                                                    startIcon={<CheckIcon />}
+                                                    sx={{
+                                                        py: 1.5,
+                                                        px: 2,
+                                                        gap: 1,
+                                                        fontSize: '1rem',
+                                                        bgcolor: 'success.main',
+                                                        textTransform: 'none',
+                                                        lineHeight: 1.5,
+                                                        width: '100%',
+                                                        '&:hover': { bgcolor: 'success.dark' }
+                                                    }}
+                                                >
+                                                    Approve
+                                                </Button>
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="large"
+                                                    startIcon={<SaveIcon />}
+                                                    onClick={handleSaveScript}
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        px: 2,
+                                                        py: 1.5,
+                                                        lineHeight: 1.5,
+                                                        fontSize: '1rem',
+                                                        width: '100%'
+                                                    }}
+                                                >
+                                                    Save Changes
+                                                </Button>
+
+                                                <Button
+                                                    variant="outlined"
+                                                    size="large"
+                                                    color="secondary"
+                                                    startIcon={<CancelIcon />}
+                                                    onClick={handleCancelEditingScript}
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        px: 2,
+                                                        py: 1.5,
+                                                        lineHeight: 1.5,
+                                                        fontSize: '1rem',
+                                                        width: '100%'
+                                                    }}
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            </Box>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+
+                    {!isInitialLoading && !isScriptApproved && !scriptData?.transcription && (
                         <Paper sx={{
                             flex: 1,
                             display: 'flex',
@@ -1649,7 +1500,7 @@ const ScriptProductionClient = () => {
                         </Paper>
                     )}
 
-                    {isScriptApproved && showNarrationUploadView && chapters.length === 0 &&
+                    {(isNarrationUploadView || isNarratorVideoUploaded) && scenesData.length === 0 &&
                         //show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
                         <Paper sx={{
                             flex: 1,
@@ -1663,13 +1514,14 @@ const ScriptProductionClient = () => {
                             <Box sx={{ p: 2 }}>
                                 <ChromaKeyUpload
                                     jobId={jobId || 'job-chroma-key'}
-                                    scriptLanguage={scriptData?.language || 'english'}
+                                    scriptData={scriptData as ScriptData}
+                                    setScriptData={setScriptData}
                                     onUploadComplete={(driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
                                         // console.log("transcription text: ", transcription)
                                         // update the ScriptData with transcribe text as script     
                                         console.log("backgroundType: ", backgroundType);
-                                        setIsHumanNarrationUploaded(true);
-                                        setShowNarrationUploadView(false);
+                                        setIsNarratorVideoUploaded(true);
+                                        setIsNarrationUploadView(false);
                                         setNarratorChromaKeyLink(driveUrl);
 
                                         const updatedScriptData = {
@@ -1678,12 +1530,12 @@ const ScriptProductionClient = () => {
                                             status: SCRIPT_STATUS.UPLOADED,
                                             narrator_chroma_key_link: driveUrl,
                                             transcription: transcriptionData.text,
+                                            scenesData: transcriptionData.scenes,
                                             updated_at: new Date().toISOString(),
                                         } as ScriptData;
                                         setScriptData(updatedScriptData);
                                         SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-
-                                        updateParagraphs(transcriptionData);
+                                        updateParagraphs(updatedScriptData);
                                     }}
                                     onUploadFailed={(errorMessage: string) => {
                                         toast.error(errorMessage);
@@ -1694,7 +1546,7 @@ const ScriptProductionClient = () => {
                         </Paper>
                     }
 
-                    {scriptData?.status === SCRIPT_STATUS.UPLOADED && scriptData?.transcription && chapters && chapters.length > 0 &&
+                    {scriptData?.status === SCRIPT_STATUS.UPLOADED && scriptData?.transcription && scenesData && scenesData.length > 0 &&
                         <Paper sx={{
                             flex: 1,
                             display: 'flex',
@@ -1908,41 +1760,41 @@ const ScriptProductionClient = () => {
                                     </Grid>
                                 </Paper>
 
-                                <ChaptersSection
+                                <SceneDataSection
                                     jobId={jobId}
-                                    chaptersGenerated={true}
-                                    generatingChapters={false}
-                                    chapters={chapters}
-                                    editingChapter={editingChapter}
+                                    SceneDataGenerated={true}
+                                    generatingSceneData={false}
+                                    scenesData={scenesData}
+                                    editingSceneData={editingSceneData}
                                     editHeading={editHeading}
                                     editNarration={editNarration}
-                                    selectedChapterIndex={selectedChapterIndex}
+                                    selectedSceneDataIndex={selectedSceneDataIndex}
                                     rightTabIndex={rightTabIndex}
                                     aiImagesEnabled={aiImagesEnabled}
                                     imagesLoading={imagesLoading}
                                     generatedImages={generatedImages}
                                     aiPrompt={aiPrompt}
                                     pickerOpen={pickerOpen}
-                                    pickerChapterIndex={pickerChapterIndex}
+                                    pickerSceneDataIndex={pickerSceneDataIndex}
                                     pickerNarrations={pickerNarrations}
                                     pickerLoading={pickerLoading}
                                     uploadedImages={uploadedImages}
                                     isDraggingUpload={isDraggingUpload}
-                                    chapterImagesMap={chapterImagesMap}
+                                    SceneDataImagesMap={SceneDataImagesMap}
                                     selectedText={selectedText}
-                                    onChaptersUpdate={(chapters: Chapter[]) => {
-                                        setChapters(chapters);
-                                        SecureStorageHelpers.setScriptMetadata({ ...scriptData, chapters: chapters });
+                                    onSceneDataUpdate={(SceneData: SceneData[]) => {
+                                        setScenesData(SceneData);
+                                        SecureStorageHelpers.setScriptMetadata({ ...scriptData, SceneData: SceneData });
                                     }}
-                                    onAddChapterAfter={handleAddChapterAfter}
-                                    onDeleteChapter={handleDeleteChapter}
+                                    onAddSceneDataAfter={handleAddSceneDataAfter}
+                                    onDeleteSceneData={handleDeleteSceneData}
                                     onSaveEdit={handleSaveEdit}
                                     onCancelEdit={handleCancelEdit}
                                     onEditHeadingChange={setEditHeading}
                                     onEditNarrationChange={setEditNarration}
-                                    onStartEdit={handleEditChapter}
+                                    onStartEdit={handleEditSceneData}
                                     onDragEnd={handleDragEnd}
-                                    onSelectChapter={selectChapter}
+                                    onSelectSceneData={selectSceneData}
                                     onRightTabChange={setRightTabIndex}
                                     onAIPromptChange={setAiPrompt}
                                     onUseAIChange={setAiImagesEnabled}
@@ -1953,28 +1805,28 @@ const ScriptProductionClient = () => {
                                     onTriggerFileUpload={handleTriggerFileUpload}
                                     onUploadFiles={handleUploadFiles}
                                     onPickerOpen={setPickerOpen}
-                                    onPickerChapterIndex={setPickerChapterIndex}
+                                    onPickerSceneDataIndex={setPickerSceneDataIndex}
                                     onPickerLoading={setPickerLoading}
                                     onPickerNarrations={setPickerNarrations}
-                                    onChapterImagesMapChange={setChapterImagesMap}
+                                    onSceneDataImagesMapChange={setScenesDataImagesMap}
                                     onGeneratedImagesChange={setGeneratedImages}
                                     onRightTabIndexChange={setRightTabIndex}
                                     mediaManagementOpen={mediaManagementOpen}
-                                    mediaManagementChapterIndex={mediaManagementChapterIndex}
+                                    mediaManagementSceneDataIndex={mediaManagementSceneDataIndex}
                                     onMediaManagementOpen={setMediaManagementOpen}
-                                    onMediaManagementChapterIndex={setMediaManagementChapterIndex}
+                                    onMediaManagementSceneDataIndex={setMediaManagementSceneDataIndex}
                                     onTextSelection={handleTextSelection}
                                     onAddKeyword={addKeyword}
                                     onClearSelection={() => handleClearSelection()}
                                     onToolbarInteraction={setIsInteractingWithToolbar}
                                     language={scriptData?.language || 'english'}
-                                    onGoogleImagePreview={(imageUrl) => {
+                                    onGoogleImagePreview={(imageUrl: any) => {
                                         // Open the image in a new tab for preview
                                         window.open(imageUrl, '_blank');
                                     }}
-                                    chapterEditDialogOpen={chapterEditDialogOpen}
-                                    onChapterEditDialogOpen={setChapterEditDialogOpen}
-                                    onChapterEditDialogChapterIndex={setChapterEditDialogChapterIndex}
+                                    SceneDataEditDialogOpen={SceneDataEditDialogOpen}
+                                    onSceneDataEditDialogOpen={setScenesDataEditDialogOpen}
+                                    onSceneDataEditDialogSceneDataIndex={setScenesDataEditDialogSceneDataIndex}
                                     driveBackgrounds={driveLibrary?.backgrounds}
                                     driveMusic={driveLibrary?.music}
                                     driveTransitions={predefinedTransitions.map((t) => ({ id: t, name: t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) }))}
@@ -2003,7 +1855,7 @@ const ScriptProductionClient = () => {
                                                 fullWidth
                                                 startIcon={<VideoIcon />}
                                                 onClick={() => uploadCompleteProjectToDrive()}
-                                                disabled={!chapters.length}
+                                                disabled={!scenesData.length}
                                                 sx={{
                                                     bgcolor: SUCCESS.main,
                                                     '&:hover': { bgcolor: SUCCESS.dark },

@@ -6,6 +6,17 @@ import ffmpeg from "fluent-ffmpeg";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AI_CONFIG } from "@/config/aiConfig";
 import { getDriveClient } from "@/services/googleDriveService";
+import {
+  generateJobId,
+  createProgress,
+  updateProgress,
+  completeProgress,
+  errorProgress,
+  deleteProgress,
+  calculateProgress,
+  type ProgressStage
+} from "@/utils/progressTracker";
+import { getSupabase } from "@/utils/supabase";
 
 // Avoid static import so Next.js doesn't inline ffmpeg into vendor-chunks
 let ffmpegStaticPath: string = '' as any;
@@ -61,7 +72,7 @@ const performSemanticSegmentation = async (genAI: GoogleGenerativeAI, transcript
   const wordCount = transcription.trim().split(/\s+/).length;
   if (wordCount < 50) {
     console.log('Transcription too short for semantic segmentation:', wordCount, 'words');
-    throw new Error('Transcription too short for semantic segmentation');
+    return [];
   }
 
   const segmentationPrompt = `You are an expert at semantic segmentation of transcribed speech. 
@@ -116,7 +127,7 @@ ${transcription}`;
       throw new Error('No scenes found in response');
     }
 
-    console.log('Semantic segmentation successful:', scenes.length, 'scenes');
+    // console.log('Semantic segmentation successful:', scenes.length, 'scenes');
     return scenes;
   } catch (error) {
     console.error('Semantic segmentation error:', error);
@@ -125,22 +136,26 @@ ${transcription}`;
 };
 
 // Helper function to process transcription into scenes using semantic segmentation
-const processTranscriptionIntoScenes = async (genAI: GoogleGenerativeAI, transcription: string, language: string) => {
-  console.log('Starting semantic segmentation for language:', language);
+const processTranscriptionIntoScenes = async (genAI: GoogleGenerativeAI, transcription: string, language: string, jobId?: string) => {
+  const wordCount = transcription.trim().split(/\s+/).length;
+  console.log(`Starting scene segmentation for ${wordCount} words, language: ${language}`);
 
   // First, try semantic segmentation
   try {
     const semanticScenes = await performSemanticSegmentation(genAI, transcription, language);
     if (semanticScenes && semanticScenes.length > 0) {
-      console.log('Semantic segmentation successful:', semanticScenes.length, 'scenes');
+      console.log('✅ Semantic segmentation successful:', semanticScenes.length, 'scenes');
       // Convert semantic scenes to our format with timing
       return calculateSequentialTimeRanges(semanticScenes.map((scene: any) => scene.text));
+    } else {
+      console.log('⚠️ Semantic segmentation returned 0 scenes, using fallback');
     }
   } catch (error) {
-    console.error('Semantic segmentation failed, falling back to heuristic:', error);
+    console.error('❌ Semantic segmentation failed:', error instanceof Error ? error.message : error);
+    console.log('→ Falling back to heuristic segmentation');
     // Check if it's a network error
     if (error instanceof Error && error.message.includes('fetch failed')) {
-      console.log('Network error detected, using heuristic segmentation');
+      console.log('🔗 Network error detected');
     }
   }
 
@@ -163,11 +178,51 @@ const processTranscriptionIntoScenes = async (genAI: GoogleGenerativeAI, transcr
       .filter(p => p.length > 0);
   }
 
-  // If no paragraphs found, treat entire text as one scene
+  // If no paragraphs found, try sentence-level splitting as intelligent fallback
+  if (scriptParagraphs.length === 0 || (scriptParagraphs.length === 1 && scriptParagraphs[0].split(/\s+/).length > 30)) {
+    console.log('No paragraph breaks found, using sentence-level splitting');
+    const paragraphText = scriptParagraphs[0] || transcription;
+    const wordCount = paragraphText.split(/\s+/).length;
+    
+    // Split by sentence boundaries (. ! ?)
+    let sentences = paragraphText
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    // If no sentence endings found, split by commas or create segments by word count
+    if (sentences.length === 1 && wordCount > 50) {
+      console.log('No sentence endings found, splitting by word count');
+      // Create scenes with ~30-40 words each
+      const wordsPerScene = 35;
+      const words = paragraphText.split(/\s+/);
+      sentences = [];
+      
+      for (let i = 0; i < words.length; i += wordsPerScene) {
+        const segment = words.slice(i, i + wordsPerScene).join(' ');
+        if (segment.trim()) {
+          sentences.push(segment);
+        }
+      }
+    }
+
+    // Group sentences into logical scenes (3-5 sentences per scene)
+    const sentencesPerScene = Math.min(3, Math.ceil(sentences.length / 3)); // Aim for ~3 scenes
+    for (let i = 0; i < sentences.length; i += sentencesPerScene) {
+      const sceneText = sentences.slice(i, i + sentencesPerScene).join(' ');
+      if (sceneText.trim()) {
+        scriptParagraphs.push(sceneText);
+      }
+    }
+  }
+
+  // If still no paragraphs found, treat entire text as one scene
   if (scriptParagraphs.length === 0) {
+    console.log('Treating entire transcription as single scene');
     scriptParagraphs = [transcription.trim()];
   }
 
+  console.log(`Heuristic segmentation created ${scriptParagraphs.length} scenes`);
   // Calculate timing for each scene
   return calculateSequentialTimeRanges(scriptParagraphs);
 };
@@ -202,28 +257,31 @@ const calculateSequentialTimeRanges = (scriptParagraphs: string[]) => {
 
     return {
       id: `scene-${index + 1}`,
-      text: paragraph,
+      narration: paragraph,
       duration: formatTimeRange(startTime, endTime),
       words,
       startTime,
       endTime,
-      durationInSeconds
+      durationInSeconds,
+      highlightedKeywords: [],
     };
   });
 };
 
 export async function POST(req: Request) {
+
   try {
     console.log('Starting /api/transcribe');
     console.log('Content-Type:', req.headers.get('content-type'));
     console.log('Content-Length:', req.headers.get('content-length'));
 
-    // Accept both multipart/form-data and JSON payloads
-    // JSON shape supported: { base64: string, mimeType?: string, fileName?: string, scriptLanguage?: string } OR { url: string, scriptLanguage?: string }
-    let incomingFile: File | null = null;
     let incomingBuffer: Buffer | null = null;
     let incomingFileName = `input-${Date.now()}.mp4`;
     let scriptLanguage = 'en'; // Default to English
+    let driveUrl = '';
+    let jobId = '';
+    let userId = '';
+    let file: File | null = null;
 
     const contentType = req.headers.get('content-type') || '';
     console.log('Processing content-type:', contentType);
@@ -233,20 +291,36 @@ export async function POST(req: Request) {
         console.log('Attempting to parse FormData...');
         const formData = await req.formData();
         console.log('FormData parsed successfully');
-        const file = formData.get('file') as File | null;
-        console.log('File found:', file?.name, 'Size:', file?.size);
-        if (file) {
-          incomingFile = file;
-          incomingFileName = (file as any).name || incomingFileName;
-          incomingBuffer = Buffer.from(await file.arrayBuffer());
-          console.log('File buffer created, size:', incomingBuffer.length);
+        // Extract userId from FormData
+        const userIdField = formData.get('userId') as string | null;
+        if (userIdField) {
+          userId = userIdField;
+          console.log('User ID from FormData:', userId);
         }
-
         // Extract scriptLanguage from FormData
         const languageField = formData.get('scriptLanguage') as string | null;
         if (languageField) {
           scriptLanguage = languageField;
           console.log('Script language from FormData:', scriptLanguage);
+        }
+        // Extract driveUrl from FormData
+        const driveUrlField = formData.get('driveUrl') as string | null;
+        if (driveUrlField) {
+          driveUrl = driveUrlField;
+          console.log('Drive URL from FormData:', driveUrl);
+        }
+        // Extract jobId from FormData
+        const job_Id = formData.get('jobId') as string | null;
+        if (job_Id) {
+          jobId = job_Id;
+          console.log('Job ID from FormData:', jobId);
+        }
+
+        // Extract file from FormData
+        const fileField = formData.get('file') as File | null;
+        if (fileField && fileField !== null) {
+          file = fileField;
+          console.log('File from FormData:', file?.name);
         }
       } catch (e) {
         console.log('FormData parsing failed:', e);
@@ -254,23 +328,20 @@ export async function POST(req: Request) {
       }
     }
 
+    // Initialize progress tracking
+    createProgress(jobId);
+    updateProgress(jobId, 'initializing', 0, 'Starting transcription process...');
+
     if (!incomingBuffer) {
       try {
         console.log('Attempting to parse JSON...');
         const json = await req.json();
         console.log('JSON parsed:', Object.keys(json));
-        if (json?.base64) {
-          const b64 = String(json.base64).replace(/^data:[^;]+;base64,/, '');
-          incomingBuffer = Buffer.from(b64, 'base64');
-          incomingFileName = json.fileName || incomingFileName;
-          scriptLanguage = json.scriptLanguage || scriptLanguage;
-          console.log('Base64 buffer created, size:', incomingBuffer.length);
-          console.log('Script language from JSON:', scriptLanguage);
-        } else if (json?.url) {
-          const url = String(json.url);
+
+        if (json?.driveUrl) {
+          const url = String(json.driveUrl);
           scriptLanguage = json.scriptLanguage || scriptLanguage;
           console.log('Downloading from URL:', url);
-          console.log('Script language from JSON URL:', scriptLanguage);
 
           // Handle Google Drive URLs - use Drive API for authenticated download
           if (url.includes('drive.google.com')) {
@@ -314,8 +385,11 @@ export async function POST(req: Request) {
 
     if (!incomingBuffer) {
       console.log('No buffer created - returning error');
-      return NextResponse.json({ error: 'No file provided (expecting multipart field "file", or JSON { base64 } / { url })' }, { status: 400 });
+      errorProgress(jobId, 'No file provided');
+      return NextResponse.json({ error: 'No file provided (expecting multipart field "file", or JSON { base64 } / { url })', jobId }, { status: 400 });
     }
+
+    updateProgress(jobId, 'audio_extraction', 5, 'Preparing video file...');
 
     // Save video temporarily
     const buffer = incomingBuffer;
@@ -347,7 +421,10 @@ export async function POST(req: Request) {
     console.log(`Extracting audio from ${fileSizeInMB.toFixed(2)} MB video file`);
     const audioQuality = fileSizeInMB > 100 ? 'low' : 'high';
 
+    updateProgress(jobId, 'audio_extraction', 10, `Extracting audio from ${fileSizeInMB.toFixed(2)} MB video...`);
+
     await new Promise<void>((resolve, reject) => {
+      let progressUpdated = false;
       ffmpeg(inputPath)
         .noVideo()
         .audioCodec('libmp3lame') // Use MP3 compression instead of uncompressed PCM
@@ -355,12 +432,24 @@ export async function POST(req: Request) {
         .audioChannels(1) // Always use mono for speech transcription
         .audioBitrate(audioQuality === 'low' ? '64k' : '128k') // Compressed bitrate
         .format('mp3') // Use MP3 format for compression
+        .on('start', (commandLine) => {
+          console.log('FFmpeg started:', commandLine);
+          updateProgress(jobId, 'audio_extraction', 15, 'Processing video...');
+        })
+        .on('progress', (progress) => {
+          if (!progressUpdated && progress.timemark) {
+            updateProgress(jobId, 'audio_extraction', 50, `Extracting audio: ${progress.timemark}`);
+            progressUpdated = true;
+          }
+        })
         .on('end', () => {
           console.log('Audio extraction completed');
+          updateProgress(jobId, 'audio_extraction', 100, 'Audio extraction completed');
           resolve();
         })
         .on('error', (err: any) => {
           console.error('FFmpeg error (transcribe):', err);
+          errorProgress(jobId, `Audio extraction failed: ${err.message}`);
           reject(err);
         })
         .save(outputPath);
@@ -376,8 +465,11 @@ export async function POST(req: Request) {
     const compressedOutputPath = path.join(uploadsDir, "compressed_audio.mp3");
     let compressionUsed = false;
 
+    updateProgress(jobId, 'audio_compression', 0, `Checking audio size: ${audioSizeInMB.toFixed(2)} MB...`);
+
     if (audioSizeInMB > maxAudioSizeMB) {
       console.log(`Audio file still too large (${audioSizeInMB.toFixed(2)} MB), applying additional compression...`);
+      updateProgress(jobId, 'audio_compression', 10, `Compressing audio file to reduce size...`);
 
       try {
         await new Promise<void>((resolve, reject) => {
@@ -387,12 +479,17 @@ export async function POST(req: Request) {
             .audioChannels(1) // Mono
             .audioBitrate('32k') // Very low bitrate for extreme compression
             .format('mp3')
+            .on('start', () => {
+              updateProgress(jobId, 'audio_compression', 30, 'Compressing audio...');
+            })
             .on('end', () => {
               console.log('Additional audio compression completed');
+              updateProgress(jobId, 'audio_compression', 80, 'Compression completed');
               resolve();
             })
             .on('error', (err: any) => {
               console.error('Additional audio compression error:', err);
+              errorProgress(jobId, `Audio compression failed: ${err.message}`);
               reject(err);
             })
             .save(compressedOutputPath);
@@ -437,7 +534,9 @@ export async function POST(req: Request) {
       }, { status: 413 });
     }
 
+    updateProgress(jobId, 'bytes_conversion', 10, 'Converting audio to base64...');
     const audioBytes = audioBuffer.toString("base64");
+    updateProgress(jobId, 'bytes_conversion', 100, 'Conversion completed');
 
     // Create language-specific transcription prompt
     const languagePrompts: Record<string, string> = {
@@ -458,11 +557,13 @@ export async function POST(req: Request) {
 
     try {
       // Send to Gemini model for transcription
+      updateProgress(jobId, 'generateContent', 10, 'Initializing Gemini AI...');
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
       const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_PRO });
       console.log('Using Gemini model:', model.model);
 
+      updateProgress(jobId, 'generateContent', 30, 'Sending audio to Gemini for transcription...');
       const result = await model.generateContent([
         {
           inlineData: {
@@ -475,26 +576,71 @@ export async function POST(req: Request) {
         },
       ]);
 
+      updateProgress(jobId, 'generateContent', 80, 'Received transcription...');
       const text = result.response.text();
+      updateProgress(jobId, 'generateContent', 100, 'Transcription completed');
 
       // Process transcription into scenes using semantic segmentation
       console.log('Processing transcription into scenes...');
-      const scenes = await processTranscriptionIntoScenes(genAI, text, scriptLanguage);
+      updateProgress(jobId, 'semantic_segmentation', 10, 'Processing transcription into scenes...');
+      const scenes = await processTranscriptionIntoScenes(genAI, text, scriptLanguage, jobId);
       console.log('Scenes processed:', scenes.length);
+      updateProgress(jobId, 'semantic_segmentation', 100, `Successfully created ${scenes.length} scenes`);
 
       // Cleanup
       fs.unlinkSync(inputPath);
       if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       if (fs.existsSync(compressedOutputPath)) fs.unlinkSync(compressedOutputPath);
 
-      return NextResponse.json({
+      // Mark as completed
+      completeProgress(jobId);
+
+      // Save job result to Supabase if userId exists
+      if (userId) {
+        try {
+          const supabase = getSupabase();
+          await supabase.from('transcription_jobs').upsert({
+            job_id: jobId,
+            user_id: userId,
+            job_name: incomingFileName.replace(/\.[^/.]+$/, ''), // Remove extension
+            drive_url: driveUrl,
+            file_name: incomingFileName,
+            script_language: scriptLanguage,
+            status: 'completed',
+            stage: 'completed',
+            progress: 100,
+            message: 'Transcription completed successfully',
+            transcription_data: {
+              text,
+              language: scriptLanguage,
+              audioSizeMB: audioSizeInMB.toFixed(2),
+              compressed: compressionUsed,
+              scenes
+            }
+          } as any, {
+            onConflict: 'job_id'
+          });
+        } catch (error) {
+          console.error('Error saving transcription job to Supabase:', error);
+          // Don't fail the request if Supabase save fails
+        }
+      }
+
+      // Return response with jobId for tracking
+      const response = NextResponse.json({
         text,
         language: scriptLanguage,
         fileName: incomingFileName,
         audioSizeMB: audioSizeInMB.toFixed(2),
         compressed: compressionUsed,
-        scenes: scenes
+        scenes: scenes,
+        jobId
       });
+
+      // Clean up progress after 1 minute
+      deleteProgress(jobId);
+
+      return response;
     } catch (geminiError: any) {
       console.error('Gemini API error:', geminiError);
 
@@ -503,22 +649,48 @@ export async function POST(req: Request) {
       if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
       if (fs.existsSync(compressedOutputPath)) fs.unlinkSync(compressedOutputPath);
 
+      // Update progress with error
+      let errorMessage = `Transcription failed: ${geminiError.message || 'Unknown error'}`;
+
+      // Save error to Supabase if userId exists
+      if (userId) {
+        try {
+          const supabase = getSupabase();
+          await supabase.from('transcription_jobs').upsert({
+            job_id: jobId,
+            user_id: userId,
+            job_name: incomingFileName.replace(/\.[^/.]+$/, ''),
+            drive_url: driveUrl,
+            file_name: incomingFileName,
+            script_language: scriptLanguage,
+            status: 'failed',
+            stage: 'error',
+            progress: 0,
+            message: errorMessage,
+            error: errorMessage
+          } as any, {
+            onConflict: 'job_id'
+          });
+        } catch (error) {
+          console.error('Error saving transcription job error to Supabase:', error);
+        }
+      }
+
       // Provide more specific error messages
       if (geminiError.message?.includes('string longer than')) {
-        return NextResponse.json({
-          error: 'Audio file is too large for processing. Please use a shorter video or compress it first.'
-        }, { status: 413 });
+        errorMessage = 'Audio file is too large for processing. Please use a shorter video or compress it first.';
+        errorProgress(jobId, errorMessage);
+        return NextResponse.json({ error: errorMessage }, { status: 413 });
       }
 
       if (geminiError.message?.includes('fetch failed')) {
-        return NextResponse.json({
-          error: 'Network error occurred during transcription. Please check your internet connection and try again.'
-        }, { status: 503 });
+        errorMessage = 'Network error occurred during transcription. Please check your internet connection and try again.';
+        errorProgress(jobId, errorMessage);
+        return NextResponse.json({ error: errorMessage }, { status: 503 });
       }
 
-      return NextResponse.json({
-        error: `Transcription failed: ${geminiError.message || 'Unknown error'}`
-      }, { status: 500 });
+      errorProgress(jobId, errorMessage);
+      return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
   } catch (error: any) {
     console.error("Error:", error);

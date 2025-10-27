@@ -700,4 +700,126 @@ export class SupabaseHelpers {
       return { data: null, error };
     }
   }
+
+  /**
+   * Save transcription job to track ongoing operations
+   */
+  static async saveTranscriptionJob(jobData: {
+    user_id: string;
+    job_id: string;
+    job_name: string;
+    drive_url: string;
+    file_name: string;
+    script_language: string;
+  }): Promise<{ data: any; error: any }> {
+    try {
+      const { data, error } = await SupabaseHelpers.supabase
+        .from('transcription_jobs')
+        .insert({
+          user_id: jobData.user_id,
+          job_id: jobData.job_id,
+          job_name: jobData.job_name,
+          drive_url: jobData.drive_url,
+          file_name: jobData.file_name,
+          script_language: jobData.script_language,
+          status: 'processing'
+        } as any)
+        .select();
+
+      if (error) {
+        console.error('Error saving transcription job:', error);
+        return { data: null, error };
+      }
+
+      console.log('Transcription job saved:', data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Update transcription job status
+   */
+  static async updateTranscriptionJob(
+    jobId: string,
+    userId: string,
+    updates: {
+      status?: string;
+      stage?: string;
+      progress?: number;
+      message?: string;
+      error?: string;
+      transcription_data?: any;
+    }
+  ): Promise<{ data: any; error: any }> {
+    try {
+      // Remove 'as any' from .update(). Cast to Record<string, unknown>, which is generally acceptable for update.
+      const { data, error } = await SupabaseHelpers.supabase
+        .from('transcription_jobs')
+        .update(updates as never)
+        .eq('job_id', jobId)
+        .eq('user_id', userId)
+        .select();
+
+      if (error) {
+        console.error('Error updating transcription job:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Get transcription job by job_id
+   */
+  static async getTranscriptionJob(jobId: string, userId: string): Promise<{ data: any; error: any }> {
+    try {
+      const { data, error } = await SupabaseHelpers.supabase
+        .from('transcription_jobs')
+        .select('*')
+        .eq('job_id', jobId)
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching transcription job:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Get all failed transcription jobs for user (for retry)
+   */
+  static async getFailedTranscriptionJobs(userId: string): Promise<{ data: any; error: any }> {
+    try {
+      const { data, error } = await SupabaseHelpers.supabase
+        .from('transcription_jobs')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'failed')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching failed jobs:', error);
+        return { data: null, error };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      return { data: null, error };
+    }
+  }
 }

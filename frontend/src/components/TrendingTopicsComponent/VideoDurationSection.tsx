@@ -17,9 +17,9 @@ interface VideoDurationSectionProps {
   language: string;
   onLanguageChange: (language: string) => void;
   languageOptions: LanguageOption[];
-  onGenerateChapters: () => void;
+  onGenerateSceneData: () => void;
   onRegenerateAllAssets?: () => void;
-  hasChapters?: boolean;
+  hasSceneData?: boolean;
   canGenerate?: boolean;
   subtitle_language?: string;
   onsubtitle_languageChange?: (subtitle_language: string) => void;
@@ -36,9 +36,9 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   language,
   onLanguageChange,
   languageOptions,
-  onGenerateChapters,
+  onGenerateSceneData,
   onRegenerateAllAssets,
-  hasChapters = false,
+  hasSceneData = false,
   canGenerate = false,
   subtitle_language = 'english',
   onsubtitle_languageChange,
@@ -57,7 +57,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
         Select the desired length for your generated video content and manage your video assets.
       </Typography>
 
-      {/* Duration Selection, Language Selection and Generate Chapters */}
+      {/* Duration Selection, Language Selection and Generate SceneData */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 1 }}>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -141,20 +141,20 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
         <Button
           variant={generating ? 'outlined' : 'contained'}
           size="medium"
-          startIcon={generating ? <RefreshIcon /> : (hasChapters ? <RefreshIcon /> : <CutIcon />)}
-          onClick={hasChapters ? onRegenerateAllAssets : onGenerateChapters}
+          startIcon={generating ? <RefreshIcon /> : (hasSceneData ? <RefreshIcon /> : <CutIcon />)}
+          onClick={hasSceneData ? onRegenerateAllAssets : onGenerateSceneData}
           disabled={!canGenerate || generating || generatedOnce}
           sx={{
-            bgcolor: generating ? 'action.disabledBackground' : (hasChapters ? '#ff9800' : '#1DA1F2'),
+            bgcolor: generating ? 'action.disabledBackground' : (hasSceneData ? '#ff9800' : '#1DA1F2'),
             color: generating ? 'text.secondary' : 'inherit',
-            '&:hover': { bgcolor: generating ? 'action.disabledBackground' : (hasChapters ? '#f57c00' : '#0d8bd9') },
+            '&:hover': { bgcolor: generating ? 'action.disabledBackground' : (hasSceneData ? '#f57c00' : '#0d8bd9') },
             px: 3,
             py: 1,
             fontSize: '1.05rem',
             height: 40
           }}
         >
-          {generating ? 'Generating Script...' : (generatedOnce ? 'Script Generated' : (hasChapters ? 'Regenerate Assets' : 'Generate Script'))}
+          {generating ? 'Generating Script...' : (generatedOnce ? 'Script Generated' : (hasSceneData ? 'Regenerate Assets' : 'Generate Script'))}
         </Button>
       </Box>
 

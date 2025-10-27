@@ -42,14 +42,14 @@ import {
 } from '@mui/icons-material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { Chapter } from '../../types/chapters';
+import { SceneData, SceneKeywordSelection } from '../../types/sceneData';
 import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
 import { MediaPlayer } from '../videoEffects/MediaPlayer';
-import { useImageViewer, formatChapterImages } from '../../hooks/useImageViewer';
+import { useImageViewer, formatSceneDataImages } from '../../hooks/useImageViewer';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL, TEXT, BORDER, HOVER, SPECIAL } from '../../styles/colors';
 import ImageSearch from './ImageSearch';
-import { ChapterEditDialog } from './ChapterEditDialog';
+import { SceneDataEditDialog } from './SceneDataEditDialog';
 import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights';
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
@@ -81,37 +81,37 @@ const EFFECT_NAME_MAP: Record<string, string> = {
   spatial_audio: 'Spatial Audio',
 };
 
-interface ChaptersSectionProps {
+interface SceneDataSectionProps {
   jobId: string;
-  chapters: Chapter[];
-  chaptersGenerated: boolean;
-  generatingChapters: boolean;
-  editingChapter: number | null;
+  scenesData: SceneData[];
+  SceneDataGenerated: boolean;
+  generatingSceneData: boolean;
+  editingSceneData: number | null;
   editHeading: string;
   editNarration: string;
-  selectedChapterIndex: number;
+  selectedSceneDataIndex: number;
   rightTabIndex: number;
   aiImagesEnabled: boolean;
   imagesLoading: boolean;
   generatedImages: string[];
   aiPrompt: string;
   pickerOpen: boolean;
-  pickerChapterIndex: number | null;
+  pickerSceneDataIndex: number | null;
   pickerNarrations: string[];
   pickerLoading: boolean;
   uploadedImages: string[];
   isDraggingUpload: boolean;
-  chapterImagesMap: Record<number, string[]>;
-  selectedText: { chapterIndex: number; text: string; startIndex: number; endIndex: number } | null;
-  onAddChapterAfter: (index: number) => void;
-  onDeleteChapter: (index: number) => void;
+  SceneDataImagesMap: Record<number, string[]>;
+  selectedText: { SceneDataIndex: number; text: string; startIndex: number; endIndex: number } | null;
+  onAddSceneDataAfter: (index: number) => void;
+  onDeleteSceneData: (index: number) => void;
   onSaveEdit: (index: number) => void;
   onCancelEdit: () => void;
   onEditHeadingChange: (heading: string) => void;
   onEditNarrationChange: (narration: string) => void;
   onStartEdit: (index: number, heading: string, narration: string) => void;
   onDragEnd: (result: DropResult) => void;
-  onSelectChapter: (index: number) => void;
+  onSelectSceneData: (index: number) => void;
   onRightTabChange: (index: number) => void;
   onAIPromptChange: (prompt: string) => void;
   onUseAIChange: (enabled: boolean) => void;
@@ -122,29 +122,29 @@ interface ChaptersSectionProps {
   onTriggerFileUpload: () => void;
   onUploadFiles: (files: FileList | null) => void;
   onPickerOpen: (open: boolean) => void;
-  onPickerChapterIndex: (index: number | null) => void;
+  onPickerSceneDataIndex: (index: number | null) => void;
   onPickerLoading: (loading: boolean) => void;
   onPickerNarrations: (narrations: string[]) => void;
-  onChapterImagesMapChange: (map: Record<number, string[]>) => void;
+  onSceneDataImagesMapChange: (map: Record<number, string[]>) => void;
   onGeneratedImagesChange: (images: string[]) => void;
   onRightTabIndexChange: (index: number) => void;
   mediaManagementOpen: boolean;
-  mediaManagementChapterIndex: number | null;
+  mediaManagementSceneDataIndex: number | null;
   onMediaManagementOpen: (open: boolean) => void;
-  onMediaManagementChapterIndex: (index: number | null) => void;
-  onChaptersUpdate: (chapters: Chapter[]) => void;
-  onTextSelection: (chapterIndex: number, event: React.MouseEvent) => void;
+  onMediaManagementSceneDataIndex: (index: number | null) => void;
+  onSceneDataUpdate: (SceneData: SceneData[]) => void;
+  onTextSelection: (SceneDataIndex: number, event: React.MouseEvent) => void;
   onAddKeyword: () => void;
   onClearSelection: () => void;
   onToolbarInteraction: (interacting: boolean) => void;
   language: string;
   onGoogleImagePreview?: (imageUrl: string) => void;
   // Optional: notify parent when opening media for a specific keyword
-  onOpenMediaForKeyword?: (chapterIndex: number, keyword: string) => void;
-  // Chapter editing dialog
-  chapterEditDialogOpen: boolean;
-  onChapterEditDialogOpen: (open: boolean) => void;
-  onChapterEditDialogChapterIndex: (index: number | null) => void;
+  onOpenMediaForKeyword?: (SceneDataIndex: number, keyword: string) => void;
+  // SceneData editing dialog
+  SceneDataEditDialogOpen: boolean;
+  onSceneDataEditDialogOpen: (open: boolean) => void;
+  onSceneDataEditDialogSceneDataIndex: (index: number | null) => void;
   // Drive library options
   driveBackgrounds?: Array<{ id: string; name: string; webViewLink?: string; webContentLink?: string }>;
   driveMusic?: Array<{ id: string; name: string; webContentLink?: string }>;
@@ -160,64 +160,64 @@ interface ChaptersSectionProps {
   onOpenProjectSettingsDialog?: (sceneIndex: number) => void;
 }
 
-const ChaptersSection: React.FC<ChaptersSectionProps> = ({
+const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   jobId,
-  chapters,
-  chaptersGenerated,
-  generatingChapters,
-  editingChapter,
+  scenesData,
+  SceneDataGenerated,
+  generatingSceneData,
+  editingSceneData,
   editNarration,
-  selectedChapterIndex,
-  chapterImagesMap,
+  selectedSceneDataIndex,
+  SceneDataImagesMap,
   selectedText,
-  onAddChapterAfter,
-  onDeleteChapter,
+  onAddSceneDataAfter,
+  onDeleteSceneData,
   onSaveEdit,
   onCancelEdit,
   onEditNarrationChange,
   onStartEdit,
   onDragEnd,
-  onSelectChapter,
+  onSelectSceneData,
   onPickerOpen,
-  onPickerChapterIndex,
+  onPickerSceneDataIndex,
   onPickerLoading,
   onPickerNarrations,
-  onChapterImagesMapChange,
+  onSceneDataImagesMapChange,
   mediaManagementOpen,
-  mediaManagementChapterIndex,
+  mediaManagementSceneDataIndex,
   onMediaManagementOpen,
-  onMediaManagementChapterIndex,
-  onChaptersUpdate,
+  onMediaManagementSceneDataIndex,
+  onSceneDataUpdate,
   onTextSelection,
   onAddKeyword,
   onClearSelection,
   onToolbarInteraction,
   language,
   onGoogleImagePreview,
-  chapterEditDialogOpen,
-  onChapterEditDialogOpen,
-  onChapterEditDialogChapterIndex,
+  SceneDataEditDialogOpen,
+  onSceneDataEditDialogOpen,
+  onSceneDataEditDialogSceneDataIndex,
   driveBackgrounds,
   driveMusic,
   driveTransitions,
   projectSettings,
   onOpenProjectSettingsDialog,
 }) => {
-  const [expandedChapterIndex, setExpandedChapterIndex] = React.useState<number | null>(null);
-  // Volume popover open state per chapter (inline editor)
+  const [expandedSceneDataIndex, setExpandedSceneDataIndex] = React.useState<number | null>(null);
+  // Volume popover open state per SceneData (inline editor)
   const [volumeOpenIndex, setVolumeOpenIndex] = React.useState<number | null>(null);
   // Image viewer hook for enhanced image viewing
   const imageViewer = useImageViewer();
 
 
-  // Handle opening image viewer for a chapter
-  const handleImageClick = (chapterIndex: number, imageIndex: number = 0) => {
-    const chapter = chapters[chapterIndex];
-    const chapterImages = chapterImagesMap[chapterIndex] || [];
+  // Handle opening image viewer for a SceneData
+  const handleImageClick = (SceneDataIndex: number, imageIndex: number = 0) => {
+    const sceneData = scenesData[SceneDataIndex];
+    const SceneDataImages = SceneDataImagesMap[SceneDataIndex] || [];
 
-    const images = formatChapterImages(
-      chapterImages,
-      chapter.assets?.images?.[0] || undefined,
+    const images = formatSceneDataImages(
+      SceneDataImages,
+      sceneData.assets?.images?.[0] || undefined,
     );
 
     if (images.length > 0) {
@@ -227,8 +227,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
   // Calculate total duration
   const calculateTotalDuration = () => {
-    const totalSeconds = chapters.reduce((total, chapter) => {
-      const duration = chapter.duration || '0s';
+    const totalSeconds = scenesData.reduce((total, sceneData) => {
+      const duration = sceneData.duration || '0s';
       const seconds = parseDurationToSeconds(duration);
       return total + seconds;
     }, 0);
@@ -267,19 +267,19 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
   return (
     <Paper sx={{ minHeight: '400px' }}>
-      {chaptersGenerated && chapters.length > 0 ? (
+      {SceneDataGenerated && scenesData.length > 0 ? (
         <Box sx={{ width: '100%' }}>
           <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="chapters" isDropDisabled={true} isCombineEnabled={true} ignoreContainerClipping={true}>
+            <Droppable droppableId="SceneData" isDropDisabled={true} isCombineEnabled={true} ignoreContainerClipping={true}>
               {(provided) => (
                 <Box
                   {...provided.droppableProps}
                   ref={provided.innerRef}
                   sx={{ display: 'flex', flexDirection: 'column', gap: 0.6, alignItems: 'stretch', width: '100%' }}
                 >
-                  {chapters.map((chapter, index) => (
-                    <Box key={chapter.id || index.toString()} sx={{ width: '100%' }}>
-                      <Draggable key={(chapter.id || index.toString()) + '-draggable'} draggableId={chapter.id || index.toString()} index={index}>
+                  {scenesData.map((sceneData, index) => (
+                    <Box key={sceneData.id || index.toString()} sx={{ width: '100%' }}>
+                      <Draggable key={(sceneData.id || index.toString()) + '-draggable'} draggableId={sceneData.id || index.toString()} index={index}>
                         {(provided, snapshot) => (
                           <Card
                             ref={provided.innerRef}
@@ -289,11 +289,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                               transform: snapshot.isDragging ? 'rotate(2deg)' : 'none',
                               boxShadow: snapshot.isDragging ? 8 : 0,
                               width: '100%',
-                              bgcolor: selectedChapterIndex === index ? 'rgba(29,161,242,0.06)' : 'transparent',
+                              bgcolor: selectedSceneDataIndex === index ? 'rgba(29,161,242,0.06)' : 'transparent',
                               cursor: 'pointer',
                               // transition: 'background-color 0.2s ease',
                               overflow: 'hidden',
-                              borderColor: selectedChapterIndex === index ? INFO.main : BORDER.dark,
+                              borderColor: selectedSceneDataIndex === index ? INFO.main : BORDER.dark,
                               borderWidth: 1,
                               borderStyle: 'solid',
                               borderRadius: 1,
@@ -304,7 +304,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 backgroundColor: 'rgba(29, 161, 242, 0.02)'
                               }
                             }}
-                            onClick={() => onSelectChapter(index)}
+                            onClick={() => onSelectSceneData(index)}
                           >
                             <CardContent sx={{ p: 0, width: '100%', height: 'auto', '&:last-child': { paddingBottom: 0 } }}>
                               <Box sx={{
@@ -331,7 +331,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                 {/* Narration Content - centered with integrated left strip number */}
                                 <Box sx={{ width: '100%', height: '100%', minHeight: '120px' }}>
                                   <Box
-                                    data-chapter-index={index}
+                                    data-scenedata-index={index}
                                     sx={{
                                       display: 'flex',
                                       height: '100%',
@@ -366,11 +366,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                         mt: 0.25
                                       }}>
                                         {/* <TimeIcon sx={{ fontSize: 10 }} /> */}
-                                        {chapter.duration || '0s'}
+                                        {sceneData.duration || '0s'}
                                       </Box>
                                     </Box>
                                     <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%' }}>
-                                      {editingChapter === index ? (
+                                      {editingSceneData === index ? (
                                         <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                                           <TextField
                                             value={editNarration}
@@ -399,13 +399,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               </Typography>
                                               <TextField
                                                 size="small"
-                                                value={chapter.duration || ''}
+                                                value={sceneData.duration || ''}
                                                 onChange={(e) => {
-                                                  const updatedChapters = chapters.map((ch, idx) =>
+                                                  const updatedSceneData = scenesData.map((ch, idx) =>
                                                     idx === index ? { ...ch, duration: e.target.value } : ch
                                                   );
-                                                  onChaptersUpdate(updatedChapters);
-                                                  SecureStorageHelpers.setScriptMetadata({ ...SecureStorageHelpers.getScriptMetadata(), chapters: updatedChapters });
+                                                  onSceneDataUpdate(updatedSceneData);
+                                                  SecureStorageHelpers.setScriptMetadata({ ...SecureStorageHelpers.getScriptMetadata(), SceneData: updatedSceneData });
                                                 }}
                                                 placeholder="e.g., 30s, 1m 30s, 2m"
                                                 sx={{
@@ -422,7 +422,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           <Box sx={{ display: 'flex', gap: 1, width: '100%', height: '100%', minHeight: '120px', bgcolor: 'background.paper', justifyContent: 'center', alignItems: 'center' }}>
                                             {/* Narration Content */}
                                             <Box sx={{
-                                              flex: expandedChapterIndex === index ? '1 1 100%' : '0 0 70%',
+                                              flex: expandedSceneDataIndex === index ? '1 1 100%' : '0 0 70%',
                                               display: 'flex',
                                               flexDirection: 'column',
                                               height: '100%',
@@ -454,12 +454,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   window.getSelection()?.removeAllRanges();
                                                 }}
                                               >
-                                                {expandedChapterIndex !== index && (
+                                                {expandedSceneDataIndex !== index && (
                                                   <>
-                                                    {chapter.narration ? (
+                                                    {sceneData.narration ? (
                                                       <TextWithHighlights
-                                                        text={chapter.narration}
-                                                        keywords={chapter.highlightedKeywords || []}
+                                                        text={sceneData.narration}
+                                                        keywords={sceneData.highlightedKeywords || []}
                                                       />
                                                     ) : (
                                                       'Narration content will be generated here.'
@@ -469,7 +469,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               </Box>
 
                                               {/* Inline Editor (expanded view) */}
-                                              {expandedChapterIndex === index && (
+                                              {expandedSceneDataIndex === index && (
                                                 <Box sx={{
                                                   mt: 1,
                                                   p: 2,
@@ -482,14 +482,14 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
                                                     <TextField
                                                       label="Narration"
-                                                      value={chapters[index].narration}
+                                                      value={scenesData[index].narration}
                                                       onChange={(e) => {
                                                         onEditNarrationChange(e.target.value);
                                                         // Recompute duration from narration length (simple heuristic: ~150 wpm)
                                                         const words = e.target.value.trim().split(/\s+/).filter(Boolean).length;
                                                         const seconds = Math.ceil((words / 150) * 60);
-                                                        const updated = chapters.map((ch, i) => i === index ? { ...ch, narration: e.target.value, words, durationInSeconds: seconds } : ch);
-                                                        onChaptersUpdate(updated);
+                                                        const updated = scenesData.map((ch, i) => i === index ? { ...ch, narration: e.target.value, words, durationInSeconds: seconds } : ch);
+                                                        onSceneDataUpdate(updated);
                                                       }}
                                                       multiline
                                                       minRows={3}
@@ -505,13 +505,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     />
                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                                                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                        Duration: {Math.max(0, Math.round(chapters[index].durationInSeconds))} seconds
+                                                        Duration: {Math.max(0, Math.round(scenesData[index].durationInSeconds))} seconds
                                                       </Typography>
                                                     </Box>
 
-                                                    {Array.isArray(((chapters[index] as any).videoEffects?.backgroundMusic)) && ((chapters[index] as any).videoEffects.backgroundMusic as any[]).length > 0 && (
+                                                    {Array.isArray(((scenesData[index] as any).videoEffects?.backgroundMusic)) && ((scenesData[index] as any).videoEffects.backgroundMusic as any[]).length > 0 && (
                                                       <Box sx={{ width: '100%' }}>
-                                                        {(((chapters[index] as any).videoEffects.backgroundMusic) as any[]).map((bm: any, bmIdx: number) => {
+                                                        {(((scenesData[index] as any).videoEffects.backgroundMusic) as any[]).map((bm: any, bmIdx: number) => {
                                                           const getDriveIdFromLink = (link: string): string => {
                                                             if (!link) return '';
                                                             if (/^https?:\/\//i.test(link)) {
@@ -540,7 +540,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   size="small"
                                                                   value={currentId || ''}
                                                                   onChange={(e) => {
-                                                                    const updated = chapters.map((ch, i) => {
+                                                                    const updated = scenesData.map((ch, i) => {
                                                                       if (i !== index) return ch;
                                                                       const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                       const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -551,7 +551,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                       list[bmIdx] = nextItem;
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                     });
-                                                                    onChaptersUpdate(updated);
+                                                                    onSceneDataUpdate(updated);
                                                                     setVolumeOpenIndex(null);
                                                                     HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music changed');
                                                                   }}
@@ -614,7 +614,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         value={bm?.volume || 0.3}
                                                                         onChange={(_, value) => {
                                                                           const vol = Array.isArray(value) ? value[0] : value;
-                                                                          const updated = chapters.map((ch, i) => {
+                                                                          const updated = scenesData.map((ch, i) => {
                                                                             if (i !== index) return ch;
                                                                             const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                             const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -622,7 +622,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                             list[bmIdx] = nextItem;
                                                                             return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                           });
-                                                                          onChaptersUpdate(updated);
+                                                                          onSceneDataUpdate(updated);
                                                                           HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music volume updated');
                                                                         }}
                                                                         sx={{ height: 120, ml: 1 }}
@@ -639,7 +639,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     disabled={false}
                                                                     variant={(bm?.autoAdjust !== false ? 'contained' : 'outlined')}
                                                                     onClick={() => {
-                                                                      const updated = chapters.map((ch, i) => {
+                                                                      const updated = scenesData.map((ch, i) => {
                                                                         if (i !== index) return ch;
                                                                         const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                         const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -647,7 +647,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         list[bmIdx] = nextItem;
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
-                                                                      onChaptersUpdate(updated);
+                                                                      onSceneDataUpdate(updated);
                                                                       HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music auto-adjust toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
@@ -659,7 +659,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     disabled={false}
                                                                     variant={(bm?.fadeIn !== false ? 'contained' : 'outlined')}
                                                                     onClick={() => {
-                                                                      const updated = chapters.map((ch, i) => {
+                                                                      const updated = scenesData.map((ch, i) => {
                                                                         if (i !== index) return ch;
                                                                         const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                         const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -667,7 +667,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         list[bmIdx] = nextItem;
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
-                                                                      onChaptersUpdate(updated);
+                                                                      onSceneDataUpdate(updated);
                                                                       HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music fade-in toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
@@ -678,7 +678,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     size="small"
                                                                     variant={(bm?.fadeOut !== false ? 'contained' : 'outlined')}
                                                                     onClick={() => {
-                                                                      const updated = chapters.map((ch, i) => {
+                                                                      const updated = scenesData.map((ch, i) => {
                                                                         if (i !== index) return ch;
                                                                         const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                         const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -686,7 +686,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                         list[bmIdx] = nextItem;
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
-                                                                      onChaptersUpdate(updated);
+                                                                      onSceneDataUpdate(updated);
                                                                       HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music fade-out toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
@@ -701,14 +701,14 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   sx={{ textTransform: 'none', fontSize: '1rem', width: 120, height: 40 }}
                                                                   onClick={() => {
                                                                     const id = currentId;
-                                                                    const current = Array.isArray((chapters[index] as any).videoEffects?.backgroundMusic) ? (chapters[index] as any).videoEffects.backgroundMusic : [];
+                                                                    const current = Array.isArray((scenesData[index] as any).videoEffects?.backgroundMusic) ? (scenesData[index] as any).videoEffects.backgroundMusic : [];
                                                                     // already saved link on change; here we just ensure item exists
                                                                     const applied = current.map((item: any, idx: number) => idx === bmIdx ? { ...item } : item);
-                                                                    const updated = chapters.map((ch, i) => {
+                                                                    const updated = scenesData.map((ch, i) => {
                                                                       if (i !== index) return ch;
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: applied } } as any;
                                                                     });
-                                                                    onChaptersUpdate(updated);
+                                                                    onSceneDataUpdate(updated);
                                                                     HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music applied');
                                                                   }}
                                                                 >Apply Music</Button>
@@ -719,13 +719,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   color="error"
                                                                   sx={{ textTransform: 'none', fontSize: '1rem', width: 100, height: 40 }}
                                                                   onClick={() => {
-                                                                    const updated = chapters.map((ch, i) => {
+                                                                    const updated = scenesData.map((ch, i) => {
                                                                       if (i !== index) return ch;
                                                                       const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                       const pruned = list.filter((_: any, idx: number) => idx !== bmIdx);
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: pruned } } as any;
                                                                     });
-                                                                    onChaptersUpdate(updated);
+                                                                    onSceneDataUpdate(updated);
                                                                     HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music removed');
                                                                   }}
                                                                 >Remove</Button>
@@ -740,7 +740,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               )}
 
                                               {/* Highlighted Keywords Display */}
-                                              {chapter.highlightedKeywords && chapter.highlightedKeywords.length > 0 && (
+                                              {sceneData.highlightedKeywords && sceneData.highlightedKeywords.length > 0 && (
                                                 <Box sx={{ px: 1.5, py: 0.5, width: '100%' }}>
                                                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{
@@ -749,19 +749,19 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       fontWeight: 500,
                                                       display: 'block'
                                                     }}>
-                                                      Keywords ({chapter.highlightedKeywords.length}):
+                                                      Keywords ({sceneData.highlightedKeywords.length}):
                                                     </Typography>
                                                     <Button
                                                       size="large"
                                                       variant="text"
                                                       color="error"
                                                       onClick={() => {
-                                                        onChaptersUpdate(chapters.map((ch, idx) =>
+                                                        onSceneDataUpdate(scenesData.map((ch, idx) =>
                                                           idx === index
                                                             ? { ...ch, highlightedKeywords: [] }
                                                             : ch
                                                         ));
-                                                        HelperFunctions.persistSceneUpdate(jobId, chapters, index, 'All keywords cleared');
+                                                        HelperFunctions.persistSceneUpdate(jobId, scenesData, index, 'All keywords cleared');
                                                         if (typeof window !== 'undefined' && (window as any).toast) {
                                                           HelperFunctions.showSuccess('Cleared all keywords');
                                                         }
@@ -779,7 +779,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     </Button>
                                                   </Box>
                                                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                    {chapter.highlightedKeywords.map((keyword, keywordIndex) => (
+                                                    {sceneData.highlightedKeywords.map((keyword, keywordIndex) => (
                                                       <Box
                                                         key={keywordIndex}
                                                         data-keyword-badge="true"
@@ -806,7 +806,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           if (typeof window !== 'undefined') {
                                                             (window as any).__keywordSuggestions = { keyword, keywords: [keyword] };
                                                           }
-                                                          onMediaManagementChapterIndex(index);
+                                                          onMediaManagementSceneDataIndex(index);
                                                           onMediaManagementOpen(true);
                                                           // if (typeof onOpenMediaForKeyword === 'function') {
                                                           //   onOpenMediaForKeyword(index, keyword);
@@ -835,12 +835,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           onClick={(e) => {
                                                             // Remove this keyword and its associated images from all arrays
                                                             e.stopPropagation();
-                                                            const updatedChapters = chapters.map((ch, idx) => {
+                                                            const updatedSceneData = scenesData.map((ch, idx) => {
                                                               if (idx !== index) return ch;
                                                               // Build list of URLs tied to this keyword based on new array format (fallback to legacy map)
                                                               let urlsToRemove: string[] = [];
                                                               if (Array.isArray(ch.keywordsSelected)) {
-                                                                const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
                                                                 const entry = arr.find(e => e.suggestedKeyword === keyword);
                                                                 if (entry && entry.media) {
                                                                   const low = entry.media.lowResMedia;
@@ -858,9 +858,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               const filteredGoogle = imagesGoogle.filter(u => !urlsToRemove.includes(u));
                                                               const filteredEnvato = imagesEnvato.filter(u => !urlsToRemove.includes(u));
                                                               // Remove keyword from keywordsSelected
-                                                              let nextKeywordsSelected: import('@/types/chapters').ChapterKeywordSelection[] | Record<string, string[]> | undefined = ch.keywordsSelected;
+                                                              let nextKeywordsSelected: import('@/types/sceneData').SceneKeywordSelection[] | Record<string, string[]> | undefined = ch.keywordsSelected;
                                                               if (Array.isArray(ch.keywordsSelected)) {
-                                                                const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
                                                                 nextKeywordsSelected = arr.filter(e => e.suggestedKeyword !== keyword);
                                                               } else {
                                                                 const map = (ch.keywordsSelected || {}) as Record<string, string[]>;
@@ -879,8 +879,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                 }
                                                               };
                                                             });
-                                                            onChaptersUpdate(updatedChapters);
-                                                            HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, `Keyword removed`);
+                                                            onSceneDataUpdate(updatedSceneData);
+                                                            HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, `Keyword removed`);
                                                             if (typeof window !== 'undefined' && (window as any).toast) {
                                                               HelperFunctions.showSuccess(`Removed "${keyword}" and its images`);
                                                             }
@@ -893,7 +893,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                   </Box>
                                                   {/* Media Selected (prefer scene-level videoEffects, fallback to project-level) */}
                                                   {projectSettings && (() => {
-                                                    const ve: any = (chapters[index] as any)?.videoEffects || {};
+                                                    const ve: any = (scenesData[index] as any)?.videoEffects || {};
                                                     const driveIdFromLink = (link: string): string => {
                                                       if (!link) return '';
                                                       const idParam = /[?&]id=([\w-]+)/.exec(link);
@@ -943,9 +943,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               )}
 
                                               {/* Text Selection Toolbar */}
-                                              {selectedText && selectedText.chapterIndex === index && (() => {
-                                                const chapter = chapters[index];
-                                                const currentKeywords = chapter.highlightedKeywords || [];
+                                              {selectedText && selectedText.SceneDataIndex === index && (() => {
+                                                const SceneData = scenesData[index];
+                                                const currentKeywords = sceneData.highlightedKeywords || [];
                                                 const selectedTextLower = selectedText?.text.toLowerCase().trim() || '';
 
                                                 // Check for conflicts
@@ -1041,7 +1041,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                             </Box>
 
                                             {/* Media Section */}
-                                            {expandedChapterIndex !== index && (
+                                            {expandedSceneDataIndex !== index && (
                                               <Box sx={{
                                                 flex: '0 0 30%',
                                                 px: 1.5,
@@ -1055,7 +1055,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                               }}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.25rem' }}>
-                                                    📎 Media ({(chapterImagesMap[index] || []).length + (chapter.assets?.images ? 1 : 0)})
+                                                    📎 Media ({(SceneDataImagesMap[index] || []).length + (sceneData.assets?.images ? 1 : 0)})
                                                   </Typography>
                                                   {/* <Button
                                                     size="small"
@@ -1077,23 +1077,23 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       if (typeof window !== 'undefined') {
                                                         (window as any).__keywordSuggestions = undefined;
                                                       }
-                                                      onMediaManagementChapterIndex(index);
+                                                      onMediaManagementSceneDataIndex(index);
                                                       onMediaManagementOpen(true);
                                                     }}
                                                   >
-                                                    {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? 'Manage' : 'Add'}
+                                                    {((SceneDataImagesMap[index] || []).length > 0 || (sceneData.assets && Array.isArray(sceneData.assets.images) ? sceneData.assets.images.length > 0 : false)) ? 'Manage' : 'Add'}
                                                   </Button> */}
                                                 </Box>
 
                                                 {/* Media Display */}
-                                                {((chapterImagesMap[index] || []).length > 0 || (chapter.assets && Array.isArray(chapter.assets.images) ? chapter.assets.images.length > 0 : false)) ? (
+                                                {((SceneDataImagesMap[index] || []).length > 0 || (sceneData.assets && Array.isArray(sceneData.assets.images) ? sceneData.assets.images.length > 0 : false)) ? (
                                                   <>
                                                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
                                                       {/* Determine if first image is AI (not from Google/Envato) */}
                                                       {(() => {
-                                                        const allImages = (chapter.assets && Array.isArray(chapter.assets.images)) ? chapter.assets.images : [];
-                                                        const googleSet = new Set(chapter.assets?.imagesGoogle || []);
-                                                        const envatoSet = new Set(chapter.assets?.imagesEnvato || []);
+                                                        const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
+                                                        const googleSet = new Set(sceneData.assets?.imagesGoogle || []);
+                                                        const envatoSet = new Set(sceneData.assets?.imagesEnvato || []);
                                                         const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
                                                         return hasAIAtFirst;
                                                       })() && (
@@ -1118,8 +1118,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             }}
                                                           >
                                                             <img
-                                                              src={chapter.assets?.images?.[0] || ''}
-                                                              alt={`Generated chapter ${index + 1} Image`}
+                                                              src={sceneData.assets?.images?.[0] || ''}
+                                                              alt={`Generated SceneData ${index + 1} Image`}
                                                               style={{
                                                                 position: 'absolute',
                                                                 width: '100%',
@@ -1142,14 +1142,14 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               }}
                                                               onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                // Remove the AI generated image from chapter and related keyword selections
-                                                                const updatedChapters = chapters.map((ch, chIndex) => {
+                                                                // Remove the AI generated image from SceneData and related keyword selections
+                                                                const updatedSceneData = scenesData.map((ch, chIndex) => {
                                                                   if (chIndex === index) {
                                                                     const aiUrl = ch.assets?.images?.[0] || '';
                                                                     // Update keywordsSelected
                                                                     let nextKeywordsSelected: any = ch.keywordsSelected;
                                                                     if (Array.isArray(ch.keywordsSelected)) {
-                                                                      const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                      const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
                                                                       nextKeywordsSelected = arr.filter(entry => {
                                                                         const low = entry.media?.lowResMedia;
                                                                         const high = entry.media?.highResMedia;
@@ -1177,8 +1177,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   }
                                                                   return ch;
                                                                 });
-                                                                onChaptersUpdate(updatedChapters);
-                                                                HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, 'Media deleted');
+                                                                onSceneDataUpdate(updatedSceneData);
+                                                                HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1190,9 +1190,9 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
 
                                                       {/* Show Selected Images (Google/Envato) */}
                                                       {(() => {
-                                                        const allImages = (chapter.assets && Array.isArray(chapter.assets.images)) ? chapter.assets.images : [];
-                                                        const googleSet = new Set(chapter.assets?.imagesGoogle || []);
-                                                        const envatoSet = new Set(chapter.assets?.imagesEnvato || []);
+                                                        const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
+                                                        const googleSet = new Set(sceneData.assets?.imagesGoogle || []);
+                                                        const envatoSet = new Set(sceneData.assets?.imagesEnvato || []);
                                                         const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
                                                         const list = hasAIAtFirst ? allImages.slice(1) : allImages;
                                                         return list.map((imageUrl, imgIndex) => (
@@ -1243,8 +1243,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                               }}
                                                               onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                // Remove the selected image from chapter assets and related keyword selections
-                                                                const updatedChapters = chapters.map((ch, chIndex) => {
+                                                                // Remove the selected image from SceneData assets and related keyword selections
+                                                                const updatedSceneData = scenesData.map((ch, chIndex) => {
                                                                   if (chIndex === index) {
                                                                     const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
                                                                     const googleSetInner = new Set(ch.assets?.imagesGoogle || []);
@@ -1260,7 +1260,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                     // Update keywordsSelected
                                                                     let nextKeywordsSelected: any = ch.keywordsSelected;
                                                                     if (Array.isArray(ch.keywordsSelected)) {
-                                                                      const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                      const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
                                                                       nextKeywordsSelected = arr.filter(entry => {
                                                                         const low = entry.media?.lowResMedia;
                                                                         const high = entry.media?.highResMedia;
@@ -1288,8 +1288,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   }
                                                                   return ch;
                                                                 });
-                                                                onChaptersUpdate(updatedChapters);
-                                                                HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, 'Media deleted');
+                                                                onSceneDataUpdate(updatedSceneData);
+                                                                HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1301,7 +1301,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                       })()}
 
                                                       {/* Show Additional Images */}
-                                                      {(chapterImagesMap[index] || []).slice(0, 4).map((imageUrl, imgIndex) => (
+                                                      {(SceneDataImagesMap[index] || []).slice(0, 4).map((imageUrl, imgIndex) => (
                                                         <Box
                                                           key={imgIndex}
                                                           sx={{
@@ -1320,7 +1320,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           }}
                                                           onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const imageIndex = chapter.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
+                                                            const imageIndex = sceneData.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
                                                             handleImageClick(index, imageIndex);
                                                           }}
                                                         >
@@ -1349,16 +1349,16 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             }}
                                                             onClick={(e) => {
                                                               e.stopPropagation();
-                                                              const currentImages = chapterImagesMap[index] || [];
+                                                              const currentImages = SceneDataImagesMap[index] || [];
                                                               const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
-                                                              onChapterImagesMapChange({
-                                                                ...chapterImagesMap,
+                                                              onSceneDataImagesMapChange({
+                                                                ...SceneDataImagesMap,
                                                                 [index]: updatedImages
                                                               });
 
-                                                              // Also remove from chapter assets and keywordsSelected if this URL was associated
+                                                              // Also remove from SceneData assets and keywordsSelected if this URL was associated
                                                               const imageUrlToRemove = imageUrl;
-                                                              const updatedChapters = chapters.map((ch, chIndex) => {
+                                                              const updatedSceneData = scenesData.map((ch, chIndex) => {
                                                                 if (chIndex !== index) return ch;
                                                                 // Remove from assets.images lists if present
                                                                 const imagesList = Array.isArray(ch.assets?.images) ? (ch.assets!.images as string[]) : [];
@@ -1369,7 +1369,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                 // Remove keyword selection entries referencing this URL
                                                                 let nextKeywordsSelected: any = ch.keywordsSelected;
                                                                 if (Array.isArray(ch.keywordsSelected)) {
-                                                                  const arr = ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[];
+                                                                  const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
                                                                   nextKeywordsSelected = arr.filter(entry => {
                                                                     const low = entry.media?.lowResMedia;
                                                                     const high = entry.media?.highResMedia;
@@ -1396,8 +1396,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                                   ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
                                                                 };
                                                               });
-                                                              onChaptersUpdate(updatedChapters);
-                                                              HelperFunctions.persistSceneUpdate(jobId, updatedChapters, index, 'Media deleted');
+                                                              onSceneDataUpdate(updatedSceneData);
+                                                              HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
                                                             }}
                                                           >
                                                             <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1406,7 +1406,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           </IconButton>
                                                         </Box>
                                                       ))}
-                                                      {(chapterImagesMap[index] || []).length > 4 && (
+                                                      {(SceneDataImagesMap[index] || []).length > 4 && (
                                                         <Box sx={{
                                                           position: 'relative',
                                                           width: '50px',
@@ -1426,12 +1426,12 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             if (typeof window !== 'undefined') {
                                                               (window as any).__keywordSuggestions = undefined;
                                                             }
-                                                            onMediaManagementChapterIndex(index);
+                                                            onMediaManagementSceneDataIndex(index);
                                                             onMediaManagementOpen(true);
                                                           }}
                                                         >
                                                           <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            +{(chapterImagesMap[index] || []).length - 4}
+                                                            +{(SceneDataImagesMap[index] || []).length - 4}
                                                           </Box>
                                                         </Box>
                                                       )}
@@ -1445,7 +1445,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     p: 1,
                                                     textAlign: 'center',
                                                     bgcolor: 'background.default',
-                                                    cursor: generatingChapters ? 'default' : 'pointer',
+                                                    cursor: generatingSceneData ? 'default' : 'pointer',
                                                     minHeight: '60px',
                                                     display: 'flex',
                                                     flexDirection: 'column',
@@ -1453,17 +1453,17 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                     justifyContent: 'center'
                                                   }}
                                                     onClick={(e) => {
-                                                      // if (!generatingChapters) {
+                                                      // if (!generatingSceneData) {
                                                       //   e.stopPropagation();
                                                       //   if (typeof window !== 'undefined') {
                                                       //     (window as any).__keywordSuggestions = undefined;
                                                       //   }
-                                                      //   onMediaManagementChapterIndex(index);
+                                                      //   onMediaManagementSceneDataIndex(index);
                                                       //   onMediaManagementOpen(true);
                                                       // }
                                                     }}
                                                   >
-                                                    {generatingChapters ? (
+                                                    {generatingSceneData ? (
                                                       <>
                                                         <CircularProgress size={16} sx={{ mb: 0.5 }} />
                                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.25rem' }}>
@@ -1481,7 +1481,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                           sx={{ fontSize: '1.25rem', py: 0.3, px: 1, minHeight: 'auto', textTransform: 'none' }}
                                                           onClick={(e) => {
                                                             e.stopPropagation();
-                                                            const ch = chapters[index];
+                                                            const ch = scenesData[index];
                                                             const highlighted = Array.isArray((ch as any).highlightedKeywords)
                                                               ? ((ch as any).highlightedKeywords as string[]).filter(k => typeof k === 'string' && k.trim())
                                                               : [];
@@ -1492,7 +1492,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                                             if (typeof window !== 'undefined') {
                                                               (window as any).__keywordSuggestions = { keyword: keywords[0] || '', keywords };
                                                             }
-                                                            onMediaManagementChapterIndex(index);
+                                                            onMediaManagementSceneDataIndex(index);
                                                             onMediaManagementOpen(true);
                                                           }}
                                                         >
@@ -1511,19 +1511,19 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                   </Box>
                                 </Box>
 
-                                {/* Chapter Actions */}
-                                {/* <Box sx={{ display: expandedChapterIndex === index ? 'none' : 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
-                                  {editingChapter === index ? (
+                                {/* SceneData Actions */}
+                                {/* <Box sx={{ display: expandedSceneDataIndex === index ? 'none' : 'flex', flexDirection: 'column', gap: 1, ml: 2, alignSelf: 'center' }}>
+                                  {editingSceneData === index ? (
                                     <>
                                       <IconButton
                                         size="small"
                                         onClick={() => {
-                                          const cleaned = chapters.map((ch, i) => (
+                                          const cleaned = scenesData.map((ch, i) => (
                                             i === index
                                               ? { ...(ch as any), assets: { ...(ch as any).assets, video: undefined } as any } as any
                                               : ch
                                           ));
-                                          onChaptersUpdate(cleaned);
+                                          onSceneDataUpdate(cleaned);
                                           onSaveEdit(index);
                                         }}
                                         sx={{
@@ -1560,18 +1560,18 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                   ) : (
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                       <IconButton
-                                        className="chapter-actions"
+                                        className="SceneData-actions"
                                         size="small"
                                         onClick={async () => {
                                           try {
                                             onPickerOpen(true);
-                                            onPickerChapterIndex(index);
+                                            onPickerSceneDataIndex(index);
                                             onPickerLoading(true);
-                                            const chapter = chapters[index];
+                                            const SceneData = scenesData[index];
                                             const res = await fetch('/api/get-narration-variations', {
                                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                                               body: JSON.stringify({
-                                                narration: chapter.narration,
+                                                narration: sceneData.narration,
                                                 noOfNarrations: 5
                                               })
                                             });
@@ -1580,13 +1580,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                             onPickerNarrations(vars);
                                           } catch (e) {
                                             console.error('picker fetch failed', e);
-                                            onPickerNarrations([chapters[index].narration]);
+                                            onPickerNarrations([scenesData[index].narration]);
                                           } finally {
                                             onPickerLoading(false);
                                           }
                                         }}
                                         sx={{
-                                          opacity: selectedChapterIndex === index ? 1 : 0,
+                                          opacity: selectedSceneDataIndex === index ? 1 : 0,
                                           transition: 'opacity 0.2s ease',
                                           color: INFO.main,
                                           '&:hover': { bgcolor: HOVER.info, color: INFO.dark },
@@ -1598,11 +1598,11 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                       </IconButton>
                                       
                                       <IconButton
-                                        className="chapter-actions"
+                                        className="SceneData-actions"
                                         size="small"
                                         onClick={() => {
-                                          onSelectChapter(index);
-                                          setExpandedChapterIndex(expandedChapterIndex === index ? null : index);
+                                          onSelectSceneData(index);
+                                          setExpandedSceneDataIndex(expandedSceneDataIndex === index ? null : index);
                                         }}
                                         sx={{
                                           opacity: 1,
@@ -1615,15 +1615,15 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           width: 36,
                                           height: 36,
                                         }}
-                                        title="Edit chapter"
+                                        title="Edit SceneData"
                                       >
                                         <CreateIcon fontSize="small" />
                                       </IconButton>
                                      
                                       <IconButton
-                                        className="chapter-actions"
+                                        className="SceneData-actions"
                                         size="small"
-                                        onClick={() => onDeleteChapter(index)}
+                                        onClick={() => onDeleteSceneData(index)}
                                         sx={{
                                           opacity: 1,
                                           transition: 'opacity 0.2s ease',
@@ -1635,15 +1635,15 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                                           width: 36,
                                           height: 36,
                                         }}
-                                        title="Delete chapter"
+                                        title="Delete SceneData"
                                       >
                                         <DeleteIcon fontSize="small" />
                                       </IconButton>
 
                                       <IconButton
-                                        className="chapter-actions"
+                                        className="SceneData-actions"
                                         size="small"
-                                        onClick={() => onAddChapterAfter(index)}
+                                        onClick={() => onAddSceneDataAfter(index)}
                                         sx={{
                                           opacity: 1,
                                           transition: 'opacity 0.2s ease',
@@ -1696,7 +1696,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
       >
         <DialogTitle sx={{ pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h5" component="div" sx={{ fontSize: '1.3rem', fontWeight: 600 }}>
-            Manage Media - Chapter {(mediaManagementChapterIndex || 0) + 1}
+            Manage Media - SceneData {(mediaManagementSceneDataIndex || 0) + 1}
           </Typography>
           <IconButton
             onClick={() => {
@@ -1721,13 +1721,13 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
             {/* Image Search with integrated tabs */}
             <Box sx={{ flex: 1 }}>
               <ImageSearch
-                chapterNarration={chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.narration || ''}
+                SceneDataNarration={scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.narration || ''}
                 onClearSelection={() => onClearSelection()}
                 onImageSelect={(imageUrl) => {
-                  const currentIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
-                  onChapterImagesMapChange({
-                    ...chapterImagesMap,
-                    [currentIdx]: [...(chapterImagesMap[currentIdx] || []), imageUrl]
+                  const currentIdx = mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex;
+                  onSceneDataImagesMapChange({
+                    ...SceneDataImagesMap,
+                    [currentIdx]: [...(SceneDataImagesMap[currentIdx] || []), imageUrl]
                   });
                 }}
                 onImagePreview={(imageUrl) => {
@@ -1738,31 +1738,31 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                     imageViewer.openViewer([{ url: imageUrl }], 0, 'preview');
                   }
                 }}
-                chapterIndex={mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex}
-                onChapterUpdate={(chapterIndex, updatedChapter) => {
-                  // Update the chapter with new assets
-                  const updatedChapters = chapters.map((chapter, index) => {
-                    if (index === chapterIndex) {
+                SceneDataIndex={mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex}
+                onSceneDataUpdate={(SceneDataIndex, updatedSceneData: any) => {
+                  // Update the SceneData with new assets
+                  const modifiedScenesData = scenesData.map((sceneData, index) => {
+                    if (index === SceneDataIndex) {
                       // Transform any legacy merge payload (map) into array entries
-                      let nextKeywordsSelected: import('@/types/chapters').ChapterKeywordSelection[] = Array.isArray(chapter.keywordsSelected) ? (chapter.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[]) : [];
-                      if (updatedChapter.keywordsSelectedMerge && typeof updatedChapter.keywordsSelectedMerge === 'object') {
-                        const mergeMap = updatedChapter.keywordsSelectedMerge as Record<string, string[]>;
+                      let nextKeywordsSelected: SceneKeywordSelection[] = Array.isArray(sceneData.keywordsSelected) ? (sceneData.keywordsSelected as SceneKeywordSelection[]) : [];
+                      if (updatedSceneData?.keywordsSelectedMerge && typeof updatedSceneData.keywordsSelectedMerge === 'object') {
+                        const mergeMap = updatedSceneData?.keywordsSelectedMerge as Record<string, string[]>;
                         const entries = Object.entries(mergeMap);
                         if (entries.length > 0) {
                           const [kw, urls] = entries[0];
                           const low = urls?.[0] || undefined;
                           const high = urls?.[1] || urls?.[0] || undefined;
                           const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
-                          const newEntry: import('@/types/chapters').ChapterKeywordSelection = {
+                          const newEntry: import('@/types/sceneData').SceneKeywordSelection = {
                             suggestedKeyword: kw,
-                            ...(updatedChapter.modifiedKeywordForMapping && typeof updatedChapter.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedChapter.modifiedKeywordForMapping } : {}),
+                            ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
                             media: {
                               ...(low ? { lowResMedia: low } : {}),
                               ...(high ? { highResMedia: high } : {})
                             },
-                            // Add transitionsEffects to chapter and log
-                            ...(updatedChapter.keywordsSelected && Array.isArray(updatedChapter.keywordsSelected) && updatedChapter.keywordsSelected.length > 0 && updatedChapter.keywordsSelected[0].transitionsEffects
-                              ? { transitionsEffects: updatedChapter.keywordsSelected[0].transitionsEffects }
+                            // Add transitionsEffects to SceneData and log
+                            ...(updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0 && updatedSceneData.keywordsSelected[0].transitionsEffects
+                              ? { transitionsEffects: updatedSceneData.keywordsSelected[0].transitionsEffects }
                               : {}),
                           };
                           if (idx >= 0) {
@@ -1770,7 +1770,7 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                             nextKeywordsSelected = nextKeywordsSelected.slice();
                             nextKeywordsSelected[idx] = {
                               ...existing,
-                              ...(updatedChapter.modifiedKeywordForMapping && typeof updatedChapter.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedChapter.modifiedKeywordForMapping } : {}),
+                              ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
                               media: {
                                 ...(existing.media || {}),
                                 ...(low ? { lowResMedia: low } : {}),
@@ -1783,8 +1783,8 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                         }
                       }
                       // Merge direct keywordsSelected array payload (carry transitionsEffects)
-                      if (updatedChapter.keywordsSelected && Array.isArray(updatedChapter.keywordsSelected) && updatedChapter.keywordsSelected.length > 0) {
-                        const entry = updatedChapter.keywordsSelected[0] as any;
+                      if (updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0) {
+                        const entry = updatedSceneData.keywordsSelected[0] as any;
                         const kw = String(entry?.suggestedKeyword || '').trim();
                         if (kw) {
                           const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
@@ -1819,23 +1819,23 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                         }
                       }
                       return {
-                        ...chapter,
+                        ...sceneData,
                         ...(nextKeywordsSelected.length > 0 ? { keywordsSelected: nextKeywordsSelected } : {}),
                         assets: {
-                          ...chapter.assets,
-                          ...updatedChapter.assets
+                          ...sceneData.assets,
+                          ...updatedSceneData.assets
                         }
                       };
                     }
-                    return chapter;
+                    return sceneData;
                   });
                   try {
-                    // console.log('Chapter modified (onChapterUpdate):', JSON.stringify(updatedChapters[chapterIndex]));
-                    const sceneId = updatedChapters[chapterIndex].id || '';
-                    const jobId = updatedChapters[chapterIndex].jobId || '';
+                    // console.log('SceneData modified (onSceneDataUpdate):', JSON.stringify(updatedSceneData[SceneDataIndex]));
+                    const sceneId = modifiedScenesData[SceneDataIndex].id || '';
+                    const jobId = modifiedScenesData[SceneDataIndex].jobId || '';
                     if (jobId && sceneId) {
-                      const modifiedChapter = updatedChapters[chapterIndex];
-                      HelperFunctions.updateChapterSceneOnDrive(jobId || '', jobId || '', sceneId, modifiedChapter).then((ok) => {
+                      const modifiedSceneData = modifiedScenesData[SceneDataIndex];
+                      HelperFunctions.updateSceneDataceneOnDrive(jobId || '', jobId || '', sceneId, modifiedSceneData).then((ok) => {
                         if (!ok) {
                           console.error('Failed to update scene on Drive');
                           try { (window as any).toast?.error('Failed to update scene on Drive'); } catch { }
@@ -1845,41 +1845,41 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                       });
                     }
                   } catch { }
-                  onChaptersUpdate(updatedChapters);
+                  onSceneDataUpdate(modifiedScenesData);
                 }}
                 onDone={() => {
                   onMediaManagementOpen(false);
-                  onMediaManagementChapterIndex(null);
+                  onMediaManagementSceneDataIndex(null);
                 }}
                 existingImageUrls={[
                   ...(
-                    chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.imagesGoogle || []
+                    scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.assets?.imagesGoogle || []
                   ),
                   ...(
-                    chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.imagesEnvato || []
+                    scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.assets?.imagesEnvato || []
                   ),
                   ...(
-                    chapters[mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex]?.assets?.images || []
+                    scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.assets?.images || []
                   )
                 ]}
                 suggestionKeywords={typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords || []}
                 autoSearchOnMount={!!(typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords?.length)}
                 currentKeywordForMapping={typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword}
                 onDoneWithSelected={(selectedUrls, modifiedKeyword) => {
-                  const chapterIdx = mediaManagementChapterIndex !== null ? mediaManagementChapterIndex : selectedChapterIndex;
+                  const SceneDataIdx = mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex;
                   const kw = typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword;
                   if (kw) {
                     // add selected urls to the images array and keywordsSelected
-                    const updated = chapters.map((ch, idx) => {
-                      if (idx !== chapterIdx) return ch;
-                      const existingArray: import('@/types/chapters').ChapterKeywordSelection[] = Array.isArray(ch.keywordsSelected) ? (ch.keywordsSelected as import('@/types/chapters').ChapterKeywordSelection[]) : [];
+                    const updated = scenesData.map((ch, idx) => {
+                      if (idx !== SceneDataIdx) return ch;
+                      const existingArray: import('@/types/sceneData').SceneKeywordSelection[] = Array.isArray(ch.keywordsSelected) ? (ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[]) : [];
                       const low = selectedUrls?.[0] || undefined;
                       const high = selectedUrls?.[1] || selectedUrls?.[0] || undefined;
                       const existingIdx = existingArray.findIndex(e => e && e.suggestedKeyword === kw);
-                      let nextArray: import('@/types/chapters').ChapterKeywordSelection[];
+                      let nextArray: import('@/types/sceneData').SceneKeywordSelection[];
                       if (existingIdx >= 0) {
                         nextArray = existingArray.slice();
-                        const existing = nextArray[existingIdx] || {} as import('@/types/chapters').ChapterKeywordSelection;
+                        const existing = nextArray[existingIdx] || {} as import('@/types/sceneData').SceneKeywordSelection;
                         nextArray[existingIdx] = {
                           ...existing,
                           ...(modifiedKeyword && modifiedKeyword.trim() ? { modifiedKeyword: modifiedKeyword.trim() } : {}),
@@ -1912,10 +1912,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
                       };
                     });
                     // try {
-                    //   console.log('Media added to chapter:', JSON.stringify(updated[chapterIdx]));
+                    //   console.log('Media added to SceneData:', JSON.stringify(updated[SceneDataIdx]));
                     // } catch {}
-                    onChaptersUpdate(updated);
-                    HelperFunctions.persistSceneUpdate(jobId, updated, chapterIdx, 'Media added');
+                    onSceneDataUpdate(updated);
+                    HelperFunctions.persistSceneUpdate(jobId, updated, SceneDataIdx, 'Media added');
                     if (typeof window !== 'undefined') {
                       (window as any).__keywordSuggestions = undefined;
                     }
@@ -1936,10 +1936,10 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         onIndexChange={imageViewer.setCurrentIndex}
         viewMode={imageViewer.viewMode}
         onViewModeChange={imageViewer.setViewMode}
-        title={`Chapter ${chapters.findIndex(ch => {
-          const chapterImages = chapterImagesMap[chapters.indexOf(ch)] || [];
-          const images = formatChapterImages(
-            chapterImages,
+        title={`SceneData ${scenesData.findIndex(ch => {
+          const SceneDataImages = SceneDataImagesMap[scenesData.indexOf(ch)] || [];
+          const images = formatSceneDataImages(
+            SceneDataImages,
             ch.assets?.images?.[0] || undefined,
           );
           return images.some(img => img.url === imageViewer.currentImage?.url);
@@ -1949,23 +1949,23 @@ const ChaptersSection: React.FC<ChaptersSectionProps> = ({
         showViewModeSelector={true}
       />
 
-      {/* Chapter Edit Dialog */}
-      <ChapterEditDialog
-        open={chapterEditDialogOpen}
-        chapter={chapters[selectedChapterIndex] || null}
-        chapterIndex={selectedChapterIndex}
+      {/* SceneData Edit Dialog */}
+      <SceneDataEditDialog
+        open={SceneDataEditDialogOpen}
+        SceneData={scenesData[selectedSceneDataIndex] || null}
+        SceneDataIndex={selectedSceneDataIndex}
         language={language}
-        onClose={() => onChapterEditDialogOpen(false)}
-        onSave={(chapterIndex, updatedChapter) => {
-          const updatedChapters = chapters.map((ch, idx) =>
-            idx === chapterIndex ? updatedChapter : ch
+        onClose={() => onSceneDataEditDialogOpen(false)}
+        onSave={(SceneDataIndex, sceneData: SceneData) => {
+          const updatedSceneData: SceneData[] = scenesData.map((ch: SceneData, idx: number) =>
+            idx === SceneDataIndex ? sceneData : ch
           );
-          onChaptersUpdate(updatedChapters);
-          onChapterEditDialogOpen(false);
+          onSceneDataUpdate(updatedSceneData as SceneData[]);
+          onSceneDataEditDialogOpen(false);
         }}
       />
     </Paper>
   );
 };
 
-export default ChaptersSection;
+export default SceneDataSection;

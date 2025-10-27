@@ -40,21 +40,21 @@ interface GoogleImage {
 }
 
 interface GoogleImageSearchProps {
-    chapterNarration: string;
+    SceneDataNarration: string;
     onImageSelect: (imageUrl: string) => void;
     onImagePreview: (imageUrl: string) => void;
-    chapterIndex: number;
-    onChapterUpdate: (chapterIndex: number, updatedChapter: any) => void;
+    SceneDataIndex: number;
+    onSceneDataUpdate: (SceneDataIndex: number, updatedSceneData: any) => void;
     onDone: () => void;
     existingImageUrls?: string[];
 }
 
 const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
-    chapterNarration,
+    SceneDataNarration,
     onImageSelect,
     onImagePreview,
-    chapterIndex,
-    onChapterUpdate,
+    SceneDataIndex,
+    onSceneDataUpdate,
     onDone,
     existingImageUrls = []
 }) => {
@@ -198,11 +198,11 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
         }
     };
 
-    // Auto-generate search query from chapter narration and auto-search all suggestions
+    // Auto-generate search query from SceneData narration and auto-search all suggestions
     useEffect(() => {
-        if (chapterNarration && !hasInitialSearch.current) {
+        if (SceneDataNarration && !hasInitialSearch.current) {
             // Generate suggested queries
-            const suggestions = generateSuggestedQueries(chapterNarration);
+            const suggestions = generateSuggestedQueries(SceneDataNarration);
             setSuggestedQueries(suggestions);
 
             // Auto-search all suggested queries if available
@@ -211,7 +211,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                 searchAllSuggestions(suggestions);
             }
         }
-    }, [chapterNarration]);
+    }, [SceneDataNarration]);
 
     // Enhanced search query generation
     const generateEnhancedSearchQuery = (narration: string): string => {
@@ -332,9 +332,9 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
             const suggestions = generateSuggestedQueries(newQuery);
             setSuggestedQueries(suggestions);
         } else {
-            // If query is empty, generate suggestions from chapter narration
-            if (chapterNarration) {
-                const suggestions = generateSuggestedQueries(chapterNarration);
+            // If query is empty, generate suggestions from SceneData narration
+            if (SceneDataNarration) {
+                const suggestions = generateSuggestedQueries(SceneDataNarration);
                 setSuggestedQueries(suggestions);
             }
         }
@@ -389,18 +389,18 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
 
     const handleDone = () => {
         if (selectedImages.size > 0) {
-            // Convert Set to Array for the chapter assets
+            // Convert Set to Array for the SceneData assets
             const selectedImageUrls = Array.from(selectedImages);
 
-            // Create updated chapter with selected images in assets.image array
-            const updatedChapter = {
+            // Create updated SceneData with selected images in assets.image array
+            const updatedSceneData = {
                 assets: {
                     image: selectedImageUrls
                 }
             };
 
-            // Update the chapter
-            onChapterUpdate(chapterIndex, updatedChapter);
+            // Update the SceneData
+            onSceneDataUpdate(SceneDataIndex, updatedSceneData);
 
         } else {
             console.log('ℹ️ No images selected, closing dialog without updates');
@@ -700,7 +700,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                             Search for Images
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300, mx: 'auto' }}>
-                            Enter a search query to find relevant images for your chapter. The search will suggest queries based on your chapter narration. All suggestions are combined into one single API call for maximum efficiency!
+                            Enter a search query to find relevant images for your SceneData. The search will suggest queries based on your SceneData narration. All suggestions are combined into one single API call for maximum efficiency!
                         </Typography>
                     </Box>
                 )}

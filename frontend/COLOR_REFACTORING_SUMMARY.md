@@ -15,7 +15,7 @@ Successfully refactored all hardcoded colors from the YouTube Clone application 
 - **`src/components/AudioPlayer/AudioPlayer.tsx`** - Component styling colors
 - **`src/components/Layout/Layout.tsx`** - Layout component colors
 - **`src/components/LandingPageComponents/LandingPage.tsx`** - Landing page colors
-- **`src/components/TrendingTopics/ChaptersSection.tsx`** - Chapter section colors
+- **`src/components/TrendingTopics/SceneDataSection.tsx`** - SceneData section colors
 - **`src/components/WordCloudChart/WordCloudChart.tsx`** - Word cloud colors
 - **`pages/script-production.tsx`** - Script production page colors
 

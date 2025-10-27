@@ -343,15 +343,15 @@ export async function POST(request: NextRequest) {
 
             // Upload scene images
             const scenesSummary: Array<{ sceneId: string | number; uploaded: number; folderId: string }> = [];
-            const scriptChapters: any[] = Array.isArray(jsonData?.script) ? jsonData.script : [];
+            const scriptSceneData: any[] = Array.isArray(jsonData?.script) ? jsonData.script : [];
 
-            for (let i = 0; i < scriptChapters.length; i++) {
-                const chapter = scriptChapters[i];
-                const sceneId = chapter?.id ?? i + 1;
+            for (let i = 0; i < scriptSceneData.length; i++) {
+                const SceneData = scriptSceneData[i];
+                const sceneId = SceneData?.id ?? i + 1;
                 const sceneFolderName = `${sceneId}`;
                 const sceneFolder = await findOrCreateFolder(drive, sceneFolderName, project.id);
 
-                const assets = chapter?.assets || {};
+                const assets = SceneData?.assets || {};
                 const images: string[] = Array.isArray(assets.images) ? assets.images : [];
                 const videos: string[] = Array.isArray((assets as any).videos) ? (assets as any).videos : [];
 
