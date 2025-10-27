@@ -8,7 +8,7 @@ import { TrendingTopic } from '../../types/TrendingTopics';
 import { durationOptions } from '../../data/mockDurationOptions';
 import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
-import { ROUTES_KEYS, SCRIPT_STATUS } from '../../data/constants';
+import { ROUTES_KEYS, SCRIPT_STATUS, TRENDING_TOPICS_CACHE_MAX_AGE } from '../../data/constants';
 import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
 import { secure } from '../../utils/helperFunctions';
 
@@ -42,7 +42,6 @@ const TrendingTopics: React.FC = () => {
   const [selectedDateRange, setSelectedDateRange] = useState<string>('24h');
   // Category removed per request
   const [selectedCountry, setSelectedCountry] = useState<string>('');
-  const [lastUpdated, setLastUpdated] = useState<string>('');
 
   // Topic Details State
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
@@ -60,99 +59,19 @@ const TrendingTopics: React.FC = () => {
   const [dialogTitle, setDialogTitle] = useState<string>('');
   const [dialogDescription, setDialogDescription] = useState<string>('');
 
-  // Function to clear cache for current location and date range
-  const clearCurrentLocationCache = () => {
-    if (!isAllFieldsSelected()) {
-      HelperFunctions.showInfo('Please select all options before clearing cache');
-      return;
-    }
-
-    try {
-      const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
-      clearCache(cacheRegion);
-      HelperFunctions.showSuccess('Cache cleared for current location and time range');
-    } catch (error) {
-      console.warn('Error clearing cache:', error);
-      HelperFunctions.showError('Failed to clear cache');
-    }
-  };
-
-  // Check if all required fields are selected
-  const isAllFieldsSelected = () => {
-    // require all valid fields filled first
-    if (!selectedDateRange) return false;
-    if (selectedLocationType === 'global') {
-      // for global, just need dateRange
-      if (
-        selectedLocationType !== selectedPreviousLocationType &&
-        selectedDateRange !== selectedPreviousDateRange
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    } else if (selectedLocationType === 'region') {
-      // require region name (selectedLocation)
-      if (
-        !!selectedLocation &&
-        (selectedLocation !== selectedPreviousLocation &&
-          selectedLocationType !== selectedPreviousLocationType &&
-          selectedDateRange !== selectedPreviousDateRange)
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    } else if (selectedLocationType === 'country') {
-      // require country and location both
-      if (
-        !!selectedCountry &&
-        !!selectedLocation &&
-        selectedCountry !== selectedPreviousCountry &&
-        selectedLocation !== selectedPreviousLocation &&
-        selectedLocationType !== selectedPreviousLocationType &&
-        selectedDateRange !== selectedPreviousDateRange
-      ) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-    return false;
-  };
-
   const fetchTrendingTopics = async () => {
     try {
 
       // Guard: avoid duplicate calls with identical params within a short window (dev StrictMode)
-      const fetchKey = `${selectedLocationType}|${selectedLocation}|${selectedCountry}|${selectedDateRange}`;
+      const cacheKey = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
       const now = Date.now();
-      if (lastFetchRef.current && lastFetchRef.current.key === fetchKey && (now - lastFetchRef.current.ts) < 1500) {
+      if (lastFetchRef.current && lastFetchRef.current.key === cacheKey && (now - lastFetchRef.current.ts) < 1500) {
         // console.log('Skipping duplicate fetch for key:', fetchKey);
         return;
       }
-      lastFetchRef.current = { key: fetchKey, ts: now };
+      lastFetchRef.current = { key: cacheKey, ts: now };
 
-      const locationKey = selectedLocationType === 'global'
-        ? selectedLocationType
-        : selectedLocationType === 'region'
-          ? selectedLocation
-          : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
-
-
-      // const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
-      // // Check cache first (unless force refresh is requested)
-      // if (!forceRefresh) {
-      //   const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
-      //   if (cachedData && isCacheValid(cacheRegion)) {
-      //     console.log('🟡 Using cached data for:', cacheRegion);
-      //     setTrendingTopics(cachedData);
-      //     setLastUpdated(new Date().toISOString()); // Update UI timestamp
-      //     setError(null);
-      //     setLoading(false);
-      //     return;
-      //   }
-      // }
+      const searchQuery = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
 
       // Fetch fresh data from API
       // console.log('🟢 Fetching fresh data for:', locationKey);
@@ -162,7 +81,7 @@ const TrendingTopics: React.FC = () => {
       setLoading(true);
       setDialogTitle('Please wait');
       setDialogDescription('We are finding the trending topics for you...');
-      const geminiResult = await apiService.getGeminiTrendingTopics(locationKey, selectedDateRange);
+      const geminiResult = await apiService.getGeminiTrendingTopics(searchQuery, selectedDateRange);
 
       setLoading(false);
       // Handle Gemini results
@@ -174,13 +93,12 @@ const TrendingTopics: React.FC = () => {
         geminiData.sort((a: any, b: any) => b.engagement_count - a.engagement_count);
 
         // Cache the fresh data
-        // setCachedData(cacheRegion, geminiData);
         setTrendingTopics(geminiData);
-        // setLastUpdated(new Date().toISOString());
-
+        if (geminiData.length > 0) {
+          setCachedData(searchQuery, geminiData);
+        }
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
-        // setLastUpdated(new Date().toISOString());
         HelperFunctions.showError('Failed to fetch trending topics');
       }
 
@@ -188,74 +106,40 @@ const TrendingTopics: React.FC = () => {
       console.error('Error fetching trending topics, using mock data:', err);
       setError(null);
       setLoading(false);
-      // setLastUpdated(new Date().toISOString());
       HelperFunctions.showError('Error loading trending topics');
     }
   };
 
   useEffect(() => {
     // Always fetch on any field change and all fields selected
-    if (isAllFieldsSelected()) {
-      // // Try to load from cache first
-      // const cacheRegion = `${selectedLocationType}_${selectedLocation}_${selectedDateRange}`;
-      // const cachedData = getCachedData<TrendingTopic[]>(cacheRegion);
-
-      // if (cachedData && isCacheValid(cacheRegion)) {
-      //   console.log('🟡 Using cached data - no API call needed');
-      //   setTrendingTopics(cachedData);
-      //   setLastUpdated(new Date().toISOString());
-      //   setError(null);
-      // } else {
-      // console.log('🟠 No valid cache found - calling API to fetch fresh data');
-      // Call API when no cached data is available
+    if (HelperFunctions.isAllFieldsSelected(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry, selectedPreviousLocation, selectedPreviousLocationType, selectedPreviousDateRange, selectedPreviousCountry)) {
 
       const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
       if (scriptMetadata && typeof scriptMetadata === 'object') {
         console.log('🟢 Script metadata found, redirecting to script production');
-        router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+        router.replace(ROUTES_KEYS.SCRIPT_PRODUCTION);
+        return;
+      }
+
+      // Try to load from cache first
+      const cacheKey = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
+      const cachedData = getCachedData<TrendingTopic[]>(cacheKey);
+
+      // Check if cachedData exists, cache is valid, and lastUpdated is less than 1 hour old
+      if (cachedData && isCacheValid(cacheKey)) {
+        // Last updated is less than 1 hour old
+        console.log('🟡 Using cached data - no API call needed');
+        setTrendingTopics(cachedData);
+        setError(null);
         return;
       } else {
+        console.log('🟠 No valid cache found - calling API to fetch fresh data');
         fetchTrendingTopics();
         setDialogTitle('Please wait');
         setDialogDescription('We are finding the trending topics for you...');
       }
-      // }
     }
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
-
-  // useEffect(() => {
-  //   const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
-  //   if (scriptMetadata && typeof scriptMetadata === 'object') {
-  //     console.log('🟢 Script metadata found, redirecting to script production');
-  //     router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
-  //   }
-  // }, []);
-
-  const handleLocationChange = (location: string) => {
-    setSelectedPreviousLocation(selectedLocation);
-    setSelectedLocation(location);
-  };
-
-  const handleLocationTypeChange = (locationType: 'global' | 'region' | 'country') => {
-    setSelectedPreviousLocationType(selectedLocationType);
-    setSelectedLocationType(locationType);
-    setSelectedLocation('');
-    setSelectedCountry('');
-  };
-
-  const handleDateRangeChange = (dateRange: string) => {
-    setSelectedPreviousDateRange(selectedDateRange);
-    setSelectedDateRange(dateRange);
-  };
-
-  const handleCountryChange = (country: string) => {
-    setSelectedPreviousCountry(selectedCountry);
-    setSelectedCountry(country);
-  };
-
-  const handleRefresh = () => {
-    fetchTrendingTopics();
-  };
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
     // console.log('🟢 Handling topic select:', topic);
@@ -345,6 +229,28 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
+  const handleLocationChange = (location: string) => {
+    setSelectedPreviousLocation(selectedLocation);
+    setSelectedLocation(location);
+  };
+
+  const handleLocationTypeChange = (locationType: 'global' | 'region' | 'country') => {
+    setSelectedPreviousLocationType(selectedLocationType);
+    setSelectedLocationType(locationType);
+    setSelectedLocation('');
+    setSelectedCountry('');
+  };
+
+  const handleDateRangeChange = (dateRange: string) => {
+    setSelectedPreviousDateRange(selectedDateRange);
+    setSelectedDateRange(dateRange);
+  };
+
+  const handleCountryChange = (country: string) => {
+    setSelectedPreviousCountry(selectedCountry);
+    setSelectedCountry(country);
+  };
+
   const handlesubtitle_languageChange = (newsubtitle_language: string) => {
     setsubtitle_language(newsubtitle_language);
   };
@@ -396,10 +302,11 @@ const TrendingTopics: React.FC = () => {
         onDateRangeChange={handleDateRangeChange}
         selectedCountry={selectedCountry}
         onCountryChange={handleCountryChange}
-        onRefresh={handleRefresh}
-        onClearCache={clearCurrentLocationCache}
+        onRefresh={() => {
+          clearCache(HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry));
+          fetchTrendingTopics();
+        }}
         loading={loading}
-        lastUpdated={lastUpdated}
       />
 
       {

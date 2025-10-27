@@ -5,43 +5,12 @@ import fs from 'fs';
 import { Readable } from 'stream';
 // @ts-ignore - use runtime types for busboy
 import Busboy from 'busboy';
+import { DRIVE_CLIENT_CREDENTIALS_FILE_NAME } from '@/data/constants';
+import { findOrCreateFolder, getDriveClient, getRootFolderId } from '@/services/googleDriveService';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxRequestBodySize = '200mb';
-
-async function findOrCreateFolder(drive: any, name: string, parentId: string) {
-    const q = [
-        `name = '${name.replace(/'/g, "\\'")}'`,
-        "mimeType = 'application/vnd.google-apps.folder'",
-        `'${parentId}' in parents`,
-        'trashed = false'
-    ].join(' and ');
-
-    const res = await drive.files.list({
-        q,
-        fields: 'files(id, name)',
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-        pageSize: 1,
-    });
-
-    if (res.data.files && res.data.files.length > 0) {
-        return { id: res.data.files[0].id, created: false };
-    }
-
-    const created = await drive.files.create({
-        requestBody: {
-            name,
-            parents: [parentId],
-            mimeType: 'application/vnd.google-apps.folder',
-        },
-        fields: 'id, name',
-        supportsAllDrives: true,
-    });
-
-    return { id: created.data.id!, created: true };
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -93,21 +62,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'File not received' }, { status: 400 });
         }
 
-        const credentialsPath = path.join(process.cwd(), 'src', 'config', 'gen-lang-client-0211941879-57f306607431.json');
-        const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-        const jwtClient = new google.auth.JWT({
-            email: credentials.client_email,
-            key: credentials.private_key,
-            scopes: ['https://www.googleapis.com/auth/drive'],
-        });
-        const drive = google.drive({ version: 'v3', auth: jwtClient });
+        const drive = getDriveClient();
 
-        const ROOT_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+        const ROOT_ID = getRootFolderId();
         if (!ROOT_ID) {
             return NextResponse.json({ error: 'Google Drive root folder env not set (GOOGLE_DRIVE_FOLDER_ID)' }, { status: 500 });
         }
 
         const project = await findOrCreateFolder(drive, jobName, ROOT_ID);
+
         // Support nested paths in targetFolder like "scene-1/videos"
         const segments = targetFolder.split('/').filter(Boolean);
         let currentParent = project.id;

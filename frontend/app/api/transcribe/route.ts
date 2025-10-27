@@ -5,11 +5,7 @@ import path from "path";
 import ffmpeg from "fluent-ffmpeg";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AI_CONFIG } from "@/config/aiConfig";
-import { google } from 'googleapis';
-
-export const runtime = "nodejs";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+import { getDriveClient } from "@/services/googleDriveService";
 
 // Avoid static import so Next.js doesn't inline ffmpeg into vendor-chunks
 let ffmpegStaticPath: string = '' as any;
@@ -52,13 +48,13 @@ const formatTimeRange = (startTime: number, endTime: number): string => {
 };
 
 // Semantic segmentation using LLM
-const performSemanticSegmentation = async (transcription: string, language: string) => {
+const performSemanticSegmentation = async (genAI: GoogleGenerativeAI, transcription: string, language: string) => {
   // Check if Gemini API key is available
   if (!process.env.GEMINI_API_KEY) {
     console.error('GEMINI_API_KEY not found in environment variables');
     throw new Error('Gemini API key not configured');
   }
-  
+
   const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_PRO });
 
   // Check if transcription is too short for semantic segmentation
@@ -129,12 +125,12 @@ ${transcription}`;
 };
 
 // Helper function to process transcription into scenes using semantic segmentation
-const processTranscriptionIntoScenes = async (transcription: string, language: string) => {
+const processTranscriptionIntoScenes = async (genAI: GoogleGenerativeAI, transcription: string, language: string) => {
   console.log('Starting semantic segmentation for language:', language);
 
   // First, try semantic segmentation
   try {
-    const semanticScenes = await performSemanticSegmentation(transcription, language);
+    const semanticScenes = await performSemanticSegmentation(genAI, transcription, language);
     if (semanticScenes && semanticScenes.length > 0) {
       console.log('Semantic segmentation successful:', semanticScenes.length, 'scenes');
       // Convert semantic scenes to our format with timing
@@ -284,14 +280,7 @@ export async function POST(req: Request) {
               console.log('Using Google Drive API for file ID:', fileId);
 
               // Set up Google Drive API client
-              const credentialsPath = path.join(process.cwd(), 'src', 'config', 'gen-lang-client-0211941879-57f306607431.json');
-              const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-              const jwtClient = new google.auth.JWT({
-                email: credentials.client_email,
-                key: credentials.private_key,
-                scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-              });
-              const drive = google.drive({ version: 'v3', auth: jwtClient });
+              const drive = getDriveClient();
 
               // Download file using Drive API
               const response = await drive.files.get({
@@ -450,10 +439,6 @@ export async function POST(req: Request) {
 
     const audioBytes = audioBuffer.toString("base64");
 
-    // Send to Gemini model for transcription
-    const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_PRO });
-    console.log('Using Gemini model:', model.model);
-
     // Create language-specific transcription prompt
     const languagePrompts: Record<string, string> = {
       'en': 'Transcribe this audio to English text. Provide accurate transcription with proper punctuation and capitalization.',
@@ -472,6 +457,12 @@ export async function POST(req: Request) {
     console.log('Using transcription prompt for language:', scriptLanguage);
 
     try {
+      // Send to Gemini model for transcription
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+      const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_PRO });
+      console.log('Using Gemini model:', model.model);
+
       const result = await model.generateContent([
         {
           inlineData: {
@@ -488,7 +479,7 @@ export async function POST(req: Request) {
 
       // Process transcription into scenes using semantic segmentation
       console.log('Processing transcription into scenes...');
-      const scenes = await processTranscriptionIntoScenes(text, scriptLanguage);
+      const scenes = await processTranscriptionIntoScenes(genAI, text, scriptLanguage);
       console.log('Scenes processed:', scenes.length);
 
       // Cleanup

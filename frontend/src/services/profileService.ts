@@ -26,27 +26,27 @@ class ProfileServiceImpl implements ProfileService {
      */
     async fetchBackgrounds(): Promise<BackgroundItem[]> {
         try {
-            console.log('Fetching backgrounds from:', `${API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY}?category=backgrounds`);
-            const response = await fetch(`${API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY}?category=backgrounds`);
-            
+            console.log('Fetching backgrounds from:', `${API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY}`);
+            const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY);
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error:', response.status, errorText);
                 throw new Error(`Failed to fetch backgrounds: ${response.status} ${errorText}`);
             }
-            
+
             const data = await response.json();
             console.log('API Response:', data);
-            
+
             if (data.error) {
                 throw new Error(data.error);
             }
-            
+
             if (data.meta?.backgroundsWarning) {
                 console.warn('Backgrounds warning:', data.meta.backgroundsWarning);
                 HelperFunctions.showError(data.meta.backgroundsWarning);
             }
-            
+
             return data?.data?.backgrounds || [];
         } catch (error) {
             console.error('Error fetching backgrounds:', error);
@@ -61,7 +61,7 @@ class ProfileServiceImpl implements ProfileService {
     async uploadLogo(file: File, userId: string): Promise<{ success: boolean; url?: string; fileName?: string }> {
         try {
             const result = await SupabaseHelpers.uploadLogoToProfile(userId, file);
-            
+
             if (result.success) {
                 // Also save to local secure storage for immediate access
                 const logoData = {
@@ -69,7 +69,7 @@ class ProfileServiceImpl implements ProfileService {
                     fileName: result.fileName!,
                     uploadedAt: new Date().toISOString()
                 };
-                
+
                 const key = `profileSettings_${userId}`;
                 const currentSettings = secure.j[key as any].get() || {};
                 secure.j[key as any].set({
@@ -77,7 +77,7 @@ class ProfileServiceImpl implements ProfileService {
                     logo: logoData
                 });
             }
-            
+
             return result;
         } catch (error) {
             console.error('Error uploading logo:', error);
@@ -92,7 +92,7 @@ class ProfileServiceImpl implements ProfileService {
     async removeLogo(fileName: string, url: string, userId: string): Promise<{ success: boolean }> {
         try {
             const result = await SupabaseHelpers.removeLogoFromProfile(fileName, url, userId);
-            
+
             if (result.success) {
                 // Also remove from local secure storage
                 const key = `profileSettings_${userId}`;
@@ -102,7 +102,7 @@ class ProfileServiceImpl implements ProfileService {
                     logo: null
                 });
             }
-            
+
             return result;
         } catch (error) {
             console.error('Error removing logo:', error);
@@ -145,9 +145,9 @@ class ProfileServiceImpl implements ProfileService {
         try {
             // First try to get from Supabase
             const { data: profileData } = await SupabaseHelpers.getUserProfileWithAssets(userId);
-            
+
             const settings: { logo?: any; background?: any } = {};
-            
+
             // Get logo from Supabase profile
             if ((profileData as any)?.logo_url) {
                 settings.logo = {
@@ -156,16 +156,16 @@ class ProfileServiceImpl implements ProfileService {
                     uploadedAt: (profileData as any).updated_at
                 };
             }
-            
+
             // Get background from Supabase profile
             if ((profileData as any)?.selected_background) {
                 settings.background = (profileData as any).selected_background;
             }
-            
+
             // Fallback to local storage if Supabase data is incomplete
             const key = `profileSettings_${userId}`;
             const localSettings = secure.j[key as any].get() || {};
-            
+
             return {
                 logo: settings.logo || localSettings.logo,
                 background: settings.background || localSettings.background

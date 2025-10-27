@@ -4,6 +4,8 @@ import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
 import { Readable } from 'stream';
+import { DRIVE_CLIENT_CREDENTIALS_FILE_NAME } from '@/data/constants';
+import { getDriveClient, getRootFolderId } from '@/services/googleDriveService';
 
 export const runtime = 'nodejs';
 
@@ -48,7 +50,7 @@ async function clearFolder(drive: any, folderId: string) {
     });
     const files = res.data.files || [];
     for (const f of files) {
-        try { await drive.files.delete({ fileId: f.id, supportsAllDrives: true }); } catch {}
+        try { await drive.files.delete({ fileId: f.id, supportsAllDrives: true }); } catch { }
     }
 }
 
@@ -63,16 +65,15 @@ export async function POST(request: NextRequest) {
         const contentType = request.headers.get('content-type') || '';
         const isMultipart = contentType.includes('multipart/form-data');
 
-        // service account credentials
-        const credentialsPath = path.join(process.cwd(), 'src', 'config', 'gen-lang-client-0211941879-57f306607431.json');
-        const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+        // Get authenticated Drive client
+        const drive = getDriveClient();
 
-        const jwtClient = new google.auth.JWT({
-            email: credentials.client_email,
-            key: credentials.private_key,
-            scopes: ['https://www.googleapis.com/auth/drive'],
-        });
-        const drive = google.drive({ version: 'v3', auth: jwtClient });
+        // Get root folder ID from environment
+        const ROOT_ID = getRootFolderId();
+        // root from env (support both var names)
+        if (!ROOT_ID) {
+            return NextResponse.json({ error: 'Google Drive root folder env not set (GOOGLE_DRIVE_FOLDER_ID or GOOGLE_PARENT_FOLDER_ID)' }, { status: 500 });
+        }
 
         const form = await request.formData();
         const fileNameForm = String(form.get('fileName') || '').trim();
@@ -82,11 +83,6 @@ export async function POST(request: NextRequest) {
         const sceneId = String(form.get('sceneId') || '').trim();
         const file = form.get('file') as unknown as File | null;
 
-        // root from env (support both var names)
-        const ROOT_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
-        if (!ROOT_ID) {
-            return NextResponse.json({ error: 'Google Drive root folder env not set (GOOGLE_DRIVE_FOLDER_ID or GOOGLE_PARENT_FOLDER_ID)' }, { status: 500 });
-        }
 
         if (isMultipart) {
             // Multipart mode: supports two flows

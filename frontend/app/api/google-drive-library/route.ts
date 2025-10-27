@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs';
-import { google } from 'googleapis';
+import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
+import { getDriveClient, getRootFolderId } from '@/services/googleDriveService';
 
 // Lightweight in-memory cache to reduce Drive API calls
 type CacheEntry = { timestamp: number; data: any };
 const cache = new Map<string, CacheEntry>();
-const FIVE_MINUTES_MS = 5 * 60 * 1000;
-
-function getDriveClient() {
-  const credentialsPath = path.join(process.cwd(), 'src', 'config', 'gen-lang-client-0211941879-57f306607431.json');
-  const raw = fs.readFileSync(credentialsPath, 'utf8');
-  const credentials = JSON.parse(raw);
-  const jwtClient = new google.auth.JWT({
-    email: credentials.client_email,
-    key: credentials.private_key,
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-  });
-  return google.drive({ version: 'v3', auth: jwtClient });
-}
 
 async function resolveSubfolderId(drive: any, rootFolderId: string, name: string): Promise<string | null> {
   const q = [
@@ -54,10 +40,10 @@ async function listCategory(drive: any, folderId: string): Promise<any[]> {
   return files.map((f: any) => {
     // For videos, we need to use a different URL format
     const isVideo = f.mimeType && f.mimeType.startsWith('video/');
-    const webContentLink = isVideo 
+    const webContentLink = isVideo
       ? `https://drive.google.com/uc?id=${f.id}` // Direct streaming URL for videos
       : `https://drive.google.com/uc?id=${f.id}&export=download`; // Download URL for other files
-    
+
     return {
       id: f.id,
       name: f.name,
@@ -78,8 +64,15 @@ export async function GET(req: NextRequest) {
     const allowList = ['backgrounds', 'music', 'transitions', 'all'];
     const requested = allowList.includes(category) ? category : 'all';
 
-    // Auth client (reuse the service account approach from google-drive-upload route)
+    // Get authenticated Drive client
     const drive = getDriveClient();
+
+    // Get root folder ID from environment
+    const ROOT_ID = getRootFolderId();
+    // root from env (support both var names)
+    if (!ROOT_ID) {
+      return NextResponse.json({ error: 'Google Drive root folder env not set (GOOGLE_DRIVE_FOLDER_ID or GOOGLE_PARENT_FOLDER_ID)' }, { status: 500 });
+    }
 
     // Env configuration (align with upload route and allow library-specific overrides)
     const rootId = process.env.GOOGLE_DRIVE_FOLDER_ID || '';
@@ -90,7 +83,7 @@ export async function GET(req: NextRequest) {
     // Cache key
     const cacheKey = `library:${requested}:${rootId}:${backgroundsIdEnv}:${musicIdEnv}:${transitionsIdEnv}`;
     const hit = cache.get(cacheKey);
-    if (hit && Date.now() - hit.timestamp < FIVE_MINUTES_MS) {
+    if (hit && Date.now() - hit.timestamp < TRENDING_TOPICS_CACHE_MAX_AGE) {
       return NextResponse.json(hit.data);
     }
 

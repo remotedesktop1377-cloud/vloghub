@@ -180,6 +180,60 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 
 export class HelperFunctions {
 
+  static getSearchQuery(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string): string {
+    const location = selectedLocationType === 'global'
+      ? selectedLocationType
+      : selectedLocationType === 'region'
+        ? selectedLocation
+        : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
+    return `${location}|${selectedDateRange}`;
+  }
+
+  // Check if all required fields are selected
+  static isAllFieldsSelected(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string, selectedPreviousLocation: string, selectedPreviousLocationType: string, selectedPreviousDateRange: string, selectedPreviousCountry: string): boolean {
+    // require all valid fields filled first
+    if (!selectedDateRange) return false;
+    if (selectedLocationType === 'global') {
+      // for global, just need dateRange
+      if (
+        selectedLocationType !== selectedPreviousLocationType &&
+        selectedDateRange !== selectedPreviousDateRange
+      ) {
+        return true;
+      } else {
+        return false;
+      }
+    } else if (selectedLocationType === 'region') {
+      // require region name (selectedLocation)
+      if (
+        !!selectedLocation &&
+        (selectedLocation !== selectedPreviousLocation &&
+          selectedLocationType !== selectedPreviousLocationType &&
+          selectedDateRange !== selectedPreviousDateRange)
+      ) {
+        return true;
+      } else {
+        return false;
+      }
+    } else if (selectedLocationType === 'country') {
+      // require country and location both
+      if (
+        !!selectedCountry &&
+        !!selectedLocation &&
+        selectedCountry !== selectedPreviousCountry &&
+        selectedLocation !== selectedPreviousLocation &&
+        selectedLocationType !== selectedPreviousLocationType &&
+        selectedDateRange !== selectedPreviousDateRange
+      ) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+    return false;
+  };
+
+
   /**
    * Parse a narration .txt file and return extracted fields.
    * Recognizes headers like TITLE, HOOK, MAIN CONTENT, CONCLUSION, CALL TO ACTION.
@@ -460,11 +514,11 @@ export class HelperFunctions {
       form.append('jobName', jobId);
       const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_GENERATE_FOLDER, { method: 'POST', body: form });
       const data = await res.json().catch(() => ({}));
-      
+
       if (!res.ok) {
         throw new Error(data?.message || data?.error || data?.details || 'Failed to generate a folder on Drive');
       }
-      
+
       // Handle the API response structure: { success: boolean, result: {...}, message: string }
       if (data.success && data.result) {
         return { success: true, result: data.result, message: data.message };

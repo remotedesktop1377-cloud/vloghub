@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { secure } from '../utils/helperFunctions';
+import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
 
 interface CachedData<T> {
   data: T;
@@ -15,14 +16,13 @@ export const useTrendingTopicsCache = () => {
       const cached = secure.j[cacheKey].get();
       if (cached) {
         const { data, timestamp }: CachedData<T> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<T>;
-        // Check if cache is less than 30 minutes old
+        // Check if cache is less than TRENDING_TOPICS_CACHE_MAX_AGE old
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        const maxAge = 30 * 60 * 1000; // 30 minutes in milliseconds
-
-        if (cacheAge < maxAge) {
+        if (cacheAge < TRENDING_TOPICS_CACHE_MAX_AGE) {
+          console.log('🟡 Cache is valid - returning data');
           return data;
         } else {
-          // Remove expired cache
+          // Cache is expired, remove it
           secure.j[cacheKey].remove();
         }
       }
