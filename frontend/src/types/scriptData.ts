@@ -1,4 +1,8 @@
+import { SceneData } from "./sceneData";
+import { BackgroundType } from "./backgroundType";
+
 export interface ScriptData {
+    jobId?: string;
     title: string;
     topic: string;
     description: string;
@@ -20,4 +24,17 @@ export interface ScriptData {
     updated_at: string;
     narrator_chroma_key_link: string;
     transcription: string;
+    videoBackground: BackgroundType | null;
+    userLogo?: {
+        url: string;
+        fileName: string;
+        uploadedAt: string;
+    };
+    selectedBackground?: {
+        id: string;
+        name: string;
+        url: string;
+        thumbnailUrl?: string;
+    };
+    scenesData?: SceneData[];
 }

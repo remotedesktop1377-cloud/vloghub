@@ -12,7 +12,7 @@ Create a `.env.local` file in your `frontend` directory with the following conte
 # Twitter API Configuration
 X_BEARER_TOKEN=your_actual_twitter_bearer_token_here
 
-# OpenAI API Configuration (for chapter generation)
+# OpenAI API Configuration (for SceneData generation)
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 

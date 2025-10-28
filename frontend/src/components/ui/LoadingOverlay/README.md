@@ -15,7 +15,7 @@ A reusable loading overlay component that provides a full-screen loading experie
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `generatingChapters` | `boolean` | `false` | Shows "Generating Script" message |
+| `generatingSceneData` | `boolean` | `false` | Shows "Generating Script" message |
 | `enhancingDetails` | `boolean` | `false` | Shows "Enhancing Topic Details" message |
 | `enhancingHypothesis` | `boolean` | `false` | Shows "Enhancing Hypothesis" message |
 | `imagesLoading` | `boolean` | `false` | Shows "Generating Images" message |
@@ -28,7 +28,7 @@ import LoadingOverlay from '../LoadingOverlay';
 
 // In your component
 <LoadingOverlay
-  generatingChapters={generatingChapters}
+  generatingSceneData={generatingSceneData}
   loadingTopicSuggestions={loadingTopicSuggestions}
   imagesLoading={imagesLoading}
   // ... other loading states

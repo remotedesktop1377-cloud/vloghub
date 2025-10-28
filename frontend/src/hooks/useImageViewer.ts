@@ -95,9 +95,9 @@ export const useImageViewer = (): UseImageViewerReturn => {
   };
 };
 
-// Helper function to convert chapter images to ImageData format
-export const formatChapterImages = (
-  chapterImages: string[],
+// Helper function to convert SceneData images to ImageData format
+export const formatSceneDataImages = (
+  SceneDataImages: string[],
   generatedImage?: string,
   generatedPrompt?: string
 ): ImageData[] => {
@@ -107,14 +107,14 @@ export const formatChapterImages = (
   if (generatedImage) {
     images.push({
       url: generatedImage,
-      name: 'AI Generated Chapter Image',
+      name: 'AI Generated SceneData Image',
       type: 'generated',
       prompt: generatedPrompt
     });
   }
   
   // Add uploaded images
-  chapterImages.forEach((url, index) => {
+  SceneDataImages.forEach((url, index) => {
     images.push({
       url,
       name: `Uploaded Image ${index + 1}`,

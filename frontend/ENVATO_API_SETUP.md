@@ -71,7 +71,7 @@ The integration uses the following Envato API endpoints:
 - **High Quality**: Professional stock images
 
 ### 2. Search Functionality
-- Auto-generated search queries from chapter narration
+- Auto-generated search queries from SceneData narration
 - Manual search with custom queries
 - Pagination support
 
@@ -85,11 +85,11 @@ The integration uses the following Envato API endpoints:
 ## Usage in Application
 
 ### Accessing Envato Images
-1. Open the Media Management dialog for any chapter
+1. Open the Media Management dialog for any SceneData
 2. Click on the "Envato Elements" tab
-3. Search results will auto-populate based on chapter narration
+3. Search results will auto-populate based on SceneData narration
 4. Use category filters to refine results
-5. Select images and click "Done" to add to chapter
+5. Select images and click "Done" to add to SceneData
 
 ### Search Tips
 - Use descriptive keywords for better results

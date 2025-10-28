@@ -1,20 +1,20 @@
-# 🎬 Auto Chapter Image Generation
+# 🎬 Auto SceneData Image Generation
 
 ## 🚀 **What Was Implemented**
 
-A focused auto chapter image generation system that automatically creates cinematic images for YouTube video chapters when they are generated.
+A focused auto SceneData image generation system that automatically creates cinematic images for YouTube video SceneData when they are generated.
 
 ## 📁 **Files Created/Modified**
 
 ### **Core Functionality:**
-- ✅ `src/utils/chapterImageGenerator.ts` - Main image generation logic
+- ✅ `src/utils/SceneDataImageGenerator.ts` - Main image generation logic
 - ✅ `src/utils/prompts/buildImagePrompt.ts` - Enhanced image prompt builder  
 - ✅ `src/lib/imageProvider.ts` - Vendor abstraction for image APIs
-- ✅ `src/data/mockChapters.ts` - Updated Chapter interface with media field
+- ✅ `src/data/mockSceneData.ts` - Updated SceneData interface with media field
 
 ### **Integration:**
-- ✅ `src/components/TrendingTopics/TrendingTopics.tsx` - Added auto image generation to handleGenerateChapters
-- ✅ `src/components/TrendingTopics/ChaptersSection.tsx` - Updated to display generated images
+- ✅ `src/components/TrendingTopics/TrendingTopics.tsx` - Added auto image generation to handleGenerateSceneData
+- ✅ `src/components/TrendingTopics/SceneDataSection.tsx` - Updated to display generated images
 
 ### **APIs Enhanced:**
 - ✅ `pages/api/generate-images.ts` - Updated to support new prompt structure
@@ -22,20 +22,20 @@ A focused auto chapter image generation system that automatically creates cinema
 ## 🎯 **How It Works**
 
 ### **1. Automatic Trigger**
-When chapters are generated via "Generate Chapters" button:
-1. Chapters are created from API response
-2. `generateChapterImages()` is automatically called  
-3. Images are generated in parallel for all chapters
-4. Chapter objects are updated with `media.image` URLs
+When SceneData are generated via "Generate SceneData" button:
+1. SceneData are created from API response
+2. `generateSceneDataImages()` is automatically called  
+3. Images are generated in parallel for all SceneData
+4. SceneData objects are updated with `media.image` URLs
 
 ### **2. Image Generation Process**
 ```typescript
-// For each chapter:
+// For each SceneData:
 const prompt = buildImagePrompt({
-  title: "YouTube Video Chapter",
-  chapterIdx: index,
-  visual_guidance: chapter.visuals,  // Uses existing visuals field
-  on_screen_text: chapter.heading
+  title: "YouTube Video SceneData",
+  SceneDataIdx: index,
+  visual_guidance: SceneData.visuals,  // Uses existing visuals field
+  on_screen_text: SceneData.heading
 });
 
 // Call image API
@@ -46,7 +46,7 @@ const response = await fetch('/api/generate-images', {
 ```
 
 ### **3. UI Integration**
-- Generated images appear automatically in chapter cards
+- Generated images appear automatically in SceneData cards
 - Green border with "AI" badge distinguishes generated images
 - Loading indicators show during generation
 - Images are clickable to open in new tab
@@ -55,12 +55,12 @@ const response = await fetch('/api/generate-images', {
 
 ### **✅ Automatic Generation**
 - No manual intervention required
-- Triggered when chapters are loaded
+- Triggered when SceneData are loaded
 - Parallel processing for speed
 
 ### **✅ Error Resilience** 
-- Individual chapter failures don't break the flow
-- Chapters still work without images
+- Individual SceneData failures don't break the flow
+- SceneData still work without images
 - Console logging for debugging
 
 ### **✅ Visual Integration**
@@ -70,25 +70,25 @@ const response = await fetch('/api/generate-images', {
 
 ### **✅ Performance Optimized**
 - Skips generation if image already exists
-- Uses chapter index as seed for consistency
-- Parallel API calls for all chapters
+- Uses SceneData index as seed for consistency
+- Parallel API calls for all SceneData
 
 ## 🎨 **Image Prompt Enhancement**
 
-Uses the existing `chapter.visuals` field to create optimized prompts:
+Uses the existing `SceneData.visuals` field to create optimized prompts:
 
 **Input:** `"Archival footage vibes, Pakistan cityscapes, crowd shots"`
 
 **Enhanced Prompt:** 
 ```
-"High-quality thumbnail frame for YouTube Video Chapter short. Scene 1: Archival footage vibes, Pakistan cityscapes, crowd shots. Cinematic, 16:9, crisp details, realistic lighting, broadcast quality. No text overlay baked into the image."
+"High-quality thumbnail frame for YouTube Video SceneData short. Scene 1: Archival footage vibes, Pakistan cityscapes, crowd shots. Cinematic, 16:9, crisp details, realistic lighting, broadcast quality. No text overlay baked into the image."
 ```
 
 ## 📊 **Data Structure**
 
-### **Updated Chapter Interface:**
+### **Updated SceneData Interface:**
 ```typescript
-interface Chapter {
+interface SceneData {
   id: string;
   time_range: string;
   narration: string;
@@ -110,15 +110,15 @@ interface Chapter {
 - ✅ **Error Handling**: Graceful failures
 - ✅ **Performance**: Parallel processing
 - ✅ **Integration**: Works with existing UI
-- ✅ **Scalable**: Handles any number of chapters
+- ✅ **Scalable**: Handles any number of SceneData
 
 ## 🎯 **User Experience**
 
-1. User clicks "Generate Chapters"
-2. Chapters appear immediately
+1. User clicks "Generate SceneData"
+2. SceneData appear immediately
 3. Loading indicators show in media sections
 4. Images populate automatically as they're generated
 5. Green "AI" badges identify generated content
 6. No additional clicks or configuration needed
 
-**🎬 Zero-click chapter image generation is now live!**
+**🎬 Zero-click SceneData image generation is now live!**

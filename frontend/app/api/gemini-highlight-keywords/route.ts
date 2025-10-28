@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AI_CONFIG } from '@/config/aiConfig';
+import { SceneData } from '@/types/sceneData';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
@@ -11,24 +12,29 @@ const model = genAI.getGenerativeModel({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { chapters } = body as { chapters: Array<{ id: string; narration: string }> };
-
-    if (!Array.isArray(chapters) || chapters.length === 0) {
-      return NextResponse.json({ error: 'chapters array required' }, { status: 400 });
+    const { scenesData } = body as { scenesData: SceneData[] };
+    if (!Array.isArray(scenesData) || scenesData.length === 0) {
+      return NextResponse.json({ error: 'scenesData array required' }, { status: 400 });
     }
 
-    const prompt = `You are an assistant that extracts concise highlight keywords from narration paragraphs.
-For each paragraph, identify 5-12 short, specific keywords or short phrases that are most useful for visuals search (people, places, objects, events, actions, nouns). Avoid generic words. No hashtags. Keep phrases under 4 words.
+    const prompt = `You are an assistant that extracts EXACT words and phrases from narration paragraphs.
+IMPORTANT: Only extract words and phrases that appear EXACTLY in the original text. Do not paraphrase, interpret, or create new phrases.
+
+For each paragraph, identify 5-12 exact words or short phrases (1-4 words) that are most useful for visual search. These must be:
+- Exact words or phrases from the original text
+- Nouns, adjectives, verbs, or short descriptive phrases
+- Useful for finding relevant images/videos
+- Avoid generic words like "the", "and", "is", "are"
 
 Return ONLY valid JSON in this exact format:
 {
   "results": [
-    { "id": "scene-1", "highlightedKeywords": ["keyword1", "keyword2", "keyword3"] }
+    { "id": "scene-1", "highlightedKeywords": ["exact word", "exact phrase"] }
   ]
 }
 
 Paragraphs:
-${chapters.map((c, i) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
+${scenesData.map((c: SceneData, i: number) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
 
     const result = await model.generateContent(prompt);
     const response = result.response;
@@ -44,12 +50,27 @@ ${chapters.map((c, i) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
     const parsed = JSON.parse(jsonMatch[0]);
     const results = Array.isArray(parsed?.results) ? parsed.results : [];
 
-    const normalized = results.map((r: any) => ({
-      id: String(r?.id ?? ''),
-      highlightedKeywords: Array.isArray(r?.highlightedKeywords)
-        ? r.highlightedKeywords.map((k: any) => String(k).trim()).filter(Boolean)
-        : []
-    }));
+    const normalized = results.map((r: any) => {
+      const sceneDataId = String(r?.id ?? '');
+      const sceneData = scenesData.find((c: SceneData) => c.id === sceneDataId);
+      const narrationText = sceneData?.narration?.toLowerCase() || '';
+      
+      const validKeywords = Array.isArray(r?.highlightedKeywords)
+        ? r.highlightedKeywords
+            .map((k: any) => String(k).trim())
+            .filter(Boolean)
+            .filter((keyword: string) => {
+              // Check if the keyword exists exactly in the narration text
+              const keywordLower = keyword.toLowerCase();
+              return narrationText.includes(keywordLower);
+            })
+        : [];
+      
+      return {
+        id: sceneDataId,
+        highlightedKeywords: validKeywords
+      };
+    });
 
     return NextResponse.json({ results: normalized });
   } catch (error: any) {

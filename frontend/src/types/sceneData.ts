@@ -1,4 +1,4 @@
-export interface Chapter {
+export interface SceneData {
     id: string;
     jobId?: string;
     jobName?: string;
@@ -15,7 +15,7 @@ export interface Chapter {
     on_screen_text?: string;
     highlightedKeywords?: string[];
     // Selected media for keywords; supports new array format and legacy map
-    keywordsSelected?: ChapterKeywordSelection[] | Record<string, string[]>;
+    keywordsSelected?: SceneKeywordSelection[] | Record<string, string[]>;
     assets?: {
         images?: string[] | null;
         imagesGoogle?: string[] | null;
@@ -31,7 +31,7 @@ export interface Chapter {
     };
 }
 
-export interface ChapterKeywordSelection {
+export interface SceneKeywordSelection {
     suggestedKeyword: string; // highlighted keyword
     modifiedKeyword?: string; // user-changed search term
     media?: {

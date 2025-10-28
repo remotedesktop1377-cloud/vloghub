@@ -2,7 +2,7 @@
 
 ## 🚀 **What Was Implemented**
 
-Automatic voice narration generation using ElevenLabs API based on each chapter's `voiceover_style` and `narration` content, with interactive audio controls and waveform visualization.
+Automatic voice narration generation using ElevenLabs API based on each SceneData's `voiceover_style` and `narration` content, with interactive audio controls and waveform visualization.
 
 ## 📁 **Files Created/Modified**
 
@@ -14,9 +14,9 @@ Automatic voice narration generation using ElevenLabs API based on each chapter'
 - ✅ `src/components/AudioPlayer/AudioPlayer.css` - Audio player styling
 
 ### **Enhanced Functionality:**
-- ✅ `src/utils/chapterImageGenerator.ts` - Now generates both images AND audio
-- ✅ `src/data/mockChapters.ts` - Added voiceover_style field to Chapter interface
-- ✅ `src/components/TrendingTopics/ChaptersSection.tsx` - Audio player integration
+- ✅ `src/utils/SceneDataImageGenerator.ts` - Now generates both images AND audio
+- ✅ `src/data/mockSceneData.ts` - Added voiceover_style field to SceneData interface
+- ✅ `src/components/TrendingTopics/SceneDataSection.tsx` - Audio player integration
 
 ## 🎯 **How It Works**
 
@@ -29,10 +29,10 @@ Automatic voice narration generation using ElevenLabs API based on each chapter'
 ```
 
 ### **2. Automatic Generation Process**
-1. User clicks "Generate Chapters"
-2. Chapters created with narration and voiceover_style
+1. User clicks "Generate SceneData"
+2. SceneData created with narration and voiceover_style
 3. **Parallel Generation**: Images and audio generated simultaneously
-4. Audio URLs stored in `chapter.media.audio`
+4. Audio URLs stored in `SceneData.media.audio`
 5. Audio players appear below narration text
 
 ### **3. Audio Player Features**
@@ -47,7 +47,7 @@ Automatic voice narration generation using ElevenLabs API based on each chapter'
 
 ### **Narration Section Layout:**
 ```
-📝 Chapter Narration Text
+📝 SceneData Narration Text
 🎵 Audio Player (if audio exists)
    ▶️ Play/Pause | [====🔊====    ] | 0:15 / 0:45
    Voice Style: "Energetic, curious"
@@ -60,7 +60,7 @@ Automatic voice narration generation using ElevenLabs API based on each chapter'
 
 ## 🔧 **Voice Style Examples**
 
-### **Chapter Types & Styles:**
+### **SceneData Types & Styles:**
 - **Opening**: "Energetic, curious, engaging"
 - **Serious Content**: "Serious, contemplative, authoritative"  
 - **Inspiring Sections**: "Passionate, inspiring, determined"
@@ -90,7 +90,7 @@ ELEVENLABS_API_KEY=your_api_key_here
 
 ## 🚀 **User Experience**
 
-1. **Generate Chapters** → Text + voice style created
+1. **Generate SceneData** → Text + voice style created
 2. **Auto Voice Generation** → ElevenLabs creates audio using style
 3. **Audio Player Appears** → Below narration with waveform
 4. **Interactive Playback** → Play, pause, seek, time display
@@ -98,8 +98,8 @@ ELEVENLABS_API_KEY=your_api_key_here
 
 ### **Example Flow:**
 ```
-User: Generate chapters about "Pakistan Weather"
-System: Creates chapter with voiceover_style: "Energetic, curious"
+User: Generate SceneData about "Pakistan Weather"
+System: Creates SceneData with voiceover_style: "Energetic, curious"
 ElevenLabs: Generates audio with energetic, curious voice
 UI: Shows audio player with waveform below narration
 User: Clicks play to test the generated voice
@@ -111,13 +111,13 @@ User: Clicks play to test the generated voice
 - ✅ **Style-Aware**: Voice matches content tone
 - ✅ **Interactive Testing**: Immediate playback capability
 - ✅ **Performance Optimized**: Base64 data URLs for instant playback
-- ✅ **Error Resilient**: Audio generation failures don't break chapters
+- ✅ **Error Resilient**: Audio generation failures don't break SceneData
 - ✅ **Responsive Design**: Works on all screen sizes
 
 ## 🎬 **Result**
 
-**Users now get complete multimedia chapters with both visual and audio content generated automatically based on the content style and tone!**
+**Users now get complete multimedia SceneData with both visual and audio content generated automatically based on the content style and tone!**
 
 🎤 **Voice generation powered by ElevenLabs with intelligent style mapping**
 🎵 **Interactive audio players with waveform visualization** 
-🚀 **Zero additional clicks - audio generates with chapters**
+🚀 **Zero additional clicks - audio generates with SceneData**

@@ -51,7 +51,7 @@ This directory contains video walkthroughs demonstrating how to use the YouTube 
 ## How to Use These Videos
 
 - Videos are available in MP4 format at 720p resolution
-- Each video includes chapter markers for easy navigation
+- Each video includes SceneData markers for easy navigation
 - Closed captions are available in multiple languages
 - Playback at 1.5x or 2x speed is recommended for experienced users
 

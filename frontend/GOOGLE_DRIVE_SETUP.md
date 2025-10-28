@@ -104,8 +104,8 @@ GOOGLE_DRIVE_FOLDER_ID=1ABcDeFgHiJkLmNoPqRsTuVwXyZ123456789
 1. User clicks "Upload JSON to Google Drive" button
 2. System creates comprehensive JSON structure with:
    - Project metadata (topic, title, duration, etc.)
-   - Chapter details (narration, timing, assets)
-   - Image URLs for each chapter
+   - SceneData details (narration, timing, assets)
+   - Image URLs for each SceneData
 3. Generates timestamped filename
 4. Uploads to specified Google Drive folder
 5. Returns shareable link to uploaded file
@@ -128,7 +128,7 @@ The uploaded JSON contains:
   "script": [
     {
       "id": "scene-1",
-      "narration": "Chapter narration text...",
+      "narration": "SceneData narration text...",
       "duration": "10 seconds",
       "durationInSeconds": 10,
       "words": 25,
@@ -147,7 +147,7 @@ The uploaded JSON contains:
 ### Test Upload
 
 1. Make sure your environment variables are set correctly
-2. Create a script with chapters in the application
+2. Create a script with SceneData in the application
 3. Click "Upload JSON to Google Drive"
 4. Check your Google Drive folder for the uploaded file
 5. Verify the file contains the expected JSON structure
