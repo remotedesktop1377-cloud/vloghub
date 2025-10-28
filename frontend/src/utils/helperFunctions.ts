@@ -902,6 +902,19 @@ export class HelperFunctions {
     } as const;
   }
 
+  static detectLanguage(text: string): 'urdu' | 'english' | 'mixed' | 'unknown' {
+    const urduRegex = /[\u0600-\u06FF]/;
+    const englishRegex = /[A-Za-z]/;
+
+    const hasUrdu = urduRegex.test(text);
+    const hasEnglish = englishRegex.test(text);
+
+    if (hasUrdu && !hasEnglish) return 'urdu';
+    if (hasEnglish && !hasUrdu) return 'english';
+    if (hasUrdu && hasEnglish) return 'mixed';
+    return 'unknown';
+  }
+
   static getTimeRangeDescription(dateRange: string): string {
     switch (dateRange) {
       case '24h':

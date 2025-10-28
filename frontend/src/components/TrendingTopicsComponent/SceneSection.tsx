@@ -388,7 +388,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 fontSize: '1.2rem',
                                                 textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
                                               },
-                                              ...HelperFunctions.getDirectionSx(language)
+                                              ...HelperFunctions.getDirectionSx(HelperFunctions.detectLanguage(sceneData.narration)),
                                             }}
                                           />
                                           <Box sx={{ px: 1.5, py: 1, display: 'flex', alignItems: 'center', gap: 2, borderTop: '1px solid', borderColor: 'divider' }}>
@@ -440,8 +440,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                   fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
                                                   userSelect: 'text',
                                                   cursor: 'text',
-                                                  ...HelperFunctions.getDirectionSx(language),
-                                                  textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
+                                                  ...HelperFunctions.getDirectionSx(HelperFunctions.detectLanguage(sceneData.narration)),
+                                                  // textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
                                                 }}
                                                 onMouseUp={(e) => {
                                                   onTextSelection(index, e);

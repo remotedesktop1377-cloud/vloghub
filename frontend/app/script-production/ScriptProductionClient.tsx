@@ -122,6 +122,7 @@ const ScriptProductionClient = () => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [lastMusicIdLoaded, setLastMusicIdLoaded] = useState<string | null>(null);
     const [completeProjectUploaded, setCompleteProjectUploaded] = useState(false);
+    const [pageTitle, setPageTitle] = useState('Script Review & Approval');
 
     const CONTROL_HEIGHT = 44;
     const [jobId, setJobId] = useState<string>('');
@@ -164,11 +165,13 @@ const ScriptProductionClient = () => {
                     setJobId(storedData.jobId);
                     setIsScriptApproved(true);
                     setIsNarrationUploadView(true);
+                    setPageTitle('Step 2: Narrator Video Upload Stage');
                 }
 
                 if (storedData.status === SCRIPT_STATUS.UPLOADED && storedData.narrator_chroma_key_link) {
                     setIsNarrationUploadView(false);
                     setIsNarratorVideoUploaded(true);
+                    setPageTitle('Final Step: Scene Composition & Video Generation');
 
                     if (storedData.transcription) {
                         setNarratorChromaKeyLink(storedData.narrator_chroma_key_link);
@@ -194,7 +197,7 @@ const ScriptProductionClient = () => {
     // Calculate estimated duration when script data changes
     useEffect(() => {
         if (scriptData) {
-            setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.script));
+            setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.transcription));
         }
     }, [scriptData]);
 
@@ -936,6 +939,7 @@ const ScriptProductionClient = () => {
         setIsScriptApproved(true);
         // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
         setIsNarrationUploadView(true);
+        setPageTitle('Step 2: Narrator Video Upload Stage');
         // console.log('Approved script saved successfully');
         // }
         setLoading(false);
@@ -1184,7 +1188,7 @@ const ScriptProductionClient = () => {
                         Back
                     </Button>
                     <Typography variant="h6" color="text.secondary" sx={{ lineHeight: 2.5, fontSize: '1.5rem' }}>
-                        Script Review & Approval
+                        {pageTitle}
                     </Typography>
                 </Box>
 
@@ -1251,7 +1255,14 @@ const ScriptProductionClient = () => {
                             </Typography>
                             {isScriptApproved && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                    <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }}
+                                    <Button variant="contained" size="medium" sx={{
+                                        textTransform: 'none',
+                                        fontSize: '1.25rem',
+                                        px: 2,
+                                        py: 1.5,
+                                        lineHeight: 1.5,
+                                        gap: 1,
+                                    }}
                                         startIcon={<DownloadIcon />}
                                         onClick={() => HelperFunctions.handleDownloadAllNarrations(scriptData as ScriptData)}
                                     >
@@ -1283,7 +1294,7 @@ const ScriptProductionClient = () => {
                                                         py: 1.5,
                                                         lineHeight: 1.5,
                                                         gap: 1,
-                                                        fontSize: '1rem',
+                                                        fontSize: '1.25rem',
                                                         width: '100%'
                                                     }}
                                                 >
@@ -1300,7 +1311,7 @@ const ScriptProductionClient = () => {
                                                         py: 1.5,
                                                         px: 2,
                                                         gap: 1,
-                                                        fontSize: '1rem',
+                                                        fontSize: '1.25rem',
                                                         bgcolor: 'success.main',
                                                         textTransform: 'none',
                                                         lineHeight: 1.5,
@@ -1320,14 +1331,15 @@ const ScriptProductionClient = () => {
                                                     onClick={handleSaveScript}
                                                     sx={{
                                                         textTransform: 'none',
-                                                        px: 2,
                                                         py: 1.5,
+                                                        px: 2,
+                                                        gap: 1,
                                                         lineHeight: 1.5,
-                                                        fontSize: '1rem',
+                                                        fontSize: '1.25rem',
                                                         width: '100%'
                                                     }}
                                                 >
-                                                    Save Changes
+                                                    Save
                                                 </Button>
 
                                                 <Button
@@ -1338,14 +1350,15 @@ const ScriptProductionClient = () => {
                                                     onClick={handleCancelEditingScript}
                                                     sx={{
                                                         textTransform: 'none',
-                                                        px: 2,
                                                         py: 1.5,
+                                                        px: 2,
+                                                        gap: 1,
                                                         lineHeight: 1.5,
-                                                        fontSize: '1rem',
+                                                        fontSize: '1.25rem',
                                                         width: '100%'
                                                     }}
                                                 >
-                                                    Cancel
+                                                    Discard
                                                 </Button>
                                             </Box>
                                         )}
@@ -1517,9 +1530,7 @@ const ScriptProductionClient = () => {
                                     scriptData={scriptData as ScriptData}
                                     setScriptData={setScriptData}
                                     onUploadComplete={(driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
-                                        // console.log("transcription text: ", transcription)
-                                        // update the ScriptData with transcribe text as script     
-                                        console.log("backgroundType: ", backgroundType);
+                                        setPageTitle('Final Step: Scene Composition & Video Generation');
                                         setIsNarratorVideoUploaded(true);
                                         setIsNarrationUploadView(false);
                                         setNarratorChromaKeyLink(driveUrl);
