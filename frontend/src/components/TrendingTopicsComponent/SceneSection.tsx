@@ -158,6 +158,10 @@ interface SceneDataSectionProps {
   };
   // Open project settings dialog in scene context
   onOpenProjectSettingsDialog?: (sceneIndex: number) => void;
+  // Context for refining image search queries
+  scriptTitle?: string;
+  trendingTopic?: string;
+  location?: string;
 }
 
 const SceneDataSection: React.FC<SceneDataSectionProps> = ({
@@ -202,6 +206,9 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   driveTransitions,
   projectSettings,
   onOpenProjectSettingsDialog,
+  scriptTitle,
+  trendingTopic,
+  location,
 }) => {
   const [expandedSceneDataIndex, setExpandedSceneDataIndex] = React.useState<number | null>(null);
   // Volume popover open state per SceneData (inline editor)
@@ -1722,6 +1729,10 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
             <Box sx={{ flex: 1 }}>
               <ImageSearch
                 SceneDataNarration={scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.narration || ''}
+                scriptTitle={scriptTitle }
+                trendingTopic={trendingTopic}
+                location={location}
+                keywords={(scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.highlightedKeywords || []).filter(k => typeof k === 'string' && k.trim())}
                 onClearSelection={() => onClearSelection()}
                 onImageSelect={(imageUrl) => {
                   const currentIdx = mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex;

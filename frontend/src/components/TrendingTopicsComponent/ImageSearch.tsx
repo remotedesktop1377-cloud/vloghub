@@ -72,6 +72,11 @@ interface ImageSearchProps {
     onDoneWithSelected?: (selectedUrls: string[], modifiedKeyword?: string) => void;
     // If provided, also attach keywordsSelected merge payload on update
     currentKeywordForMapping?: string;
+    // Context to refine Google queries for higher relevance
+    trendingTopic?: string;
+    location?: string;
+    scriptTitle?: string;
+    keywords?: string[];
 }
 
 type TabValue = 'google' | 'envato' | 'envatoClips' | 'youtube' | 'upload';
@@ -88,7 +93,11 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     suggestionKeywords = [],
     autoSearchOnMount = false,
     onDoneWithSelected,
-    currentKeywordForMapping
+    currentKeywordForMapping,
+    trendingTopic,
+    location,
+    scriptTitle,
+    keywords = []
 }) => {
     const [activeTab, setActiveTab] = useState<TabValue>('google');
     const [searchQuery, setSearchQuery] = useState('');
@@ -126,43 +135,31 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const currentLoading = activeTab === 'google' ? googleLoading : envatoLoading;
     const currentError = activeTab === 'google' ? googleError : envatoError;
 
-    // Prefill search input with a brief summary from the scene narration
-    useEffect(() => {
-        if (!SceneDataNarration) return;
-        if (searchQuery && searchQuery.trim().length > 0) return; // don't override user input
-        const summary = SceneDataNarration
-            .replace(/\s+/g, ' ')
-            .trim()
-            .split(' ')
-            // .slice(0, 12)
-            .join(' ');
-        if (summary) setSearchQuery(summary);
-    }, [SceneDataNarration]);
-
     // Search Google Images
     const searchGoogleImages = async (query: string, suggestions: string[] = []) => {
         setGoogleLoading(true);
         setGoogleError(null);
 
         try {
-            const combinedQuery = suggestions.length > 0 ? createCombinedSearchQuery(suggestions) : query;
+            // Step 1: Build base context (used only when no suggestions)
+            const suggestionQuery = query !== "" ? query : buildContextString();
 
+            // Step 6: Call backend
             const response = await fetch(API_ENDPOINTS.GOOGLE_IMAGE_SEARCH, {
-                method: 'POST',
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    query: combinedQuery,
-                    page: 1,
-                    imagesPerPage: 10
+                    query: suggestionQuery,
+                    location: location,
                 }),
             });
 
             if (!response.ok) {
                 const data = await response.json();
-                const errorMessage = data.error || 'Failed to search Google images';
-                const errorDetails = data.details ? ` (${data.details})` : '';
+                const errorMessage = data.error || "Failed to search Google images";
+                const errorDetails = data.details ? ` (${data.details})` : "";
                 throw new Error(`${errorMessage}${errorDetails}`);
             }
 
@@ -170,18 +167,20 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
             const imagesWithSource = (data.images || []).map((img: any, index: number) => ({
                 ...img,
-                source: 'google' as const,
+                source: "google" as const,
                 sourceSuggestion: suggestions.length > 0 ? suggestions[index % suggestions.length] : undefined,
-                suggestionIndex: suggestions.length > 0 ? index % suggestions.length : undefined
+                suggestionIndex: suggestions.length > 0 ? index % suggestions.length : undefined,
             }));
 
             setGoogleImages(imagesWithSource);
-            checkAndSelectExistingImages(imagesWithSource, 'google');
+            checkAndSelectExistingImages(imagesWithSource, "google");
 
             HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Google images`);
-
         } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'An error occurred searching Google images';
+            const errorMsg =
+                err instanceof Error
+                    ? err.message
+                    : "An error occurred searching Google images";
             setGoogleError(errorMsg);
             setGoogleImages([]);
             HelperFunctions.showError(errorMsg);
@@ -284,36 +283,28 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         }
     };
 
-    // Create a comprehensive search query by combining all suggestions
-    const createCombinedSearchQuery = (suggestions: string[]): string => {
-        if (suggestions.length === 0) return '';
+    // Build compact and meaningful context string from props
+    const buildContextString = (): string => {
+        const ctxParts: string[] = [];
 
-        const cleanSuggestions = suggestions.map(suggestion =>
-            suggestion.trim().replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ')
-        );
+        // First: script title and location
+        if (scriptTitle?.trim()) ctxParts.push(`${scriptTitle.trim()}`);
+        console.log('scriptTitle', scriptTitle);
+        if (location?.trim()) ctxParts.push("at the location of " + location.replace(/[,]/g, ' ').trim());
+        console.log('location', location);
 
-        const uniqueSuggestions = Array.from(new Set(cleanSuggestions))
-            .filter(suggestion => suggestion.length > 2);
-
-        if (uniqueSuggestions.length === 0) return suggestions[0];
-        if (uniqueSuggestions.length === 1) return uniqueSuggestions[0];
-
-        const relevantSuggestions = uniqueSuggestions.slice(0, Math.min(4, uniqueSuggestions.length));
-
-        let combinedQuery = '';
-        if (relevantSuggestions.length === 2) {
-            combinedQuery = `${relevantSuggestions[0]} and ${relevantSuggestions[1]}`;
-        } else if (relevantSuggestions.length === 3) {
-            combinedQuery = `${relevantSuggestions[0]}, ${relevantSuggestions[1]}, and ${relevantSuggestions[2]}`;
-        } else if (relevantSuggestions.length >= 4) {
-            combinedQuery = `${relevantSuggestions[0]}, ${relevantSuggestions[1]}, ${relevantSuggestions[2]}, and ${relevantSuggestions[3]}`;
+        if (keywords && Array.isArray(keywords) && keywords.length > 0) {
+            // Join keywords with OR to allow broader search matching
+            const keywordQuery = keywords.map(k => `${k.trim()}`).join(', ');
+            ctxParts.push("and the keywords are: " + keywordQuery + " on the topic of");
         }
 
-        if (combinedQuery.length > 100) {
-            combinedQuery = relevantSuggestions.slice(0, 3).join(' ');
-        }
+        // Then: trending topic (optional)
+        if (trendingTopic?.trim()) ctxParts.push(trendingTopic.trim());
+        console.log('trendingTopic', trendingTopic);
 
-        return combinedQuery;
+        const finalContext = ctxParts.filter(Boolean).join(' ');
+        return finalContext;
     };
 
     // Function to check if existing image URLs match API response images and auto-select them
@@ -337,6 +328,11 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         if (!narration) return [];
 
         const suggestions: string[] = [];
+        // Seed with context for better precision
+        if (scriptTitle && scriptTitle.trim()) suggestions.push(scriptTitle.trim());
+        if (trendingTopic && trendingTopic.trim()) suggestions.push(trendingTopic.trim());
+        if (location && location.trim()) suggestions.push(location.trim());
+        if (keywords && Array.isArray(keywords) && keywords.length > 0) suggestions.push(keywords.slice(0, 3).join(' '));
         const words = narration.toLowerCase().split(' ');
         const stopWordsSet = new Set([
             'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
@@ -386,7 +382,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             }
         }
 
-        return Array.from(new Set(suggestions)).slice(0, 5);
+        return Array.from(new Set(suggestions)).slice(0, 8);
     };
 
     // Generate meaningful keywords for Envato (single words)
@@ -517,8 +513,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             HelperFunctions.showError('Failed to download image');
         }
     };
-
-    const toggleSelectAll = () => { };
 
     const handleDone = () => {
         // Single selection across tabs

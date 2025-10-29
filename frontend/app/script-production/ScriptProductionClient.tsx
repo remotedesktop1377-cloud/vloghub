@@ -1849,6 +1849,9 @@ const ScriptProductionClient = () => {
                                         transitionEffects: projectTransitionEffects,
                                     }}
                                     onOpenProjectSettingsDialog={(sceneIndex: number) => openProjectSettingsDialog('scene', sceneIndex)}
+                                    scriptTitle={scriptData?.title || ''}
+                                    trendingTopic={scriptData?.topic || ''}
+                                    location={scriptData?.region || ''}
                                 />
 
                                 {/* Production Actions - Only show when script is approved */}

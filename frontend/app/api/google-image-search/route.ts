@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, page = 1 } = await request.json();
+    const { query, page = 1, location } = await request.json();
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json(
@@ -39,15 +39,17 @@ export async function POST(request: NextRequest) {
     searchUrl.searchParams.set('cx', searchEngineId);
     searchUrl.searchParams.set('q', query);
     searchUrl.searchParams.set('searchType', 'image');
-    searchUrl.searchParams.set('start', startIndex.toString());
-    searchUrl.searchParams.set('num', imagesPerPage.toString());
-    searchUrl.searchParams.set('safe', 'active');
+    searchUrl.searchParams.set('gl', location); // country
+    searchUrl.searchParams.set('lr', 'lang_en'); // language
+    // searchUrl.searchParams.set('start', startIndex.toString());
+    // searchUrl.searchParams.set('num', imagesPerPage.toString());
+    searchUrl.searchParams.set('safe', 'off'); // 'active' or 'off'
 
     console.log('Searching with URL:', searchUrl.toString());
     // console.log('Requested images per page:', requestedImagesPerPage, 'Actual images per page:', imagesPerPage);
 
     const response = await fetch(searchUrl.toString());
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Google Custom Search API error:', {
@@ -55,9 +57,9 @@ export async function POST(request: NextRequest) {
         statusText: response.statusText,
         data: errorData
       });
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to search images',
           details: errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`
         },
@@ -110,7 +112,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Google image search error:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
