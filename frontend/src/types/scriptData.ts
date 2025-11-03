@@ -37,4 +37,7 @@ export interface ScriptData {
         thumbnailUrl?: string;
     };
     scenesData?: SceneData[];
+    // Gamma video preview (script-level)
+    gammaGenId?: string;
+    gammaExportUrl?: string;
 }

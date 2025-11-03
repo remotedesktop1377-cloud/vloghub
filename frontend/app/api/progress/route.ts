@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${data}\n\n`));
       };
 
-      send(JSON.stringify({ type: 'connected', jobId }));
+      send(JSON.stringify({ type: 'transcribing', jobId }));
 
       let pollCount = 0;
       const MAX_POLLS = 600; // 5 minutes (600 * 500ms)

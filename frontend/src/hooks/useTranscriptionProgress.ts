@@ -49,7 +49,7 @@ export function useTranscriptionProgress({ jobId, onComplete, onError }: UseTran
         setProgress({
             stage: 'initializing',
             progress: 0,
-            message: 'Connecting to progress stream...',
+            message: 'Extracting Audio from Video...',
             isLoading: true,
         });
 
@@ -61,9 +61,9 @@ export function useTranscriptionProgress({ jobId, onComplete, onError }: UseTran
             try {
                 const data = JSON.parse(event.data);
 
-                if (data.type === 'connected') {
+                if (data.type === 'transcribing') {
                     console.log('Connected to progress stream');
-                    setProgress(prev => ({ ...prev, message: 'Connected...', isLoading: true }));
+                    setProgress(prev => ({ ...prev, message: 'transcribing...', isLoading: true }));
                     return;
                 }
 

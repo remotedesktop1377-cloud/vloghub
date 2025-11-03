@@ -43,6 +43,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
+import GammaService from '@/services/gammaService';
 import { SceneData } from '@/types/sceneData';
 import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
@@ -195,11 +196,11 @@ const ScriptProductionClient = () => {
     }, []);
 
     // Calculate estimated duration when script data changes
-    useEffect(() => {
-        if (scriptData) {
-            setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.transcription));
-        }
-    }, [scriptData]);
+    // useEffect(() => {
+    //     if (scriptData) {
+    //         setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.transcription));
+    //     }
+    // }, [scriptData]);
 
     // Handle browser back button
     useEffect(() => {
@@ -237,7 +238,6 @@ const ScriptProductionClient = () => {
 
     useEffect(() => {
         if (scriptData?.transcription && scenesData && scenesData.length > 0) {
-
             const needsHighlights = scenesData.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
             if (needsHighlights) {
                 setLoading(true);
@@ -571,6 +571,42 @@ const ScriptProductionClient = () => {
         }
     };
 
+    // Start Gamma generation if needed (script-level)
+    const startGammaIfNeeded = async (scriptData: ScriptData) => {
+        try {
+            if (!scriptData || scriptData.gammaGenId || scriptData.gammaExportUrl || !scriptData.transcription || !scriptData.scenesData || scriptData.scenesData.length <= 0) return;
+            const inputText = scriptData.transcription;
+            const data = await GammaService.startGeneration(inputText, scriptData.scenesData!.length);
+            if (data?.generationId) {
+                const updatedScriptData = { ...scriptData, gammaGenId: data.generationId } as ScriptData;
+                setScriptData(updatedScriptData);
+                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+
+                checkGammaAPIStatus(updatedScriptData);
+            }
+        } catch { }
+    };
+
+    const checkGammaAPIStatus = async (scriptData: ScriptData) => {
+        try {
+            const poll = async () => {
+                try {
+                    const data = await GammaService.checkStatus(scriptData.gammaGenId!);
+                    if (data?.status === 'completed' && data?.exportUrl) {
+                        const updatedScriptData = { ...scriptData, gammaExportUrl: data.exportUrl } as ScriptData;
+                        setScriptData(updatedScriptData);
+                        SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                    } else {
+                        setTimeout(poll, 5000);
+                    }
+                } catch {
+                    setTimeout(poll, 5000);
+                }
+            };
+            poll();
+        } catch { }
+    };
+
     // Function to break down script into paragraphs and calculate individual durations
     const updateParagraphs = (scriptData: ScriptData) => {
         // Check if we have scenes data from the new transcribe API
@@ -598,34 +634,20 @@ const ScriptProductionClient = () => {
                     }));
                     console.log('Using existing SceneData with scenes data:', normalizedFromStorage.length);
                     setScenesData(normalizedFromStorage);
+                    // Kick off or check Gamma generation at SCRIPT level
+                    if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {
+                        checkGammaAPIStatus(scriptData);
+                    } else {
+                        void startGammaIfNeeded(scriptData);
+                    }
                     return;
                 }
             } catch (error) {
                 console.error('Error processing existing SceneData with scenes:', error);
             }
 
-            // Map scenes data to SceneData[] with required fields
-            const SceneDataFromScenes: SceneData[] = scriptData.scenesData!.map((scene: any, index: number) => ({
-                id: scene.id || `scene-${index + 1}`,
-                jobId: jobId || '',
-                jobName: jobId || '',
-                narration: scene.narration || '',
-                duration: scene.duration || '',
-                words: scene.words || 0,
-                startTime: scene.startTime || 0,
-                endTime: scene.endTime || 0,
-                durationInSeconds: scene.durationInSeconds || 0,
-                keywordsSelected: [],
-                assets: { image: null, audio: null, video: null, images: [], imagesGoogle: [], imagesEnvato: [] }
-            }));
-
-            console.log('Created SceneData from scenes data:', SceneDataFromScenes.length);
-            setScenesData(SceneDataFromScenes);
             return;
         }
-
-        // Fallback to old method if no scenes data available
-        console.log('No scenes data found, using legacy paragraph splitting');
     };
 
     // SceneData Management Functions
