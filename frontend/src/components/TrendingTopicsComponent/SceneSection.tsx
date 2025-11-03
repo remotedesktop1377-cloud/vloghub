@@ -218,13 +218,13 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
 
 
   // Handle opening image viewer for a SceneData
-  const handleImageClick = (SceneDataIndex: number, imageIndex: number = 0) => {
+  const handleImageClick = (SceneDataIndex: number, imageIndex: number = 0, isPreview: boolean) => {
     const sceneData = scenesData[SceneDataIndex];
     const SceneDataImages = SceneDataImagesMap[SceneDataIndex] || [];
 
     const images = formatSceneDataImages(
       SceneDataImages,
-      sceneData.assets?.images?.[0] || undefined,
+      isPreview ? sceneData.previewImage || '' : sceneData.assets?.images?.[0] || '',
     );
 
     if (images.length > 0) {
@@ -1052,71 +1052,73 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 </Box>
 
                                                 {/* Media Display */}
-                                                {((SceneDataImagesMap[index] || []).length > 0 || (sceneData.assets && Array.isArray(sceneData.assets.images) ? sceneData.assets.images.length > 0 : false)) ? (
-                                                  <>
-                                                    {(() => {
-                                                      const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
-                                                      const previewUrl = allImages[0] || (SceneDataImagesMap[index] || [])[0] || '';
-                                                      const handlePreviewClick = (e: any) => {
-                                                        e.stopPropagation();
-                                                        handleImageClick(index, 0);
-                                                      };
-                                                      return (
-                                                        <Box sx={{ mb: 1 }}>
-                                                          <Box sx={{ position: 'relative', width: '100%', borderRadius: 1, overflow: 'hidden', border: `1px solid ${BORDER.light}` }} onClick={handlePreviewClick}>
-                                                            <Box sx={{ position: 'relative', width: '100%', pt: '75%' }}>
-                                                              {previewUrl ? (
-                                                                <img
-                                                                  src={previewUrl}
-                                                                  alt={`Preview media ${index + 1}`}
-                                                                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                                                                />
-                                                              ) : (
-                                                                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
-                                                                  No media
-                                                                </Box>
-                                                              )}
-                                                            </Box>
+                                                <>
+                                                  {(() => {
+                                                    const previewUrl = sceneData.previewImage || '';
+                                                    console.log('Preview URL:', previewUrl);
+                                                    const handlePreviewClick = (e: any) => {
+                                                      e.stopPropagation();
+                                                      handleImageClick(index, 0, true);
+                                                    };
+                                                    return (
+                                                      <Box sx={{ mb: 1 }}>
+                                                        <Box sx={{ position: 'relative', width: '100%', borderRadius: 1, overflow: 'hidden', border: `1px solid ${BORDER.light}` }} onClick={handlePreviewClick}>
+                                                          <Box sx={{ position: 'relative', width: '100%', pt: '75%' }}>
+                                                            {previewUrl ? (
+                                                              <img
+                                                                src={previewUrl}
+                                                                alt={`Preview media ${index + 1}`}
+                                                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                                              />
+                                                            ) : (
+                                                              <>
+                                                                <CircularProgress size={24} />
+                                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.25rem', mb: 0.5 }}>
+                                                                  Generating Preview...
+                                                                </Typography>
+                                                              </>
+                                                            )}
                                                           </Box>
                                                         </Box>
-                                                      );
-                                                    })()}
+                                                      </Box>
+                                                    );
+                                                  })()}
 
-                                                    {/* Horizontal selected images */}
-                                                    {(() => {
-                                                      const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
-                                                      const googleSet = new Set(sceneData.assets?.imagesGoogle || []);
-                                                      const envatoSet = new Set(sceneData.assets?.imagesEnvato || []);
-                                                      const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
-                                                      const list = hasAIAtFirst ? allImages.slice(1) : allImages;
-                                                      return (
-                                                        <Box sx={{ display: 'flex', gap: 0.75, overflowX: 'auto', pb: 0.5 }}>
-                                                          {list.map((imageUrl, imgIndex) => (
-                                                            <Box
-                                                              key={`selected-${imgIndex}`}
-                                                              sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `2px solid ${PRIMARY.main}`, cursor: 'pointer' }}
+                                                  {/* Horizontal selected images */}
+                                                  {(() => {
+                                                    const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
+                                                    const googleSet = new Set(sceneData.assets?.imagesGoogle || []);
+                                                    const envatoSet = new Set(sceneData.assets?.imagesEnvato || []);
+                                                    const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
+                                                    const list = hasAIAtFirst ? allImages.slice(1) : allImages;
+                                                    return (
+                                                      <Box sx={{ display: 'flex', gap: 0.75, overflowX: 'auto', pb: 0.5 }}>
+                                                        {list.map((imageUrl, imgIndex) => (
+                                                          <Box
+                                                            key={`selected-${imgIndex}`}
+                                                            sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `2px solid ${PRIMARY.main}`, cursor: 'pointer' }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              const imageIndex = (hasAIAtFirst ? 1 : 0) + imgIndex;
+                                                              handleImageClick(index, imageIndex, false);
+                                                            }}
+                                                          >
+                                                            <img src={imageUrl} alt={`Selected Image ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <IconButton
+                                                              size="small"
+                                                              sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
                                                               onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                const imageIndex = (hasAIAtFirst ? 1 : 0) + imgIndex;
-                                                                handleImageClick(index, imageIndex);
-                                                              }}
-                                                            >
-                                                              <img src={imageUrl} alt={`Selected Image ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                              <IconButton
-                                                                size="small"
-                                                                sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
-                                                                onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  const updatedSceneData = scenesData.map((ch, chIndex) => {
-                                                                    if (chIndex === index) {
-                                                                      const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
-                                                                      const googleSetInner = new Set(ch.assets?.imagesGoogle || []);
-                                                                      const envatoSetInner = new Set(ch.assets?.imagesEnvato || []);
-                                                                      const hasAIAtFirstInner = currentImages.length > 0 && !googleSetInner.has(currentImages[0]) && !envatoSetInner.has(currentImages[0]);
-                                                                      const absoluteIndex = (hasAIAtFirstInner ? 1 : 0) + imgIndex;
-                                                                      const targetUrl = currentImages[absoluteIndex];
-                                                                      const updatedImages = currentImages.filter((_, i) => i !== absoluteIndex);
-                                                                      const currentGoogle = ch.assets?.imagesGoogle || [];
+                                                                const updatedSceneData = scenesData.map((ch, chIndex) => {
+                                                                  if (chIndex === index) {
+                                                                    const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
+                                                                    const googleSetInner = new Set(ch.assets?.imagesGoogle || []);
+                                                                    const envatoSetInner = new Set(ch.assets?.imagesEnvato || []);
+                                                                    const hasAIAtFirstInner = currentImages.length > 0 && !googleSetInner.has(currentImages[0]) && !envatoSetInner.has(currentImages[0]);
+                                                                    const absoluteIndex = (hasAIAtFirstInner ? 1 : 0) + imgIndex;
+                                                                    const targetUrl = currentImages[absoluteIndex];
+                                                                    const updatedImages = currentImages.filter((_, i) => i !== absoluteIndex);
+                                                                    const currentGoogle = ch.assets?.imagesGoogle || [];
                                                                     const currentEnvato = ch.assets?.imagesEnvato || [];
                                                                     const updatedGoogle = currentGoogle.filter((u) => u !== targetUrl);
                                                                     const updatedEnvato = currentEnvato.filter((u) => u !== targetUrl);
@@ -1124,156 +1126,119 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                     let nextKeywordsSelected: any = ch.keywordsSelected;
                                                                     if (Array.isArray(ch.keywordsSelected)) {
                                                                       const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
-                                                                        nextKeywordsSelected = arr.filter(entry => {
-                                                                          const low = entry.media?.lowResMedia;
-                                                                          const high = entry.media?.highResMedia;
-                                                                          return low !== targetUrl && high !== targetUrl;
-                                                                        });
-                                                                      } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
-                                                                        const map = ch.keywordsSelected as Record<string, string[]>;
-                                                                        const newMap: Record<string, string[]> = {};
-                                                                        Object.entries(map).forEach(([k, list]) => {
-                                                                          const filtered = (list || []).filter(u => u !== targetUrl);
-                                                                          if (filtered.length > 0) newMap[k] = filtered;
-                                                                        });
-                                                                        nextKeywordsSelected = newMap;
-                                                                      }
-                                                                      return {
-                                                                        ...ch,
-                                                                        assets: {
-                                                                          ...ch.assets,
-                                                                          images: updatedImages.length > 0 ? updatedImages : null,
-                                                                          imagesGoogle: updatedGoogle.length > 0 ? updatedGoogle : null,
-                                                                          imagesEnvato: updatedEnvato.length > 0 ? updatedEnvato : null
-                                                                        },
-                                                                        ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
-                                                                      };
-                                                                    }
-                                                                    return ch;
-                                                                  });
-                                                                  onSceneDataUpdate(updatedSceneData);
-                                                                  HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
-                                                                }}
-                                                              >
-                                                                <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                                  <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                                </svg>
-                                                              </IconButton>
-                                                            </Box>
-                                                          ))}
-
-                                                          {(SceneDataImagesMap[index] || []).map((imageUrl, imgIndex) => (
-                                                            <Box
-                                                              key={`extra-${imgIndex}`}
-                                                              sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `1px solid ${BORDER.light}`, cursor: 'pointer' }}
-                                                              onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const imageIndex = sceneData.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
-                                                                handleImageClick(index, imageIndex);
-                                                              }}
-                                                            >
-                                                              <img src={imageUrl} alt={`Scene ${index + 1} Media ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                              <IconButton
-                                                                size="small"
-                                                                sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
-                                                                onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  const currentImages = SceneDataImagesMap[index] || [];
-                                                                  const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
-                                                                  onSceneDataImagesMapChange({
-                                                                    ...SceneDataImagesMap,
-                                                                    [index]: updatedImages
-                                                                  });
-
-                                                                  const imageUrlToRemove = imageUrl;
-                                                                  const updatedSceneData = scenesData.map((ch, chIndex) => {
-                                                                    if (chIndex !== index) return ch;
-                                                                    const imagesList = Array.isArray(ch.assets?.images) ? (ch.assets!.images as string[]) : [];
-                                                                    const newImagesList = imagesList.filter(u => u !== imageUrlToRemove);
-                                                                    const newImagesGoogle = (ch.assets?.imagesGoogle || []).filter(u => u !== imageUrlToRemove) || null;
-                                                                    const newImagesEnvato = (ch.assets?.imagesEnvato || []).filter(u => u !== imageUrlToRemove) || null;
-
-                                                                    let nextKeywordsSelected: any = ch.keywordsSelected;
-                                                                    if (Array.isArray(ch.keywordsSelected)) {
-                                                                      const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
                                                                       nextKeywordsSelected = arr.filter(entry => {
                                                                         const low = entry.media?.lowResMedia;
                                                                         const high = entry.media?.highResMedia;
-                                                                        return low !== imageUrlToRemove && high !== imageUrlToRemove;
+                                                                        return low !== targetUrl && high !== targetUrl;
                                                                       });
                                                                     } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
                                                                       const map = ch.keywordsSelected as Record<string, string[]>;
                                                                       const newMap: Record<string, string[]> = {};
                                                                       Object.entries(map).forEach(([k, list]) => {
-                                                                        const filtered = (list || []).filter(u => u !== imageUrlToRemove);
+                                                                        const filtered = (list || []).filter(u => u !== targetUrl);
                                                                         if (filtered.length > 0) newMap[k] = filtered;
                                                                       });
                                                                       nextKeywordsSelected = newMap;
                                                                     }
-
                                                                     return {
                                                                       ...ch,
                                                                       assets: {
                                                                         ...ch.assets,
-                                                                        images: newImagesList.length > 0 ? newImagesList : null,
-                                                                        imagesGoogle: newImagesGoogle,
-                                                                        imagesEnvato: newImagesEnvato
+                                                                        images: updatedImages.length > 0 ? updatedImages : null,
+                                                                        imagesGoogle: updatedGoogle.length > 0 ? updatedGoogle : null,
+                                                                        imagesEnvato: updatedEnvato.length > 0 ? updatedEnvato : null
                                                                       },
                                                                       ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
                                                                     };
-                                                                  });
-                                                                  onSceneDataUpdate(updatedSceneData);
-                                                                  HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
-                                                                }}
-                                                              >
-                                                                <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                                  <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                                </svg>
-                                                              </IconButton>
-                                                            </Box>
-                                                          ))}
+                                                                  }
+                                                                  return ch;
+                                                                });
+                                                                onSceneDataUpdate(updatedSceneData);
+                                                                HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
+                                                              }}
+                                                            >
+                                                              <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                              </svg>
+                                                            </IconButton>
+                                                          </Box>
+                                                        ))}
 
-                                                          {(SceneDataImagesMap[index] || []).length === 0 && list.length === 0 && (
-                                                            <Box sx={{ color: 'text.secondary' }}>No images</Box>
-                                                          )}
-                                                        </Box>
-                                                      );
-                                                    })()}
-                                                  </>
-                                                ) : (
-                                                  <Box sx={{
-                                                    border: '1px dashed',
-                                                    borderColor: 'divider',
-                                                    borderRadius: 1,
-                                                    p: 1,
-                                                    textAlign: 'center',
-                                                    bgcolor: 'background.default',
-                                                    cursor: generatingSceneData ? 'default' : 'pointer',
-                                                    minHeight: '60px',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                  }}
-                                                    onClick={(e) => {
-                                                      // if (!generatingSceneData) {
-                                                      //   e.stopPropagation();
-                                                      //   if (typeof window !== 'undefined') {
-                                                      //     (window as any).__keywordSuggestions = undefined;
-                                                      //   }
-                                                      //   onMediaManagementSceneDataIndex(index);
-                                                      //   onMediaManagementOpen(true);
-                                                      // }
-                                                    }}
-                                                  >
-                                                    <>
-                                                      <CircularProgress size={24} />
-                                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.25rem', mb: 0.5 }}>
-                                                        Generating Media...
-                                                      </Typography>
-                                                    </>
-                                                  </Box>
-                                                )}
+                                                        {(SceneDataImagesMap[index] || []).map((imageUrl, imgIndex) => (
+                                                          <Box
+                                                            key={`extra-${imgIndex}`}
+                                                            sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `1px solid ${BORDER.light}`, cursor: 'pointer' }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              const imageIndex = sceneData.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
+                                                              handleImageClick(index, imageIndex, false);
+                                                            }}
+                                                          >
+                                                            <img src={imageUrl} alt={`Scene ${index + 1} Media ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <IconButton
+                                                              size="small"
+                                                              sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const currentImages = SceneDataImagesMap[index] || [];
+                                                                const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
+                                                                onSceneDataImagesMapChange({
+                                                                  ...SceneDataImagesMap,
+                                                                  [index]: updatedImages
+                                                                });
+
+                                                                const imageUrlToRemove = imageUrl;
+                                                                const updatedSceneData = scenesData.map((ch, chIndex) => {
+                                                                  if (chIndex !== index) return ch;
+                                                                  const imagesList = Array.isArray(ch.assets?.images) ? (ch.assets!.images as string[]) : [];
+                                                                  const newImagesList = imagesList.filter(u => u !== imageUrlToRemove);
+                                                                  const newImagesGoogle = (ch.assets?.imagesGoogle || []).filter(u => u !== imageUrlToRemove) || null;
+                                                                  const newImagesEnvato = (ch.assets?.imagesEnvato || []).filter(u => u !== imageUrlToRemove) || null;
+
+                                                                  let nextKeywordsSelected: any = ch.keywordsSelected;
+                                                                  if (Array.isArray(ch.keywordsSelected)) {
+                                                                    const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
+                                                                    nextKeywordsSelected = arr.filter(entry => {
+                                                                      const low = entry.media?.lowResMedia;
+                                                                      const high = entry.media?.highResMedia;
+                                                                      return low !== imageUrlToRemove && high !== imageUrlToRemove;
+                                                                    });
+                                                                  } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
+                                                                    const map = ch.keywordsSelected as Record<string, string[]>;
+                                                                    const newMap: Record<string, string[]> = {};
+                                                                    Object.entries(map).forEach(([k, list]) => {
+                                                                      const filtered = (list || []).filter(u => u !== imageUrlToRemove);
+                                                                      if (filtered.length > 0) newMap[k] = filtered;
+                                                                    });
+                                                                    nextKeywordsSelected = newMap;
+                                                                  }
+
+                                                                  return {
+                                                                    ...ch,
+                                                                    assets: {
+                                                                      ...ch.assets,
+                                                                      images: newImagesList.length > 0 ? newImagesList : null,
+                                                                      imagesGoogle: newImagesGoogle,
+                                                                      imagesEnvato: newImagesEnvato
+                                                                    },
+                                                                    ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
+                                                                  };
+                                                                });
+                                                                onSceneDataUpdate(updatedSceneData);
+                                                                HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
+                                                              }}
+                                                            >
+                                                              <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                              </svg>
+                                                            </IconButton>
+                                                          </Box>
+                                                        ))}
+                                                       
+                                                      </Box>
+                                                    );
+                                                  })()}
+                                                </>
                                               </Box>
                                             )}
                                           </Box>
@@ -1716,7 +1681,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
           const SceneDataImages = SceneDataImagesMap[scenesData.indexOf(ch)] || [];
           const images = formatSceneDataImages(
             SceneDataImages,
-            ch.assets?.images?.[0] || undefined,
+            ch.assets?.images?.[0] || '',
           );
           return images.some(img => img.url === imageViewer.currentImage?.url);
         }) + 1} Images`}

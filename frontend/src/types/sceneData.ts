@@ -16,6 +16,7 @@ export interface SceneData {
     gammaGenId?: string;
     gammaUrl?: string;
     highlightedKeywords?: string[];
+    previewImage?: string;
     // Selected media for keywords; supports new array format and legacy map
     keywordsSelected?: SceneKeywordSelection[] | Record<string, string[]>;
     assets?: {

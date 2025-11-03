@@ -44,6 +44,7 @@ import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
+import PdfService from '@/services/pdfService';
 import { SceneData } from '@/types/sceneData';
 import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
@@ -51,7 +52,7 @@ import ChromaKeyUpload from '@/components/scriptProductionComponents/ChromaKeyUp
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
 import { SUCCESS } from '@/styles/colors';
-import { ROUTES_KEYS, SCRIPT_STATUS } from '@/data/constants';
+import { PDF_TO_IMAGES_INTERVAL, ROUTES_KEYS, SCRIPT_STATUS } from '@/data/constants';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import CustomAudioPlayer from '@/components/scriptProductionComponents/CustomAudioPlayer';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
@@ -572,7 +573,7 @@ const ScriptProductionClient = () => {
     };
 
     // Start Gamma generation if needed (script-level)
-    const startGammaIfNeeded = async (scriptData: ScriptData) => {
+    const GenerateGammaId = async (scriptData: ScriptData) => {
         try {
             if (!scriptData || scriptData.gammaGenId || scriptData.gammaExportUrl || !scriptData.transcription || !scriptData.scenesData || scriptData.scenesData.length <= 0) return;
             const inputText = scriptData.transcription;
@@ -596,15 +597,41 @@ const ScriptProductionClient = () => {
                         const updatedScriptData = { ...scriptData, gammaExportUrl: data.exportUrl } as ScriptData;
                         setScriptData(updatedScriptData);
                         SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+
+                        // PDF -> Images (one per scene) and populate preview images
+                        convertPdfToImages(updatedScriptData);
                     } else {
-                        setTimeout(poll, 5000);
+                        setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
                     }
                 } catch {
-                    setTimeout(poll, 5000);
+                    setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
                 }
             };
             poll();
         } catch { }
+    };
+
+    const convertPdfToImages = async (scriptData: ScriptData) => {
+        try {
+            const arrayBuffer = await PdfService.fetchPdfArrayBuffer(scriptData.gammaExportUrl!);
+            // First, split: get total pages
+            const totalPages = await PdfService.getPdfPageCount(arrayBuffer);
+            const pagesToRender = Math.min(totalPages, (scriptData.scenesData || []).length);
+            const images: string[] = [];
+            for (let i = 1; i <= pagesToRender; i++) {
+                const img = await PdfService.renderPdfPageToImage(arrayBuffer, i, 2);
+                images.push(img);
+            }
+            const mapped = scriptData.scenesData?.map((ch, idx) => ({
+                ...ch,
+                previewImage: images[idx] || '',
+            }));
+            console.log('PDF pages:', totalPages, 'Rendered images:', mapped || []);
+            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
+            setScenesData(mapped || [] as SceneData[]);
+        } catch (e: any) {
+            console.error('Failed to convert PDF to images:', e?.message || 'Unknown error');
+        }
     };
 
     // Function to break down script into paragraphs and calculate individual durations
@@ -635,21 +662,17 @@ const ScriptProductionClient = () => {
                     console.log('Using existing SceneData with scenes data:', normalizedFromStorage.length);
                     setScenesData(normalizedFromStorage);
                     // Kick off or check Gamma generation at SCRIPT level
-                    if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {
+                    if (!scriptData.gammaGenId) {
+                        GenerateGammaId(scriptData);
+                    } else if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {    
                         checkGammaAPIStatus(scriptData);
-                    } else {
-                        void startGammaIfNeeded(scriptData);
+                    } else if (scriptData.gammaGenId && scriptData.gammaExportUrl) {
+                        convertPdfToImages(scriptData);
                     }
-                    return;
                 }
-            } catch (error) {
-                console.error('Error processing existing SceneData with scenes:', error);
-            }
-
-            return;
+            } catch { }
         }
     };
-
     // SceneData Management Functions
     const handleAddSceneDataAfter = (index: number) => {
         HelperFunctions.addSceneDataAfter(index, scenesData, setScenesData);

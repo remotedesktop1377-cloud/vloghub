@@ -5,7 +5,6 @@ interface ImageData {
   url: string;
   name?: string;
   type?: 'generated' | 'uploaded';
-  prompt?: string;
 }
 
 interface UseImageViewerReturn {
@@ -14,7 +13,7 @@ interface UseImageViewerReturn {
   currentIndex: number;
   viewMode: ImageViewMode;
   images: ImageData[];
-  
+
   // Actions
   openViewer: (images: ImageData[], initialIndex?: number, initialViewMode?: ImageViewMode) => void;
   closeViewer: () => void;
@@ -22,7 +21,7 @@ interface UseImageViewerReturn {
   setViewMode: (mode: ImageViewMode) => void;
   nextImage: () => void;
   prevImage: () => void;
-  
+
   // Utility
   hasNext: boolean;
   hasPrev: boolean;
@@ -36,8 +35,8 @@ export const useImageViewer = (): UseImageViewerReturn => {
   const [images, setImages] = useState<ImageData[]>([]);
 
   const openViewer = useCallback((
-    newImages: ImageData[], 
-    initialIndex: number = 0, 
+    newImages: ImageData[],
+    initialIndex: number = 0,
     initialViewMode: ImageViewMode = 'preview'
   ) => {
     setImages(newImages);
@@ -79,7 +78,7 @@ export const useImageViewer = (): UseImageViewerReturn => {
     currentIndex,
     viewMode,
     images,
-    
+
     // Actions
     openViewer,
     closeViewer,
@@ -87,7 +86,7 @@ export const useImageViewer = (): UseImageViewerReturn => {
     setViewMode,
     nextImage,
     prevImage,
-    
+
     // Utility
     hasNext,
     hasPrev,
@@ -98,21 +97,19 @@ export const useImageViewer = (): UseImageViewerReturn => {
 // Helper function to convert SceneData images to ImageData format
 export const formatSceneDataImages = (
   SceneDataImages: string[],
-  generatedImage?: string,
-  generatedPrompt?: string
+  previewImage: string,
 ): ImageData[] => {
   const images: ImageData[] = [];
-  
+
   // Add generated image first if it exists
-  if (generatedImage) {
+  if (previewImage) {
     images.push({
-      url: generatedImage,
-      name: 'AI Generated SceneData Image',
+      url: previewImage,
+      name: 'Preview Image',
       type: 'generated',
-      prompt: generatedPrompt
     });
   }
-  
+
   // Add uploaded images
   SceneDataImages.forEach((url, index) => {
     images.push({
@@ -121,7 +118,7 @@ export const formatSceneDataImages = (
       type: 'uploaded'
     });
   });
-  
+
   return images;
 };
 
