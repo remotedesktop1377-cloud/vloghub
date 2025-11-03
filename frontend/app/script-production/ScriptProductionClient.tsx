@@ -1793,9 +1793,9 @@ const ScriptProductionClient = () => {
                                     isDraggingUpload={isDraggingUpload}
                                     SceneDataImagesMap={SceneDataImagesMap}
                                     selectedText={selectedText}
-                                    onSceneDataUpdate={(SceneData: SceneData[]) => {
-                                        setScenesData(SceneData);
-                                        SecureStorageHelpers.setScriptMetadata({ ...scriptData, SceneData: SceneData });
+                                    onSceneDataUpdate={(scenesData: SceneData[]) => {
+                                        setScenesData(scenesData);
+                                        SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: scenesData });
                                     }}
                                     onAddSceneDataAfter={handleAddSceneDataAfter}
                                     onDeleteSceneData={handleDeleteSceneData}

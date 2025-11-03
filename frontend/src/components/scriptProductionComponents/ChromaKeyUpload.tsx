@@ -203,7 +203,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     const handleBackgroundTypeSelected = (type: BackgroundType) => {
         setSelectedBackgroundType(type);
         setShowBackgroundTypeDialog(false);
-        
+
         // Reset transcription started flag for new upload
         transcriptionStartedRef.current = false;
 
@@ -335,6 +335,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                                 {transcriptionProgress.progress.toFixed(0)}% of transcription complete
                                             </Typography>
                                         )}
+                                        <CircularProgress size={16} sx={{ mb: 0.5 }} />
                                     </Box>
                                 )}
 

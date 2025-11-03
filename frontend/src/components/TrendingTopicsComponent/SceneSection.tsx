@@ -132,8 +132,8 @@ interface SceneDataSectionProps {
   mediaManagementSceneDataIndex: number | null;
   onMediaManagementOpen: (open: boolean) => void;
   onMediaManagementSceneDataIndex: (index: number | null) => void;
-  onSceneDataUpdate: (SceneData: SceneData[]) => void;
-  onTextSelection: (SceneDataIndex: number, event: React.MouseEvent) => void;
+  onSceneDataUpdate: (sceneData: SceneData[]) => void;
+  onTextSelection: (sceneDataIndex: number, event: React.MouseEvent) => void;
   onAddKeyword: () => void;
   onClearSelection: () => void;
   onToolbarInteraction: (interacting: boolean) => void;
@@ -229,46 +229,6 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
 
     if (images.length > 0) {
       imageViewer.openViewer(images, imageIndex, 'preview');
-    }
-  };
-
-  // Calculate total duration
-  const calculateTotalDuration = () => {
-    const totalSeconds = scenesData.reduce((total, sceneData) => {
-      const duration = sceneData.duration || '0s';
-      const seconds = parseDurationToSeconds(duration);
-      return total + seconds;
-    }, 0);
-    return formatSecondsToDuration(totalSeconds);
-  };
-
-  const parseDurationToSeconds = (duration: string): number => {
-    if (!duration) return 0;
-
-    // Handle formats like "30s", "1m 30s", "2m", "1h 30m", etc.
-    const timeRegex = /(?:(\d+)h\s*)?(?:(\d+)m\s*)?(?:(\d+)s)?/;
-    const match = duration.match(timeRegex);
-
-    if (!match) return 0;
-
-    const hours = parseInt(match[1] || '0');
-    const minutes = parseInt(match[2] || '0');
-    const seconds = parseInt(match[3] || '0');
-
-    return hours * 3600 + minutes * 60 + seconds;
-  };
-
-  const formatSecondsToDuration = (totalSeconds: number): string => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
     }
   };
 
@@ -412,7 +372,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     idx === index ? { ...ch, duration: e.target.value } : ch
                                                   );
                                                   onSceneDataUpdate(updatedSceneData);
-                                                  SecureStorageHelpers.setScriptMetadata({ ...SecureStorageHelpers.getScriptMetadata(), SceneData: updatedSceneData });
+                                                  SecureStorageHelpers.setScriptMetadata({ ...SecureStorageHelpers.getScriptMetadata(), scenesData: updatedSceneData });
                                                 }}
                                                 placeholder="e.g., 30s, 1m 30s, 2m"
                                                 sx={{
@@ -1064,32 +1024,23 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                   <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '1.25rem' }}>
                                                     📎 Media ({(SceneDataImagesMap[index] || []).length + (sceneData.assets?.images ? 1 : 0)})
                                                   </Typography>
-                                                  {/* <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    sx={{
-                                                      fontSize: '1rem',
-                                                      py: 0.4,
-                                                      px: 0.9,
-                                                      minHeight: 'auto',
-                                                      borderColor: 'primary.main',
-                                                      color: 'primary.main',
-                                                      '&:hover': {
-                                                        borderColor: 'primary.dark',
-                                                        bgcolor: 'action.hover'
+                                                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                                                    <FormControlLabel
+                                                      sx={{ m: 0 }}
+                                                      control={
+                                                        <Switch
+                                                          size="small"
+                                                          checked={scenePreviewMode === 'video'}
+                                                          onChange={() => setScenePreviewMode(prev => prev === 'video' ? 'images' : 'video')}
+                                                        />
                                                       }
-                                                    }}
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      if (typeof window !== 'undefined') {
-                                                        (window as any).__keywordSuggestions = undefined;
+                                                      label={
+                                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem' }}>
+                                                          {scenePreviewMode === 'video' ? 'Video preview' : 'Image preview'}
+                                                        </Typography>
                                                       }
-                                                      onMediaManagementSceneDataIndex(index);
-                                                      onMediaManagementOpen(true);
-                                                    }}
-                                                  >
-                                                    {((SceneDataImagesMap[index] || []).length > 0 || (sceneData.assets && Array.isArray(sceneData.assets.images) ? sceneData.assets.images.length > 0 : false)) ? 'Manage' : 'Add'}
-                                                  </Button> */}
+                                                    />
+                                                  </Box>
                                                 </Box>
 
                                                 {/* Media Display */}
@@ -1729,7 +1680,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
             <Box sx={{ flex: 1 }}>
               <ImageSearch
                 SceneDataNarration={scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.narration || ''}
-                scriptTitle={scriptTitle }
+                scriptTitle={scriptTitle}
                 trendingTopic={trendingTopic}
                 location={location}
                 keywords={(scenesData[mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex]?.highlightedKeywords || []).filter(k => typeof k === 'string' && k.trim())}
@@ -1963,13 +1914,13 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
       {/* SceneData Edit Dialog */}
       <SceneDataEditDialog
         open={SceneDataEditDialogOpen}
-        SceneData={scenesData[selectedSceneDataIndex] || null}
-        SceneDataIndex={selectedSceneDataIndex}
+        sceneData={scenesData[selectedSceneDataIndex] || null}
+        sceneDataIndex={selectedSceneDataIndex}
         language={language}
         onClose={() => onSceneDataEditDialogOpen(false)}
-        onSave={(SceneDataIndex, sceneData: SceneData) => {
+        onSave={(sceneDataIndex, sceneData: SceneData) => {
           const updatedSceneData: SceneData[] = scenesData.map((ch: SceneData, idx: number) =>
-            idx === SceneDataIndex ? sceneData : ch
+            idx === sceneDataIndex ? sceneData : ch
           );
           onSceneDataUpdate(updatedSceneData as SceneData[]);
           onSceneDataEditDialogOpen(false);

@@ -750,8 +750,8 @@ export class HelperFunctions {
    */
   static addSceneDataAfter(
     index: number,
-    SceneData: SceneData[],
-    setSceneData: (SceneData: SceneData[]) => void
+    sceneData: SceneData[],
+    setSceneData: (sceneData: SceneData[]) => void
   ): void {
     const newSceneData: SceneData = {
       id: Date.now().toString(),
@@ -766,7 +766,7 @@ export class HelperFunctions {
       }
     }
 
-    const updatedSceneData = [...SceneData];
+    const updatedSceneData = [...sceneData];
     updatedSceneData.splice(index + 1, 0, newSceneData);
     setSceneData(updatedSceneData);
   }
@@ -776,10 +776,10 @@ export class HelperFunctions {
    */
   static deleteSceneData(
     index: number,
-    SceneData: SceneData[],
-    setSceneData: (SceneData: SceneData[]) => void
+    sceneData: SceneData[],
+    setSceneData: (sceneData: SceneData[]) => void
   ): void {
-    const updatedSceneData = SceneData.filter((_, i) => i !== index);
+    const updatedSceneData = sceneData.filter((_, i) => i !== index);
     setSceneData(updatedSceneData);
   }
 
@@ -788,13 +788,13 @@ export class HelperFunctions {
    */
   static saveEdit(
     index: number,
-    SceneData: SceneData[],
-    setSceneData: (SceneData: SceneData[]) => void,
+    sceneData: SceneData[],
+    setSceneData: (sceneData: SceneData[]) => void,
     editHeading: string,
     editNarration: string,
     setEditingSceneData: (index: number | null) => void
   ): void {
-    const updatedSceneData = [...SceneData];
+    const updatedSceneData = [...sceneData];
 
     updatedSceneData[index] = {
       ...updatedSceneData[index],

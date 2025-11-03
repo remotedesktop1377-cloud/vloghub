@@ -13,6 +13,8 @@ export interface SceneData {
     voiceover_style?: string;
     visual_guidance?: string;
     on_screen_text?: string;
+    gammaGenId?: string;
+    gammaUrl?: string;
     highlightedKeywords?: string[];
     // Selected media for keywords; supports new array format and legacy map
     keywordsSelected?: SceneKeywordSelection[] | Record<string, string[]>;

@@ -47,8 +47,8 @@ import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../s
 
 interface SceneDataEditDialogProps {
     open: boolean;
-    SceneData: SceneData | null;
-    SceneDataIndex: number;
+    sceneData: SceneData | null;
+    sceneDataIndex: number;
     language: string;
     onClose: () => void;
     onSave: (SceneDataIndex: number, updatedSceneData: SceneData) => void;
@@ -90,8 +90,8 @@ const preStoredMusic = [
 
 export function SceneDataEditDialog({
     open,
-    SceneData,
-    SceneDataIndex,
+    sceneData,
+    sceneDataIndex,
     language,
     onClose,
     onSave
@@ -100,33 +100,33 @@ export function SceneDataEditDialog({
     const [editData, setEditData] = useState<SceneData | null>(null);
 
     useEffect(() => {
-        if (SceneData) {
+        if (sceneData) {
             setEditData({
-                ...SceneData,
+                ...sceneData,
                 videoEffects: {
-                    clips: SceneData.videoEffects?.clips || [],
-                    logos: SceneData.videoEffects?.logos || [],
-                    backgroundMusic: Array.isArray(SceneData.videoEffects?.backgroundMusic)
-                        ? SceneData.videoEffects?.backgroundMusic
-                        : (SceneData.videoEffects?.backgroundMusic
-                            ? [SceneData.videoEffects.backgroundMusic as unknown as BackgroundMusic]
+                    clips: sceneData.videoEffects?.clips || [],
+                    logos: sceneData.videoEffects?.logos || [],
+                    backgroundMusic: Array.isArray(sceneData.videoEffects?.backgroundMusic)
+                        ? sceneData.videoEffects?.backgroundMusic
+                        : (sceneData.videoEffects?.backgroundMusic
+                            ? [sceneData.videoEffects.backgroundMusic as unknown as BackgroundMusic]
                             : []),
-                    transition: SceneData.videoEffects?.transition || 'quantum_dissolve',
-                    transitionEffects: SceneData.videoEffects?.transitionEffects || []
+                    transition: sceneData.videoEffects?.transition || 'quantum_dissolve',
+                    transitionEffects: sceneData.videoEffects?.transitionEffects || []
                 }
             });
         }
-    }, [SceneData]);
+    }, [sceneData]);
 
     const handleSave = () => {
         if (editData) {
-            onSave(SceneDataIndex, editData);
+            onSave(sceneDataIndex, editData);
             onClose();
         }
     };
 
     const handleCancel = () => {
-        setEditData(SceneData);
+        setEditData(sceneData);
         onClose();
     };
 
@@ -278,7 +278,7 @@ export function SceneDataEditDialog({
                 borderBottom: '1px solid rgba(255,255,255,0.1)'
             }}>
                 <Typography variant="h5" component="span" sx={{ fontWeight: 'bold' }}>
-                    Edit SceneData {SceneDataIndex + 1}
+                    Edit SceneData {sceneDataIndex + 1}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Button

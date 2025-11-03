@@ -800,6 +800,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
                 {/* Search Controls */}
                 <Box sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                        Image Search
+                    </Typography>
                     <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                         <TextField
                             fullWidth
@@ -936,7 +939,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 )
             }
 
-            {/* Images Grid with Transitions Sidebar */}
+            {/* Main Content with Transitions Sidebar */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={9} lg={9}>

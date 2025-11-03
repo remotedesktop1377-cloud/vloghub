@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
   GOOGLE_DRIVE_IMAGE_UPLOAD: '/api/google-drive-image-upload', // to upload an image to drive
   TRANSCRIBE_VIDEO: '/api/transcribe', // to transcribe a video file
   GOOGLE_DRIVE_GENERATE_FOLDER: '/api/google-drive-generate-folder', // to generate a folder on drive
+  GAMMA_GENERATE: '/api/gamma-generate', // to generate a gamma video
   
 } as const;
 
