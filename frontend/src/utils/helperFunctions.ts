@@ -239,7 +239,8 @@ export class GoogleDriveHelperFunctions {
           images: mergedImages,
           ...(mergedVideos.length > 0 ? { videos: mergedVideos } : {}),
         },
-        sceneSettings
+        sceneSettings,
+        previewImage: SceneDataWithAssets.previewImage || '',
       };
       console.log('Updating scene on Drive:', scene);
 
