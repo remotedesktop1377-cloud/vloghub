@@ -16,7 +16,7 @@ export interface ProfileService {
     fetchBackgrounds: () => Promise<BackgroundItem[]>;
     uploadLogo: (file: File, userId: string) => Promise<{ success: boolean; url?: string; fileName?: string }>;
     removeLogo: (fileName: string, url: string, userId: string) => Promise<{ success: boolean }>;
-    saveProfileSettings: (userId: string, settings: { logo?: any; background?: any }) => Promise<boolean>;
+    saveProfileSettings: (userId: string, settings: { logo?: any; background?: any; textMode?: any; format?: any; themeName?: any }) => Promise<boolean>;
     getProfileSettings: (userId: string) => Promise<{ logo?: any; background?: any }>;
 }
 
@@ -114,7 +114,7 @@ class ProfileServiceImpl implements ProfileService {
     /**
      * Save profile settings (logo and background) to Supabase and secure storage
      */
-    async saveProfileSettings(userId: string, settings: { logo?: any; background?: any }): Promise<boolean> {
+    async saveProfileSettings(userId: string, settings: { logo?: any; background?: any; textMode?: any; format?: any; themeName?: any }): Promise<boolean> {
         try {
             // Save background to Supabase if provided
             if (settings.background) {
@@ -141,12 +141,12 @@ class ProfileServiceImpl implements ProfileService {
     /**
      * Get profile settings from Supabase and secure storage
      */
-    async getProfileSettings(userId: string): Promise<{ logo?: any; background?: any }> {
+    async getProfileSettings(userId: string): Promise<{ logo?: any; background?: any; textMode?: any; format?: any; themeName?: any }> {
         try {
             // First try to get from Supabase
             const { data: profileData } = await SupabaseHelpers.getUserProfileWithAssets(userId);
 
-            const settings: { logo?: any; background?: any } = {};
+            const settings: { logo?: any; background?: any; textMode?: any; format?: any; themeName?: any } = {};
 
             // Get logo from Supabase profile
             if ((profileData as any)?.logo_url) {
@@ -160,6 +160,16 @@ class ProfileServiceImpl implements ProfileService {
             // Get background from Supabase profile
             if ((profileData as any)?.selected_background) {
                 settings.background = (profileData as any).selected_background;
+            }
+
+            if ((profileData as any)?.textMode) {
+                settings.textMode = (profileData as any).textMode;
+            }
+            if ((profileData as any)?.format) {
+                settings.format = (profileData as any).format;
+            }
+            if ((profileData as any)?.themeName) {
+                settings.themeName = (profileData as any).themeName;
             }
 
             // Fallback to local storage if Supabase data is incomplete

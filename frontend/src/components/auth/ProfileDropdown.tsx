@@ -3,17 +3,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import styles from './ProfileDropdown.module.css';
-import { HelperFunctions } from '../../utils/helperFunctions';
+import { HelperFunctions, secure } from '../../utils/helperFunctions';
 import { SupabaseHelpers } from '../../utils/SupabaseHelpers';
-import { useRouter } from 'next/navigation';
 import { profileService, BackgroundItem } from '../../services/profileService';
 import { toast } from 'react-toastify';
+import { useBackgroundsCache } from '../../hooks/useBackgroundsCache';
 
 export const ProfileDropdown: React.FC = () => {
-  const router = useRouter();
   const { user, signOut } = useAuth();
+  const { getCachedData, setCachedData, clearCache } = useBackgroundsCache();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
   const [socialKeys, setSocialKeys] = useState({ tiktok: '', instagram: '', facebook: '', youtube: '' });
   const [backgrounds, setBackgrounds] = useState<BackgroundItem[]>([]);
   const [selectedBackground, setSelectedBackground] = useState<BackgroundItem | null>(null);
@@ -21,6 +20,14 @@ export const ProfileDropdown: React.FC = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [loadingBackgrounds, setLoadingBackgrounds] = useState(false);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [textMode, setTextMode] = useState<string>(() => String((secure as any).j?.textMode?.get?.() || 'generate'));
+  const [format, setFormat] = useState<string>(() => String((secure as any).j?.format?.get?.() || 'presentation'));
+  const [themeName, setThemeName] = useState<string>(() => String((secure as any).j?.themeName?.get?.() || 'Pearl'));
+  const [themeFilter, setThemeFilter] = useState<string>('');
+  const allThemes: string[] = [
+    // 'Pearl', 'Vortex', 'Clementa', 'Stratos', 'Nova', 'Twilight', 'Coral Glow', 'Mercury', 'Ashrose', 'Spectrum', 'Chisel', 'Stardust', 'Seafoam', 'Nebulae', 'Creme', 'Lux', 'Consultant', 'Marine', 'Elysia', 'Prism', 'Lunaria', 'Night Sky', 'Commons', 'Bonan Hale', 'Gamma', 'Gamma Dark', 'Dialogue', 'Founder', 'Lavender', 'Indigo', 'Howlite', 'Onyx', 'Atmosphere', 'Blueberry', 'Kraft', 'Mystique', 'Petrol', 'Blues', 'Peach', 'Incandescent', 'Oatmeal', 'Sanguine', 'Sage', 'Verdigris', 'Ash', 'Coal', 'Flamingo', 'Canaveral', 'Oasis', 'Fluo', 'Finesse', 'Electric', 'Zephyr', 'Chimney Smoke', 'Chimney Dust', 'Icebreaker', 'Blue Steel', 'Daydream', 'Orbit', 'Dune', 'Mocha', 'Serene', 'Cornflower', 'Vanilla', 'Alien', 'Breeze', 'Aurora', 'Velvet Tides', 'Tranquil', 'Borealis', 'Terracotta', 'Bubble Gum', 'Snowball', 'Pistachio', 'Piano', 'Atacama', 'Wireframe', 'Aurum', 'Bee Happy', 'Chocolate', 'Cigar', 'Cornfield', 'Daktilo', 'Dawn', 'Editoria', 'Flax', 'Gleam', 'Gold Leaf', 'Iris', 'Keepsake', 'Leimoon', 'Linen', 'Malibu', 'Moss & Mist', 'Plant Shop', 'Rush', 'Shadow', 'Slate', 'Sprout', 'Wine', 'Basic Light', 'Basic Dark'
+    'Pearl', 'Vortex', 'Clementa', 'Seafoam', 'Chisel', 'Marine', 'Lux',
+  ];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -41,7 +48,7 @@ export const ProfileDropdown: React.FC = () => {
     let mounted = true;
     (async () => {
       try {
-        
+
         if (mounted) {
           const keys = HelperFunctions.getSocialAuthKeys(user.id);
           setSocialKeys({ tiktok: keys.tiktok || '', instagram: keys.instagram || '', facebook: keys.facebook || '', youtube: keys.youtube || '' });
@@ -57,29 +64,17 @@ export const ProfileDropdown: React.FC = () => {
           if (profileSettings.background) {
             setSelectedBackground(profileSettings.background);
           }
+          if (profileSettings.textMode) {
+            setTextMode(profileSettings.textMode);
+          }
+          if (profileSettings.format) {
+            setFormat(profileSettings.format);
+          }
+          if (profileSettings.themeName) {
+            setThemeName(profileSettings.themeName);
+          }
         }
-
-        // Load backgrounds
-        // setLoadingBackgrounds(true);
-        // try {
-        //   const backgroundsList = await profileService.fetchBackgrounds();
-        //   if (mounted) {
-        //     setBackgrounds(backgroundsList);
-        //     console.log('Loaded backgrounds:', backgroundsList);
-        //     if (backgroundsList.length === 0) {
-        //       toast.warning('No backgrounds found. Please check your Google Drive configuration.');
-        //     }
-        //   }
-        // } catch (error) {
-        //   console.error('Error loading backgrounds:', error);
-        //   if (mounted) {
-        //     toast.error('Failed to load backgrounds. Please check your configuration.');
-        //   }
-        // } finally {
-        //   if (mounted) {
-        //     setLoadingBackgrounds(false);
-        //   }
-        // }
+        
       } catch {
         if (mounted) {
           const keys = HelperFunctions.getSocialAuthKeys(user.id);
@@ -90,6 +85,54 @@ export const ProfileDropdown: React.FC = () => {
     })();
     return () => { mounted = false; };
   }, [user?.id]);
+
+  // Load backgrounds from cache on mount
+  useEffect(() => {
+    const cachedBackgrounds = getCachedData();
+    if (cachedBackgrounds && cachedBackgrounds.length > 0) {
+      console.log('🟡 Loading backgrounds from cache');
+      setBackgrounds(cachedBackgrounds);
+    }
+  }, [getCachedData]);
+
+  const loadBackgrounds = async (forceRefresh: boolean = false) => {
+    // If not forcing refresh, check cache first
+    if (!forceRefresh) {
+      const cachedBackgrounds = getCachedData();
+      if (cachedBackgrounds && cachedBackgrounds.length > 0) {
+        console.log('🟡 Using cached backgrounds');
+        setBackgrounds(cachedBackgrounds);
+        return;
+      }
+    }
+
+    setLoadingBackgrounds(true);
+    try {
+      console.log(forceRefresh ? '🔄 Force refreshing backgrounds from API' : '🔄 Fetching backgrounds from API');
+      const backgroundsList = await profileService.fetchBackgrounds();
+      setBackgrounds(backgroundsList);
+      // Cache the results
+      if (backgroundsList.length > 0) {
+        setCachedData(backgroundsList);
+      }
+      if (backgroundsList.length === 0) {
+        toast.warning('No backgrounds found. Please check your Google Drive configuration.');
+        console.log('No backgrounds found. Please check your Google Drive configuration.');
+      } else {
+        toast.success(`Loaded ${backgroundsList.length} backgrounds`);
+        console.log(`Loaded ${backgroundsList.length} backgrounds`);
+      }
+    } catch (error) {
+      console.error('Error refreshing backgrounds:', error);
+      toast.error('Failed to refresh backgrounds');
+    } finally {
+      setLoadingBackgrounds(false);
+    }
+  };
+
+  useEffect(() => {
+    saveProfileSettings();
+  }, [textMode, format, themeName, selectedBackground, userLogo]);
 
   const handleSignOut = async () => {
     try {
@@ -103,6 +146,16 @@ export const ProfileDropdown: React.FC = () => {
   const saveKeys = async () => {
     HelperFunctions.saveSocialAuthKeys(user.id, socialKeys); // local secure cache
     await SupabaseHelpers.saveUserSocialAuthKeys(user.id, socialKeys); // persist to DB
+  };
+
+  const saveProfileSettings = async () => {
+    await profileService.saveProfileSettings(user.id, {
+      logo: userLogo,
+      background: selectedBackground,
+      textMode: textMode,
+      format: format,
+      themeName: themeName
+    });
   };
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,12 +176,12 @@ export const ProfileDropdown: React.FC = () => {
 
     console.log('Starting logo upload for file:', file.name, 'Size:', file.size);
     setUploadingLogo(true);
-    
+
     try {
       console.log('Calling profileService.uploadLogo...');
       const result = await profileService.uploadLogo(file, user.id);
       console.log('Upload result:', result);
-      
+
       if (result.success && result.url) {
         const logoData = {
           url: result.url,
@@ -139,10 +192,6 @@ export const ProfileDropdown: React.FC = () => {
 
         // Save to profile settings
         console.log('Saving profile settings...');
-        await profileService.saveProfileSettings(user.id, {
-          logo: logoData,
-          background: selectedBackground
-        });
 
         toast.success('Logo uploaded successfully');
         console.log('Logo upload completed successfully');
@@ -161,12 +210,6 @@ export const ProfileDropdown: React.FC = () => {
 
   const handleBackgroundSelect = async (background: BackgroundItem) => {
     setSelectedBackground(background);
-
-    // Save to profile settings
-    await profileService.saveProfileSettings(user.id, {
-      logo: userLogo,
-      background: background
-    });
 
     toast.success('Background selected successfully');
   };
@@ -234,7 +277,7 @@ export const ProfileDropdown: React.FC = () => {
         style={{ display: 'none' }}
         disabled={uploadingLogo}
       />
-      
+
       <div className={styles.profileDropdown}>
         <button
           ref={triggerRef}
@@ -246,9 +289,9 @@ export const ProfileDropdown: React.FC = () => {
         >
           <div className={styles.avatarCircleSmall}>
             {user.user_metadata?.picture ? (
-              <img 
-                src={user.user_metadata.picture} 
-                alt="Profile" 
+              <img
+                src={user.user_metadata.picture}
+                alt="Profile"
                 className={styles.avatarImage}
               />
             ) : (
@@ -291,8 +334,8 @@ export const ProfileDropdown: React.FC = () => {
                 </div>
                 <div className={styles.userMeta}>
                   <div id="profileMenuTitle" className={styles.userName}>
-                  {user.user_metadata?.full_name || 'User'}
-                </div>
+                    {user.user_metadata?.full_name || 'User'}
+                  </div>
                   <div className={styles.userEmail}>{user.email}</div>
                 </div>
                 <button
@@ -316,7 +359,7 @@ export const ProfileDropdown: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className={styles.dialogContent}>
               {/* Left Column */}
               <div className={styles.leftColumn}>
@@ -370,7 +413,7 @@ export const ProfileDropdown: React.FC = () => {
                       </div>
                     ) : (
                       <div className={styles.logoUploadArea}>
-                        <label 
+                        <label
                           className={styles.uploadLabel}
                           onClick={() => fileInputRef.current?.click()}
                         >
@@ -404,23 +447,7 @@ export const ProfileDropdown: React.FC = () => {
                     <h3 className={styles.sectionTitle}>Background</h3>
                     <button
                       className={styles.refreshBtn}
-                      onClick={async () => {
-                        setLoadingBackgrounds(true);
-                        try {
-                          const backgroundsList = await profileService.fetchBackgrounds();
-                          setBackgrounds(backgroundsList);
-                          if (backgroundsList.length === 0) {
-                            toast.warning('No backgrounds found. Please check your Google Drive configuration.');
-                          } else {
-                            toast.success(`Loaded ${backgroundsList.length} backgrounds`);
-                          }
-                        } catch (error) {
-                          console.error('Error refreshing backgrounds:', error);
-                          toast.error('Failed to refresh backgrounds');
-                        } finally {
-                          setLoadingBackgrounds(false);
-                        }
-                      }}
+                      onClick={() => loadBackgrounds(true)}
                       disabled={loadingBackgrounds}
                       title="Refresh backgrounds"
                     >
@@ -536,35 +563,187 @@ export const ProfileDropdown: React.FC = () => {
 
               {/* Right Column */}
               <div className={styles.rightColumn}>
+                {/* Theme & Generation Section */}
+                <div className={styles.generationSection}>
+                  <h3 className={styles.sectionTitle}>Theme & Generation</h3>
+                  <div className={styles.rowInputs}>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>Text mode</label>
+                      <select className={styles.selectInput} value={textMode} onChange={(e) => setTextMode(e.target.value)}>
+                        <option value="generate">generate</option>
+                        <option value="condense">condense</option>
+                        <option value="preserve">preserve</option>
+                      </select>
+                    </div>
+                    <div className={styles.inputGroup}>
+                      <label className={styles.inputLabel}>Format</label>
+                      <select className={styles.selectInput} value={format} onChange={(e) => setFormat(e.target.value)}>
+                        <option value="presentation">presentation</option>
+                        <option value="document">document</option>
+                        <option value="social">social</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={styles.themeGridHeader}>
+                    <div className={styles.themeSearchWrap}>
+                      <input
+                        className={styles.themeSearch}
+                        value={themeFilter}
+                        placeholder="Search theme..."
+                        onChange={(e) => {
+                          setThemeFilter(e.target.value);
+                        }}
+                      />
+                    </div>
+                    {/* <div className={styles.themeSelected}>Selected: <strong>{themeName}</strong></div> */}
+                  </div>
+
+                  <ThemeCards
+                    themes={allThemes.filter(t => t.toLowerCase().includes(themeFilter.toLowerCase()))}
+                    selected={themeName}
+                    onSelect={(name) => setThemeName(name)}
+                  />
+
+                </div>
                 {/* Social Keys Section */}
-              <div className={styles.socialForm}>
+                <div className={styles.socialForm}>
                   <h3 className={styles.sectionTitle}>Social Media Keys</h3>
-                <div className={styles.socialGroup}>
-                  <label className={styles.socialLabel} htmlFor="tiktokKey">TikTok profile key</label>
-                  <input id="tiktokKey" className={styles.socialInput} value={socialKeys.tiktok} onChange={(e) => setSocialKeys(k => ({ ...k, tiktok: e.target.value }))} placeholder="Enter TikTok key" />
+                  <div className={styles.socialGroup}>
+                    <label className={styles.socialLabel} htmlFor="tiktokKey">TikTok profile key</label>
+                    <input id="tiktokKey" className={styles.socialInput} value={socialKeys.tiktok} onChange={(e) => setSocialKeys(k => ({ ...k, tiktok: e.target.value }))} placeholder="Enter TikTok key" />
+                  </div>
+                  <div className={styles.socialGroup}>
+                    <label className={styles.socialLabel} htmlFor="instagramKey">Instagram profile key</label>
+                    <input id="instagramKey" className={styles.socialInput} value={socialKeys.instagram} onChange={(e) => setSocialKeys(k => ({ ...k, instagram: e.target.value }))} placeholder="Enter Instagram key" />
+                  </div>
+                  <div className={styles.socialGroup}>
+                    <label className={styles.socialLabel} htmlFor="facebookKey">Facebook profile key</label>
+                    <input id="facebookKey" className={styles.socialInput} value={socialKeys.facebook} onChange={(e) => setSocialKeys(k => ({ ...k, facebook: e.target.value }))} placeholder="Enter Facebook key" />
+                  </div>
+                  <div className={styles.socialGroup}>
+                    <label className={styles.socialLabel} htmlFor="youtubeKey">YouTube API key</label>
+                    <input id="youtubeKey" className={styles.socialInput} value={socialKeys.youtube} onChange={(e) => setSocialKeys(k => ({ ...k, youtube: e.target.value }))} placeholder="Enter YouTube key" />
+                  </div>
+                  <div className={styles.formActions}>
+                    <button className={styles.saveBtn} onClick={saveKeys}>Save</button>
+                    <button className={styles.cancelBtn} onClick={() => setMenuOpen(false)}>Cancel</button>
+                  </div>
                 </div>
-                <div className={styles.socialGroup}>
-                  <label className={styles.socialLabel} htmlFor="instagramKey">Instagram profile key</label>
-                  <input id="instagramKey" className={styles.socialInput} value={socialKeys.instagram} onChange={(e) => setSocialKeys(k => ({ ...k, instagram: e.target.value }))} placeholder="Enter Instagram key" />
-                </div>
-                <div className={styles.socialGroup}>
-                  <label className={styles.socialLabel} htmlFor="facebookKey">Facebook profile key</label>
-                  <input id="facebookKey" className={styles.socialInput} value={socialKeys.facebook} onChange={(e) => setSocialKeys(k => ({ ...k, facebook: e.target.value }))} placeholder="Enter Facebook key" />
-                </div>
-                <div className={styles.socialGroup}>
-                  <label className={styles.socialLabel} htmlFor="youtubeKey">YouTube API key</label>
-                  <input id="youtubeKey" className={styles.socialInput} value={socialKeys.youtube} onChange={(e) => setSocialKeys(k => ({ ...k, youtube: e.target.value }))} placeholder="Enter YouTube key" />
-                </div>
-                <div className={styles.formActions}>
-                  <button className={styles.saveBtn} onClick={saveKeys}>Save</button>
-                  <button className={styles.cancelBtn} onClick={() => setMenuOpen(false)}>Cancel</button>
-            </div>
-          </div>
-      </div>
+              </div>
             </div>
           </div>
         </div >
       )}
     </>
+  );
+};
+
+// Local ThemeCards component renders a grid of cards resembling the provided visuals
+const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name: string) => void; }> = ({ themes, selected, onSelect }) => {
+
+  // Preview style presets for specific themes
+  const themePreview: Record<string, {
+    cardBg?: string;
+    cardBorder?: string;
+    titleColor?: string;
+    bodyColor?: string;
+    accentColor?: string;
+    pageBg?: string;
+    shadow?: string;
+  }> = {
+    Pearl: {
+      accentColor: '#1B1B27', // Primary accent color
+      titleColor: '#1B1B27', // Heading color
+      bodyColor: '#3C3939', // Body color
+      cardBg: '#FFFFFF', // Card background color
+      pageBg: '#ECECF3', // Page background   
+      cardBorder: '#E6E6E6', // Card border color
+    },
+    Vortex: {
+      titleColor: '#F2F2F3', // Heading color
+      accentColor: '#F2F2F3', // Primary accent color
+      cardBg: '#050505', // Card background color
+      cardBorder: '#565151', // Card border color
+      bodyColor: '#E5E0DF', // Body color
+      pageBg: '#19191A', // Page background   
+    },
+    Clementa: {
+      accentColor: '#FF954F', // Primary accent color
+      titleColor: '#532418', // Heading color
+      bodyColor: '#67534F', // Body color
+      cardBg: '#FFFFF4', // Card background color
+      pageBg: '#DEC8AB', // Page background   
+      cardBorder: '#E6E6E6', // Card border color
+    },
+    // Stratos: {
+    //   accentColor: '#487CFF', // Primary accent color
+    //   titleColor: '#F2F5FA', // Heading color
+    //   bodyColor: '#EBEDF0', // Body color
+    //   cardBg: '#101620', // Card background color 
+    //   pageBg: '#101620', // Page background   
+    //   cardBorder: '', // Card border color
+    // },
+    Seafoam: {
+      accentColor: '#26A688', // Primary accent color
+      titleColor: '#333F70', // Heading color
+      bodyColor: '#333F70', // Body color
+      cardBg: '#FFFFFF', // Card background color
+      pageBg: '#D6F5EE', // Page background   
+      cardBorder: '#E5E0DF', // Card border color
+    },
+    Chisel: {
+      accentColor: '#3E2513', // Primary accent color
+      titleColor: '#201B18', // Heading color
+      bodyColor: '#504C49', // Body color
+      cardBg: '#FFFFFF', // Card background color
+      pageBg: '#F7F3F0', // Page background   
+      cardBorder: '', // Card border color
+    },
+    Marine: {
+      accentColor: '#8C98CA', // Primary accent color
+      titleColor: '#FFFFFF', // Heading color
+      bodyColor: '#EBECEF', // Body color
+      cardBg: '#080E26', // Card background color
+      pageBg: '#A8AFCC', // Page background   
+      cardBorder: '#565151', // Card border color
+    },
+    Lux: {
+      accentColor: '#EF9C82', // Primary accent color
+      titleColor: '#FFD9BE', // Heading color
+      bodyColor: '#F9EEE7', // Body color
+      cardBg: '#123332', // Card background color
+      pageBg: '#1C4241', // Page background   
+      cardBorder: '', // Card border color
+    },
+  };
+
+  return (
+    <div className={styles.themeGrid}>
+      {themes.map((name, idx) => {
+        const isActive = selected === name;
+        const preset = themePreview[name] || {};
+
+        return (
+          <button
+            key={name}
+            className={isActive ? `${styles.themeCard} ${styles.themeCardActive}` : `${styles.themeCard}`}
+            onClick={() => onSelect(name)}
+          // style={cardStyle}
+          >
+            <div className={styles.themeThumb} style={{ backgroundColor: preset.pageBg, backgroundImage: 'none', borderBottom: `1px solid #e5e7eb` }}>
+              <div
+                className={`${styles.themeThumbInner}`}
+                style={{ borderColor: preset.cardBorder, backgroundColor: preset.cardBg }}
+              >
+                <div className={styles.themeTitle} style={{ color: preset.titleColor }}>Title</div>
+                <div className={styles.themeBody} style={{ color: preset.bodyColor }}> Body </div>
+              </div>
+            </div>
+            <div className={styles.themeName} style={{ color: 'black' }}>{name}</div>
+          </button>
+        );
+      })}
+    </div>
   );
 };
