@@ -136,7 +136,7 @@ export function EditableSegmentTimeline({ script }: EditableSegmentTimelineProps
 
       if (response.ok) {
         setRenderedScenes(prev => new Set(prev).add(segmentKey));
-        console.log(`Scene ${segmentKey} rendered successfully`);
+        console.log(`scene ${segmentKey} rendered successfully`);
       } else {
         console.error(`Failed to render scene ${segmentKey}`);
       }

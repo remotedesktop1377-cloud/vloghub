@@ -191,13 +191,13 @@ export const ImageViewModal: React.FC<ImageViewModalProps> = ({
           <Typography variant="h6" component="span">
             {title}
           </Typography>
-          {currentImage.type && (
+          {/* {currentImage.type && (
             <Chip
               label={currentImage.type === 'generated' ? 'AI Generated' : 'Uploaded'}
               size="small"
               color={currentImage.type === 'generated' ? 'primary' : 'default'}
             />
-          )}
+          )} */}
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

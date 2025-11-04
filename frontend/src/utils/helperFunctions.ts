@@ -181,6 +181,177 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
   return classes.filter(Boolean).join(' ');
 };
 
+export class GoogleDriveHelperFunctions {
+  /**
+    * Update a single scene JSON on the server/Drive and ensure assets are synced.
+    * Returns true on success.
+    */
+  static async updateSceneDataceneOnDrive(jobName: string, jobId: string, sceneId: string, sceneData: SceneData): Promise<boolean> {
+    try {
+      const SceneDataWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(sceneData);
+      const ve: any = (SceneDataWithAssets as any).videoEffects || {};
+      const sceneSettings = {
+        transition: ve.transition || '',
+        backgroundMusic: ve.backgroundMusic && typeof ve.backgroundMusic === 'object'
+          ? ({ selectedMusic: ve.backgroundMusic.selectedMusic || '' } as any)
+          : null,
+        logo: ve.logo || null,
+        clip: ve.clip || null,
+        transitionEffects: Array.isArray(ve.transitionEffects) ? ve.transitionEffects : [],
+      };
+
+      // Build assets with logo image and video clip included
+      const existingImages: string[] = Array.isArray(SceneDataWithAssets.assets?.images) ? (SceneDataWithAssets.assets!.images as string[]) : [];
+      const logoUrl: string | undefined = ve?.logo?.url;
+      const mergedImages = Array.from(new Set<string>([
+        ...existingImages,
+        ...(logoUrl ? [logoUrl] : []),
+      ].filter(Boolean) as string[]));
+
+      const existingVideos: string[] = Array.isArray((SceneDataWithAssets as any).assets?.videos) ? ((SceneDataWithAssets as any).assets.videos as string[]) : [];
+      let mergedVideos = existingVideos;
+      const clipUrl: string | undefined = ve?.clip?.url;
+      if (clipUrl) {
+        try {
+          // Upload clip to Drive/videos for this scene folder path and use returned link
+          const jobFolderName = SceneDataWithAssets.jobName || jobName || `job-${HelperFunctions.generateRandomId()}`;
+          const uploadResult = await GoogleDriveHelperFunctions.uploadMediaToDrive(jobFolderName, `${sceneId}/videos`, await HelperFunctions.fetchBlobAsFile(clipUrl, ve?.clip?.name || 'clip.mp4'));
+          if (uploadResult && uploadResult.success && uploadResult.fileId) {
+            mergedVideos = Array.from(new Set<string>([...existingVideos, `https://drive.google.com/uc?id=${uploadResult.fileId}`]));
+          } else {
+            mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
+          }
+        } catch {
+          mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
+        }
+      }
+      const scene = {
+        id: SceneDataWithAssets.id,
+        narration: SceneDataWithAssets.narration,
+        duration: SceneDataWithAssets.duration,
+        durationInSeconds: (SceneDataWithAssets as any).durationInSeconds,
+        words: (SceneDataWithAssets as any).words,
+        startTime: (SceneDataWithAssets as any).startTime,
+        endTime: (SceneDataWithAssets as any).endTime,
+        highlightedKeywords: SceneDataWithAssets.highlightedKeywords || [],
+        keywordsSelected: Array.isArray((SceneDataWithAssets as any).keywordsSelected) ? (SceneDataWithAssets as any).keywordsSelected : [],
+        assets: {
+          images: mergedImages,
+          ...(mergedVideos.length > 0 ? { videos: mergedVideos } : {}),
+        },
+        sceneSettings
+      };
+      console.log('Updating scene on Drive:', scene);
+
+      const form = new FormData();
+      // Pass job folder and scene folder separately so backend can resolve path as jobs/<folderName>/<sceneFolderId>/
+      form.append('jobName', jobName);
+      form.append('jobId', jobId);
+      form.append('sceneId', sceneId);
+      form.append('fileName', 'scene-config.json');
+      form.append('jsonData', JSON.stringify(scene));
+
+      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_SCENE_UPLOAD, {
+        method: 'POST',
+        body: form
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || err?.details || 'Drive scene update failed');
+      }
+      return true;
+    } catch (e) {
+      console.error('updateSceneDataceneOnDrive error', e);
+      return false;
+    }
+  }
+
+  /**
+   * Upload a media file (e.g., chroma key or any video) to Google Drive under the given job folder and target subfolder.
+   * Returns Drive identifiers on success.
+   */
+  static async uploadMediaToDrive(jobId: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
+    try {
+      const form = new FormData();
+      form.append('jobName', jobId);
+      form.append('targetFolder', targetFolder || 'input');
+      form.append('file', file);
+
+      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || data?.details || 'Media upload failed');
+      }
+      return data;
+    } catch (e: any) {
+      console.error('uploadMediaToDrive error', e);
+      return { success: false };
+    }
+  }
+
+  static async uploadContentToDrive(form: FormData): Promise<{ success: boolean; result: any }> {
+    try {
+      const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_UPLOAD, {
+        method: 'POST',
+        body: form,
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        return { success: false, result: err?.error || err?.details || 'Failed to upload to Google Drive' };
+      }
+
+      const result = await response.json();
+      console.log('Drive result:', result);
+      return { success: true, result: result };
+    } catch (e: any) {
+      console.error('uploadContentToDrive error', e);
+      return { success: false, result: e?.message || 'Unknown error' };
+    }
+  }
+
+  static async generateAFolderOnDrive(jobId: string): Promise<{ success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string }> {
+    try {
+      const form = new FormData();
+      form.append('jobName', jobId);
+      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_GENERATE_FOLDER, { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || data?.details || 'Failed to generate a folder on Drive');
+      }
+
+      // Handle the API response structure: { success: boolean, result: {...}, message: string }
+      if (data.success && data.result) {
+        return { success: true, result: data.result, message: data.message };
+      } else {
+        return { success: false, result: null, message: data.message || 'Failed to generate folder' };
+      }
+    } catch (e: any) {
+      console.error('generateAFolderOnDrive error', e);
+      return { success: false, result: null, message: e?.message || 'Unknown error' };
+    }
+  }
+
+  static async generateSceneFoldersInDrive(jobId: string, numberOfScenes: number): Promise<{ success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string }> {
+    try {
+      const form = new FormData();
+      form.append('jobName', jobId);
+      form.append('numberOfScenes', numberOfScenes.toString());
+      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_GENERATE_SCENE_FOLDERS, { method: 'POST', body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || data?.details || 'Failed to generate scene folders');
+      }
+      return { success: true, result: data.result, message: data.message };
+    } catch (e: any) {
+      console.error('generateSceneFoldersInDrive error', e);
+      return { success: false, result: null, message: e?.message || 'Unknown error' };
+    }
+  }
+}
+
 export class HelperFunctions {
 
   static getSearchQuery(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string): string {
@@ -431,158 +602,6 @@ export class HelperFunctions {
     } as SceneData;
   }
 
-  /**
-   * Update a single scene JSON on the server/Drive and ensure assets are synced.
-   * Returns true on success.
-   */
-  static async updateSceneDataceneOnDrive(jobName: string, jobId: string, sceneId: string, sceneData: SceneData): Promise<boolean> {
-    try {
-      const SceneDataWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(sceneData);
-      const ve: any = (SceneDataWithAssets as any).videoEffects || {};
-      const sceneSettings = {
-        transition: ve.transition || '',
-        backgroundMusic: ve.backgroundMusic && typeof ve.backgroundMusic === 'object'
-          ? ({ selectedMusic: ve.backgroundMusic.selectedMusic || '' } as any)
-          : null,
-        logo: ve.logo || null,
-        clip: ve.clip || null,
-        transitionEffects: Array.isArray(ve.transitionEffects) ? ve.transitionEffects : [],
-      };
-
-      // Build assets with logo image and video clip included
-      const existingImages: string[] = Array.isArray(SceneDataWithAssets.assets?.images) ? (SceneDataWithAssets.assets!.images as string[]) : [];
-      const logoUrl: string | undefined = ve?.logo?.url;
-      const mergedImages = Array.from(new Set<string>([
-        ...existingImages,
-        ...(logoUrl ? [logoUrl] : []),
-      ].filter(Boolean) as string[]));
-
-      const existingVideos: string[] = Array.isArray((SceneDataWithAssets as any).assets?.videos) ? ((SceneDataWithAssets as any).assets.videos as string[]) : [];
-      let mergedVideos = existingVideos;
-      const clipUrl: string | undefined = ve?.clip?.url;
-      if (clipUrl) {
-        try {
-          // Upload clip to Drive/videos for this scene folder path and use returned link
-          const jobFolderName = SceneDataWithAssets.jobName || jobName || `job-${HelperFunctions.generateRandomId()}`;
-          const uploadResult = await HelperFunctions.uploadMediaToDrive(jobFolderName, `${sceneId}/videos`, await HelperFunctions.fetchBlobAsFile(clipUrl, ve?.clip?.name || 'clip.mp4'));
-          if (uploadResult && uploadResult.success && uploadResult.fileId) {
-            mergedVideos = Array.from(new Set<string>([...existingVideos, `https://drive.google.com/uc?id=${uploadResult.fileId}`]));
-          } else {
-            mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
-          }
-        } catch {
-          mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
-        }
-      }
-      const scene = {
-        id: SceneDataWithAssets.id,
-        narration: SceneDataWithAssets.narration,
-        duration: SceneDataWithAssets.duration,
-        durationInSeconds: (SceneDataWithAssets as any).durationInSeconds,
-        words: (SceneDataWithAssets as any).words,
-        startTime: (SceneDataWithAssets as any).startTime,
-        endTime: (SceneDataWithAssets as any).endTime,
-        highlightedKeywords: SceneDataWithAssets.highlightedKeywords || [],
-        keywordsSelected: Array.isArray((SceneDataWithAssets as any).keywordsSelected) ? (SceneDataWithAssets as any).keywordsSelected : [],
-        assets: {
-          images: mergedImages,
-          ...(mergedVideos.length > 0 ? { videos: mergedVideos } : {}),
-        },
-        sceneSettings
-      };
-      console.log('Updating scene on Drive:', scene);
-
-      const form = new FormData();
-      // Pass job folder and scene folder separately so backend can resolve path as jobs/<folderName>/<sceneFolderId>/
-      form.append('jobName', jobName);
-      form.append('jobId', jobId);
-      form.append('sceneId', sceneId);
-      form.append('fileName', 'scene-config.json');
-      form.append('jsonData', JSON.stringify(scene));
-
-      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_SCENE_UPLOAD, {
-        method: 'POST',
-        body: form
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error || err?.details || 'Drive scene update failed');
-      }
-      return true;
-    } catch (e) {
-      console.error('updateSceneDataceneOnDrive error', e);
-      return false;
-    }
-  }
-
-  /**
-   * Upload a media file (e.g., chroma key or any video) to Google Drive under the given job folder and target subfolder.
-   * Returns Drive identifiers on success.
-   */
-  static async uploadMediaToDrive(jobId: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
-    try {
-      const form = new FormData();
-      form.append('jobName', jobId);
-      form.append('targetFolder', targetFolder || 'input');
-      form.append('file', file);
-
-      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: form });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || data?.details || 'Media upload failed');
-      }
-      return data;
-    } catch (e: any) {
-      console.error('uploadMediaToDrive error', e);
-      return { success: false };
-    }
-  }
-
-  static async uploadContentToDrive(form: FormData): Promise<{ success: boolean; result: any }> {
-    try {
-      const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_UPLOAD, {
-        method: 'POST',
-        body: form,
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        return { success: false, result: err?.error || err?.details || 'Failed to upload to Google Drive' };
-      }
-
-      const result = await response.json();
-      console.log('Drive result:', result);
-      return { success: true, result: result };
-    } catch (e: any) {
-      console.error('uploadContentToDrive error', e);
-      return { success: false, result: e?.message || 'Unknown error' };
-    }
-  }
-
-  static async generateAFolderOnDrive(jobId: string): Promise<{ success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string }> {
-    try {
-      const form = new FormData();
-      form.append('jobName', jobId);
-      const res = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_GENERATE_FOLDER, { method: 'POST', body: form });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || data?.details || 'Failed to generate a folder on Drive');
-      }
-
-      // Handle the API response structure: { success: boolean, result: {...}, message: string }
-      if (data.success && data.result) {
-        return { success: true, result: data.result, message: data.message };
-      } else {
-        return { success: false, result: null, message: data.message || 'Failed to generate folder' };
-      }
-    } catch (e: any) {
-      console.error('generateAFolderOnDrive error', e);
-      return { success: false, result: null, message: e?.message || 'Unknown error' };
-    }
-  }
-
   // Utility: fetch a URL or blob: URL as a File for upload
   static async fetchBlobAsFile(url: string, fileName: string): Promise<File> {
     const res = await fetch(url);
@@ -608,7 +627,7 @@ export class HelperFunctions {
       const job_id = String((sceneData as any).jobId || jobId || '');
       // const jobName = String((SceneData as any).jobName || jobInfo?.jobName || '');
       if (!jobId || !sceneId) return;
-      const ok = await HelperFunctions.updateSceneDataceneOnDrive(job_id, job_id, sceneId, sceneData);
+      const ok = await GoogleDriveHelperFunctions.updateSceneDataceneOnDrive(job_id, job_id, sceneId, sceneData);
       if (ok) {
         HelperFunctions.showSuccess(successMessage);
       } else {

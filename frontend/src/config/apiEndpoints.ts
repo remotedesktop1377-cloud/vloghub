@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
   GOOGLE_DRIVE_UPLOAD: '/api/google-drive-upload', // to upload project config json to drive
   GOOGLE_DRIVE_SCENE_UPLOAD: '/api/google-drive-scene-upload', // to update scene json on drive
   GOOGLE_DRIVE_FOLDERS: '/api/google-drive-folders', // to get all folders on drive
+  GOOGLE_DRIVE_GENERATE_SCENE_FOLDERS: '/api/google-drive-generate-scene-folders', // to generate scene folders on drive
   GOOGLE_DRIVE_LIBRARY: '/api/google-drive-library?category=all', // to get all library files on drive
   GOOGLE_DRIVE_MEDIA: '/api/google-drive-media?id=', // to get a media file from drive
   GOOGLE_DRIVE_MEDIA_UPLOAD: '/api/google-drive-media-upload', // to upload a media file to drive

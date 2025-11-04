@@ -26,7 +26,7 @@ import {
     HourglassEmpty as ProcessingIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
+import { GoogleDriveHelperFunctions, HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import BackgroundTypeDialog from '../../dialogs/BackgroundTypeDialog';
 import { BackgroundType } from '../../types/backgroundType';
@@ -232,7 +232,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
             if (status === 'upload' && file !== null) {
                 // 1) Upload to Drive first
-                const upload = await HelperFunctions.uploadMediaToDrive(jobId, 'input', file);
+                const upload = await GoogleDriveHelperFunctions.uploadMediaToDrive(jobId, 'input', file);
                 if (!upload?.success || !upload?.fileId) {
                     setUploading(false);
                     setCurrentStep('idle');

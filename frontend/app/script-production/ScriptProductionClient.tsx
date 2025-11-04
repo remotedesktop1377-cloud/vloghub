@@ -38,7 +38,7 @@ import {
 } from '@mui/icons-material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
+import { GoogleDriveHelperFunctions, HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
 import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
@@ -80,8 +80,6 @@ const ScriptProductionClient = () => {
 
     // Production states
     const [scenesData, setScenesData] = useState<SceneData[]>([]);
-    const [chromaKeyFile, setChromaKeyFile] = useState<File | null>(null);
-    const [uploadingChromaKey, setUploadingChromaKey] = useState(false);
 
     // SceneData editing states
     const [editingSceneData, setEditingSceneData] = useState<number | null>(null);
@@ -530,7 +528,7 @@ const ScriptProductionClient = () => {
             //     form.append('file', chromaKeyFile);
             // }
 
-            const uploadResult = await HelperFunctions.uploadContentToDrive(form);
+            const uploadResult = await GoogleDriveHelperFunctions.uploadContentToDrive(form);
             if (!uploadResult.success) {
                 toast.error(uploadResult.result || 'Failed to upload to Google Drive');
                 return;
@@ -550,7 +548,7 @@ const ScriptProductionClient = () => {
 
             // // Update SceneData with their corresponding folder IDs
             // const updatedSceneData = SceneData.map((SceneData, index) => {
-            //     const sceneId = `scene-${index + 1}`;
+            //     const sceneId = `Scene ${index + 1}`;
             //     // const folderId = sceneFolderMap[sceneId];
             //     return {
             //         ...SceneData,
@@ -599,6 +597,7 @@ const ScriptProductionClient = () => {
                         SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                         // PDF -> Images (one per scene) and populate preview images
+                        debugger;
                         convertPdfToImages(updatedScriptData);
                     } else {
                         setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
@@ -635,7 +634,7 @@ const ScriptProductionClient = () => {
     };
 
     // Function to break down script into paragraphs and calculate individual durations
-    const updateParagraphs = (scriptData: ScriptData) => {
+    const updateParagraphs = async (scriptData: ScriptData) => {
         // Check if we have scenes data from the new transcribe API
         if (scriptData?.scenesData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length > 0) {
             console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
@@ -657,18 +656,32 @@ const ScriptProductionClient = () => {
                         keywordsSelected: ch.keywordsSelected ?? {},
                         assets: {
                             images: ch.assets?.images || [],
-                        }
+                        },
+                        previewImage: ch.previewImage || scriptData.scenesData![index]?.previewImage || '',
                     }));
-                    console.log('Using existing SceneData with scenes data:', normalizedFromStorage.length);
+                    // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
                     setScenesData(normalizedFromStorage);
                     // Kick off or check Gamma generation at SCRIPT level
                     if (!scriptData.gammaGenId) {
                         GenerateGammaId(scriptData);
-                    } else if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {    
+                    } else if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {
                         checkGammaAPIStatus(scriptData);
-                    } else if (scriptData.gammaGenId && scriptData.gammaExportUrl) {
-                        convertPdfToImages(scriptData);
-                    }
+                    } else if (
+                        scriptData.gammaGenId &&
+                        scriptData.gammaExportUrl &&
+                        scriptData.scenesData &&
+                        scriptData.scenesData.length > 0
+                    ) {
+                        // Determine if any scene is missing a previewImage
+                        const hasMissingPreviewImages = scriptData.scenesData.some(
+                            (scene: any) => !scene.previewImage
+                        );
+                        if (hasMissingPreviewImages) {
+                            convertPdfToImages(scriptData);
+                        } else {
+                            console.log('All scenes have preview images');
+                        }
+                    }            
                 }
             } catch { }
         }
@@ -966,13 +979,13 @@ const ScriptProductionClient = () => {
         const jobId = HelperFunctions.generateJobId();
         setJobId(jobId);
 
-        const uploadResult: { success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string } = await HelperFunctions.generateAFolderOnDrive(jobId);
-        if (!uploadResult.success || !uploadResult.result) {
+        const sceneFolderResult: { success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string } = await GoogleDriveHelperFunctions.generateAFolderOnDrive(jobId);
+        if (!sceneFolderResult.success || !sceneFolderResult.result) {
             setLoading(false);
-            toast.error(uploadResult.message || 'Failed to generate a folder on Google Drive');
+            toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
             return;
         }
-        console.log('Drive result:', uploadResult.result);
+        console.log('Scene folder result:', sceneFolderResult.result);
         // push this script data to the scripts_approved table in supabase
         const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
         setScriptData(approvedData);
@@ -1574,7 +1587,7 @@ const ScriptProductionClient = () => {
                                     jobId={jobId || 'job-chroma-key'}
                                     scriptData={scriptData as ScriptData}
                                     setScriptData={setScriptData}
-                                    onUploadComplete={(driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
+                                    onUploadComplete={async (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
                                         setPageTitle('Final Step: Scene Composition & Video Generation');
                                         setIsNarratorVideoUploaded(true);
                                         setIsNarrationUploadView(false);
@@ -1592,6 +1605,14 @@ const ScriptProductionClient = () => {
                                         setScriptData(updatedScriptData);
                                         SecureStorageHelpers.setScriptMetadata(updatedScriptData);
                                         updateParagraphs(updatedScriptData);
+
+                                        // generate scene folder in google drive by using googleDriveService function
+                                        const sceneFolderResult = await GoogleDriveHelperFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
+                                        if (!sceneFolderResult.success) {
+                                            toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
+                                            return;
+                                        }
+                                        console.log('Scene folder result:', sceneFolderResult.result);
                                     }}
                                     onUploadFailed={(errorMessage: string) => {
                                         toast.error(errorMessage);
@@ -1922,7 +1943,6 @@ const ScriptProductionClient = () => {
                                                     fontSize: '1.25rem',
                                                     lineHeight: 1.5
                                                 }}
-                                                title={!chromaKeyFile ? 'Upload chroma key first' : ''}
                                             >
                                                 Generate Video
                                             </Button>

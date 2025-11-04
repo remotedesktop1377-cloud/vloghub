@@ -43,7 +43,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { SceneData, SceneKeywordSelection } from '../../types/sceneData';
-import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
+import { GoogleDriveHelperFunctions, HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
 import { MediaPlayer } from '../videoEffects/MediaPlayer';
 import { useImageViewer, formatSceneDataImages } from '../../hooks/useImageViewer';
@@ -1055,7 +1055,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 <>
                                                   {(() => {
                                                     const previewUrl = sceneData.previewImage || '';
-                                                    console.log('Preview URL:', previewUrl);
+                                                    // console.log('Preview URL:', previewUrl);
                                                     const handlePreviewClick = (e: any) => {
                                                       e.stopPropagation();
                                                       handleImageClick(index, 0, true);
@@ -1174,7 +1174,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                               handleImageClick(index, imageIndex, false);
                                                             }}
                                                           >
-                                                            <img src={imageUrl} alt={`Scene ${index + 1} Media ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            <img src={imageUrl} alt={`scene ${index + 1} Media ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                                                             <IconButton
                                                               size="small"
                                                               sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
@@ -1576,7 +1576,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                     const jobId = modifiedScenesData[SceneDataIndex].jobId || '';
                     if (jobId && sceneId) {
                       const modifiedSceneData = modifiedScenesData[SceneDataIndex];
-                      HelperFunctions.updateSceneDataceneOnDrive(jobId || '', jobId || '', sceneId, modifiedSceneData).then((ok) => {
+                      GoogleDriveHelperFunctions.updateSceneDataceneOnDrive(jobId || '', jobId || '', sceneId, modifiedSceneData).then((ok) => {
                         if (!ok) {
                           console.error('Failed to update scene on Drive');
                           try { (window as any).toast?.error('Failed to update scene on Drive'); } catch { }
@@ -1677,14 +1677,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
         onIndexChange={imageViewer.setCurrentIndex}
         viewMode={imageViewer.viewMode}
         onViewModeChange={imageViewer.setViewMode}
-        title={`SceneData ${scenesData.findIndex(ch => {
-          const SceneDataImages = SceneDataImagesMap[scenesData.indexOf(ch)] || [];
-          const images = formatSceneDataImages(
-            SceneDataImages,
-            ch.assets?.images?.[0] || '',
-          );
-          return images.some(img => img.url === imageViewer.currentImage?.url);
-        }) + 1} Images`}
+        title={`Preview Image`}
         showNavigation={true}
         showDownload={true}
         showViewModeSelector={true}
