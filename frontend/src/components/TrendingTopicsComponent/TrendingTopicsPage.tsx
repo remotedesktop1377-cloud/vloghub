@@ -116,7 +116,7 @@ const TrendingTopics: React.FC = () => {
 
       const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
       if (scriptMetadata && typeof scriptMetadata === 'object') {
-        console.log('🟢 Script metadata found, redirecting to script production');
+        // console.log('🟢 Script metadata found, redirecting to script production');
         router.replace(ROUTES_KEYS.SCRIPT_PRODUCTION);
         return;
       }

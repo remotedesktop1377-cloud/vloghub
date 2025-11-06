@@ -6,7 +6,7 @@ import { Readable } from 'stream';
 // @ts-ignore - use runtime types for busboy
 import Busboy from 'busboy';
 import { DRIVE_CLIENT_CREDENTIALS_FILE_NAME } from '@/data/constants';
-import { findOrCreateFolder, getDriveClient, getRootFolderId } from '@/services/googleDriveService';
+import { findOrCreateFolder, getDriveClient, getRootFolderId } from '@/services/googleDriveServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

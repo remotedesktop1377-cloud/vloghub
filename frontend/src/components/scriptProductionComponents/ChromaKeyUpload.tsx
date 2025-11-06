@@ -26,7 +26,7 @@ import {
     HourglassEmpty as ProcessingIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { GoogleDriveHelperFunctions, HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
+import { SecureStorageHelpers } from '../../utils/helperFunctions';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import BackgroundTypeDialog from '../../dialogs/BackgroundTypeDialog';
 import { BackgroundType } from '../../types/backgroundType';
@@ -34,6 +34,7 @@ import { useTranscriptionProgress } from '@/hooks/useTranscriptionProgress';
 import { useAuth } from '@/context/AuthContext';
 import { SCRIPT_STATUS } from '@/data/constants';
 import { ScriptData } from '@/types/scriptData';
+import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 
 interface ChromaKeyUploadProps {
     jobId: string;
@@ -81,24 +82,29 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     // Sync upload progress with transcription progress
     useEffect(() => {
         if (scriptData.status === SCRIPT_STATUS.UPLOADED && scriptData.narrator_chroma_key_link && scriptData.transcription === "" && !transcriptionStartedRef.current) {
-            // Prevent double transcription
-            transcriptionStartedRef.current = true;
-            // Update visual progress based on transcription stage
-            setCurrentStep('transcribing');
-            setUploadProgress(40);
-            setUploading(true);
-            setTranscriptionJobId(jobId);
-            transcribeVideo(scriptData.narrator_chroma_key_link, null);
+            startTranscription();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scriptData]);
+
+    const startTranscription = () => {
+        // Prevent double transcription
+        clearError();
+        transcriptionStartedRef.current = true;
+        // Update visual progress based on transcription stage
+        setCurrentStep('transcribing');
+        setUploadProgress(40);
+        setUploading(true);
+        setTranscriptionJobId(jobId);
+        transcribeVideo(scriptData.narrator_chroma_key_link, null);
+    }
 
     const transcribeVideo = async (currentDriveUrl: string, file: File | null) => {
         try {
             // Start tracking progress immediately with the jobId
             setTranscriptionJobId(jobId);
 
-            const res = await fetch(API_ENDPOINTS.TRANSCRIBE_VIDEO, {
+            const res = await fetch(API_ENDPOINTS.API_TRANSCRIBE_VIDEO, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -184,16 +190,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     };
 
     const handleRetry = () => {
-        // Reset transcription started flag to allow retry
-        transcriptionStartedRef.current = false;
-        clearError();
-        if (errorType === 'upload' && uploadedFile) {
-            handleUploadComplete('upload', uploadedFile);
-        } else if (errorType === 'transcribe' && driveUrl !== '') {
-            handleUploadComplete('transcribe', uploadedFile);
-        } else if (errorType === 'general' && uploadedFile) {
-            handleUploadComplete('upload', uploadedFile);
-        }
+        handleUploadComplete(errorType || '', uploadedFile);
     };
 
     const onFileSelectionClick = () => {
@@ -223,16 +220,15 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
         input.click();
     };
 
-    const handleUploadComplete = async (status: 'upload' | 'transcribe', file: File | null) => {
+    const handleUploadComplete = async (status: string, file: File | null) => {
         try {
             setUploading(true);
             setUploadProgress(5);
             setCurrentStep('uploading');
-            let currentDriveUrl = driveUrl; // Use current state value as fallback
 
-            if (status === 'upload' && file !== null) {
+            if (status === 'upload' && file !== null && driveUrl === '') {
                 // 1) Upload to Drive first
-                const upload = await GoogleDriveHelperFunctions.uploadMediaToDrive(jobId, 'input', file);
+                const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', file);
                 if (!upload?.success || !upload?.fileId) {
                     setUploading(false);
                     setCurrentStep('idle');
@@ -241,7 +237,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     onUploadFailed('Failed to upload video to Drive');
                     return;
                 }
-                currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
+                const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
                 // currentDriveUrl = 'https://drive.google.com/uc?id=1lDQe0CXoeiFbcfM6DdnpMK-rNNKHusAt'; // long
                 // currentDriveUrl = 'https://drive.google.com/uc?id=1dh2NClbUC5pZw-qlNs0Td2-yaB_4HySo'; // short
                 setDriveUrl(currentDriveUrl);
@@ -254,6 +250,8 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 } as ScriptData;
                 setScriptData(updatedScriptData);
                 SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+            } else if (status === 'transcribe' && file !== null && driveUrl !== '') {
+                startTranscription();
             }
             // Transcription will be triggered automatically by useEffect when scriptData is updated
             // No need to call transcribeVideo here - the useEffect handles it
@@ -398,7 +396,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                         <IconButton
                                             size="small"
                                             onClick={handleRetry}
-                                            disabled={uploading}
+                                            // disabled={uploading}
                                             color="inherit"
                                         >
                                             <RefreshIcon />

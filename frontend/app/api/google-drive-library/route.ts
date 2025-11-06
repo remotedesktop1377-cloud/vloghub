@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
-import { getDriveClient, getRootFolderId } from '@/services/googleDriveService';
+import { getDriveClient, getRootFolderId } from '@/services/googleDriveServer';
 
 // Lightweight in-memory cache to reduce Drive API calls
 type CacheEntry = { timestamp: number; data: any };

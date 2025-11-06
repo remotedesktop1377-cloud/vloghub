@@ -5,7 +5,7 @@ import path from "path";
 import ffmpeg from "fluent-ffmpeg";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AI_CONFIG } from "@/config/aiConfig";
-import { getDriveClient } from "@/services/googleDriveService";
+import { getDriveClient } from "@/services/googleDriveServer";
 import {
   generateJobId,
   createProgress,

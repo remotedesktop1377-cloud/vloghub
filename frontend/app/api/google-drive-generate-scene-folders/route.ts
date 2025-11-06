@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDriveClient, getRootFolderId, findOrCreateFolder } from '@/services/googleDriveService';
+import { getDriveClient, getRootFolderId, findOrCreateFolder } from '@/services/googleDriveServer';
 
 export const runtime = 'nodejs';
 

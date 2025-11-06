@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 let API_IN_PROGRESS = false;
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    const generationId = params?.id;
+    const awaited = 'then' in (ctx.params as any) ? await (ctx.params as Promise<{ id: string }>) : (ctx.params as { id: string });
+    const generationId = awaited?.id;
     if (!generationId) {
       return NextResponse.json({ error: "generationId is required" }, { status: 400 });
     }

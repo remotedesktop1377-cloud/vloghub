@@ -26,8 +26,8 @@ class ProfileServiceImpl implements ProfileService {
      */
     async fetchBackgrounds(): Promise<BackgroundItem[]> {
         try {
-            console.log('Fetching backgrounds from:', `${API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY}`);
-            const response = await fetch(API_ENDPOINTS.GOOGLE_DRIVE_LIBRARY);
+            console.log('Fetching backgrounds from:', `${API_ENDPOINTS.API_GOOGLE_DRIVE_LIBRARY}`);
+            const response = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_LIBRARY);
 
             if (!response.ok) {
                 const errorText = await response.text();

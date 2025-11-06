@@ -15,7 +15,7 @@ export const GammaService = {
             return { error: 'Gamma API is already in progress' };
         }
         API_IN_PROGRESS = true;
-        const res = await HttpService.post<any>(API_ENDPOINTS.GAMMA_GENERATE, {
+        const res = await HttpService.post<any>(API_ENDPOINTS.API_GAMMA_GENERATE, {
             inputText,
             textMode: 'preserve',   // generate, condense, preserve
             format: 'presentation', // presentation, document, social
@@ -42,7 +42,7 @@ export const GammaService = {
     },
 
     async checkStatus(generationId: string): Promise<any> {
-        return HttpService.get<any>(`${API_ENDPOINTS.GAMMA_GENERATE}/${encodeURIComponent(generationId)}`);
+        return HttpService.get<any>(`${API_ENDPOINTS.API_GAMMA_GENERATE}/${encodeURIComponent(generationId)}`);
     }
 };
 

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getJWTClient } from '@/services/googleDriveService';
+import { getJWTClient } from '@/services/googleDriveServer';
 
 export const runtime = 'nodejs';
 

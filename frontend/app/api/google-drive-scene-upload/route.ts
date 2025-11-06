@@ -1,64 +1,8 @@
 // app/api/upload-to-drive/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { google } from 'googleapis';
-import path from 'path';
-import fs from 'fs';
 import { Readable } from 'stream';
-import { DRIVE_CLIENT_CREDENTIALS_FILE_NAME } from '@/data/constants';
-import { getDriveClient, getRootFolderId } from '@/services/googleDriveService';
-
+import { getDriveClient, getRootFolderId, findOrCreateFolder } from '@/services/googleDriveServer';
 export const runtime = 'nodejs';
-
-// helper: find or create folder under parent
-async function findOrCreateFolder(drive: any, name: string, parentId: string) {
-    const q = [
-        `name = '${name.replace(/'/g, "\\'")}'`,
-        "mimeType = 'application/vnd.google-apps.folder'",
-        `'${parentId}' in parents`,
-        'trashed = false'
-    ].join(' and ');
-
-    const res = await drive.files.list({
-        q,
-        fields: 'files(id, name)',
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-        pageSize: 1,
-    });
-
-    if (res.data.files && res.data.files.length > 0) {
-        return { id: res.data.files[0].id, created: false };
-    }
-
-    const created = await drive.files.create({
-        requestBody: {
-            name,
-            parents: [parentId],
-            mimeType: 'application/vnd.google-apps.folder',
-        },
-        fields: 'id, name',
-        supportsAllDrives: true,
-    });
-
-    return { id: created.data.id!, created: true };
-}
-
-async function clearFolder(drive: any, folderId: string) {
-    const res = await drive.files.list({
-        q: `'${folderId}' in parents and trashed = false`,
-        fields: 'files(id)'
-    });
-    const files = res.data.files || [];
-    for (const f of files) {
-        try { await drive.files.delete({ fileId: f.id, supportsAllDrives: true }); } catch { }
-    }
-}
-
-async function findOrCreateCleanFolder(drive: any, name: string, parentId: string) {
-    const folder = await findOrCreateFolder(drive, name, parentId);
-    await clearFolder(drive, folder.id);
-    return folder;
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -78,11 +22,9 @@ export async function POST(request: NextRequest) {
         const form = await request.formData();
         const fileNameForm = String(form.get('fileName') || '').trim();
         const jsonDataRaw = form.get('jsonData');
-        const jobName = String(form.get('jobName') || '').trim();
         const jobId = String(form.get('jobId') || '').trim();
         const sceneId = String(form.get('sceneId') || '').trim();
         const file = form.get('file') as unknown as File | null;
-
 
         if (isMultipart) {
             // Multipart mode: supports two flows
@@ -94,7 +36,7 @@ export async function POST(request: NextRequest) {
             }
 
             const jsonData = typeof jsonDataRaw === 'string' ? JSON.parse(jsonDataRaw) : JSON.parse(await (jsonDataRaw as any).text());
-            const project = await findOrCreateFolder(drive, jobName, ROOT_ID);
+            const project = await findOrCreateFolder(drive, jobId, ROOT_ID);
             const sceneFolder = await findOrCreateFolder(drive, sceneId, project.id);
             // console.log('project', project);
             // console.log('sceneFolder project', sceneFolder);
@@ -126,51 +68,51 @@ export async function POST(request: NextRequest) {
                 let uploadedLow = 0;
                 let uploadedHigh = 0;
                 let uploadedLogos = 0;
+                const imagesFolder = await findOrCreateFolder(drive, 'images', sceneFolder.id);
 
-                if (imagesIn.length > 0) {
-                    const imagesFolder = await findOrCreateCleanFolder(drive, 'images', sceneFolder.id);
-                    for (let j = 0; j < imagesIn.length; j++) {
-                        const url = imagesIn[j];
-                        // Skip if this URL is already handled as low or high res upload
-                        if (lowResUrls.includes(url) || highResUrls.includes(url)) continue;
-                        try {
-                            if (url.startsWith('blob:')) throw new Error('Cannot fetch blob URL on server');
-                            const res = await fetch(url, {
-                                headers: {
-                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-                                    'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                                    'Referer': new URL(url).origin,
-                                },
-                                redirect: 'follow',
-                            });
-                            if (!res.ok) throw new Error(`download ${res.status}`);
-                            const contentType = res.headers.get('content-type') || undefined;
-                            const arrayBuffer = await res.arrayBuffer();
-                            const buffer = Buffer.from(arrayBuffer);
-                            const stream = Readable.from(buffer);
-                            const name = `${sceneId}-image-${j + 1}`;
-                            const created = await drive.files.create({
-                                requestBody: { name, parents: [imagesFolder.id], mimeType: contentType },
-                                media: { body: stream, mimeType: contentType },
-                                supportsAllDrives: true,
-                                fields: 'id, name',
-                            });
-                            if (created.data.id) {
-                                uploadedImages += 1;
-                                imagesOut.push(`https://drive.google.com/uc?id=${created.data.id}`);
-                            } else {
-                                imagesOut.push(url);
-                            }
-                        } catch (e) {
-                            console.error('Image upload failed', { sceneId, url, error: (e as any)?.message });
-                            imagesOut.push(url);
-                        }
-                    }
-                }
+                // if (imagesIn.length > 0) {
+                //     for (let j = 0; j < imagesIn.length; j++) {
+                //         const url = imagesIn[j];
+                //         // Skip if this URL is already handled as low or high res upload
+                //         if (lowResUrls.includes(url) || highResUrls.includes(url)) continue;
+                //         try {
+                //             if (url.startsWith('blob:')) throw new Error('Cannot fetch blob URL on server');
+                //             const res = await fetch(url, {
+                //                 headers: {
+                //                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+                //                     'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                //                     'Referer': new URL(url).origin,
+                //                 },
+                //                 redirect: 'follow',
+                //             });
+                //             if (!res.ok) throw new Error(`download ${res.status}`);
+                //             const contentType = res.headers.get('content-type') || undefined;
+                //             const arrayBuffer = await res.arrayBuffer();
+                //             const buffer = Buffer.from(arrayBuffer);
+                //             const stream = Readable.from(buffer);
+                //             const name = `${sceneId}-image-${j + 1}`;
+                //             const created = await drive.files.create({
+                //                 requestBody: { name, parents: [imagesFolder.id], mimeType: contentType },
+                //                 media: { body: stream, mimeType: contentType },
+                //                 supportsAllDrives: true,
+                //                 fields: 'id, name',
+                //             });
+                //             if (created.data.id) {
+                //                 uploadedImages += 1;
+                //                 imagesOut.push(`https://drive.google.com/uc?id=${created.data.id}`);
+                //             } else {
+                //                 imagesOut.push(url);
+                //             }
+                //         } catch (e) {
+                //             console.error('Image upload failed', { sceneId, url, error: (e as any)?.message });
+                //             imagesOut.push(url);
+                //         }
+                //     }
+                // }
 
                 // Upload scene lowRes images
                 if (lowResUrls.length > 0) {
-                    const lowFolder = await findOrCreateCleanFolder(drive, 'lowRes', sceneFolder.id);
+                    const lowFolder = await findOrCreateFolder(drive, 'lowRes', imagesFolder?.id || sceneFolder.id);
                     for (let j = 0; j < lowResUrls.length; j++) {
                         const url = lowResUrls[j];
                         try {
@@ -188,7 +130,8 @@ export async function POST(request: NextRequest) {
                             const arrayBuffer = await res.arrayBuffer();
                             const buffer = Buffer.from(arrayBuffer);
                             const stream = Readable.from(buffer);
-                            const name = `${sceneId}-low-${j + 1}`;
+                            //use timestamp as name
+                            const name = `${Date.now()}-${j + 1}.${contentType?.split('/')[1]}`;
                             const created = await drive.files.create({
                                 requestBody: { name, parents: [lowFolder.id], mimeType: contentType },
                                 media: { body: stream, mimeType: contentType },
@@ -204,7 +147,7 @@ export async function POST(request: NextRequest) {
 
                 // Upload scene highRes images
                 if (highResUrls.length > 0) {
-                    const highFolder = await findOrCreateCleanFolder(drive, 'highRes', sceneFolder.id);
+                    const highFolder = await findOrCreateFolder(drive, 'highRes', imagesFolder.id);
                     for (let j = 0; j < highResUrls.length; j++) {
                         const url = highResUrls[j];
                         try {
@@ -222,7 +165,8 @@ export async function POST(request: NextRequest) {
                             const arrayBuffer = await res.arrayBuffer();
                             const buffer = Buffer.from(arrayBuffer);
                             const stream = Readable.from(buffer);
-                            const name = `${sceneId}-high-${j + 1}`;
+                            //use timestamp as name
+                            const name = `${Date.now()}-${j + 1}.${contentType?.split('/')[1]}`;
                             const created = await drive.files.create({
                                 requestBody: { name, parents: [highFolder.id], mimeType: contentType },
                                 media: { body: stream, mimeType: contentType },
@@ -240,7 +184,7 @@ export async function POST(request: NextRequest) {
                 if (logoUrl) {
                     try {
                         if (!logoUrl.startsWith('blob:')) {
-                            const logosFolder = await findOrCreateCleanFolder(drive, 'scene-logos', sceneFolder.id);
+                            const logosFolder = await findOrCreateFolder(drive, 'scene-logos', imagesFolder.id);
                             const res = await fetch(logoUrl, {
                                 headers: {
                                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
@@ -270,7 +214,7 @@ export async function POST(request: NextRequest) {
                 }
 
                 if (videosIn.length > 0) {
-                    const videosFolder = await findOrCreateCleanFolder(drive, 'videos', sceneFolder.id);
+                    const videosFolder = await findOrCreateFolder(drive, 'videos', imagesFolder.id);
                     for (let j = 0; j < videosIn.length; j++) {
                         const url = videosIn[j];
                         try {

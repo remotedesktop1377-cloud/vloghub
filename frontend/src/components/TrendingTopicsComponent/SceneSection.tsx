@@ -43,7 +43,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { SceneData, SceneKeywordSelection } from '../../types/sceneData';
-import { GoogleDriveHelperFunctions, HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
+import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
 import { MediaPlayer } from '../videoEffects/MediaPlayer';
 import { useImageViewer, formatSceneDataImages } from '../../hooks/useImageViewer';
@@ -53,6 +53,7 @@ import { SceneDataEditDialog } from './SceneDataEditDialog';
 import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights';
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
+import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 
 // Map effect ids to human-readable names for project-level effects display
 const EFFECT_NAME_MAP: Record<string, string> = {
@@ -507,7 +508,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                   size="small"
                                                                   value={currentId || ''}
                                                                   onChange={(e) => {
-                                                                    const updated = scenesData.map((ch, i) => {
+                                                                    const updated: SceneData[] = scenesData.map((ch, i) => {
                                                                       if (i !== index) return ch;
                                                                       const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                       const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -520,7 +521,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                     });
                                                                     onSceneDataUpdate(updated);
                                                                     setVolumeOpenIndex(null);
-                                                                    HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music changed');
+                                                                    GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[index], 'Music changed');
                                                                   }}
                                                                   disabled={false}
                                                                   sx={{
@@ -555,7 +556,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                     <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
                                                                       <CustomAudioPlayer
                                                                         key={`audio-${index}-${bmIdx}-${id}`}
-                                                                        src={id ? `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA}${id}` : ''}
+                                                                        src={id ? `${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${id}` : ''}
                                                                         title={''}
                                                                       />
                                                                     </Box>
@@ -581,7 +582,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                         value={bm?.volume || 0.3}
                                                                         onChange={(_, value) => {
                                                                           const vol = Array.isArray(value) ? value[0] : value;
-                                                                          const updated = scenesData.map((ch, i) => {
+                                                                          const updated: SceneData[] = scenesData.map((ch, i) => {
                                                                             if (i !== index) return ch;
                                                                             const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                             const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -590,7 +591,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                             return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                           });
                                                                           onSceneDataUpdate(updated);
-                                                                          HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music volume updated');
+                                                                          GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[index], 'Music volume updated');
                                                                         }}
                                                                         sx={{ height: 120, ml: 1 }}
                                                                       />
@@ -606,7 +607,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                     disabled={false}
                                                                     variant={(bm?.autoAdjust !== false ? 'contained' : 'outlined')}
                                                                     onClick={() => {
-                                                                      const updated = scenesData.map((ch, i) => {
+                                                                      const updated: SceneData[] = scenesData.map((ch, i) => {
                                                                         if (i !== index) return ch;
                                                                         const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                         const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -615,7 +616,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onSceneDataUpdate(updated);
-                                                                      HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music auto-adjust toggled');
+                                                                      GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[index], 'Music auto-adjust toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Auto Adjust</Button></span>
@@ -626,7 +627,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                     disabled={false}
                                                                     variant={(bm?.fadeIn !== false ? 'contained' : 'outlined')}
                                                                     onClick={() => {
-                                                                      const updated = scenesData.map((ch, i) => {
+                                                                      const updated: SceneData[] = scenesData.map((ch, i) => {
                                                                         if (i !== index) return ch;
                                                                         const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                         const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -635,7 +636,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onSceneDataUpdate(updated);
-                                                                      HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music fade-in toggled');
+                                                                      GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[index], 'Music fade-in toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Fade In</Button></span>
@@ -645,7 +646,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                     size="small"
                                                                     variant={(bm?.fadeOut !== false ? 'contained' : 'outlined')}
                                                                     onClick={() => {
-                                                                      const updated = scenesData.map((ch, i) => {
+                                                                      const updated: SceneData[] = scenesData.map((ch, i) => {
                                                                         if (i !== index) return ch;
                                                                         const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                         const nextItem = { ...(list[bmIdx] || { id: Date.now().toString(), selectedMusic: '', volume: 0.3, autoAdjust: true, fadeIn: true, fadeOut: true }) };
@@ -654,7 +655,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                         return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: list } } as any;
                                                                       });
                                                                       onSceneDataUpdate(updated);
-                                                                      HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music fade-out toggled');
+                                                                      GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[index], 'Music fade-out toggled');
                                                                     }}
                                                                     sx={{ textTransform: 'none', fontSize: '0.8rem' }}
                                                                   >Fade Out</Button></span>
@@ -671,12 +672,12 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                     const current = Array.isArray((scenesData[index] as any).videoEffects?.backgroundMusic) ? (scenesData[index] as any).videoEffects.backgroundMusic : [];
                                                                     // already saved link on change; here we just ensure item exists
                                                                     const applied = current.map((item: any, idx: number) => idx === bmIdx ? { ...item } : item);
-                                                                    const updated = scenesData.map((ch, i) => {
+                                                                    const updated: SceneData[] = scenesData.map((ch, i) => {
                                                                       if (i !== index) return ch;
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: applied } } as any;
                                                                     });
                                                                     onSceneDataUpdate(updated);
-                                                                    HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music applied');
+                                                                    GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[index], 'Music applied');
                                                                   }}
                                                                 >Apply Music</Button>
 
@@ -686,14 +687,14 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                   color="error"
                                                                   sx={{ textTransform: 'none', fontSize: '1rem', width: 100, height: 40 }}
                                                                   onClick={() => {
-                                                                    const updated = scenesData.map((ch, i) => {
+                                                                    const updated: SceneData[] = scenesData.map((ch, i) => {
                                                                       if (i !== index) return ch;
                                                                       const list = Array.isArray((ch as any).videoEffects?.backgroundMusic) ? ([...(ch as any).videoEffects.backgroundMusic] as any[]) : ([] as any[]);
                                                                       const pruned = list.filter((_: any, idx: number) => idx !== bmIdx);
                                                                       return { ...(ch as any), videoEffects: { ...(ch as any).videoEffects, backgroundMusic: pruned } } as any;
                                                                     });
                                                                     onSceneDataUpdate(updated);
-                                                                    HelperFunctions.persistSceneUpdate(jobId, updated, index, 'Music removed');
+                                                                    GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[index], 'Music removed');
                                                                   }}
                                                                 >Remove</Button>
                                                               </Box>
@@ -728,7 +729,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                             ? { ...ch, highlightedKeywords: [] }
                                                             : ch
                                                         ));
-                                                        HelperFunctions.persistSceneUpdate(jobId, scenesData, index, 'All keywords cleared');
+                                                        GoogleDriveServiceFunctions.persistSceneUpdate(jobId, scenesData[index], 'All keywords cleared');
                                                         if (typeof window !== 'undefined' && (window as any).toast) {
                                                           HelperFunctions.showSuccess('Cleared all keywords');
                                                         }
@@ -802,7 +803,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                           onClick={(e) => {
                                                             // Remove this keyword and its associated images from all arrays
                                                             e.stopPropagation();
-                                                            const updatedSceneData = scenesData.map((ch, idx) => {
+                                                            const updatedSceneData: SceneData[] = scenesData.map((ch, idx) => {
                                                               if (idx !== index) return ch;
                                                               // Build list of URLs tied to this keyword based on new array format (fallback to legacy map)
                                                               let urlsToRemove: string[] = [];
@@ -847,7 +848,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                               };
                                                             });
                                                             onSceneDataUpdate(updatedSceneData);
-                                                            HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, `Keyword removed`);
+                                                            GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[index], `Keyword removed`);
                                                             if (typeof window !== 'undefined' && (window as any).toast) {
                                                               HelperFunctions.showSuccess(`Removed "${keyword}" and its images`);
                                                             }
@@ -1109,7 +1110,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                               sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
                                                               onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                const updatedSceneData = scenesData.map((ch, chIndex) => {
+                                                                const updatedSceneData: SceneData[] = scenesData.map((ch, chIndex) => {
                                                                   if (chIndex === index) {
                                                                     const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
                                                                     const googleSetInner = new Set(ch.assets?.imagesGoogle || []);
@@ -1154,7 +1155,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                   return ch;
                                                                 });
                                                                 onSceneDataUpdate(updatedSceneData);
-                                                                HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
+                                                                GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[index], 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1188,7 +1189,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                 });
 
                                                                 const imageUrlToRemove = imageUrl;
-                                                                const updatedSceneData = scenesData.map((ch, chIndex) => {
+                                                                const updatedSceneData: SceneData[] = scenesData.map((ch, chIndex) => {
                                                                   if (chIndex !== index) return ch;
                                                                   const imagesList = Array.isArray(ch.assets?.images) ? (ch.assets!.images as string[]) : [];
                                                                   const newImagesList = imagesList.filter(u => u !== imageUrlToRemove);
@@ -1225,7 +1226,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                   };
                                                                 });
                                                                 onSceneDataUpdate(updatedSceneData);
-                                                                HelperFunctions.persistSceneUpdate(jobId, updatedSceneData, index, 'Media deleted');
+                                                                GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[index], 'Media deleted');
                                                               }}
                                                             >
                                                               <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1234,7 +1235,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                             </IconButton>
                                                           </Box>
                                                         ))}
-                                                       
+
                                                       </Box>
                                                     );
                                                   })()}
@@ -1480,9 +1481,9 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                   }
                 }}
                 SceneDataIndex={mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex}
-                onSceneDataUpdate={(SceneDataIndex, updatedSceneData: any) => {
+                onSceneDataUpdate={async (SceneDataIndex, updatedSceneData: any) => {
                   // Update the SceneData with new assets
-                  const modifiedScenesData = scenesData.map((sceneData, index) => {
+                  const modifiedScenesData: SceneData[] = scenesData.map((sceneData, index) => {
                     if (index === SceneDataIndex) {
                       // Transform any legacy merge payload (map) into array entries
                       let nextKeywordsSelected: SceneKeywordSelection[] = Array.isArray(sceneData.keywordsSelected) ? (sceneData.keywordsSelected as SceneKeywordSelection[]) : [];
@@ -1575,15 +1576,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                     const sceneId = modifiedScenesData[SceneDataIndex].id || '';
                     const jobId = modifiedScenesData[SceneDataIndex].jobId || '';
                     if (jobId && sceneId) {
-                      const modifiedSceneData = modifiedScenesData[SceneDataIndex];
-                      GoogleDriveHelperFunctions.updateSceneDataceneOnDrive(jobId || '', jobId || '', sceneId, modifiedSceneData).then((ok) => {
-                        if (!ok) {
-                          console.error('Failed to update scene on Drive');
-                          try { (window as any).toast?.error('Failed to update scene on Drive'); } catch { }
-                        } else {
-                          try { (window as any).toast?.success('Scene updated on Drive'); } catch { }
-                        }
-                      });
+                      await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, modifiedScenesData[SceneDataIndex], 'Project settings applied to scene');
                     }
                   } catch { }
                   onSceneDataUpdate(modifiedScenesData);
@@ -1611,7 +1604,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                   const kw = typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword;
                   if (kw) {
                     // add selected urls to the images array and keywordsSelected
-                    const updated = scenesData.map((ch, idx) => {
+                    const updated: SceneData[] = scenesData.map((ch, idx) => {
                       if (idx !== SceneDataIdx) return ch;
                       const existingArray: import('@/types/sceneData').SceneKeywordSelection[] = Array.isArray(ch.keywordsSelected) ? (ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[]) : [];
                       const low = selectedUrls?.[0] || undefined;
@@ -1656,10 +1649,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                     //   console.log('Media added to SceneData:', JSON.stringify(updated[SceneDataIdx]));
                     // } catch {}
                     onSceneDataUpdate(updated);
-                    HelperFunctions.persistSceneUpdate(jobId, updated, SceneDataIdx, 'Media added');
-                    if (typeof window !== 'undefined') {
-                      (window as any).__keywordSuggestions = undefined;
-                    }
+                    GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[SceneDataIdx], 'Media added');
                   }
                 }}
               />

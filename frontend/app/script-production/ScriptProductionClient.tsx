@@ -38,7 +38,8 @@ import {
 } from '@mui/icons-material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { GoogleDriveHelperFunctions, HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
+import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
+import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
@@ -371,7 +372,7 @@ const ScriptProductionClient = () => {
             setProjectLogo(tmpLogo ? { ...tmpLogo } : null);
             setProjectVideoClip(tmpClip ? { ...tmpClip } : null);
             setProjectTransitionEffects([...(tmpEffects || [])]);
-            const updated = scenesData.map((ch) => ({
+            const updated: SceneData[] = scenesData.map((ch) => ({
                 ...(ch as any),
                 videoEffects: {
                     ...(ch as any).videoEffects,
@@ -385,13 +386,13 @@ const ScriptProductionClient = () => {
             setScenesData(updated);
             try {
                 for (let i = 0; i < updated.length; i++) {
-                    await HelperFunctions.persistSceneUpdate(jobId, updated, i, 'Project settings applied to all scenes');
+                    await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[i], 'Project settings applied to all scenes');
                 }
             } catch { }
         } else if (projectSettingsContext.mode === 'scene' && typeof projectSettingsContext.sceneIndex === 'number') {
             const idx = projectSettingsContext.sceneIndex;
             const seed = projectSettingsSeedRef.current;
-            const updated = scenesData.map((ch, i) => {
+            const updated: SceneData[] = scenesData.map((ch, i) => {
                 if (i !== idx) return ch;
                 const currentVE: any = (ch as any).videoEffects || {};
                 // Only replace fields that changed compared to seed
@@ -406,7 +407,7 @@ const ScriptProductionClient = () => {
             setScenesData(updated);
             try {
                 setProjectSettingsDialogOpen(false);
-                await HelperFunctions.persistSceneUpdate(jobId, updated, idx, 'Project settings applied to scene');
+                await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[idx], 'Project settings applied to scene');
             } catch {
                 setProjectSettingsDialogOpen(false);
             }
@@ -419,7 +420,7 @@ const ScriptProductionClient = () => {
         try {
             const id = (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '';
             if (!id) return;
-            const src = `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA}${id}`;
+            const src = `${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${id}`;
             if (!audioRef.current) {
                 audioRef.current = new Audio();
                 audioRef.current.addEventListener('playing', () => setIsMusicPlaying(true));
@@ -528,7 +529,7 @@ const ScriptProductionClient = () => {
             //     form.append('file', chromaKeyFile);
             // }
 
-            const uploadResult = await GoogleDriveHelperFunctions.uploadContentToDrive(form);
+            const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
             if (!uploadResult.success) {
                 toast.error(uploadResult.result || 'Failed to upload to Google Drive');
                 return;
@@ -597,7 +598,6 @@ const ScriptProductionClient = () => {
                         SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                         // PDF -> Images (one per scene) and populate preview images
-                        debugger;
                         convertPdfToImages(updatedScriptData);
                     } else {
                         setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
@@ -626,8 +626,24 @@ const ScriptProductionClient = () => {
                 previewImage: images[idx] || '',
             }));
             console.log('PDF pages:', totalPages, 'Rendered images:', mapped || []);
-            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
             setScenesData(mapped || [] as SceneData[]);
+
+            // Upload Gamma preview images to each scene folder using media upload API
+            if (mapped && mapped.length > 0) {
+                for (let i = 0; i < mapped.length; i++) {
+                    const ch: SceneData = mapped[i];
+                    if (!ch?.previewImage) continue;
+                    try {
+                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobId, ch.id ?? i + 1, ch.previewImage);
+                        if (uploadResult.success) {
+                            ch.previewImageWebviewLink = uploadResult.result.webViewLink;
+                            await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, ch, 'Preview image uploaded');
+                        }
+                    } catch { }
+                }
+            }
+
+            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
         } catch (e: any) {
             console.error('Failed to convert PDF to images:', e?.message || 'Unknown error');
         }
@@ -637,7 +653,7 @@ const ScriptProductionClient = () => {
     const updateParagraphs = async (scriptData: ScriptData) => {
         // Check if we have scenes data from the new transcribe API
         if (scriptData?.scenesData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length > 0) {
-            console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
+            // console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
 
             // If SceneData with images already exist in approvedScript, reuse them
             try {
@@ -681,7 +697,7 @@ const ScriptProductionClient = () => {
                         } else {
                             console.log('All scenes have preview images');
                         }
-                    }            
+                    }
                 }
             } catch { }
         }
@@ -979,13 +995,13 @@ const ScriptProductionClient = () => {
         const jobId = HelperFunctions.generateJobId();
         setJobId(jobId);
 
-        const sceneFolderResult: { success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string } = await GoogleDriveHelperFunctions.generateAFolderOnDrive(jobId);
+        const sceneFolderResult: { success: boolean; result: { folderId: string; webViewLink: string } | null; message?: string } = await GoogleDriveServiceFunctions.generateAFolderOnDrive(jobId);
         if (!sceneFolderResult.success || !sceneFolderResult.result) {
             setLoading(false);
             toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
             return;
         }
-        console.log('Scene folder result:', sceneFolderResult.result);
+        // console.log('Scene folder result:', sceneFolderResult.result);
         // push this script data to the scripts_approved table in supabase
         const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
         setScriptData(approvedData);
@@ -1607,12 +1623,13 @@ const ScriptProductionClient = () => {
                                         updateParagraphs(updatedScriptData);
 
                                         // generate scene folder in google drive by using googleDriveService function
-                                        const sceneFolderResult = await GoogleDriveHelperFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
+                                        const sceneFolderResult = await GoogleDriveServiceFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
                                         if (!sceneFolderResult.success) {
                                             toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
                                             return;
                                         }
-                                        console.log('Scene folder result:', sceneFolderResult.result);
+                                        // console.log('Scene folder result:', sceneFolderResult.result);
+
                                     }}
                                     onUploadFailed={(errorMessage: string) => {
                                         toast.error(errorMessage);
@@ -2009,7 +2026,7 @@ const ScriptProductionClient = () => {
                     {videoPreviewUrl && (() => {
                         const driveIdMatch = /\/d\/([\w-]+)/.exec(videoPreviewUrl || '') || /[?&]id=([\w-]+)/.exec(videoPreviewUrl || '');
                         const effectiveSrc = driveIdMatch && driveIdMatch[1]
-                            ? `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA}${driveIdMatch[1]}`
+                            ? `${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${driveIdMatch[1]}`
                             : videoPreviewUrl;
                         return (
                             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
