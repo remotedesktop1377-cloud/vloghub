@@ -62,6 +62,7 @@ import { BackgroundType } from '@/types/backgroundType';
 import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
 import ProjectSettingsDialog from '@/dialogs/ProjectSettingsDialog';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
+import { predefinedTransitions } from '@/data/DefaultData';
 
 const ScriptProductionClient = () => {
 
@@ -141,17 +142,6 @@ const ScriptProductionClient = () => {
     // Seed snapshot for change detection
     const projectSettingsSeedRef = useRef<{ transition?: string; music?: any; logo?: any; clip?: any; effects?: string[] } | null>(null);
 
-    const predefinedTransitions = [
-        'quantum_dissolve',
-        'particle_burst',
-        'quantum_tunnel',
-        'digital_matrix',
-        'data_stream',
-        'holographic_dissolve',
-        'reality_shift',
-        'quantum_fade_to_black'
-    ];
-
     useEffect(() => {
         let storedData = null;
 
@@ -160,6 +150,7 @@ const ScriptProductionClient = () => {
             const storedMetadata = SecureStorageHelpers.getScriptMetadata();
             if (storedMetadata && typeof storedMetadata === 'object') {
                 storedData = storedMetadata;
+                console.log('storedData', JSON.stringify(storedData, null, 2));
                 setScriptData(storedData);
                 if (storedData.status === SCRIPT_STATUS.APPROVED || storedData.status === SCRIPT_STATUS.UPLOADED) {
                     setJobId(storedData.jobId);
@@ -356,6 +347,9 @@ const ScriptProductionClient = () => {
     };
 
     const applyProjectSettingsDialog = async () => {
+
+        setProjectSettingsDialogOpen(false);
+
         // Apply to scenes according to context
         if (projectSettingsContext.mode === 'project') {
             // Update project-level states from temp (global apply)
@@ -376,11 +370,13 @@ const ScriptProductionClient = () => {
                 }
             }));
             setScenesData(updated);
+            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updated });
             try {
                 for (let i = 0; i < updated.length; i++) {
                     await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[i], 'Project settings applied to all scenes');
                 }
             } catch { }
+
         } else if (projectSettingsContext.mode === 'scene' && typeof projectSettingsContext.sceneIndex === 'number') {
             const idx = projectSettingsContext.sceneIndex;
             const seed = projectSettingsSeedRef.current;
@@ -397,15 +393,13 @@ const ScriptProductionClient = () => {
                 return ({ ...(ch as any), videoEffects: nextVE });
             });
             setScenesData(updated);
+            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updated });
+
             try {
-                setProjectSettingsDialogOpen(false);
                 await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[idx], 'Project settings applied to scene');
-            } catch {
-                setProjectSettingsDialogOpen(false);
-            }
+            } catch { }
         }
 
-        try { (window as any).toast?.success('Saved'); } catch { }
     };
 
     const handleToggleBackgroundMusic = async () => {
@@ -1672,7 +1666,7 @@ const ScriptProductionClient = () => {
                                                 sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
                                             >
                                                 <option value="">Select transition...</option>
-                                                {predefinedTransitions.map((t) => (
+                                                {predefinedTransitions.map((t: string) => (
                                                     <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
                                                 ))}
                                             </TextField>
@@ -2008,10 +2002,10 @@ const ScriptProductionClient = () => {
                 setIsMusicPlaying={setIsMusicPlaying}
                 setIsMusicLoading={setIsMusicLoading}
                 setLastMusicIdLoaded={setLastMusicIdLoaded}
-                predefinedTransitions={predefinedTransitions}
                 driveLibrary={driveLibrary}
                 setVideoPreviewUrl={setVideoPreviewUrl}
                 setVideoPreviewOpen={setVideoPreviewOpen}
+                jobId={jobId}
             />
 
             {/* Video Preview Dialog */}

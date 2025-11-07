@@ -1,6 +1,19 @@
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { SceneData } from '@/types/sceneData';
-import { HelperFunctions } from '@/utils/helperFunctions';
+import { HelperFunctions, secure } from '@/utils/helperFunctions';
+import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
+import { profileService, BackgroundItem } from './profileService';
+import { toast } from 'react-toastify';
+
+interface CachedBackgroundData {
+    data: BackgroundItem[];
+    timestamp: string;
+}
+
+const BACKGROUNDS_CACHE_KEY = 'backgrounds_cache';
+
+// Module-level variable to track background loading promise
+let backgroundLoadingPromise: Promise<BackgroundItem[]> | null = null;
 
 /**
  * Get authenticated Google Drive JWT Client
@@ -93,8 +106,8 @@ export const GoogleDriveServiceFunctions = {
                     ? ({ selectedMusic: ve.backgroundMusic.selectedMusic || '' } as any)
                     : null,
                 logo: ve.logo || null,
-                clip: ve.clip || null,
-                transitionEffects: Array.isArray(ve.transitionEffects) ? ve.transitionEffects : [],
+                backgroundvideo: ve.clip || null,
+                // transitionEffects: Array.isArray(ve.transitionEffects) ? ve.transitionEffects : [],
             };
 
             // Build assets with logo image and video clip included
@@ -214,6 +227,105 @@ export const GoogleDriveServiceFunctions = {
             return { success: false, message: e?.message || 'Unknown error' };
         }
     },
+
+    // Background loading and caching methods
+    /**
+     * Load backgrounds with caching support
+     * @param forceRefresh - If true, bypasses cache and fetches fresh data
+     * @returns Promise<BackgroundItem[]>
+     */
+    async loadBackgrounds(forceRefresh: boolean = false): Promise<BackgroundItem[]> {
+        // If already loading, return the existing promise
+        if (backgroundLoadingPromise && !forceRefresh) {
+            return backgroundLoadingPromise;
+        }
+
+        // Check cache first if not forcing refresh
+        if (!forceRefresh) {
+            const cached = GoogleDriveServiceFunctions.getCachedBackgrounds();
+            if (cached && cached.length > 0) {
+                console.log('🟡 Using cached backgrounds');
+                return cached;
+            }
+        }
+
+        // Fetch from API
+        console.log(forceRefresh ? '🔄 Force refreshing backgrounds from API' : '🔄 Fetching backgrounds from API');
+        backgroundLoadingPromise = profileService.fetchBackgrounds().then((backgrounds) => {
+            // Cache the results
+            if (backgrounds.length > 0) {
+                GoogleDriveServiceFunctions.setCachedBackgrounds(backgrounds);
+            }
+            if (backgrounds.length === 0) {
+                toast.warning('No backgrounds found. Please check your Google Drive configuration.');
+            } else {
+                toast.success(`Loaded ${backgrounds.length} backgrounds`);
+            }
+            return backgrounds;
+        }).catch((error) => {
+            console.error('Error loading backgrounds:', error);
+            toast.error('Failed to load backgrounds');
+            return [];
+        }).finally(() => {
+            backgroundLoadingPromise = null;
+        });
+
+        return backgroundLoadingPromise;
+    },
+
+    /**
+     * Get cached backgrounds without API call
+     * @returns BackgroundItem[] | null
+     */
+    getCachedBackgrounds(): BackgroundItem[] | null {
+        try {
+            const cached = secure.j[BACKGROUNDS_CACHE_KEY].get();
+            if (cached) {
+                const { data, timestamp }: CachedBackgroundData = typeof cached === 'string' ? JSON.parse(cached) : cached;
+                const cacheAge = Date.now() - new Date(timestamp).getTime();
+                if (cacheAge < TRENDING_TOPICS_CACHE_MAX_AGE) {
+                    return data;
+                } else {
+                    // Cache is expired, remove it
+                    console.log('🔴 Backgrounds cache expired - removing');
+                    secure.j[BACKGROUNDS_CACHE_KEY].remove();
+                }
+            }
+        } catch (error) {
+            console.warn('Error reading backgrounds cache:', error);
+        }
+        return null;
+    },
+
+    /**
+     * Set cached backgrounds
+     * @param data - Background items to cache
+     */
+    setCachedBackgrounds(data: BackgroundItem[]): void {
+        try {
+            const cacheData: CachedBackgroundData = {
+                data,
+                timestamp: new Date().toISOString()
+            };
+            secure.j[BACKGROUNDS_CACHE_KEY].set(cacheData);
+            console.log('✅ Backgrounds cached successfully');
+        } catch (error) {
+            console.warn('Error writing backgrounds cache:', error);
+        }
+    },
+
+    /**
+     * Clear the backgrounds cache
+     */
+    clearBackgroundsCache(): void {
+        try {
+            secure.j[BACKGROUNDS_CACHE_KEY].remove();
+            console.log('🗑️ Backgrounds cache cleared');
+        } catch (error) {
+            console.warn('Error clearing backgrounds cache:', error);
+        }
+    },
+    
 };
 
 

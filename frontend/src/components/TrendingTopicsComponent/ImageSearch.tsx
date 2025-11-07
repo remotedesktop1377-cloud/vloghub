@@ -34,6 +34,7 @@ import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../s
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
 import { HelperFunctions } from '../../utils/helperFunctions';
 import Image from 'next/image';
+import { predefinedTransitions } from '@/data/DefaultData';
 
 interface ImageResult {
     id: string;
@@ -114,16 +115,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
     const [uploadedFiles, setUploadedFiles] = useState<ImageResult[]>([]);
-    const predefinedTransitions = [
-        'quantum_dissolve',
-        'particle_burst',
-        'quantum_tunnel',
-        'digital_matrix',
-        'data_stream',
-        'holographic_dissolve',
-        'reality_shift',
-        'quantum_fade_to_black'
-    ];
 
     const [selectedTransitionsEffects, setSelectedTransitionsEffects] = useState<string[]>([]);
 

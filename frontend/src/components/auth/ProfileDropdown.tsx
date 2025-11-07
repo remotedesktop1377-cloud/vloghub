@@ -7,11 +7,10 @@ import { HelperFunctions, secure } from '../../utils/helperFunctions';
 import { SupabaseHelpers } from '../../utils/SupabaseHelpers';
 import { profileService, BackgroundItem } from '../../services/profileService';
 import { toast } from 'react-toastify';
-import { useBackgroundsCache } from '../../hooks/useBackgroundsCache';
+import { GoogleDriveServiceFunctions } from '../../services/googleDriveService';
 
 export const ProfileDropdown: React.FC = () => {
   const { user, signOut } = useAuth();
-  const { getCachedData, setCachedData, clearCache } = useBackgroundsCache();
   const [menuOpen, setMenuOpen] = useState(false);
   const [socialKeys, setSocialKeys] = useState({ tiktok: '', instagram: '', facebook: '', youtube: '' });
   const [backgrounds, setBackgrounds] = useState<BackgroundItem[]>([]);
@@ -88,40 +87,18 @@ export const ProfileDropdown: React.FC = () => {
 
   // Load backgrounds from cache on mount
   useEffect(() => {
-    const cachedBackgrounds = getCachedData();
+    const cachedBackgrounds = GoogleDriveServiceFunctions.getCachedBackgrounds();
     if (cachedBackgrounds && cachedBackgrounds.length > 0) {
       console.log('🟡 Loading backgrounds from cache');
       setBackgrounds(cachedBackgrounds);
     }
-  }, [getCachedData]);
+  }, []);
 
   const loadBackgrounds = async (forceRefresh: boolean = false) => {
-    // If not forcing refresh, check cache first
-    if (!forceRefresh) {
-      const cachedBackgrounds = getCachedData();
-      if (cachedBackgrounds && cachedBackgrounds.length > 0) {
-        console.log('🟡 Using cached backgrounds');
-        setBackgrounds(cachedBackgrounds);
-        return;
-      }
-    }
-
     setLoadingBackgrounds(true);
     try {
-      console.log(forceRefresh ? '🔄 Force refreshing backgrounds from API' : '🔄 Fetching backgrounds from API');
-      const backgroundsList = await profileService.fetchBackgrounds();
+      const backgroundsList = await GoogleDriveServiceFunctions.loadBackgrounds(forceRefresh);
       setBackgrounds(backgroundsList);
-      // Cache the results
-      if (backgroundsList.length > 0) {
-        setCachedData(backgroundsList);
-      }
-      if (backgroundsList.length === 0) {
-        toast.warning('No backgrounds found. Please check your Google Drive configuration.');
-        console.log('No backgrounds found. Please check your Google Drive configuration.');
-      } else {
-        toast.success(`Loaded ${backgroundsList.length} backgrounds`);
-        console.log(`Loaded ${backgroundsList.length} backgrounds`);
-      }
     } catch (error) {
       console.error('Error refreshing backgrounds:', error);
       toast.error('Failed to refresh backgrounds');

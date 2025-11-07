@@ -27,6 +27,7 @@ import HeaderSection from './HeaderSection';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { useAuth } from '@/context/AuthContext';
 import { ScriptData } from '@/types/scriptData';
+import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
@@ -96,6 +97,10 @@ const TrendingTopics: React.FC = () => {
         setTrendingTopics(geminiData);
         if (geminiData.length > 0) {
           setCachedData(searchQuery, geminiData);
+          // Load backgrounds when trending topics are fetched
+          GoogleDriveServiceFunctions.loadBackgrounds(false).catch((error) => {
+            console.error('Error loading backgrounds:', error);
+          });
         }
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);

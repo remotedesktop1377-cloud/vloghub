@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ScenePreview } from './ScenePreview';
 import { MediaPlayer } from './MediaPlayer';
+import { predefinedTransitions, preStoredMusic } from '@/data/DefaultData';
 
 interface Clip {
   id: string;
@@ -61,40 +62,6 @@ interface EditableSegmentCardProps {
   initialData?: SegmentData;
   onSave: (data: SegmentData) => void;
 }
-
-const predefinedTransitions = [
-  'quantum_dissolve',
-  'particle_burst', 
-  'quantum_tunnel',
-  'digital_matrix',
-  'data_stream',
-  'holographic_dissolve',
-  'reality_shift',
-  'quantum_fade_to_black'
-];
-
-const predefinedEffects = [
-  'chroma_key',
-  'background_blur',
-  'color_grade_blue',
-  'particle_trails',
-  'glow',
-  'contrast_boost',
-  'sepia_tone',
-  'vignette',
-  'lens_flare',
-  'desaturate_50',
-  'border_highlight'
-];
-
-const preStoredMusic = [
-  { id: 'ambient_1', name: 'Ethereal Ambience', genre: 'Ambient', url: '/music/ambient_1.mp3' },
-  { id: 'corporate_1', name: 'Corporate Success', genre: 'Corporate', url: '/music/corporate_1.mp3' },
-  { id: 'tech_1', name: 'Digital Future', genre: 'Tech', url: '/music/tech_1.mp3' },
-  { id: 'cinematic_1', name: 'Epic Journey', genre: 'Cinematic', url: '/music/cinematic_1.mp3' },
-  { id: 'upbeat_1', name: 'Positive Energy', genre: 'Upbeat', url: '/music/upbeat_1.mp3' },
-  { id: 'minimal_1', name: 'Clean Minimal', genre: 'Minimal', url: '/music/minimal_1.mp3' }
-];
 
 export function EditableSegmentCard({ title, duration, narration, index, initialData, onSave }: EditableSegmentCardProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -718,7 +685,7 @@ export function EditableSegmentCard({ title, duration, narration, index, initial
             onChange={(e) => setEditData(prev => ({ ...prev, transition: e.target.value }))}
             className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white focus:border-purple-400 focus:outline-none appearance-none"
           >
-            {predefinedTransitions.map((transition) => (
+            {predefinedTransitions.map((transition: string) => (
               <option key={transition} value={transition} className="bg-slate-800">
                 {transition.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </option>

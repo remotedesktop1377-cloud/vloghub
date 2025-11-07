@@ -20,6 +20,10 @@ import {
     Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
+import { predefinedTransitions } from '@/data/DefaultData';
+import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
+import { toast } from 'react-toastify';
 
 interface LogoType {
     name?: string;
@@ -50,14 +54,14 @@ interface ProjectSettingsDialogProps {
     onClose: () => void;
     onApply: () => void;
     context: ProjectSettingsContext;
-    
+
     // Temporary state values
     tmpTransitionId: string;
     tmpMusic: MusicType | null;
     tmpLogo: LogoType | null;
     tmpClip: ClipType | null;
     tmpEffects: string[];
-    
+
     // State setters
     onTmpTransitionIdChange: (value: string) => void;
     onTmpMusicChange: (music: MusicType | null) => void;
@@ -65,19 +69,19 @@ interface ProjectSettingsDialogProps {
     onTmpClipChange: (clip: ClipType | null) => void;
     onTmpEffectsChange: (effects: string[]) => void;
     onEffectToggle: (id: string) => void;
-    
+
     // Music player state
     isMusicLoading: boolean;
     isMusicPlaying: boolean;
     setIsMusicPlaying: (playing: boolean) => void;
     setIsMusicLoading: (loading: boolean) => void;
     setLastMusicIdLoaded: (id: string | null) => void;
-    
+
     // External dependencies
-    predefinedTransitions: string[];
     driveLibrary: { backgrounds?: any[]; music?: any[]; transitions?: any[] } | null;
     setVideoPreviewUrl: (url: string) => void;
     setVideoPreviewOpen: (open: boolean) => void;
+    jobId?: string;
 }
 
 const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
@@ -101,52 +105,160 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     setIsMusicPlaying,
     setIsMusicLoading,
     setLastMusicIdLoaded,
-    predefinedTransitions,
     driveLibrary,
     setVideoPreviewUrl,
-    setVideoPreviewOpen
+    setVideoPreviewOpen,
+    jobId
 }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
     const [backgrounds, setBackgrounds] = useState<any[]>(driveLibrary?.backgrounds || []);
+    const [music, setMusic] = useState<any[]>(driveLibrary?.music || []);
     const [selectedBackground, setSelectedBackground] = useState<any>(null);
     const [loadingBackgrounds, setLoadingBackgrounds] = useState(false);
+    const [loadingMusic, setLoadingMusic] = useState(false);
+    const [videoError, setVideoError] = useState(false);
+    const [videoLoading, setVideoLoading] = useState(false);
+    const [currentMusicId, setCurrentMusicId] = useState<string | null>(null);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
 
-    // Sync backgrounds when driveLibrary changes
+    // Load backgrounds and music from cache or driveLibrary on mount
     React.useEffect(() => {
-        setBackgrounds(driveLibrary?.backgrounds || []);
+        // Load backgrounds
+        const cachedBackgrounds = GoogleDriveServiceFunctions.getCachedBackgrounds();
+        if (cachedBackgrounds && cachedBackgrounds.length > 0) {
+            setBackgrounds(cachedBackgrounds);
+        } else if (driveLibrary?.backgrounds && driveLibrary.backgrounds.length > 0) {
+            setBackgrounds(driveLibrary.backgrounds);
+        }
+
+        // Load music from driveLibrary
+        if (driveLibrary?.music && driveLibrary.music.length > 0) {
+            setMusic(driveLibrary.music);
+        }
     }, [driveLibrary]);
+
+    // Cleanup audio when dialog closes
+    React.useEffect(() => {
+        if (!open) {
+            // Stop and cleanup audio when dialog closes
+            if (audioRef.current) {
+                try {
+                    audioRef.current.pause();
+                    audioRef.current.src = '';
+                } catch (error) {
+                    console.error('Error cleaning up audio:', error);
+                }
+            }
+            setIsMusicPlaying(false);
+            setIsMusicLoading(false);
+            setCurrentMusicId(null);
+        }
+    }, [open]);
+
+    // Utility function to get playable video URLs from Google Drive
+    const getPlayableVideoUrls = (background: any): string[] => {
+        const fileId = background.id;
+        if (!fileId) return [];
+
+        const urls: string[] = [];
+
+        // Method 1: Use our API proxy endpoint (best for .mp4 and .mov files)
+        // This endpoint handles authentication and streaming properly
+        urls.push(`${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${fileId}`);
+
+        // Method 2: Direct Google Drive streaming URL
+        urls.push(`https://drive.google.com/uc?id=${fileId}`);
+
+        // Method 3: Alternative streaming format
+        urls.push(`https://drive.google.com/file/d/${fileId}/preview`);
+
+        // Method 4: Using the original webContentLink if available
+        if (background.webContentLink) {
+            urls.push(background.webContentLink);
+        }
+
+        // Remove duplicates and return unique URLs
+        return Array.from(new Set(urls.filter(Boolean)));
+    };
+
+    const handleVideoError = () => {
+        setVideoError(true);
+        setVideoLoading(false);
+    };
+
+    const handleVideoLoadStart = () => {
+        setVideoLoading(true);
+        setVideoError(false);
+    };
+
+    const handleVideoLoaded = () => {
+        setVideoLoading(false);
+        setVideoError(false);
+    };
 
     const handleToggleBackgroundMusic = async () => {
         try {
             const id = (tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '';
             if (!id) return;
-            const src = `${process.env.NEXT_PUBLIC_API_URL || ''}/google-drive-media/${id}`;
-            
+
+            // If no audio element exists, create it
             if (!audioRef.current) {
                 audioRef.current = new Audio();
-                audioRef.current.addEventListener('playing', () => setIsMusicPlaying(true));
-                audioRef.current.addEventListener('ended', () => setIsMusicPlaying(false));
-                audioRef.current.addEventListener('canplaythrough', () => setIsMusicLoading(false));
-                audioRef.current.addEventListener('error', () => setIsMusicLoading(false));
+                audioRef.current.addEventListener('playing', () => {
+                    setIsMusicPlaying(true);
+                    setIsMusicLoading(false);
+                });
+                audioRef.current.addEventListener('pause', () => {
+                    setIsMusicPlaying(false);
+                });
+                audioRef.current.addEventListener('ended', () => {
+                    setIsMusicPlaying(false);
+                    setIsMusicLoading(false);
+                });
+                audioRef.current.addEventListener('loadstart', () => {
+                    setIsMusicLoading(true);
+                });
+                audioRef.current.addEventListener('canplaythrough', () => {
+                    setIsMusicLoading(false);
+                });
+                audioRef.current.addEventListener('error', () => {
+                    setIsMusicPlaying(false);
+                    setIsMusicLoading(false);
+                });
             }
-            
-            // Toggle logic: pause if currently playing same source; otherwise (re)load and play
-            if (isMusicPlaying && audioRef.current.src.includes(id)) {
+
+            const currentId = currentMusicId;
+            const src = `${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${id}`;
+
+            // If clicking play/pause on the same music that's currently playing, toggle pause
+            if (isMusicPlaying && currentId === id && audioRef.current.src.includes(id)) {
                 audioRef.current.pause();
                 setIsMusicPlaying(false);
                 return;
             }
-            
-            // If the same id was already loaded previously, do not reload; just resume
-            setLastMusicIdLoaded(id);
-            
-            if (!audioRef.current.src.includes(id)) {
-                audioRef.current.src = src;
+
+            // If different music is selected, stop current and load new
+            if (currentId && currentId !== id && isMusicPlaying) {
+                audioRef.current.pause();
+                setIsMusicPlaying(false);
             }
-            
+
+            // Load new music if different from current
+            if (currentId !== id || !audioRef.current.src.includes(id)) {
+                setIsMusicLoading(true);
+                setCurrentMusicId(id);
+                setLastMusicIdLoaded(id);
+                audioRef.current.src = src;
+                // Wait a bit for the source to be set
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Play the music
             await audioRef.current.play();
-        } catch {
+        } catch (error) {
+            console.error('Error playing music:', error);
             setIsMusicPlaying(false);
             setIsMusicLoading(false);
         }
@@ -168,10 +280,10 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             }}
         >
             <DialogTitle id="project-settings-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h6" component="div">Project Settings {context.mode === 'scene' ? `(Scene ${(context.sceneIndex || 0) + 1})` : ''}</Typography>
+                <Typography component="div" sx={{ fontSize: '1.25rem' }}>Project Settings {context.mode === 'scene' ? `(Scene ${(context.sceneIndex || 0) + 1})` : ''}</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button onClick={onClose} variant="outlined" size="small" sx={{ textTransform: 'none' }}>✕ Close</Button>
-                    <Button onClick={onApply} variant="contained" size="small" disabled={false} sx={{ textTransform: 'none' }}>✔ Done</Button>
+                    <Button onClick={onApply} variant="contained" size="medium" disabled={false} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✔ Save Changes</Button>
+                    <Button onClick={onClose} variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✕ Close</Button>
                 </Box>
             </DialogTitle>
             <DialogContent>
@@ -179,11 +291,11 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                     {/* Transition Effect Section */}
                     <Grid item xs={12} md={6}>
                         <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Transition Effect</Typography>
-                        <Box sx={{ 
-                            border: '1px solid', 
-                            borderColor: 'divider', 
-                            borderRadius: 2, 
-                            p: 2, 
+                        <Box sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            p: 2,
                             backgroundColor: 'background.paper'
                         }}>
                             <TextField
@@ -196,27 +308,27 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                 sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
                             >
                                 <option value="">Select transition...</option>
-                                {predefinedTransitions.map((t) => (
+                                {predefinedTransitions.map((t: string) => (
                                     <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
                                 ))}
                             </TextField>
                             {tmpTransitionId && (
                                 <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                                    <Box sx={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: 1, 
-                                        p: 2, 
+                                    <Box sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        p: 2,
                                         bgcolor: 'action.hover',
                                         borderRadius: 1
                                     }}>
-                                        <Box sx={{ 
-                                            width: 40, 
-                                            height: 40, 
-                                            borderRadius: '50%', 
-                                            bgcolor: 'primary.main', 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: '50%',
+                                            bgcolor: 'primary.main',
+                                            display: 'flex',
+                                            alignItems: 'center',
                                             justifyContent: 'center',
                                             color: 'white'
                                         }}>
@@ -226,9 +338,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                                 {tmpTransitionId.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                Selected transition effect
-                                            </Typography>
                                         </Box>
                                     </Box>
                                 </Box>
@@ -236,30 +345,186 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                         </Box>
                     </Grid>
 
+                    {/* Background Music Section */}
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Music</Typography>
+                            <IconButton
+                                size="small"
+                                onClick={async () => {
+                                    setLoadingMusic(true);
+                                    try {
+                                        // Use loadBackgrounds which calls the main API, then fetch full library to get music
+                                        await GoogleDriveServiceFunctions.loadBackgrounds(true);
+                                        const response = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_LIBRARY);
+                                        if (response.ok) {
+                                            const data = await response.json();
+                                            if (data?.data?.music && Array.isArray(data.data.music)) {
+                                                setMusic(data.data.music);
+                                                console.log(`✅ Loaded ${data.data.music.length} music files`);
+                                            }
+                                        }
+                                    } catch (error) {
+                                        console.error('Error refreshing music:', error);
+                                    } finally {
+                                        setLoadingMusic(false);
+                                    }
+                                }}
+                                disabled={loadingMusic}
+                                sx={{ color: 'primary.main' }}
+                                title="Refresh music list"
+                            >
+                                <RefreshIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                        <Box sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            p: 2,
+                            backgroundColor: 'background.paper'
+                        }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                    select
+                                    fullWidth
+                                    sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
+                                    size="small"
+                                    value={(tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
+                                    onChange={(e) => {
+                                        const selId = String(e.target.value);
+
+                                        // Stop current music if playing
+                                        if (audioRef.current && isMusicPlaying) {
+                                            try {
+                                                audioRef.current.pause();
+                                            } catch (error) {
+                                                console.error('Error stopping music:', error);
+                                            }
+                                        }
+
+                                        // Reset states
+                                        setIsMusicPlaying(false);
+                                        setIsMusicLoading(false);
+                                        setCurrentMusicId(null);
+                                        setLastMusicIdLoaded(null);
+
+                                        // Update music selection
+                                        onTmpMusicChange({
+                                            selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '',
+                                            volume: tmpMusic?.volume ?? 0.3,
+                                            autoAdjust: tmpMusic?.autoAdjust ?? true,
+                                            fadeIn: tmpMusic?.fadeIn ?? true,
+                                            fadeOut: tmpMusic?.fadeOut ?? true
+                                        });
+                                    }}
+                                    SelectProps={{ native: true }}
+                                >
+                                    <option value="">Select music...</option>
+                                    {loadingMusic ? (
+                                        <option disabled>Loading music...</option>
+                                    ) : music.length === 0 ? (
+                                        <option disabled>No music available</option>
+                                    ) : (
+                                        music.map((t: any) => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))
+                                    )}
+                                </TextField>
+                            </Box>
+                            {tmpMusic?.selectedMusic && (() => {
+                                const selectedMusicItem = music.find((t: any) => tmpMusic.selectedMusic.includes(t.id));
+                                if (selectedMusicItem) {
+                                    return (
+                                        <Box sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                                            <Box sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 2,
+                                                p: 2,
+                                                bgcolor: 'action.hover',
+                                                borderRadius: 1
+                                            }}>
+                                                <Box sx={{
+                                                    width: 50,
+                                                    height: 50,
+                                                    borderRadius: 1,
+                                                    bgcolor: 'secondary.main',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: 'white'
+                                                }}>
+                                                    <Typography variant="h6">🎵</Typography>
+                                                </Box>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                        {selectedMusicItem.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {isMusicLoading ? 'Loading...' : isMusicPlaying ? 'Playing...' : 'Ready to play'}
+                                                    </Typography>
+                                                </Box>
+                                                {isMusicLoading ? (
+                                                    <CircularProgress size={20} sx={{ color: 'primary.main' }} />
+                                                ) : isMusicPlaying ? (
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: 'primary.main' }}
+                                                        onClick={handleToggleBackgroundMusic}
+                                                    >
+                                                        <PauseIcon />
+                                                    </IconButton>
+                                                ) : (
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: 'primary.main' }}
+                                                        onClick={handleToggleBackgroundMusic}
+                                                    >
+                                                        <PlayIcon />
+                                                    </IconButton>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    );
+                                }
+                                return null;
+                            })()}
+                        </Box>
+                    </Grid>
+
                     {/* Logo Upload Section */}
                     <Grid item xs={12} md={6}>
                         <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Logo Overlay</Typography>
+                        {uploadingLogo && (
+                            <Box sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <CircularProgress size={20} />
+                                <Typography variant="body2" color="text.secondary">
+                                    Uploading logo to Google Drive...
+                                </Typography>
+                            </Box>
+                        )}
                         {tmpLogo?.url ? (
-                            <Box sx={{ 
-                                border: '1px solid', 
-                                borderColor: 'divider', 
-                                borderRadius: 2, 
-                                p: 2, 
+                            <Box sx={{
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                borderRadius: 2,
+                                p: 2,
                                 backgroundColor: 'background.paper'
                             }}>
                                 <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                                    <img 
-                                        src={tmpLogo.url} 
-                                        alt={tmpLogo.name || 'Logo'} 
-                                        style={{ 
-                                            width: 120, 
-                                            height: 120, 
-                                            objectFit: 'contain', 
-                                            borderRadius: 2, 
-                                            border: '1px solid rgba(255,255,255,0.15)', 
+                                    <img
+                                        src={tmpLogo.url}
+                                        alt={tmpLogo.name || 'Logo'}
+                                        style={{
+                                            width: 120,
+                                            height: 120,
+                                            objectFit: 'contain',
+                                            borderRadius: 2,
+                                            border: '1px solid rgba(255,255,255,0.15)',
                                             background: '#111',
                                             display: 'block'
-                                        }} 
+                                        }}
                                     />
                                     <IconButton
                                         onClick={() => fileInputRef.current?.click()}
@@ -282,14 +547,14 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary' }}>
                                         {tmpLogo.name}
                                     </Typography>
-                                    <IconButton 
+                                    <IconButton
                                         size="small"
                                         onClick={() => window.open(tmpLogo.url, '_blank')}
                                         sx={{ color: 'primary.main' }}
                                     >
                                         <ViewIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton 
+                                    <IconButton
                                         size="small"
                                         onClick={() => onTmpLogoChange(null)}
                                         sx={{ color: 'error.main' }}
@@ -297,13 +562,13 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         <DeleteIcon fontSize="small" />
                                     </IconButton>
                                 </Box>
-                                <TextField 
-                                    size="small" 
-                                    select 
-                                    label="Position" 
-                                    value={tmpLogo?.position || 'top-right'} 
-                                    onChange={(e) => onTmpLogoChange({ ...tmpLogo, position: String(e.target.value) })} 
-                                    SelectProps={{ native: true }} 
+                                <TextField
+                                    size="small"
+                                    select
+                                    label="Position"
+                                    value={tmpLogo?.position || 'top-right'}
+                                    onChange={(e) => onTmpLogoChange({ ...tmpLogo, position: String(e.target.value) })}
+                                    SelectProps={{ native: true }}
                                     fullWidth
                                     sx={{ mt: 1.5 }}
                                 >
@@ -343,116 +608,66 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             type="file"
                             accept="image/*"
                             style={{ display: 'none' }}
-                            onChange={(e) => {
+                            onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
-                                const objectUrl = URL.createObjectURL(file);
-                                onTmpLogoChange({ name: file.name, url: objectUrl, position: tmpLogo?.position || 'top-right' });
+
+                                // If jobId is available, upload to Google Drive
+                                if (jobId) {
+                                    setUploadingLogo(true);
+                                    try {
+                                        // Get file extension
+                                        const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+                                        const logoFileName = `logo.${fileExtension}`;
+
+                                        // Create a new File object with the renamed filename
+                                        const renamedFile = new File([file], logoFileName, { type: file.type });
+
+                                        // Upload to Google Drive in images/logo/ folder
+                                        const uploadResult = await GoogleDriveServiceFunctions.uploadMediaToDrive(
+                                            jobId,
+                                            'images/logo',
+                                            renamedFile
+                                        );
+
+                                        if (uploadResult.success && uploadResult.fileId) {
+                                            // Use webViewLink from upload response, fallback to constructed URL if not available
+                                            const logoUrl = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view?usp=drive_link`;
+
+                                            // Update logo with Google Drive webViewLink and renamed file
+                                            onTmpLogoChange({
+                                                name: logoFileName,
+                                                url: logoUrl,
+                                                position: tmpLogo?.position || 'top-right'
+                                            });
+                                            toast.success(`Logo uploaded successfully as ${logoFileName}`);
+                                        } else {
+                                            throw new Error('Upload failed');
+                                        }
+                                    } catch (error) {
+                                        console.error('Error uploading logo to Google Drive:', error);
+                                        toast.error('Failed to upload logo to Google Drive. Using local preview.');
+                                        // Fallback to blob URL if upload fails
+                                        const objectUrl = URL.createObjectURL(file);
+                                        onTmpLogoChange({
+                                            name: file.name,
+                                            url: objectUrl,
+                                            position: tmpLogo?.position || 'top-right'
+                                        });
+                                    } finally {
+                                        setUploadingLogo(false);
+                                    }
+                                } else {
+                                    // No jobId, use blob URL as fallback
+                                    const objectUrl = URL.createObjectURL(file);
+                                    onTmpLogoChange({
+                                        name: file.name,
+                                        url: objectUrl,
+                                        position: tmpLogo?.position || 'top-right'
+                                    });
+                                }
                             }}
                         />
-                    </Grid>
-
-                    {/* Background Music Section */}
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Background Music</Typography>
-                        <Box sx={{ 
-                            border: '1px solid', 
-                            borderColor: 'divider', 
-                            borderRadius: 2, 
-                            p: 2, 
-                            backgroundColor: 'background.paper'
-                        }}>
-                            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                                <TextField
-                                    select
-                                    fullWidth
-                                    sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
-                                    size="small"
-                                    value={(tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
-                                    onChange={(e) => {
-                                        const selId = String(e.target.value);
-                                        onTmpMusicChange({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: tmpMusic?.volume ?? 0.3, autoAdjust: tmpMusic?.autoAdjust ?? true, fadeIn: tmpMusic?.fadeIn ?? true, fadeOut: tmpMusic?.fadeOut ?? true });
-                                        try { audioRef.current?.pause(); } catch { }
-                                        setIsMusicPlaying(false);
-                                        setIsMusicLoading(false);
-                                        setLastMusicIdLoaded(null);
-                                    }}
-                                    SelectProps={{ native: true }}
-                                >
-                                    <option value="">Select music...</option>
-                                    {(driveLibrary?.music || []).map((t: any) => (
-                                        <option key={t.id} value={t.id}>{t.name}</option>
-                                    ))}
-                                </TextField>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    size="small"
-                                    disabled={!((tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
-                                    onClick={handleToggleBackgroundMusic}
-                                    sx={{ 
-                                        height: 44, 
-                                        minWidth: 90, 
-                                        textTransform: 'none', 
-                                        display: 'inline-flex', 
-                                        alignItems: 'center', 
-                                        gap: 1 
-                                    }}
-                                >
-                                    {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
-                                    {isMusicPlaying ? 'Pause' : 'Play'}
-                                </Button>
-                            </Box>
-                            {tmpMusic?.selectedMusic && (() => {
-                                const selectedMusicItem = driveLibrary?.music?.find((t: any) => tmpMusic.selectedMusic.includes(t.id));
-                                if (selectedMusicItem) {
-                                    return (
-                                        <Box sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                                            <Box sx={{ 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                gap: 2, 
-                                                p: 2, 
-                                                bgcolor: 'action.hover',
-                                                borderRadius: 1
-                                            }}>
-                                                <Box sx={{ 
-                                                    width: 50, 
-                                                    height: 50, 
-                                                    borderRadius: 1, 
-                                                    bgcolor: 'secondary.main', 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    justifyContent: 'center',
-                                                    color: 'white'
-                                                }}>
-                                                    <Typography variant="h6">🎵</Typography>
-                                                </Box>
-                                                <Box sx={{ flex: 1 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                        {selectedMusicItem.name}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {isMusicPlaying ? 'Playing...' : 'Ready to play'}
-                                                    </Typography>
-                                                </Box>
-                                                {isMusicPlaying && (
-                                                    <IconButton size="small" sx={{ color: 'primary.main' }}>
-                                                        <PauseIcon />
-                                                    </IconButton>
-                                                )}
-                                                {!isMusicPlaying && (
-                                                    <IconButton size="small" sx={{ color: 'primary.main' }}>
-                                                        <PlayIcon />
-                                                    </IconButton>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    );
-                                }
-                                return null;
-                            })()}
-                        </Box>
                     </Grid>
 
                     {/* Background Selection Section */}
@@ -463,9 +678,15 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                 size="small"
                                 onClick={async () => {
                                     setLoadingBackgrounds(true);
-                                    // Refresh backgrounds if needed
-                                    setBackgrounds(driveLibrary?.backgrounds || []);
-                                    setLoadingBackgrounds(false);
+                                    try {
+                                        // Force refresh backgrounds from API
+                                        const refreshedBackgrounds = await GoogleDriveServiceFunctions.loadBackgrounds(true);
+                                        setBackgrounds(refreshedBackgrounds);
+                                    } catch (error) {
+                                        console.error('Error refreshing backgrounds:', error);
+                                    } finally {
+                                        setLoadingBackgrounds(false);
+                                    }
                                 }}
                                 disabled={loadingBackgrounds}
                                 sx={{ color: 'primary.main' }}
@@ -473,11 +694,11 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                 <RefreshIcon fontSize="small" />
                             </IconButton>
                         </Box>
-                        <Box sx={{ 
-                            border: '1px solid', 
-                            borderColor: 'divider', 
-                            borderRadius: 2, 
-                            p: 2, 
+                        <Box sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            p: 2,
                             backgroundColor: 'background.paper',
                             minHeight: 200
                         }}>
@@ -500,15 +721,16 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         const background = backgrounds.find(bg => bg.id === e.target.value);
                                         if (background) {
                                             setSelectedBackground(background);
+                                            setVideoError(false);
+                                            setVideoLoading(false);
                                             // Set as clip
-                                            onTmpClipChange({ 
-                                                name: background.name, 
-                                                url: background.webContentLink 
+                                            onTmpClipChange({
+                                                name: background.name,
+                                                url: background.webContentLink
                                             });
                                         }
                                     }}
                                     SelectProps={{ native: true }}
-                                    sx={{ mb: 2 }}
                                 >
                                     <option value="">Select a background</option>
                                     {backgrounds.map((background) => (
@@ -520,47 +742,111 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             )}
                             {selectedBackground && (
                                 <Box sx={{ mt: 2 }}>
-                                    <Box sx={{ 
-                                        position: 'relative', 
-                                        width: '100%', 
+                                    <Box sx={{
+                                        position: 'relative',
+                                        width: '100%',
                                         height: 180,
                                         borderRadius: 2,
                                         overflow: 'hidden',
-                                        border: '1px solid rgba(255,255,255,0.15)'
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        bgcolor: '#000'
                                     }}>
-                                        <video
-                                            src={selectedBackground.webContentLink}
-                                            muted
-                                            playsInline
-                                            loop
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
-                                        />
-                                        <Box sx={{ 
-                                            position: 'absolute', 
-                                            inset: 0, 
-                                            display: 'flex', 
-                                            alignItems: 'center', 
-                                            justifyContent: 'center',
-                                            pointerEvents: 'none',
-                                            bgcolor: 'rgba(0,0,0,0.3)'
-                                        }}>
-                                            <Box sx={{ 
-                                                width: 48, 
-                                                height: 48, 
-                                                borderRadius: '50%', 
-                                                backgroundColor: 'rgba(255,255,255,0.2)', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
+                                        {videoError ? (
+                                            // Show error message with external link option
+                                            <Box sx={{
+                                                width: '100%',
+                                                height: '100%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
                                                 justifyContent: 'center',
-                                                backdropFilter: 'blur(8px)'
+                                                gap: 2,
+                                                p: 2,
+                                                bgcolor: 'rgba(0,0,0,0.8)'
                                             }}>
-                                                <PlayIcon sx={{ color: '#fff', ml: 0.5 }} />
+                                                <Typography variant="body2" color="error" sx={{ textAlign: 'center' }}>
+                                                    Video cannot be played in browser
+                                                </Typography>
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={() => window.open(selectedBackground.webViewLink || `https://drive.google.com/file/d/${selectedBackground.id}/view`, '_blank')}
+                                                    startIcon={<PlayIcon />}
+                                                    sx={{ textTransform: 'none' }}
+                                                >
+                                                    Open in Google Drive
+                                                </Button>
                                             </Box>
-                                        </Box>
+                                        ) : (
+                                            <>
+                                                <video
+                                                    ref={videoRef}
+                                                    muted
+                                                    playsInline
+                                                    loop
+                                                    onError={handleVideoError}
+                                                    onLoadStart={handleVideoLoadStart}
+                                                    onLoadedData={handleVideoLoaded}
+                                                    onCanPlay={handleVideoLoaded}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
+                                                >
+                                                    {/* {getPlayableVideoUrls(selectedBackground).map((url, index) => (
+                                                        <source key={index} src={url} type="video/mp4" />
+                                                    ))} */}
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                                {videoLoading && (
+                                                    <Box sx={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        bgcolor: 'rgba(0,0,0,0.5)'
+                                                    }}>
+                                                        <CircularProgress size={24} sx={{ color: 'white' }} />
+                                                    </Box>
+                                                )}
+                                                {!videoLoading && (
+                                                    <Box sx={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        pointerEvents: 'none',
+                                                        bgcolor: 'rgba(0,0,0,0.3)'
+                                                    }}>
+                                                        <Box sx={{
+                                                            width: 48,
+                                                            height: 48,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: 'rgba(255,255,255,0.2)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            backdropFilter: 'blur(8px)'
+                                                        }}>
+                                                            <PlayIcon sx={{ color: '#fff', ml: 0.5 }} />
+                                                        </Box>
+                                                    </Box>
+                                                )}
+                                            </>
+                                        )}
                                     </Box>
-                                    <Typography variant="caption" sx={{ display: 'block', mt: 1 }} color="text.secondary">
-                                        {selectedBackground.name}
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                                        {selectedBackground.webViewLink && (
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() => window.open(selectedBackground.webViewLink || `https://drive.google.com/file/d/${selectedBackground.id}/view`, '_blank')}
+                                                sx={{ textTransform: 'none', fontSize: '1.25rem', py: 0.25, px: 1 }}
+                                                startIcon={<PlayIcon fontSize="small" />}
+                                            >
+                                                Open in Drive
+                                            </Button>
+                                        )}
+                                    </Box>
                                 </Box>
                             )}
                         </Box>
