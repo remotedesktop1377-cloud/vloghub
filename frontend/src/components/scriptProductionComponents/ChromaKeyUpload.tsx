@@ -26,7 +26,7 @@ import {
     HourglassEmpty as ProcessingIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { SecureStorageHelpers } from '../../utils/helperFunctions';
+import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import BackgroundTypeDialog from '../../dialogs/BackgroundTypeDialog';
 import { BackgroundType } from '../../types/backgroundType';
@@ -40,6 +40,7 @@ interface ChromaKeyUploadProps {
     jobId: string;
     scriptData: ScriptData;
     setScriptData: (scriptData: ScriptData) => void;
+    videoDurationCaptured: (duration: number) => void;
     onUploadComplete: (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => void;
     onUploadFailed: (errorMessage: string) => void;
 }
@@ -48,6 +49,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     jobId,
     scriptData,
     setScriptData,
+    videoDurationCaptured,
     onUploadComplete,
     onUploadFailed,
 }) => {
@@ -62,6 +64,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     const [showBackgroundTypeDialog, setShowBackgroundTypeDialog] = useState(false);
     const [selectedBackgroundType, setSelectedBackgroundType] = useState<BackgroundType | null>(null);
     const [transcriptionJobId, setTranscriptionJobId] = useState<string | null>(null);
+    const [videoDuration, setVideoDuration] = useState<number | null>(null);
     const transcriptionStartedRef = useRef(false);
 
     // Use transcription progress hook
@@ -82,12 +85,11 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     // Sync upload progress with transcription progress
     useEffect(() => {
         if (scriptData.status === SCRIPT_STATUS.UPLOADED && scriptData.narrator_chroma_key_link && scriptData.transcription === "" && !transcriptionStartedRef.current) {
-            startTranscription();
+            startVideoTranscribing();
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scriptData]);
 
-    const startTranscription = () => {
+    const startVideoTranscribing = () => {
         // Prevent double transcription
         clearError();
         transcriptionStartedRef.current = true;
@@ -96,10 +98,56 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
         setUploadProgress(40);
         setUploading(true);
         setTranscriptionJobId(jobId);
-        transcribeVideo(scriptData.narrator_chroma_key_link, null);
+        transcribingApiCall(scriptData.narrator_chroma_key_link);
     }
 
-    const transcribeVideo = async (currentDriveUrl: string, file: File | null) => {
+    const startVideoUploadingAndTranscribtion = async (status: string, file: File | null) => {
+        try {
+            setUploading(true);
+            setUploadProgress(5);
+            setCurrentStep('uploading');
+
+            if (status === 'upload' && file !== null && driveUrl === '') {
+                // 1) Upload to Drive first
+                const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', file);
+                if (!upload?.success || !upload?.fileId) {
+                    setUploading(false);
+                    setCurrentStep('idle');
+                    setError('Failed to upload video to Drive');
+                    setErrorType('upload');
+                    onUploadFailed('Failed to upload video to Drive');
+                    return;
+                }
+                const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
+                // currentDriveUrl = 'https://drive.google.com/uc?id=1lDQe0CXoeiFbcfM6DdnpMK-rNNKHusAt'; // long
+                // currentDriveUrl = 'https://drive.google.com/uc?id=1dh2NClbUC5pZw-qlNs0Td2-yaB_4HySo'; // short
+                setDriveUrl(currentDriveUrl);
+                //store the drive url in the script data
+                const updatedScriptData = {
+                    ...scriptData,
+                    status: SCRIPT_STATUS.UPLOADED,
+                    narrator_chroma_key_link: currentDriveUrl,
+                    updated_at: new Date().toISOString(),
+                } as ScriptData;
+                setScriptData(updatedScriptData);
+                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+            } else if (status === 'transcribe' && file !== null && driveUrl !== '') {
+                startVideoTranscribing();
+            }
+            // Transcription will be triggered automatically by useEffect when scriptData is updated
+            // No need to call transcribeVideo here - the useEffect handles it
+        } catch (error) {
+            setTranscriptionJobId(null); // Stop tracking on error
+            setUploading(false);
+            setUploadProgress(0);
+            setCurrentStep('idle');
+            toast.error('Failed to upload chroma key');
+            setError(error instanceof Error ? error.message : 'Failed to upload chroma key');
+            setErrorType('general');
+        }
+    }
+
+    const transcribingApiCall = async (currentDriveUrl: string) => {
         try {
             // Start tracking progress immediately with the jobId
             setTranscriptionJobId(jobId);
@@ -109,10 +157,10 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     driveUrl: currentDriveUrl,
-                    file: file,
                     scriptLanguage: scriptData?.language || 'english',
                     jobId: jobId,
-                    userId: user?.id || ''
+                    userId: user?.id || '',
+                    videoDuration: videoDuration || 0
                 })
             });
             const transcriptionData = await res.json();
@@ -189,14 +237,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
         }
     };
 
-    const handleRetry = () => {
-        handleUploadComplete(errorType || '', uploadedFile);
-    };
-
-    const onFileSelectionClick = () => {
-        setShowBackgroundTypeDialog(true);
-    };
-
     const handleBackgroundTypeSelected = (type: BackgroundType) => {
         setSelectedBackgroundType(type);
         setShowBackgroundTypeDialog(false);
@@ -214,57 +254,20 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 const file = files[0];
                 setUploadedFile(file);
                 clearError(); // Clear any previous errors
-                handleUploadComplete('upload', file);
+
+                // Extract video duration
+                try {
+                    const duration = await HelperFunctions.extractVideoDuration(file);
+                    videoDurationCaptured(duration);                    
+                } catch (error) {
+                    console.error('Failed to extract video duration:', error);
+                }
+
+                startVideoUploadingAndTranscribtion('upload', file);
             }
         };
         input.click();
     };
-
-    const handleUploadComplete = async (status: string, file: File | null) => {
-        try {
-            setUploading(true);
-            setUploadProgress(5);
-            setCurrentStep('uploading');
-
-            if (status === 'upload' && file !== null && driveUrl === '') {
-                // 1) Upload to Drive first
-                const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', file);
-                if (!upload?.success || !upload?.fileId) {
-                    setUploading(false);
-                    setCurrentStep('idle');
-                    setError('Failed to upload video to Drive');
-                    setErrorType('upload');
-                    onUploadFailed('Failed to upload video to Drive');
-                    return;
-                }
-                const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
-                // currentDriveUrl = 'https://drive.google.com/uc?id=1lDQe0CXoeiFbcfM6DdnpMK-rNNKHusAt'; // long
-                // currentDriveUrl = 'https://drive.google.com/uc?id=1dh2NClbUC5pZw-qlNs0Td2-yaB_4HySo'; // short
-                setDriveUrl(currentDriveUrl);
-                //store the drive url in the script data
-                const updatedScriptData = {
-                    ...scriptData,
-                    status: SCRIPT_STATUS.UPLOADED,
-                    narrator_chroma_key_link: currentDriveUrl,
-                    updated_at: new Date().toISOString(),
-                } as ScriptData;
-                setScriptData(updatedScriptData);
-                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-            } else if (status === 'transcribe' && file !== null && driveUrl !== '') {
-                startTranscription();
-            }
-            // Transcription will be triggered automatically by useEffect when scriptData is updated
-            // No need to call transcribeVideo here - the useEffect handles it
-        } catch (error) {
-            setTranscriptionJobId(null); // Stop tracking on error
-            setUploading(false);
-            setUploadProgress(0);
-            setCurrentStep('idle');
-            toast.error('Failed to upload chroma key');
-            setError(error instanceof Error ? error.message : 'Failed to upload chroma key');
-            setErrorType('general');
-        }
-    }
 
     return (
         <>
@@ -288,7 +291,9 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                             },
                             pointerEvents: uploading ? 'none' : 'auto',
                         }}
-                        onClick={() => onFileSelectionClick()}
+                        onClick={() => {
+                            setShowBackgroundTypeDialog(true);
+                        }}
                     >
                         {uploadProgress > 0 ? (
                             <Box sx={{ textAlign: 'center' }}>
@@ -395,7 +400,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                     <Tooltip title="Retry">
                                         <IconButton
                                             size="small"
-                                            onClick={handleRetry}
+                                            onClick={() => startVideoUploadingAndTranscribtion(errorType || '', uploadedFile)}
                                             // disabled={uploading}
                                             color="inherit"
                                         >

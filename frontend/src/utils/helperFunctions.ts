@@ -659,30 +659,6 @@ export class HelperFunctions {
   }
 
   /**
-   * Calculate estimated duration based on script content (average reading speed: 150-160 words per minute)
-   */
-  static calculateDuration(script: string): string {
-    if (!script?.trim()) return '0';
-
-    const words = script?.trim().split(/\s+/).length;
-    const averageWordsPerMinute = 155; // Average speaking/reading speed
-    const minutes = words / averageWordsPerMinute;
-
-    if (minutes < 1) {
-      const seconds = Math.round(minutes * 60);
-      return `${seconds}s`;
-    } else if (minutes < 60) {
-      const wholeMinutes = Math.floor(minutes);
-      const seconds = Math.round((minutes - wholeMinutes) * 60);
-      return seconds > 0 ? `${wholeMinutes}m ${seconds}s` : `${wholeMinutes}m`;
-    } else {
-      const hours = Math.floor(minutes / 60);
-      const remainingMinutes = Math.round(minutes % 60);
-      return `${hours}h ${remainingMinutes}m`;
-    }
-  }
-
-  /**
    * Returns appropriate font-family stack based on language
    * - Urdu: Noto Nastaliq Urdu
    * - Arabic: Noto Naskh Arabic
@@ -893,6 +869,31 @@ export class HelperFunctions {
         SceneDataUpdated(bestSceneData);
       } catch { }
     }
+  }
+
+  static extractVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      const url = URL.createObjectURL(file);
+
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(video.duration);
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load video metadata'));
+      };
+      video.src = url;
+    });
+  };
+
+  static formatTime(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m ` : ''}${secs > 0 ? `${secs}s` : ''}`;
   }
 }
 

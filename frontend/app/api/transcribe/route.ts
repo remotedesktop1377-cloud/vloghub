@@ -596,35 +596,35 @@ export async function POST(req: Request) {
       completeProgress(jobId);
 
       // Save job result to Supabase if userId exists
-      if (userId) {
-        try {
-          const supabase = getSupabase();
-          await supabase.from('transcription_jobs').upsert({
-            job_id: jobId,
-            user_id: userId,
-            job_name: incomingFileName.replace(/\.[^/.]+$/, ''), // Remove extension
-            drive_url: driveUrl,
-            file_name: incomingFileName,
-            script_language: scriptLanguage,
-            status: 'completed',
-            stage: 'completed',
-            progress: 100,
-            message: 'Transcription completed successfully',
-            transcription_data: {
-              text,
-              language: scriptLanguage,
-              audioSizeMB: audioSizeInMB.toFixed(2),
-              compressed: compressionUsed,
-              scenes
-            }
-          } as any, {
-            onConflict: 'job_id'
-          });
-        } catch (error) {
-          console.error('Error saving transcription job to Supabase:', error);
-          // Don't fail the request if Supabase save fails
-        }
-      }
+      // if (userId) {
+      //   try {
+      //     const supabase = getSupabase();
+      //     await supabase.from('transcription_jobs').upsert({
+      //       job_id: jobId,
+      //       user_id: userId,
+      //       job_name: incomingFileName.replace(/\.[^/.]+$/, ''), // Remove extension
+      //       drive_url: driveUrl,
+      //       file_name: incomingFileName,
+      //       script_language: scriptLanguage,
+      //       status: 'completed',
+      //       stage: 'completed',
+      //       progress: 100,
+      //       message: 'Transcription completed successfully',
+      //       transcription_data: {
+      //         text,
+      //         language: scriptLanguage,
+      //         audioSizeMB: audioSizeInMB.toFixed(2),
+      //         compressed: compressionUsed,
+      //         scenes
+      //       }
+      //     } as any, {
+      //       onConflict: 'job_id'
+      //     });
+      //   } catch (error) {
+      //     console.error('Error saving transcription job to Supabase:', error);
+      //     // Don't fail the request if Supabase save fails
+      //   }
+      // }
 
       // Return response with jobId for tracking
       const response = NextResponse.json({
@@ -653,28 +653,28 @@ export async function POST(req: Request) {
       let errorMessage = `Transcription failed: ${geminiError.message || 'Unknown error'}`;
 
       // Save error to Supabase if userId exists
-      if (userId) {
-        try {
-          const supabase = getSupabase();
-          await supabase.from('transcription_jobs').upsert({
-            job_id: jobId,
-            user_id: userId,
-            job_name: incomingFileName.replace(/\.[^/.]+$/, ''),
-            drive_url: driveUrl,
-            file_name: incomingFileName,
-            script_language: scriptLanguage,
-            status: 'failed',
-            stage: 'error',
-            progress: 0,
-            message: errorMessage,
-            error: errorMessage
-          } as any, {
-            onConflict: 'job_id'
-          });
-        } catch (error) {
-          console.error('Error saving transcription job error to Supabase:', error);
-        }
-      }
+      // if (userId) {
+      //   try {
+      //     const supabase = getSupabase();
+      //     await supabase.from('transcription_jobs').upsert({
+      //       job_id: jobId,
+      //       user_id: userId,
+      //       job_name: incomingFileName.replace(/\.[^/.]+$/, ''),
+      //       drive_url: driveUrl,
+      //       file_name: incomingFileName,
+      //       script_language: scriptLanguage,
+      //       status: 'failed',
+      //       stage: 'error',
+      //       progress: 0,
+      //       message: errorMessage,
+      //       error: errorMessage
+      //     } as any, {
+      //       onConflict: 'job_id'
+      //     });
+      //   } catch (error) {
+      //     console.error('Error saving transcription job error to Supabase:', error);
+      //   }
+      // }
 
       // Provide more specific error messages
       if (geminiError.message?.includes('string longer than')) {

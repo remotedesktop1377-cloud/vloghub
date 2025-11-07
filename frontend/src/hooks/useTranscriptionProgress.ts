@@ -63,7 +63,7 @@ export function useTranscriptionProgress({ jobId, onComplete, onError }: UseTran
 
                 if (data.type === 'transcribing') {
                     // console.log('Connected to progress stream');
-                    setProgress(prev => ({ ...prev, message: 'transcribing...', isLoading: true }));
+                    setProgress(prev => ({ ...prev, message: 'Transcribing...', isLoading: true }));
                     return;
                 }
 

@@ -74,7 +74,6 @@ const ScriptProductionClient = () => {
     const [isScriptApproved, setIsScriptApproved] = useState(false);
     const [isEditingScript, setIsEditingScript] = useState(false);
     const [editedScript, setEditedScript] = useState('');
-    const [estimatedDuration, setEstimatedDuration] = useState('');
 
     // Navigation confirmation states
     const [showBackConfirmation, setShowBackConfirmation] = useState(false);
@@ -114,7 +113,7 @@ const ScriptProductionClient = () => {
     const [projectTransitionId, setProjectTransitionId] = useState<string>('');
     const [projectMusic, setProjectMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
     const [projectVideoClip, setProjectVideoClip] = useState<{ name?: string; url: string } | null>(null);
-    const [narratorChromaKeyLink, setNarratorChromaKeyLink] = useState<string | null>(null);
+    const [videoDuration, setVideoDuration] = useState<number | null>(null);
     const [projectTransitionEffects, setProjectTransitionEffects] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -172,10 +171,10 @@ const ScriptProductionClient = () => {
                 if (storedData.status === SCRIPT_STATUS.UPLOADED && storedData.narrator_chroma_key_link) {
                     setIsNarrationUploadView(false);
                     setIsNarratorVideoUploaded(true);
+                    setVideoDuration(storedData.videoDuration || null);
                     setPageTitle('Final Step: Scene Composition & Video Generation');
 
                     if (storedData.transcription) {
-                        setNarratorChromaKeyLink(storedData.narrator_chroma_key_link);
                         updateParagraphs(storedData);
                     }
                 }
@@ -194,13 +193,6 @@ const ScriptProductionClient = () => {
         }
 
     }, []);
-
-    // Calculate estimated duration when script data changes
-    // useEffect(() => {
-    //     if (scriptData) {
-    //         setEstimatedDuration(HelperFunctions.calculateDuration(scriptData.transcription));
-    //     }
-    // }, [scriptData]);
 
     // Handle browser back button
     useEffect(() => {
@@ -1268,14 +1260,14 @@ const ScriptProductionClient = () => {
 
                 {/* Duration Display */}
                 {
-                    !isInitialLoading && isScriptApproved && narratorChromaKeyLink &&
+                    !isInitialLoading && isScriptApproved && videoDuration !== null &&
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.25rem', lineHeight: 1.5 }}>
-                            Estimated Duration:
+                            Video Duration:
                         </Typography>
                         <Chip
-                            label={estimatedDuration}
+                            label={`${HelperFunctions.formatTime(videoDuration)}`}
                             size="medium"
                             color="success"
                             sx={{ fontSize: '1.25rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
@@ -1603,11 +1595,20 @@ const ScriptProductionClient = () => {
                                     jobId={jobId || 'job-chroma-key'}
                                     scriptData={scriptData as ScriptData}
                                     setScriptData={setScriptData}
+                                    videoDurationCaptured={(duration: number) => {
+                                        setVideoDuration(duration);
+                                        const updatedScriptData = {
+                                            ...scriptData,
+                                            videoDuration: duration,
+                                            updated_at: new Date().toISOString(),
+                                        } as ScriptData;
+                                        setScriptData(updatedScriptData);
+                                        SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                                    }}
                                     onUploadComplete={async (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
                                         setPageTitle('Final Step: Scene Composition & Video Generation');
                                         setIsNarratorVideoUploaded(true);
                                         setIsNarrationUploadView(false);
-                                        setNarratorChromaKeyLink(driveUrl);
 
                                         const updatedScriptData = {
                                             ...scriptData,

@@ -40,4 +40,5 @@ export interface ScriptData {
     // Gamma video preview (script-level)
     gammaGenId?: string;
     gammaExportUrl?: string;
+    videoDuration?: number;
 }
