@@ -105,4 +105,19 @@ export async function resolveSubfolderId(drive: any, parentFolderId: string, nam
     return null;
 }
 
+export async function findFileByName(drive: any, fileName: string, parentFolderId: string): Promise<string | null> {
+    const response = await drive.files.list({
+        q: `name='${fileName.replace(/'/g, "\\'")}' and '${parentFolderId}' in parents and trashed=false`,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        pageSize: 1,
+    });
+    const files = response.data.files;
+    if (files && files.length > 0) {
+        return files[0].id!;
+    }
+    return null;
+}
+
 

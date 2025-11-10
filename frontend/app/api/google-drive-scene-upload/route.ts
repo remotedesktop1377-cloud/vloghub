@@ -1,7 +1,7 @@
 // app/api/upload-to-drive/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { Readable } from 'stream';
-import { getDriveClient, getRootFolderId, findOrCreateFolder } from '@/services/googleDriveServer';
+import { getDriveClient, getRootFolderId, findOrCreateFolder, findFileByName } from '@/services/googleDriveServer';
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
@@ -260,12 +260,35 @@ export async function POST(request: NextRequest) {
                 const newJson = { ...jsonData, assets: { ...(jsonData.assets || {}), images: imagesOut, ...(videosOut.length ? { videos: videosOut } : {}) } };
 
                 const jsonString = JSON.stringify(newJson, null, 2);
-                const uploadedJson = await drive.files.create({
-                    requestBody: { name: 'scene-config.json', parents: [sceneFolder.id], mimeType: 'application/json' },
-                    media: { mimeType: 'application/json', body: jsonString },
-                    supportsAllDrives: true,
-                    fields: 'id, name, webViewLink, parents',
-                });
+                const fileName = fileNameForm || 'scene-config.json';
+                
+                // Check if file already exists
+                const existingFileId = await findFileByName(drive, fileName, sceneFolder.id);
+                console.log('existingFileId ', existingFileId);
+                
+                let uploadedJson;
+                if (existingFileId) {
+                    // Update existing file - overwrite the content
+                    const jsonBuffer = Buffer.from(jsonString);
+                    const jsonStream = Readable.from(jsonBuffer);
+                    uploadedJson = await drive.files.update({
+                        fileId: existingFileId,
+                        requestBody: { name: fileName, mimeType: 'application/json' },
+                        media: { mimeType: 'application/json', body: jsonStream },
+                        supportsAllDrives: true,
+                        fields: 'id, name, webViewLink, parents',
+                    });
+                } else {
+                    // Create new file
+                    const jsonBuffer = Buffer.from(jsonString);
+                    const jsonStream = Readable.from(jsonBuffer);
+                    uploadedJson = await drive.files.create({
+                        requestBody: { name: fileName, parents: [sceneFolder.id], mimeType: 'application/json' },
+                        media: { mimeType: 'application/json', body: jsonStream },
+                        supportsAllDrives: true,
+                        fields: 'id, name, webViewLink, parents',
+                    });
+                }
 
                 return NextResponse.json({
                     success: true,

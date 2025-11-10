@@ -116,104 +116,105 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
               }}
               SceneDataIndex={currentSceneDataIndex}
               onSceneDataUpdate={async (SceneDataIndex, updatedSceneData: any) => {
-                // Update the SceneData with new assets
-                const modifiedScenesData: SceneData[] = scenesData.map((sceneData, index) => {
-                  if (index === SceneDataIndex) {
-                    // Transform any legacy merge payload (map) into array entries
-                    let nextKeywordsSelected: SceneKeywordSelection[] = Array.isArray(sceneData.keywordsSelected) ? (sceneData.keywordsSelected as SceneKeywordSelection[]) : [];
-                    if (updatedSceneData?.keywordsSelectedMerge && typeof updatedSceneData.keywordsSelectedMerge === 'object') {
-                      const mergeMap = updatedSceneData?.keywordsSelectedMerge as Record<string, string[]>;
-                      const entries = Object.entries(mergeMap);
-                      if (entries.length > 0) {
-                        const [kw, urls] = entries[0];
-                        const low = urls?.[0] || undefined;
-                        const high = urls?.[1] || urls?.[0] || undefined;
-                        const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
-                        const newEntry: import('@/types/sceneData').SceneKeywordSelection = {
-                          suggestedKeyword: kw,
-                          ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
-                          media: {
-                            ...(low ? { lowResMedia: low } : {}),
-                            ...(high ? { highResMedia: high } : {})
-                          },
-                          // Add transitionsEffects to SceneData and log
-                          ...(updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0 && updatedSceneData.keywordsSelected[0].transitionsEffects
-                            ? { transitionsEffects: updatedSceneData.keywordsSelected[0].transitionsEffects }
-                            : {}),
-                        };
-                        if (idx >= 0) {
-                          const existing = nextKeywordsSelected[idx];
-                          nextKeywordsSelected = nextKeywordsSelected.slice();
-                          nextKeywordsSelected[idx] = {
-                            ...existing,
-                            ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
-                            media: {
-                              ...(existing.media || {}),
-                              ...(low ? { lowResMedia: low } : {}),
-                              ...(high ? { highResMedia: high } : {})
-                            }
-                          };
-                        } else {
-                          nextKeywordsSelected = [...nextKeywordsSelected, newEntry];
-                        }
-                      }
-                    }
-                    // Merge direct keywordsSelected array payload (carry transitionsEffects)
-                    if (updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0) {
-                      const entry = updatedSceneData.keywordsSelected[0] as any;
-                      const kw = String(entry?.suggestedKeyword || '').trim();
-                      if (kw) {
-                        const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
-                        const low = entry?.media?.lowResMedia as string | undefined;
-                        const high = entry?.media?.highResMedia as string | undefined;
-                        const transitionsEffects = Array.isArray(entry?.transitionsEffects) ? entry.transitionsEffects as string[] : undefined;
-                        if (idx >= 0) {
-                          const existing = nextKeywordsSelected[idx];
-                          nextKeywordsSelected = nextKeywordsSelected.slice();
-                          nextKeywordsSelected[idx] = {
-                            ...existing,
-                            media: {
-                              ...(existing.media || {}),
-                              ...(low ? { lowResMedia: low } : {}),
-                              ...(high ? { highResMedia: high } : {})
-                            },
-                            ...(transitionsEffects ? { transitionsEffects } : {})
-                          } as any;
-                        } else {
-                          nextKeywordsSelected = [
-                            ...nextKeywordsSelected,
-                            {
-                              suggestedKeyword: kw,
-                              media: {
-                                ...(low ? { lowResMedia: low } : {}),
-                                ...(high ? { highResMedia: high } : {})
-                              },
-                              ...(transitionsEffects ? { transitionsEffects } : {})
-                            } as any
-                          ];
-                        }
-                      }
-                    }
-                    return {
-                      ...sceneData,
-                      ...(nextKeywordsSelected.length > 0 ? { keywordsSelected: nextKeywordsSelected } : {}),
-                      assets: {
-                        ...sceneData.assets,
-                        ...updatedSceneData.assets
-                      }
-                    };
-                  }
-                  return sceneData;
-                });
-                try {
-                  // console.log('SceneData modified (onSceneDataUpdate):', JSON.stringify(updatedSceneData[SceneDataIndex]));
-                  const sceneId = modifiedScenesData[SceneDataIndex].id || '';
-                  const sceneJobId = modifiedScenesData[SceneDataIndex].jobId || jobId;
-                  if (sceneJobId && sceneId) {
-                    await GoogleDriveServiceFunctions.persistSceneUpdate(sceneJobId, modifiedScenesData[SceneDataIndex], 'Project settings applied to scene');
-                  }
-                } catch { }
-                onSceneDataUpdate(modifiedScenesData);
+                // // Update the SceneData with new assets
+                // const modifiedScenesData: SceneData[] = scenesData.map((sceneData, index) => {
+                //   if (index === SceneDataIndex) {
+                //     // Transform any legacy merge payload (map) into array entries
+                //     let nextKeywordsSelected: SceneKeywordSelection[] = Array.isArray(sceneData.keywordsSelected) ? (sceneData.keywordsSelected as SceneKeywordSelection[]) : [];
+                //     if (updatedSceneData?.keywordsSelectedMerge && typeof updatedSceneData.keywordsSelectedMerge === 'object') {
+                //       const mergeMap = updatedSceneData?.keywordsSelectedMerge as Record<string, string[]>;
+                //       const entries = Object.entries(mergeMap);
+                //       if (entries.length > 0) {
+                //         const [kw, urls] = entries[0];
+                //         const low = urls?.[0] || undefined;
+                //         const high = urls?.[1] || urls?.[0] || undefined;
+                //         const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
+                //         const newEntry: import('@/types/sceneData').SceneKeywordSelection = {
+                //           suggestedKeyword: kw,
+                //           ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
+                //           media: {
+                //             ...(low ? { lowResMedia: low } : {}),
+                //             ...(high ? { highResMedia: high } : {})
+                //           },
+                //           // Add transitionsEffects to SceneData and log
+                //           ...(updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0 && updatedSceneData.keywordsSelected[0].transitionsEffects
+                //             ? { transitionsEffects: updatedSceneData.keywordsSelected[0].transitionsEffects }
+                //             : {}),
+                //         };
+                //         if (idx >= 0) {
+                //           const existing = nextKeywordsSelected[idx];
+                //           nextKeywordsSelected = nextKeywordsSelected.slice();
+                //           nextKeywordsSelected[idx] = {
+                //             ...existing,
+                //             ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
+                //             media: {
+                //               ...(existing.media || {}),
+                //               ...(low ? { lowResMedia: low } : {}),
+                //               ...(high ? { highResMedia: high } : {})
+                //             }
+                //           };
+                //         } else {
+                //           nextKeywordsSelected = [...nextKeywordsSelected, newEntry];
+                //         }
+                //       }
+                //     }
+                //     // Merge direct keywordsSelected array payload (carry transitionsEffects)
+                //     if (updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0) {
+                //       const entry = updatedSceneData.keywordsSelected[0] as any;
+                //       const kw = String(entry?.suggestedKeyword || '').trim();
+                //       if (kw) {
+                //         const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
+                //         const low = entry?.media?.lowResMedia as string | undefined;
+                //         const high = entry?.media?.highResMedia as string | undefined;
+                //         const transitionsEffects = Array.isArray(entry?.transitionsEffects) ? entry.transitionsEffects as string[] : undefined;
+                //         if (idx >= 0) {
+                //           const existing = nextKeywordsSelected[idx];
+                //           nextKeywordsSelected = nextKeywordsSelected.slice();
+                //           nextKeywordsSelected[idx] = {
+                //             ...existing,
+                //             media: {
+                //               ...(existing.media || {}),
+                //               ...(low ? { lowResMedia: low } : {}),
+                //               ...(high ? { highResMedia: high } : {})
+                //             },
+                //             ...(transitionsEffects ? { transitionsEffects } : {})
+                //           } as any;
+                //         } else {
+                //           nextKeywordsSelected = [
+                //             ...nextKeywordsSelected,
+                //             {
+                //               suggestedKeyword: kw,
+                //               media: {
+                //                 ...(low ? { lowResMedia: low } : {}),
+                //                 ...(high ? { highResMedia: high } : {})
+                //               },
+                //               ...(transitionsEffects ? { transitionsEffects } : {})
+                //             } as any
+                //           ];
+                //         }
+                //       }
+                //     }
+                //     return {
+                //       ...sceneData,
+                //       ...(nextKeywordsSelected.length > 0 ? { keywordsSelected: nextKeywordsSelected } : {}),
+                //       assets: {
+                //         ...sceneData.assets,
+                //         ...updatedSceneData.assets
+                //       }
+                //     };
+                //   }
+                //   return sceneData;
+                // });
+                // debugger;
+                // try {
+                //   // console.log('SceneData modified (onSceneDataUpdate):', JSON.stringify(updatedSceneData[SceneDataIndex]));
+                //   const sceneId = modifiedScenesData[SceneDataIndex].id || '';
+                //   const sceneJobId = modifiedScenesData[SceneDataIndex].jobId || jobId;
+                //   if (sceneJobId && sceneId) {
+                //     await GoogleDriveServiceFunctions.persistSceneUpdate(sceneJobId, modifiedScenesData[SceneDataIndex], 'Project settings applied to scene');
+                //   }
+                // } catch { }
+                // onSceneDataUpdate(modifiedScenesData);
               }}
               onDone={() => {
                 onMediaManagementOpen(false);
@@ -236,6 +237,7 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
               onDoneWithSelected={(selectedUrls, modifiedKeyword) => {
                 const SceneDataIdx = mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex;
                 const kw = typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword;
+                debugger;
                 if (kw) {
                   // add selected urls to the images array and keywordsSelected
                   const updated: SceneData[] = scenesData.map((ch, idx) => {
