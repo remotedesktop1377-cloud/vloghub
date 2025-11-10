@@ -250,7 +250,8 @@ export const ImageViewModal: React.FC<ImageViewModalProps> = ({
           ...(viewMode === 'fullscreen' && {
             bgcolor: 'black',
             height: '100vh',
-            pt: '80px' // Account for header
+            pt: '80px', // Account for header
+            pb: images.length > 1 ? '140px' : '60px' // Account for thumbnail strip and footer
           })
         }}
       >
@@ -347,6 +348,68 @@ export const ImageViewModal: React.FC<ImageViewModalProps> = ({
             <Typography variant="caption" component="p">
               <strong>Prompt:</strong> {currentImage.prompt}
             </Typography>
+          </Box>
+        )}
+
+        {/* Horizontal Thumbnail Strip */}
+        {images.length > 1 && viewMode !== 'thumbnail' && (
+          <Box
+            sx={{
+              width: '100%',
+              p: 2,
+              borderTop: 1,
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              display: 'flex',
+              gap: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              flexShrink: 0,
+              ...(viewMode === 'fullscreen' && {
+                position: 'absolute',
+                bottom: currentImage.prompt ? '80px' : '60px',
+                left: 0,
+                right: 0,
+                bgcolor: 'rgba(0, 0, 0, 0.9)',
+                zIndex: 3,
+                borderTop: 'none'
+              })
+            }}
+          >
+            {images.map((image, index) => (
+              <Box
+                key={index}
+                onClick={() => onIndexChange(index)}
+                sx={{
+                  flex: '0 0 auto',
+                  width: '80px',
+                  height: '60px',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  border: currentIndex === index ? `3px solid ${theme.palette.primary.main}` : `2px solid ${theme.palette.divider}`,
+                  opacity: currentIndex === index ? 1 : 0.7,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    opacity: 1,
+                    transform: 'scale(1.05)',
+                    borderColor: theme.palette.primary.main
+                  }
+                }}
+              >
+                <img
+                  src={image.url}
+                  alt={image.name || `Thumbnail ${index + 1}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              </Box>
+            ))}
           </Box>
         )}
       </DialogContent>

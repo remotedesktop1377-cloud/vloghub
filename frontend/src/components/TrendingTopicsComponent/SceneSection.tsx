@@ -224,11 +224,30 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   const handleImageClick = (SceneDataIndex: number, imageIndex: number = 0, isPreview: boolean) => {
     const sceneData = scenesData[SceneDataIndex];
     const SceneDataImages = SceneDataImagesMap[SceneDataIndex] || [];
+    
+    let images: Array<{ url: string; name?: string; type?: 'generated' | 'uploaded' }> = [];
 
-    const images = formatSceneDataImages(
-      SceneDataImages,
-      isPreview ? sceneData.previewImage || '' : sceneData.assets?.images?.[0] || '',
-    );
+    if (isPreview) {
+      // When clicking preview image, use formatSceneDataImages
+      images = formatSceneDataImages(
+        SceneDataImages,
+        sceneData.previewImage || '',
+      );
+    } else {
+      // When clicking on selected images, get all images from sceneData.assets.images
+      const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) 
+        ? sceneData.assets.images 
+        : [];
+      
+      // Convert all images to ImageData format
+      allImages.forEach((url, idx) => {
+        images.push({
+          url,
+          name: `Image ${idx + 1}`,
+          type: 'uploaded'
+        });
+      });
+    }
 
     if (images.length > 0) {
       imageViewer.openViewer(images, imageIndex, 'preview');
@@ -1125,20 +1144,17 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                             }}>
                                               {(() => {
                                                 const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
-                                                const googleSet = new Set(sceneData.assets?.imagesGoogle || []);
-                                                const envatoSet = new Set(sceneData.assets?.imagesEnvato || []);
-                                                const hasAIAtFirst = allImages.length > 0 && !googleSet.has(allImages[0]) && !envatoSet.has(allImages[0]);
-                                                const list = hasAIAtFirst ? allImages.slice(1) : allImages;
+                                                // const googleSet = new Set(sceneData.assets?.imagesGoogle || []);
+                                                // const envatoSet = new Set(sceneData.assets?.imagesEnvato || []);
                                                 return (
                                                   <Box sx={{ display: 'flex', gap: 0.75, overflowX: 'auto', pb: 0.5 }}>
-                                                    {list.map((imageUrl, imgIndex) => (
+                                                    {allImages.map((imageUrl, imgIndex) => (
                                                       <Box
                                                         key={`selected-${imgIndex}`}
                                                         sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `2px solid ${PRIMARY.main}`, cursor: 'pointer' }}
                                                         onClick={(e) => {
                                                           e.stopPropagation();
-                                                          const imageIndex = (hasAIAtFirst ? 1 : 0) + imgIndex;
-                                                          handleImageClick(index, imageIndex, false);
+                                                          handleImageClick(index, imgIndex, false);
                                                         }}
                                                       >
                                                         <img src={imageUrl} alt={`Selected Image ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
