@@ -40,6 +40,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
+import { LibraryData, profileService } from '@/services/profileService';
 import { toast, ToastContainer } from 'react-toastify';
 import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
@@ -108,7 +109,11 @@ const ScriptProductionClient = () => {
     const [isNarrationUploadView, setIsNarrationUploadView] = useState(false);
     const [selectedText, setSelectedText] = useState<{ SceneDataIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
-    const [driveLibrary, setDriveLibrary] = useState<{ backgrounds?: any[]; music?: any[]; transitions?: any[] } | null>(null);
+    const [driveLibrary, setDriveLibrary] = useState<LibraryData>({
+        backgrounds: [],
+        music: [],
+        transitions: []
+    });
     // Project-level settings
     const [projectLogo, setProjectLogo] = useState<{ name?: string; url: string; position?: string } | null>(null);
     const [projectTransitionId, setProjectTransitionId] = useState<string>('');
@@ -174,6 +179,8 @@ const ScriptProductionClient = () => {
                 setLoading(false);
             }
 
+            initDropDownsData();
+
             // Mark initial loading as complete
             setIsInitialLoading(false);
         } catch (error) {
@@ -184,6 +191,8 @@ const ScriptProductionClient = () => {
         }
 
     }, []);
+
+
 
     // Handle browser back button
     useEffect(() => {
@@ -308,6 +317,23 @@ const ScriptProductionClient = () => {
             }
         };
     }, []);
+
+    // Fetch and cache library data (backgrounds, music, transitions) on mount
+    const initDropDownsData = async () => {
+        try {
+            // Use loadBackgrounds which calls the main API, then fetch full library to get music
+            const response: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(true);
+            setDriveLibrary(response);
+        } catch (error) {
+            console.error('Error loading library data:', error);
+            // Keep default empty arrays on error
+            setDriveLibrary({
+                backgrounds: [],
+                music: [],
+                transitions: []
+            });
+        }
+    };
 
     const openProjectSettingsDialog = (mode: 'project' | 'scene', sceneIndex?: number) => {
         setProjectSettingsContext({ mode, sceneIndex });
@@ -1916,8 +1942,8 @@ const ScriptProductionClient = () => {
                                     SceneDataEditDialogOpen={SceneDataEditDialogOpen}
                                     onSceneDataEditDialogOpen={setScenesDataEditDialogOpen}
                                     onSceneDataEditDialogSceneDataIndex={setScenesDataEditDialogSceneDataIndex}
-                                    driveBackgrounds={driveLibrary?.backgrounds}
-                                    driveMusic={driveLibrary?.music}
+                                    driveBackgrounds={driveLibrary?.backgrounds || []}
+                                    driveMusic={driveLibrary?.music || []}
                                     driveTransitions={predefinedTransitions.map((t) => ({ id: t, name: t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) }))}
                                     projectSettings={{
                                         transition: projectTransitionId,

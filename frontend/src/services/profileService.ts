@@ -12,8 +12,14 @@ export interface BackgroundItem {
     iconLink?: string;
 }
 
+export interface LibraryData {
+    backgrounds: BackgroundItem[];
+    music: any[];
+    transitions: any[];
+}
+
 export interface ProfileService {
-    fetchBackgrounds: () => Promise<BackgroundItem[]>;
+    fetchLibraryData: () => Promise<LibraryData>;
     uploadLogo: (file: File, userId: string) => Promise<{ success: boolean; url?: string; fileName?: string }>;
     removeLogo: (fileName: string, url: string, userId: string) => Promise<{ success: boolean }>;
     saveProfileSettings: (userId: string, settings: { logo?: any; background?: any; textMode?: any; format?: any; themeName?: any }) => Promise<boolean>;
@@ -21,18 +27,19 @@ export interface ProfileService {
 }
 
 class ProfileServiceImpl implements ProfileService {
+
     /**
-     * Fetch available backgrounds from Google Drive library
+     * Fetch all library data (backgrounds, music, transitions) from Google Drive library
      */
-    async fetchBackgrounds(): Promise<BackgroundItem[]> {
+    async fetchLibraryData(): Promise<LibraryData> {
         try {
-            console.log('Fetching backgrounds from:', `${API_ENDPOINTS.API_GOOGLE_DRIVE_LIBRARY}`);
+            console.log('Fetching library data from:', `${API_ENDPOINTS.API_GOOGLE_DRIVE_LIBRARY}`);
             const response = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_LIBRARY);
 
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error:', response.status, errorText);
-                throw new Error(`Failed to fetch backgrounds: ${response.status} ${errorText}`);
+                throw new Error(`Failed to fetch library data: ${response.status} ${errorText}`);
             }
 
             const data = await response.json();
@@ -42,16 +49,34 @@ class ProfileServiceImpl implements ProfileService {
                 throw new Error(data.error);
             }
 
+            // Show warnings if any
             if (data.meta?.backgroundsWarning) {
                 console.warn('Backgrounds warning:', data.meta.backgroundsWarning);
                 HelperFunctions.showError(data.meta.backgroundsWarning);
             }
+            if (data.meta?.musicWarning) {
+                console.warn('Music warning:', data.meta.musicWarning);
+                HelperFunctions.showWarning(data.meta.musicWarning);
+            }
+            if (data.meta?.transitionsWarning) {
+                console.warn('Transitions warning:', data.meta.transitionsWarning);
+                HelperFunctions.showWarning(data.meta.transitionsWarning);
+            }
 
-            return data?.data?.backgrounds || [];
+            // Return the full API response structure
+            return {
+                backgrounds: data?.data?.backgrounds || [],
+                music: data?.data?.music || [],
+                transitions: data?.data?.transitions || []
+            };
         } catch (error) {
-            console.error('Error fetching backgrounds:', error);
-            HelperFunctions.showError(`Failed to load backgrounds: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            return [];
+            console.error('Error fetching library data:', error);
+            HelperFunctions.showError(`Failed to load library data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            return {
+                backgrounds: [],
+                music: [],
+                transitions: []
+            };
         }
     }
 

@@ -2,18 +2,19 @@ import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { SceneData } from '@/types/sceneData';
 import { HelperFunctions, secure } from '@/utils/helperFunctions';
 import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
-import { profileService, BackgroundItem } from './profileService';
+import { profileService, BackgroundItem, LibraryData } from './profileService';
 import { toast } from 'react-toastify';
 
-interface CachedBackgroundData {
-    data: BackgroundItem[];
+interface CachedLibraryData {
+    data: LibraryData;
     timestamp: string;
 }
 
-const BACKGROUNDS_CACHE_KEY = 'backgrounds_cache';
+const LIBRARY_CACHE_KEY = 'library_cache';
+const BACKGROUNDS_CACHE_KEY = 'backgrounds_cache'; // Keep for backward compatibility
 
 // Module-level variable to track background loading promise
-let backgroundLoadingPromise: Promise<BackgroundItem[]> | null = null;
+let loadingLibraryData: boolean = false;
 
 /**
  * Get authenticated Google Drive JWT Client
@@ -228,49 +229,64 @@ export const GoogleDriveServiceFunctions = {
         }
     },
 
-    // Background loading and caching methods
+    // Library loading and caching methods
     /**
      * Load backgrounds with caching support
      * @param forceRefresh - If true, bypasses cache and fetches fresh data
      * @returns Promise<BackgroundItem[]>
      */
-    async loadBackgrounds(forceRefresh: boolean = false): Promise<BackgroundItem[]> {
+    async loadLibraryData(forceRefresh: boolean = false): Promise<LibraryData> {
         // If already loading, return the existing promise
-        if (backgroundLoadingPromise && !forceRefresh) {
-            return backgroundLoadingPromise;
+
+        if (loadingLibraryData) {
+            return Promise.resolve(null as unknown as LibraryData);
         }
 
         // Check cache first if not forcing refresh
         if (!forceRefresh) {
-            const cached = GoogleDriveServiceFunctions.getCachedBackgrounds();
-            if (cached && cached.length > 0) {
-                console.log('🟡 Using cached backgrounds');
+            const cached = GoogleDriveServiceFunctions.getCachedLibraryData();
+            if (cached && cached.backgrounds && cached.music && cached.transitions) {
+                console.log('🟡 Using cached library data');
                 return cached;
             }
         }
+        loadingLibraryData = true;
 
         // Fetch from API
         console.log(forceRefresh ? '🔄 Force refreshing backgrounds from API' : '🔄 Fetching backgrounds from API');
-        backgroundLoadingPromise = profileService.fetchBackgrounds().then((backgrounds) => {
-            // Cache the results
-            if (backgrounds.length > 0) {
-                GoogleDriveServiceFunctions.setCachedBackgrounds(backgrounds);
-            }
-            if (backgrounds.length === 0) {
-                toast.warning('No backgrounds found. Please check your Google Drive configuration.');
-            } else {
-                toast.success(`Loaded ${backgrounds.length} backgrounds`);
-            }
-            return backgrounds;
-        }).catch((error) => {
-            console.error('Error loading backgrounds:', error);
-            toast.error('Failed to load backgrounds');
-            return [];
-        }).finally(() => {
-            backgroundLoadingPromise = null;
-        });
+        const libraryData: LibraryData = await profileService.fetchLibraryData();
+        GoogleDriveServiceFunctions.setCachedLibraryData(libraryData);
+        loadingLibraryData = false;
+        return libraryData;
+    },
 
-        return backgroundLoadingPromise;
+    getCachedLibraryData(): LibraryData | null {
+        try {
+            const cached = secure.j[LIBRARY_CACHE_KEY].get();
+            if (cached) {
+                return cached.data;
+            }
+        } catch (error) {
+            console.warn('Error reading library cache:', error);
+        }
+        return null;
+    },
+
+    /**
+     * Set cached library data (backgrounds, music, transitions)
+     * @param data - Library data to cache
+     */
+    setCachedLibraryData(data: LibraryData): void {
+        try {
+            const cacheData: CachedLibraryData = {
+                data,
+                timestamp: new Date().toISOString()
+            };
+            secure.j[LIBRARY_CACHE_KEY].set(cacheData);
+            console.log('✅ Library data cached successfully');
+        } catch (error) {
+            console.warn('Error writing library cache:', error);
+        }
     },
 
     /**
@@ -279,15 +295,20 @@ export const GoogleDriveServiceFunctions = {
      */
     getCachedBackgrounds(): BackgroundItem[] | null {
         try {
+            // First try to get from library cache
+            const libraryData = GoogleDriveServiceFunctions.getCachedLibraryData();
+            if (libraryData && libraryData.backgrounds && libraryData.backgrounds.length > 0) {
+                return libraryData.backgrounds;
+            }
+
+            // Fallback to old cache format for backward compatibility
             const cached = secure.j[BACKGROUNDS_CACHE_KEY].get();
             if (cached) {
-                const { data, timestamp }: CachedBackgroundData = typeof cached === 'string' ? JSON.parse(cached) : cached;
+                const { data, timestamp }: { data: BackgroundItem[]; timestamp: string } = typeof cached === 'string' ? JSON.parse(cached) : cached;
                 const cacheAge = Date.now() - new Date(timestamp).getTime();
                 if (cacheAge < TRENDING_TOPICS_CACHE_MAX_AGE) {
                     return data;
                 } else {
-                    // Cache is expired, remove it
-                    console.log('🔴 Backgrounds cache expired - removing');
                     secure.j[BACKGROUNDS_CACHE_KEY].remove();
                 }
             }
@@ -298,12 +319,39 @@ export const GoogleDriveServiceFunctions = {
     },
 
     /**
-     * Set cached backgrounds
+     * Get cached music without API call
+     * @returns any[] | null
+     */
+    getCachedMusic(): any[] | null {
+        try {
+            const libraryData = GoogleDriveServiceFunctions.getCachedLibraryData();
+            if (libraryData && libraryData.music) {
+                return libraryData.music;
+            }
+        } catch (error) {
+            console.warn('Error reading music cache:', error);
+        }
+        return null;
+    },
+
+    /**
+     * Set cached backgrounds (for backward compatibility)
+     * @deprecated Use setCachedLibraryData() instead
      * @param data - Background items to cache
      */
     setCachedBackgrounds(data: BackgroundItem[]): void {
         try {
-            const cacheData: CachedBackgroundData = {
+            // Try to preserve existing library data if it exists
+            const existingLibrary = GoogleDriveServiceFunctions.getCachedLibraryData();
+            const libraryData: LibraryData = {
+                backgrounds: data,
+                music: existingLibrary?.music || [],
+                transitions: existingLibrary?.transitions || []
+            };
+            GoogleDriveServiceFunctions.setCachedLibraryData(libraryData);
+
+            // Also update old cache for backward compatibility
+            const cacheData = {
                 data,
                 timestamp: new Date().toISOString()
             };
@@ -315,14 +363,15 @@ export const GoogleDriveServiceFunctions = {
     },
 
     /**
-     * Clear the backgrounds cache
+     * Clear the library cache
      */
     clearBackgroundsCache(): void {
         try {
-            secure.j[BACKGROUNDS_CACHE_KEY].remove();
-            console.log('🗑️ Backgrounds cache cleared');
+            secure.j[LIBRARY_CACHE_KEY].remove();
+            secure.j[BACKGROUNDS_CACHE_KEY].remove(); // Also clear old cache
+            console.log('🗑️ Library cache cleared');
         } catch (error) {
-            console.warn('Error clearing backgrounds cache:', error);
+            console.warn('Error clearing library cache:', error);
         }
     },
     

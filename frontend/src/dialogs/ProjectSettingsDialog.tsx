@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -26,6 +26,7 @@ import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { toast } from 'react-toastify';
 import Image from 'next/image';
 import { HelperFunctions } from '@/utils/helperFunctions';
+import { LibraryData } from '@/services/profileService';
 
 interface LogoType {
     name?: string;
@@ -80,7 +81,7 @@ interface ProjectSettingsDialogProps {
     setLastMusicIdLoaded: (id: string | null) => void;
 
     // External dependencies
-    driveLibrary: { backgrounds?: any[]; music?: any[]; transitions?: any[] } | null;
+    driveLibrary: { backgrounds?: any[]; music?: any[]; transitions?: any[] };
     setVideoPreviewUrl: (url: string) => void;
     setVideoPreviewOpen: (open: boolean) => void;
     jobId?: string;
@@ -118,28 +119,11 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     const [backgrounds, setBackgrounds] = useState<any[]>(driveLibrary?.backgrounds || []);
     const [music, setMusic] = useState<any[]>(driveLibrary?.music || []);
     const [selectedBackground, setSelectedBackground] = useState<any>(null);
-    const [loadingBackgrounds, setLoadingBackgrounds] = useState(false);
-    const [loadingMusic, setLoadingMusic] = useState(false);
+    const [loadingLibraryData, setLoadingLibraryData] = useState<boolean>(false);
     const [videoError, setVideoError] = useState(false);
     const [videoLoading, setVideoLoading] = useState(false);
     const [currentMusicId, setCurrentMusicId] = useState<string | null>(null);
     const [uploadingLogo, setUploadingLogo] = useState(false);
-
-    // Load backgrounds and music from cache or driveLibrary on mount
-    React.useEffect(() => {
-        // Load backgrounds
-        const cachedBackgrounds = GoogleDriveServiceFunctions.getCachedBackgrounds();
-        if (cachedBackgrounds && cachedBackgrounds.length > 0) {
-            setBackgrounds(cachedBackgrounds);
-        } else if (driveLibrary?.backgrounds && driveLibrary.backgrounds.length > 0) {
-            setBackgrounds(driveLibrary.backgrounds);
-        }
-
-        // Load music from driveLibrary
-        if (driveLibrary?.music && driveLibrary.music.length > 0) {
-            setMusic(driveLibrary.music);
-        }
-    }, [driveLibrary]);
 
     // Cleanup audio when dialog closes
     React.useEffect(() => {
@@ -156,6 +140,26 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             setIsMusicPlaying(false);
             setIsMusicLoading(false);
             setCurrentMusicId(null);
+        } else {
+            // Load backgrounds and music from cache or driveLibrary on mount
+            // Use single cache call to get both backgrounds and music efficiently
+            const cachedLibraryData = GoogleDriveServiceFunctions.getCachedLibraryData();
+
+            if (cachedLibraryData && cachedLibraryData.backgrounds && cachedLibraryData.music) {
+                // Set backgrounds from cache
+                setBackgrounds(cachedLibraryData.backgrounds);
+                // Set music from cache
+                setMusic(cachedLibraryData.music);
+            } else {
+                // Fallback to driveLibrary if cache is empty or missing
+                if (driveLibrary && driveLibrary.backgrounds) {
+                    setBackgrounds(driveLibrary.backgrounds);
+                }
+
+                if (driveLibrary.music) {
+                    setMusic(driveLibrary.music);
+                }
+            }
         }
     }, [open]);
 
@@ -184,6 +188,20 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
         // Remove duplicates and return unique URLs
         return Array.from(new Set(urls.filter(Boolean)));
     };
+
+    const refreshLibraryData = async () => {
+        setLoadingLibraryData(true);
+        try {
+            // Use loadBackgrounds which calls the main API, then fetch full library to get music
+            const response: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(true);
+            setMusic(response.music);
+            setBackgrounds(response.backgrounds);
+        } catch (error) {
+            console.error('Error refreshing music:', error);
+        } finally {
+            setLoadingLibraryData(false);
+        }
+    }
 
     const handleVideoError = () => {
         setVideoError(true);
@@ -354,26 +372,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Music</Typography>
                             <IconButton
                                 size="small"
-                                onClick={async () => {
-                                    setLoadingMusic(true);
-                                    try {
-                                        // Use loadBackgrounds which calls the main API, then fetch full library to get music
-                                        await GoogleDriveServiceFunctions.loadBackgrounds(true);
-                                        const response = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_LIBRARY);
-                                        if (response.ok) {
-                                            const data = await response.json();
-                                            if (data?.data?.music && Array.isArray(data.data.music)) {
-                                                setMusic(data.data.music);
-                                                console.log(`✅ Loaded ${data.data.music.length} music files`);
-                                            }
-                                        }
-                                    } catch (error) {
-                                        console.error('Error refreshing music:', error);
-                                    } finally {
-                                        setLoadingMusic(false);
-                                    }
-                                }}
-                                disabled={loadingMusic}
+                                onClick={refreshLibraryData}
+                                disabled={loadingLibraryData}
                                 sx={{ color: 'primary.main' }}
                                 title="Refresh music list"
                             >
@@ -424,7 +424,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     SelectProps={{ native: true }}
                                 >
                                     <option value="">Select music...</option>
-                                    {loadingMusic ? (
+                                    {loadingLibraryData ? (
                                         <option disabled>Loading music...</option>
                                     ) : music.length === 0 ? (
                                         <option disabled>No music available</option>
@@ -674,19 +674,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Video</Typography>
                             <IconButton
                                 size="small"
-                                onClick={async () => {
-                                    setLoadingBackgrounds(true);
-                                    try {
-                                        // Force refresh backgrounds from API
-                                        const refreshedBackgrounds = await GoogleDriveServiceFunctions.loadBackgrounds(true);
-                                        setBackgrounds(refreshedBackgrounds);
-                                    } catch (error) {
-                                        console.error('Error refreshing backgrounds:', error);
-                                    } finally {
-                                        setLoadingBackgrounds(false);
-                                    }
-                                }}
-                                disabled={loadingBackgrounds}
+                                onClick={refreshLibraryData}
+                                disabled={loadingLibraryData}
                                 sx={{ color: 'primary.main' }}
                             >
                                 <RefreshIcon fontSize="small" />
@@ -700,7 +689,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             backgroundColor: 'background.paper',
                             minHeight: 200
                         }}>
-                            {loadingBackgrounds ? (
+                            {loadingLibraryData ? (
                                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4 }}>
                                     <CircularProgress size={24} />
                                     <Typography variant="caption" sx={{ mt: 1 }}>Loading backgrounds...</Typography>
