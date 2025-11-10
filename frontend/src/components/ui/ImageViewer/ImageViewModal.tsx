@@ -27,6 +27,7 @@ import {
   ViewModule as GridIcon,
   Visibility as PreviewIcon
 } from '@mui/icons-material';
+import { HelperFunctions } from '@/utils/helperFunctions';
 
 export type ImageViewMode = 'thumbnail' | 'preview' | 'fullscreen';
 
@@ -317,7 +318,7 @@ export const ImageViewModal: React.FC<ImageViewModalProps> = ({
           onClick={viewMode === 'fullscreen' ? handleZoomIn : undefined}
         >
           <img
-            src={currentImage.url}
+            src={currentImage.url.includes('drive.google.com') ? HelperFunctions.normalizeGoogleDriveUrl(currentImage.url) : currentImage.url}
             alt={currentImage.name || `Image ${currentIndex + 1}`}
             style={{
               maxWidth: '100%',

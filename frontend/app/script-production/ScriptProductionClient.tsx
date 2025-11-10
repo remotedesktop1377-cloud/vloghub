@@ -649,6 +649,8 @@ const ScriptProductionClient = () => {
                         const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobId, ch.id ?? i + 1, ch.gammaPreviewImage);
                         if (uploadResult.success) {
                             ch.gammaPreviewImage = uploadResult.result.webViewLink;
+                            // update scene data with the updated scene data
+                            setScenesData((prev: SceneData[]) => prev.map((s: SceneData) => s.id === ch.id ? ch : s));
                             await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, ch, 'Preview image uploaded');
                         }
                     } catch { }

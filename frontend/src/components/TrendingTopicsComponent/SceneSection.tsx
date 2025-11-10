@@ -1120,9 +1120,9 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     justifyContent: 'center'
                                                   }} onClick={handlePreviewClick}>
                                                     {previewUrl ? (
-                                                      <Image
-                                                        width={100}
-                                                        height={100}
+                                                      <img
+                                                        // width={100}
+                                                        // height={100}
                                                         src={HelperFunctions.normalizeGoogleDriveUrl(previewUrl)}
                                                         alt={`Preview media ${index + 1}`}
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}

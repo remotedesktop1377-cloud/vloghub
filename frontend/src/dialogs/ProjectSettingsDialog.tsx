@@ -508,13 +508,15 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                 backgroundColor: 'background.paper'
                             }}>
                                 <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                                    <Image
-                                        width={120}
-                                        height={120}
+                                    <img
+                                        // width={120}
+                                        // height={120}
                                         src={HelperFunctions.normalizeGoogleDriveUrl(tmpLogo.url)}
                                         alt={tmpLogo.name || 'Logo'}
                                         loading="lazy"
                                         style={{
+                                            width: '45%',
+                                            height: '45%',
                                             objectFit: 'contain',
                                             borderRadius: 2,
                                             border: '1px solid rgba(255,255,255,0.15)',
