@@ -224,7 +224,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   const handleImageClick = (SceneDataIndex: number, imageIndex: number = 0, isPreview: boolean) => {
     const sceneData = scenesData[SceneDataIndex];
     const SceneDataImages = SceneDataImagesMap[SceneDataIndex] || [];
-    
+
     let images: Array<{ url: string; name?: string; type?: 'generated' | 'uploaded' }> = [];
 
     if (isPreview) {
@@ -235,10 +235,10 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
       );
     } else {
       // When clicking on selected images, get all images from sceneData.assets.images
-      const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) 
-        ? sceneData.assets.images 
+      const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images))
+        ? sceneData.assets.images
         : [];
-      
+
       // Convert all images to ImageData format
       allImages.forEach((url, idx) => {
         images.push({
@@ -903,10 +903,10 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                               } as typeof projectSettings;
                                               return (
                                                 <Box sx={{ mt: 1 }}>
-                                                  <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                                  {/* <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                                                     {effective.transition || effective.musicId || effective.logo?.url || effective.clip?.url
                                                       || (Array.isArray(effective.transitionEffects) && effective.transitionEffects.length > 0) && <span>Selected Media:</span>}
-                                                  </Typography>
+                                                  </Typography> */}
                                                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                                     {effective.transition && (
                                                       <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(effective.transition).replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
@@ -973,7 +973,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 color: exactMatch || containsExisting || isContainedInExisting ? 'error.main' : 'text.primary',
                                                 fontWeight: 500
                                               }}>
-                                                "{selectedText?.text}"
+                                                {selectedText?.text}
                                               </Typography>
 
                                               {exactMatch ? (

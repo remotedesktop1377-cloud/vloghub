@@ -24,6 +24,8 @@ import { predefinedTransitions } from '@/data/DefaultData';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { toast } from 'react-toastify';
+import Image from 'next/image';
+import { HelperFunctions } from '@/utils/helperFunctions';
 
 interface LogoType {
     name?: string;
@@ -271,6 +273,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             aria-labelledby="project-settings-dialog-title"
             maxWidth="xl"
             fullWidth
+            disableEscapeKeyDown={uploadingLogo}
             onKeyDown={(e) => {
                 if (e.key === 'Escape') onClose();
                 if (e.key === 'Enter') {
@@ -282,8 +285,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             <DialogTitle id="project-settings-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography component="div" sx={{ fontSize: '1.25rem' }}>Project Settings {context.mode === 'scene' ? `(Scene ${(context.sceneIndex || 0) + 1})` : ''}</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button onClick={onApply} variant="contained" size="medium" disabled={false} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✔ Save Changes</Button>
-                    <Button onClick={onClose} variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✕ Close</Button>
+                    <Button onClick={onApply} variant="contained" size="medium" disabled={uploadingLogo} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✔ Save Changes</Button>
+                    <Button onClick={onClose} variant="outlined" size="medium" disabled={uploadingLogo} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✕ Close</Button>
                 </Box>
             </DialogTitle>
             <DialogContent>
@@ -496,14 +499,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                     {/* Logo Upload Section */}
                     <Grid item xs={12} md={6}>
                         <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Logo Overlay</Typography>
-                        {uploadingLogo && (
-                            <Box sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <CircularProgress size={20} />
-                                <Typography variant="body2" color="text.secondary">
-                                    Uploading logo to Google Drive...
-                                </Typography>
-                            </Box>
-                        )}
                         {tmpLogo?.url ? (
                             <Box sx={{
                                 border: '1px solid',
@@ -513,12 +508,13 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                 backgroundColor: 'background.paper'
                             }}>
                                 <Box sx={{ position: 'relative', display: 'inline-block' }}>
-                                    <img
-                                        src={tmpLogo.url}
+                                    <Image
+                                        width={120}
+                                        height={120}
+                                        src={HelperFunctions.normalizeGoogleDriveUrl(tmpLogo.url)}
                                         alt={tmpLogo.name || 'Logo'}
+                                        loading="lazy"
                                         style={{
-                                            width: 120,
-                                            height: 120,
                                             objectFit: 'contain',
                                             borderRadius: 2,
                                             border: '1px solid rgba(255,255,255,0.15)',
@@ -590,14 +586,16 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     cursor: 'pointer',
                                     bgcolor: 'action.hover',
                                     transition: 'all 0.2s',
+                                    opacity: uploadingLogo ? 0.5 : 1,
+                                    pointerEvents: uploadingLogo ? 'none' : 'auto',
                                     '&:hover': {
                                         borderColor: 'primary.dark',
                                         bgcolor: 'action.selected'
                                     }
                                 }}
                             >
-                                <EditIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>Upload Logo</Typography>
+                                {uploadingLogo ? <CircularProgress size={20} /> : <EditIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />}
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{uploadingLogo ? 'Uploading logo to Google Drive...' : 'Upload Logo'}</Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     PNG, JPG, GIF up to 5MB
                                 </Typography>

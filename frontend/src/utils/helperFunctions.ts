@@ -895,5 +895,82 @@ export class HelperFunctions {
     const secs = Math.floor(seconds % 60);
     return `${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m ` : ''}${secs > 0 ? `${secs}s` : ''}`;
   }
+
+  /**
+   * Extract file ID from various Google Drive URL formats
+   * Returns the file ID or null if not found
+   */
+  static extractGoogleDriveFileId(inputUrl: string): string | null {
+    try {
+      if (!inputUrl || typeof inputUrl !== 'string') return null;
+      
+      // Only process drive.google.com links
+      if (!inputUrl.includes('drive.google.com')) {
+        return null;
+      }
+
+      // If already in uc?id= format, extract the ID
+      const ucMatch = inputUrl.match(/[?&]id=([A-Za-z0-9_-]+)/);
+      if (ucMatch && ucMatch[1]) {
+        return ucMatch[1];
+      }
+
+      const url = new URL(inputUrl);
+
+      // Pattern: /file/d/<id>/view or /file/d/<id> or /file/d/<id>/...
+      const fileDMatch = url.pathname.match(/\/file\/d\/([A-Za-z0-9_-]+)/);
+      if (fileDMatch && fileDMatch[1]) {
+        return fileDMatch[1];
+      }
+
+      // Pattern: /open?id=<id>  or any query with id
+      const idParam = url.searchParams.get('id');
+      if (idParam) {
+        return idParam;
+      }
+
+      // Try to extract ID from the path if it looks like a file ID
+      const pathParts = url.pathname.split('/');
+      const fileIndex = pathParts.indexOf('d');
+      if (fileIndex !== -1 && pathParts[fileIndex + 1]) {
+        const potentialId = pathParts[fileIndex + 1];
+        // Validate it looks like a Google Drive file ID (alphanumeric, dashes, underscores)
+        if (/^[A-Za-z0-9_-]+$/.test(potentialId) && potentialId.length > 10) {
+          return potentialId;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      console.warn('Failed to extract Google Drive file ID:', inputUrl, e);
+      return null;
+    }
+  }
+
+  /**
+   * Normalize various Google Drive URLs to use our authenticated proxy endpoint.
+   * - Converts any Google Drive URL format to /api/google-drive-media?id=FILE_ID
+   * - Uses authenticated proxy to access files even if not publicly shared
+   * - Handles URLs like: https://drive.google.com/file/d/FILE_ID/view?usp=drivesdk
+   */
+  static normalizeGoogleDriveUrl(inputUrl: string): string {
+    try {
+      if (!inputUrl || typeof inputUrl !== 'string') return inputUrl;
+      
+      // Extract file ID from the URL
+      const fileId = HelperFunctions.extractGoogleDriveFileId(inputUrl);
+      
+      // If we found a file ID, use our authenticated proxy endpoint
+      if (fileId) {
+        return `/api/google-drive-media?id=${encodeURIComponent(fileId)}`;
+      }
+
+      // If it's not a Google Drive URL or we couldn't extract the ID, return as-is
+      return inputUrl;
+    } catch (e) {
+      console.warn('Failed to normalize Google Drive URL:', inputUrl, e);
+      return inputUrl;
+    }
+  }
 }
 
