@@ -97,14 +97,14 @@ export const useImageViewer = (): UseImageViewerReturn => {
 // Helper function to convert SceneData images to ImageData format
 export const formatSceneDataImages = (
   SceneDataImages: string[],
-  previewImage: string,
+  gammaPreviewImage: string,
 ): ImageData[] => {
   const images: ImageData[] = [];
 
   // Add generated image first if it exists
-  if (previewImage) {
+  if (gammaPreviewImage) {
     images.push({
-      url: previewImage,
+      url: gammaPreviewImage,
       name: 'Preview Image',
       type: 'generated',
     });

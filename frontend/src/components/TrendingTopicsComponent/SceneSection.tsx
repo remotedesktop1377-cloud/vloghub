@@ -56,6 +56,7 @@ import MediaManagementDialog from '../../dialogs/MediaManagementDialog';
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
+import Image from 'next/image';
 
 // Map effect ids to human-readable names for project-level effects display
 const EFFECT_NAME_MAP: Record<string, string> = {
@@ -231,7 +232,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
       // When clicking preview image, use formatSceneDataImages
       images = formatSceneDataImages(
         SceneDataImages,
-        sceneData.previewImage || '',
+        sceneData.gammaPreviewImage || '',
       );
     } else {
       // When clicking on selected images, get all images from sceneData.assets.images
@@ -1101,7 +1102,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                               mb: 1
                                             }}>
                                               {(() => {
-                                                const previewUrl = sceneData.previewImage || '';
+                                                const previewUrl = sceneData.gammaPreviewImage || '';
                                                 // console.log('Preview URL:', previewUrl);
                                                 const handlePreviewClick = (e: any) => {
                                                   e.stopPropagation();
@@ -1119,18 +1120,20 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     justifyContent: 'center'
                                                   }} onClick={handlePreviewClick}>
                                                     {previewUrl ? (
-                                                      <img
-                                                        src={previewUrl}
+                                                      <Image
+                                                        width={100}
+                                                        height={100}
+                                                        src={HelperFunctions.normalizeGoogleDriveUrl(previewUrl)}
                                                         alt={`Preview media ${index + 1}`}
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                       />
                                                     ) : (
-                                                      <>
+                                                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
                                                         <CircularProgress size={24} />
                                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.25rem', mb: 0.5, mr: 1 }}>
                                                           Generating Preview...
                                                         </Typography>
-                                                      </>
+                                                      </Box>
                                                     )}
                                                   </Box>
                                                 );

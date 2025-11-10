@@ -370,7 +370,7 @@ const ScriptProductionClient = () => {
 
     const closeProjectSettingsDialog = () => {
         setProjectSettingsDialogOpen(false);
-    };
+    };  
 
     const applyProjectSettingsDialog = async () => {
 
@@ -635,7 +635,7 @@ const ScriptProductionClient = () => {
             }
             const mapped = scriptData.scenesData?.map((ch, idx) => ({
                 ...ch,
-                previewImage: images[idx] || '',
+                gammaPreviewImage: images[idx] || '',
             }));
             console.log('PDF pages:', totalPages, 'Rendered images:', mapped || []);
             setScenesData(mapped || [] as SceneData[]);
@@ -644,11 +644,11 @@ const ScriptProductionClient = () => {
             if (mapped && mapped.length > 0) {
                 for (let i = 0; i < mapped.length; i++) {
                     const ch: SceneData = mapped[i];
-                    if (!ch?.previewImage) continue;
+                    if (!ch?.gammaPreviewImage) continue;
                     try {
-                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobId, ch.id ?? i + 1, ch.previewImage);
+                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobId, ch.id ?? i + 1, ch.gammaPreviewImage);
                         if (uploadResult.success) {
-                            ch.previewImageWebviewLink = uploadResult.result.webViewLink;
+                            ch.gammaPreviewImage = uploadResult.result.webViewLink;
                             await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, ch, 'Preview image uploaded');
                         }
                     } catch { }
@@ -685,7 +685,7 @@ const ScriptProductionClient = () => {
                         assets: {
                             images: ch.assets?.images || [],
                         },
-                        previewImage: ch.previewImage || scriptData.scenesData![index]?.previewImage || '',
+                        gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
                     }));
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
                     setScenesData(normalizedFromStorage);
@@ -702,7 +702,7 @@ const ScriptProductionClient = () => {
                     ) {
                         // Determine if any scene is missing a previewImage
                         const hasMissingPreviewImages = scriptData.scenesData.some(
-                            (scene: any) => !scene.previewImage
+                            (scene: any) => !scene.gammaPreviewImage
                         );
                         if (hasMissingPreviewImages) {
                             convertPdfToImages(scriptData);

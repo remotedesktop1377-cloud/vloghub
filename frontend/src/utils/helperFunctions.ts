@@ -903,7 +903,7 @@ export class HelperFunctions {
   static extractGoogleDriveFileId(inputUrl: string): string | null {
     try {
       if (!inputUrl || typeof inputUrl !== 'string') return null;
-      
+
       // Only process drive.google.com links
       if (!inputUrl.includes('drive.google.com')) {
         return null;
@@ -956,12 +956,13 @@ export class HelperFunctions {
   static normalizeGoogleDriveUrl(inputUrl: string): string {
     try {
       if (!inputUrl || typeof inputUrl !== 'string') return inputUrl;
-      
+
       // Extract file ID from the URL
       const fileId = HelperFunctions.extractGoogleDriveFileId(inputUrl);
-      
+
       // If we found a file ID, use our authenticated proxy endpoint
       if (fileId) {
+        // console.log('🟡 Normalized Google Drive URL:', `/api/google-drive-media?id=${encodeURIComponent(fileId)}`);
         return `/api/google-drive-media?id=${encodeURIComponent(fileId)}`;
       }
 

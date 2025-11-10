@@ -151,7 +151,7 @@ export const GoogleDriveServiceFunctions = {
                     ...(mergedVideos.length > 0 ? { videos: mergedVideos } : {}),
                 },
                 sceneSettings,
-                previewImageWebviewLink: SceneDataWithAssets.previewImageWebviewLink || '',
+                gammaPreviewImage: SceneDataWithAssets.gammaPreviewImage || '',
             };
             console.log('Updating scene on Drive:', scene);
 
