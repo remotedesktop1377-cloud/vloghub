@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import styles from './ProfileDropdown.module.css';
 import { HelperFunctions, secure } from '../../utils/helperFunctions';
 import { SupabaseHelpers } from '../../utils/SupabaseHelpers';
-import { profileService, BackgroundItem } from '../../services/profileService';
+import { profileService, BackgroundItem, LibraryData } from '../../services/profileService';
 import { toast } from 'react-toastify';
 import { GoogleDriveServiceFunctions } from '../../services/googleDriveService';
 
@@ -73,7 +73,7 @@ export const ProfileDropdown: React.FC = () => {
             setThemeName(profileSettings.themeName);
           }
         }
-        
+
       } catch {
         if (mounted) {
           const keys = HelperFunctions.getSocialAuthKeys(user.id);
@@ -87,18 +87,14 @@ export const ProfileDropdown: React.FC = () => {
 
   // Load backgrounds from cache on mount
   useEffect(() => {
-    const cachedBackgrounds = GoogleDriveServiceFunctions.getCachedBackgrounds();
-    if (cachedBackgrounds && cachedBackgrounds.length > 0) {
-      console.log('🟡 Loading backgrounds from cache');
-      setBackgrounds(cachedBackgrounds);
-    }
+    loadLibraryData(false);
   }, []);
 
-  const loadBackgrounds = async (forceRefresh: boolean = false) => {
+  const loadLibraryData = async (forceRefresh: boolean = false) => {
     setLoadingBackgrounds(true);
     try {
-      const backgroundsList = await GoogleDriveServiceFunctions.loadBackgrounds(forceRefresh);
-      setBackgrounds(backgroundsList);
+      const backgroundsList: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(forceRefresh);
+      setBackgrounds(backgroundsList?.backgrounds);
     } catch (error) {
       console.error('Error refreshing backgrounds:', error);
       toast.error('Failed to refresh backgrounds');
@@ -424,7 +420,7 @@ export const ProfileDropdown: React.FC = () => {
                     <h3 className={styles.sectionTitle}>Background</h3>
                     <button
                       className={styles.refreshBtn}
-                      onClick={() => loadBackgrounds(true)}
+                      onClick={() => loadLibraryData(true)}
                       disabled={loadingBackgrounds}
                       title="Refresh backgrounds"
                     >

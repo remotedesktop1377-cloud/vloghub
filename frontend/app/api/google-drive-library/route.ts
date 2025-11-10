@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const category = (searchParams.get('category') || '').toLowerCase();
-    const allowList = ['backgrounds', 'music', 'transitions', 'all'];
+    const allowList = ['backgrounds', 'music', 'transitions', 'transition-effects', 'all'];
     const requested = allowList.includes(category) ? category : 'all';
 
     // Get authenticated Drive client
@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
     const backgroundsIdEnv = process.env.GOOGLE_DRIVE_BACKGROUND_FOLDER_ID || '';
     const musicIdEnv = process.env.GOOGLE_DRIVE_MUSIC_FOLDER_ID || '';
     const transitionsIdEnv = process.env.GOOGLE_DRIVE_TRANSITIONS_FOLDER_ID || '';
+    const transitionEffectsIdEnv = process.env.GOOGLE_DRIVE_TRANSITION_EFFECTS_FOLDER_ID || '';
 
     // Cache key
     const cacheKey = `library:${requested}:${rootId}:${backgroundsIdEnv}:${musicIdEnv}:${transitionsIdEnv}`;
@@ -91,12 +92,14 @@ export async function GET(req: NextRequest) {
     let backgroundsId = backgroundsIdEnv;
     let musicId = musicIdEnv;
     let transitionsId = transitionsIdEnv;
+    let transitionEffectsId = transitionEffectsIdEnv;
 
     if ((!backgroundsId || !musicId || !transitionsId) && rootId) {
       // Attempt to resolve subfolders by conventional names if missing in env
       if (!backgroundsId) backgroundsId = (await resolveSubfolderId(drive, rootId, 'backgrounds')) || backgroundsIdEnv;
       if (!musicId) musicId = (await resolveSubfolderId(drive, rootId, 'music')) || musicIdEnv;
       if (!transitionsId) transitionsId = (await resolveSubfolderId(drive, rootId, 'transitions')) || transitionsIdEnv;
+      if (!transitionEffectsId) transitionEffectsId = (await resolveSubfolderId(drive, rootId, 'transition-effects')) || transitionEffectsIdEnv;
     }
 
     const result: any = { meta: { rootId, requested }, data: {} };
@@ -125,6 +128,15 @@ export async function GET(req: NextRequest) {
         result.meta.transitionsWarning = 'Missing transitions folder id';
       } else {
         result.data.transitions = await listCategory(drive, transitionsId);
+      }
+    }
+
+    if (requested === 'transition-effects' || requested === 'all') {
+      if (!transitionEffectsId) {
+        result.data.transitionEffects = [];
+        result.meta.transitionEffectsWarning = 'Missing transition effects folder id';
+      } else {
+        result.data.transitionEffects = await listCategory(drive, transitionEffectsId);
       }
     }
 

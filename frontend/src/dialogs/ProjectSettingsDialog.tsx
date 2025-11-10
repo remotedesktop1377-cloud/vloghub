@@ -81,7 +81,7 @@ interface ProjectSettingsDialogProps {
     setLastMusicIdLoaded: (id: string | null) => void;
 
     // External dependencies
-    driveLibrary: { backgrounds?: any[]; music?: any[]; transitions?: any[] };
+    driveLibrary: { backgrounds?: any[]; music?: any[]; transitions?: any[], transitionEffects?: any[] };
     setVideoPreviewUrl: (url: string) => void;
     setVideoPreviewOpen: (open: boolean) => void;
     jobId?: string;
@@ -118,6 +118,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [backgrounds, setBackgrounds] = useState<any[]>(driveLibrary?.backgrounds || []);
     const [music, setMusic] = useState<any[]>(driveLibrary?.music || []);
+    const [transitions, setTransitions] = useState<any[]>(driveLibrary?.transitions || []);
+    const [transitionEffects, setTransitionEffects] = useState<any[]>(driveLibrary?.transitionEffects || []);
     const [selectedBackground, setSelectedBackground] = useState<any>(null);
     const [loadingLibraryData, setLoadingLibraryData] = useState<boolean>(false);
     const [videoError, setVideoError] = useState(false);
@@ -150,6 +152,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                 setBackgrounds(cachedLibraryData.backgrounds);
                 // Set music from cache
                 setMusic(cachedLibraryData.music);
+                setTransitions(cachedLibraryData.transitions);
             } else {
                 // Fallback to driveLibrary if cache is empty or missing
                 if (driveLibrary && driveLibrary.backgrounds) {
@@ -159,35 +162,49 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                 if (driveLibrary.music) {
                     setMusic(driveLibrary.music);
                 }
+
+                if (driveLibrary.transitions) {
+                    setTransitions(driveLibrary.transitions);
+                }
+
+                if (driveLibrary.transitionEffects) {
+                    setTransitionEffects(driveLibrary.transitionEffects);
+                }
             }
         }
     }, [open]);
 
-    // Utility function to get playable video URLs from Google Drive
-    const getPlayableVideoUrls = (background: any): string[] => {
-        const fileId = background.id;
-        if (!fileId) return [];
-
-        const urls: string[] = [];
-
-        // Method 1: Use our API proxy endpoint (best for .mp4 and .mov files)
-        // This endpoint handles authentication and streaming properly
-        urls.push(`${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${fileId}`);
-
-        // Method 2: Direct Google Drive streaming URL
-        urls.push(`https://drive.google.com/uc?id=${fileId}`);
-
-        // Method 3: Alternative streaming format
-        urls.push(`https://drive.google.com/file/d/${fileId}/preview`);
-
-        // Method 4: Using the original webContentLink if available
+    // Utility function to get playable video URL from Google Drive
+    // Uses the authenticated proxy endpoint like images do
+    const getPlayableVideoUrl = (background: any): string => {
+        if (!background) return '';
+        
+        // If webContentLink exists, normalize it (extract file ID and use proxy)
         if (background.webContentLink) {
-            urls.push(background.webContentLink);
+            return HelperFunctions.normalizeGoogleDriveUrl(background.webContentLink);
         }
-
-        // Remove duplicates and return unique URLs
-        return Array.from(new Set(urls.filter(Boolean)));
+        
+        // If we have an ID, use the proxy endpoint directly
+        if (background.id) {
+            return `/api/google-drive-media?id=${encodeURIComponent(background.id)}`;
+        }
+        
+        return '';
     };
+
+    // Update video source when selectedBackground changes
+    useEffect(() => {
+        if (selectedBackground && videoRef.current) {
+            const videoUrl = getPlayableVideoUrl(selectedBackground);
+            if (videoUrl) {
+                videoRef.current.src = videoUrl;
+                videoRef.current.load(); // Force reload the video
+            }
+        } else if (!selectedBackground && videoRef.current) {
+            // Clear video source when no background is selected
+            videoRef.current.src = '';
+        }
+    }, [selectedBackground]);
 
     const refreshLibraryData = async () => {
         setLoadingLibraryData(true);
@@ -712,10 +729,11 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             setSelectedBackground(background);
                                             setVideoError(false);
                                             setVideoLoading(false);
-                                            // Set as clip
+                                            // Set as clip - normalize the URL for proper playback
+                                            const normalizedUrl = HelperFunctions.normalizeGoogleDriveUrl(background.webContentLink || `https://drive.google.com/file/d/${background.id}/view`);
                                             onTmpClipChange({
                                                 name: background.name,
-                                                url: background.webContentLink
+                                                url: normalizedUrl
                                             });
                                         }
                                     }}
@@ -770,8 +788,9 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             <>
                                                 <video
                                                     ref={videoRef}
+                                                    src={getPlayableVideoUrl(selectedBackground)}
                                                     muted
-                                                    playsInline
+                                                    autoPlay
                                                     loop
                                                     onError={handleVideoError}
                                                     onLoadStart={handleVideoLoadStart}
@@ -779,9 +798,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                                     onCanPlay={handleVideoLoaded}
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
                                                 >
-                                                    {/* {getPlayableVideoUrls(selectedBackground).map((url, index) => (
-                                                        <source key={index} src={url} type="video/mp4" />
-                                                    ))} */}
                                                     Your browser does not support the video tag.
                                                 </video>
                                                 {videoLoading && (
@@ -796,30 +812,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                                         <CircularProgress size={24} sx={{ color: 'white' }} />
                                                     </Box>
                                                 )}
-                                                {!videoLoading && (
-                                                    <Box sx={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        pointerEvents: 'none',
-                                                        bgcolor: 'rgba(0,0,0,0.3)'
-                                                    }}>
-                                                        <Box sx={{
-                                                            width: 48,
-                                                            height: 48,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: 'rgba(255,255,255,0.2)',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            backdropFilter: 'blur(8px)'
-                                                        }}>
-                                                            <PlayIcon sx={{ color: '#fff', ml: 0.5 }} />
-                                                        </Box>
-                                                    </Box>
-                                                )}
+                                                
                                             </>
                                         )}
                                     </Box>

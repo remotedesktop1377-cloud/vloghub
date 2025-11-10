@@ -16,6 +16,7 @@ export interface LibraryData {
     backgrounds: BackgroundItem[];
     music: any[];
     transitions: any[];
+    transitionEffects: any[];
 }
 
 export interface ProfileService {
@@ -67,7 +68,8 @@ class ProfileServiceImpl implements ProfileService {
             return {
                 backgrounds: data?.data?.backgrounds || [],
                 music: data?.data?.music || [],
-                transitions: data?.data?.transitions || []
+                transitions: data?.data?.transitions || [],
+                transitionEffects: data?.data?.transitionEffects || []
             };
         } catch (error) {
             console.error('Error fetching library data:', error);
@@ -75,7 +77,8 @@ class ProfileServiceImpl implements ProfileService {
             return {
                 backgrounds: [],
                 music: [],
-                transitions: []
+                transitions: [],
+                transitionEffects: []
             };
         }
     }

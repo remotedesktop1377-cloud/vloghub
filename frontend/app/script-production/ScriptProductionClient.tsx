@@ -112,7 +112,8 @@ const ScriptProductionClient = () => {
     const [driveLibrary, setDriveLibrary] = useState<LibraryData>({
         backgrounds: [],
         music: [],
-        transitions: []
+        transitions: [],
+        transitionEffects: []
     });
     // Project-level settings
     const [projectLogo, setProjectLogo] = useState<{ name?: string; url: string; position?: string } | null>(null);
@@ -330,7 +331,8 @@ const ScriptProductionClient = () => {
             setDriveLibrary({
                 backgrounds: [],
                 music: [],
-                transitions: []
+                transitions: [],
+                transitionEffects: []
             });
         }
     };
