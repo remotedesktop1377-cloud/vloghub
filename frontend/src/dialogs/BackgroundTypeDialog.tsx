@@ -29,21 +29,21 @@ const BackgroundTypeDialog: React.FC<BackgroundTypeDialogProps> = ({
 }) => {
     const backgroundTypes = [
         {
-            id: 'chroma',
+            id: BackgroundType.CHROMA,
             title: 'Chroma Background',
             description: 'Video with green screen or chroma key background for easy background replacement',
             icon: <ChromaIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
             color: 'primary'
         },
         {
-            id: 'fixed',
+            id: BackgroundType.COLOR,
             title: 'Fixed Color Background',
             description: 'Video with a solid color background (white, black, or other solid colors)',
             icon: <ColorIcon sx={{ fontSize: 40, color: 'secondary.main' }} />,
             color: 'secondary'
         },
         {
-            id: 'event',
+            id: BackgroundType.EVENT,
             title: 'Event Based Background',
             description: 'Live event, outdoor recording, or video with complex real-world backgrounds',
             icon: <EventIcon sx={{ fontSize: 40, color: 'success.main' }} />,

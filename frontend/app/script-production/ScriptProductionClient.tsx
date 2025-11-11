@@ -48,7 +48,6 @@ import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
 import PdfService from '@/services/pdfService';
 import { SceneData } from '@/types/sceneData';
-import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
 import ChromaKeyUpload from '@/components/scriptProductionComponents/ChromaKeyUpload';
 import { DropResult } from 'react-beautiful-dnd';
@@ -58,7 +57,7 @@ import { PDF_TO_IMAGES_INTERVAL, ROUTES_KEYS, SCRIPT_STATUS } from '@/data/const
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import CustomAudioPlayer from '@/components/scriptProductionComponents/CustomAudioPlayer';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
-import { ScriptData } from '@/types/scriptData';
+import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from '@/types/scriptData';
 import { BackgroundType } from '@/types/backgroundType';
 import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
 import ProjectSettingsDialog from '@/dialogs/ProjectSettingsDialog';
@@ -107,6 +106,7 @@ const ScriptProductionClient = () => {
     const [loading, setLoading] = useState(false);
     const [isNarratorVideoUploaded, setIsNarratorVideoUploaded] = useState(false);
     const [isNarrationUploadView, setIsNarrationUploadView] = useState(false);
+    const [hasDownloadedScript, setHasDownloadedScript] = useState(false);
     const [selectedText, setSelectedText] = useState<{ SceneDataIndex: number; text: string; startIndex: number; endIndex: number } | null>(null);
     const [isInteractingWithToolbar, setIsInteractingWithToolbar] = useState(false);
     const [driveLibrary, setDriveLibrary] = useState<LibraryData>({
@@ -117,11 +117,7 @@ const ScriptProductionClient = () => {
     });
     // Project-level settings
     const [projectLogo, setProjectLogo] = useState<{ name?: string; url: string; position?: string } | null>(null);
-    const [projectTransitionId, setProjectTransitionId] = useState<string>('');
-    const [projectMusic, setProjectMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
-    const [projectVideoClip, setProjectVideoClip] = useState<{ name?: string; url: string } | null>(null);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
-    const [projectTransitionEffects, setProjectTransitionEffects] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
     const [isMusicLoading, setIsMusicLoading] = useState(false);
@@ -140,13 +136,8 @@ const ScriptProductionClient = () => {
     const [projectSettingsDialogOpen, setProjectSettingsDialogOpen] = useState(false);
     const [projectSettingsContext, setProjectSettingsContext] = useState<{ mode: 'project' | 'scene'; sceneIndex?: number }>({ mode: 'project' });
     // Temp state used inside dialog for cancel/discard behavior
-    const [tmpTransitionId, setTmpTransitionId] = useState<string>('');
-    const [tmpMusic, setTmpMusic] = useState<{ selectedMusic: string; volume: number; autoAdjust?: boolean; fadeIn?: boolean; fadeOut?: boolean } | null>(null);
-    const [tmpLogo, setTmpLogo] = useState<{ name?: string; url: string; position?: string } | null>(null);
-    const [tmpClip, setTmpClip] = useState<{ name?: string; url: string } | null>(null);
-    const [tmpEffects, setTmpEffects] = useState<string[]>([]);
-    // Seed snapshot for change detection
-    const projectSettingsSeedRef = useRef<{ transition?: string; music?: any; logo?: any; clip?: any; effects?: string[] } | null>(null);
+    const [projectSettings, setProjectSettings] = useState<Settings | null>(null);
+    const [sceneSettings, setSceneSettings] = useState<Settings | null>(null);
 
     useEffect(() => {
         let storedData = null;
@@ -158,11 +149,17 @@ const ScriptProductionClient = () => {
                 storedData = storedMetadata;
                 console.log('storedData', JSON.stringify(storedData, null, 2));
                 setScriptData(storedData);
+
+                // Use scriptData flag to restore download state
+                if (storedData.isScriptDownloaded === true) {
+                    setHasDownloadedScript(true);
+                }
                 if (storedData.status === SCRIPT_STATUS.APPROVED || storedData.status === SCRIPT_STATUS.UPLOADED) {
                     setJobId(storedData.jobId);
                     setIsScriptApproved(true);
-                    setIsNarrationUploadView(true);
-                    setPageTitle('Step 2: Narrator Video Upload Stage');
+                    // Only open upload view if user has downloaded the script
+                    setIsNarrationUploadView(Boolean(hasDownloadedScript));
+                    setPageTitle(Boolean(hasDownloadedScript) ? 'Step 2: Narrator Video Upload Stage' : 'Script Approved - Download Script to Continue');
                 }
 
                 if (storedData.status === SCRIPT_STATUS.UPLOADED && storedData.narrator_chroma_key_link) {
@@ -170,6 +167,7 @@ const ScriptProductionClient = () => {
                     setIsNarratorVideoUploaded(true);
                     setVideoDuration(storedData.videoDuration || null);
                     setPageTitle('Final Step: Scene Composition & Video Generation');
+                    setProjectSettings(storedData.projectSettings || null);
 
                     if (storedData.transcription) {
                         updateParagraphs(storedData);
@@ -193,7 +191,13 @@ const ScriptProductionClient = () => {
 
     }, []);
 
-
+    // Keep narration upload view in sync with download gate
+    useEffect(() => {
+        if (isScriptApproved && !isNarratorVideoUploaded) {
+            setIsNarrationUploadView(Boolean(hasDownloadedScript));
+            setPageTitle(Boolean(hasDownloadedScript) ? 'Step 2: Narrator Video Upload Stage' : 'Script Approved - Download Script to Continue');
+        }
+    }, [isScriptApproved, hasDownloadedScript, isNarratorVideoUploaded]);
 
     // Handle browser back button
     useEffect(() => {
@@ -228,26 +232,6 @@ const ScriptProductionClient = () => {
             window.removeEventListener('popstate', handlePopState);
         };
     }, []);
-
-    useEffect(() => {
-        if (scriptData?.transcription && scenesData && scenesData.length > 0) {
-            const needsHighlights = scenesData.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
-            if (needsHighlights) {
-                setLoading(true);
-                HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setScenesData, (scenesData) => {
-                    // console.log('SceneData with highlights', SceneData);
-                    setLoading(false);
-                    // save updated SceneData
-                    const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
-                    setScriptData(updatedScriptData);
-                    SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-                });
-            } else {
-                setLoading(false);
-            }
-
-        }
-    }, [scenesData]);
 
     // Global selection listener
     React.useEffect(() => {
@@ -341,64 +325,39 @@ const ScriptProductionClient = () => {
         setProjectSettingsContext({ mode, sceneIndex });
         if (mode === 'scene' && typeof sceneIndex === 'number') {
             const ch = scenesData[sceneIndex];
-            const ve: any = (ch as any)?.videoEffects || {};
-            const seedTransition = ve.transition || projectTransitionId || '';
-            const seedMusic = ve.backgroundMusic ? { ...ve.backgroundMusic } : (projectMusic ? { ...projectMusic } : null);
-            const seedLogo = ve.logo ? { ...ve.logo } : (projectLogo ? { ...projectLogo } : null);
-            const seedClip = ve.clip ? { ...ve.clip } : (projectVideoClip ? { ...projectVideoClip } : null);
-            const seedEffects = Array.isArray(ve.transitionEffects) ? [...ve.transitionEffects] : ([...(projectTransitionEffects || [])]);
-            setTmpTransitionId(seedTransition);
-            setTmpMusic(seedMusic);
-            setTmpLogo(seedLogo);
-            setTmpClip(seedClip);
-            setTmpEffects(seedEffects);
-            projectSettingsSeedRef.current = { transition: seedTransition, music: seedMusic, logo: seedLogo, clip: seedClip, effects: seedEffects };
-        } else {
-            // seed temporary state from current project selections
-            const seedTransition = projectTransitionId || '';
-            const seedMusic = projectMusic ? { ...projectMusic } : null;
-            const seedLogo = projectLogo ? { ...projectLogo } : null;
-            const seedClip = projectVideoClip ? { ...projectVideoClip } : null;
-            const seedEffects = [...(projectTransitionEffects || [])];
-            setTmpTransitionId(seedTransition);
-            setTmpMusic(seedMusic);
-            setTmpLogo(seedLogo);
-            setTmpClip(seedClip);
-            setTmpEffects(seedEffects);
-            projectSettingsSeedRef.current = { transition: seedTransition, music: seedMusic, logo: seedLogo, clip: seedClip, effects: seedEffects };
+            setSceneSettings(ch?.sceneSettings || null);
         }
         setProjectSettingsDialogOpen(true);
     };
 
     const closeProjectSettingsDialog = () => {
         setProjectSettingsDialogOpen(false);
-    };  
+    };
 
-    const applyProjectSettingsDialog = async () => {
+    const applyProjectSettingsDialog = async (mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => {
 
         setProjectSettingsDialogOpen(false);
-
         // Apply to scenes according to context
-        if (projectSettingsContext.mode === 'project') {
+        if (mode === 'project') {
             // Update project-level states from temp (global apply)
-            setProjectTransitionId(tmpTransitionId || '');
-            setProjectMusic(tmpMusic ? { selectedMusic: tmpMusic.selectedMusic } as any : null);
-            setProjectLogo(tmpLogo ? { ...tmpLogo } : null);
-            setProjectVideoClip(tmpClip ? { ...tmpClip } : null);
-            setProjectTransitionEffects([...(tmpEffects || [])]);
+            const updatedProjectSettings: Settings = {
+                videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
+                videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
+                videoBackgroundVideo: projectSettings?.videoBackgroundVideo as SettingItemInterface,
+                videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
+            }
+
             const updated: SceneData[] = scenesData.map((ch) => ({
                 ...(ch as any),
-                videoEffects: {
-                    ...(ch as any).videoEffects,
-                    transition: tmpTransitionId || '',
-                    backgroundMusic: tmpMusic ? ({ selectedMusic: tmpMusic.selectedMusic } as any) : null,
-                    logo: tmpLogo || null,
-                    clip: tmpClip || null,
-                    transitionEffects: tmpEffects || [],
+                sceneSettings: {
+                    ...(ch as any).sceneSettings,
+                    ...updatedProjectSettings,
                 }
             }));
             setScenesData(updated);
-            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updated });
+            
+            SecureStorageHelpers.setScriptMetadata({ ...scriptData, projectSettings: updatedProjectSettings, scenesData: updated });
+
             try {
                 for (let i = 0; i < updated.length; i++) {
                     await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[i], 'Project settings applied to all scenes');
@@ -406,63 +365,27 @@ const ScriptProductionClient = () => {
             } catch { }
 
         } else if (projectSettingsContext.mode === 'scene' && typeof projectSettingsContext.sceneIndex === 'number') {
+
+            const updatedSceneSettings: Settings = {
+                videoLogo: sceneSettings?.videoLogo as LogoOverlayInterface,
+                videoBackgroundMusic: sceneSettings?.videoBackgroundMusic as SettingItemInterface,
+                videoBackgroundVideo: sceneSettings?.videoBackgroundVideo as SettingItemInterface,
+                videoTransitionEffect: sceneSettings?.videoTransitionEffect as SettingItemInterface,
+            };
+
             const idx = projectSettingsContext.sceneIndex;
-            const seed = projectSettingsSeedRef.current;
-            const updated: SceneData[] = scenesData.map((ch, i) => {
+            const updatedSceneData: SceneData[] = scenesData.map((ch, i) => {
                 if (i !== idx) return ch;
-                const currentVE: any = (ch as any).videoEffects || {};
-                // Only replace fields that changed compared to seed
-                const nextVE: any = { ...currentVE };
-                if (!seed || seed.transition !== tmpTransitionId) nextVE.transition = tmpTransitionId || '';
-                if (!seed || JSON.stringify(seed.music || null) !== JSON.stringify(tmpMusic ? { selectedMusic: tmpMusic.selectedMusic } : null)) nextVE.backgroundMusic = tmpMusic ? ({ selectedMusic: tmpMusic.selectedMusic } as any) : null;
-                if (!seed || JSON.stringify(seed.logo || null) !== JSON.stringify(tmpLogo || null)) nextVE.logo = tmpLogo || null;
-                if (!seed || JSON.stringify(seed.clip || null) !== JSON.stringify(tmpClip || null)) nextVE.clip = tmpClip || null;
-                if (!seed || JSON.stringify(seed.effects || []) !== JSON.stringify(tmpEffects || [])) nextVE.transitionEffects = tmpEffects || [];
-                return ({ ...(ch as any), videoEffects: nextVE });
+                return { ...(ch as any), sceneSettings: { ...(ch as any).sceneSettings, ...updatedSceneSettings } };
             });
-            setScenesData(updated);
-            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updated });
+            setScenesData(updatedSceneData);
+            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updatedSceneData });
 
             try {
-                await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[idx], 'Project settings applied to scene');
+                await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[idx], 'Project settings applied to scene');
             } catch { }
         }
 
-    };
-
-    const handleToggleBackgroundMusic = async () => {
-        try {
-            const id = (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '';
-            if (!id) return;
-            const src = `${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${id}`;
-            if (!audioRef.current) {
-                audioRef.current = new Audio();
-                audioRef.current.addEventListener('playing', () => setIsMusicPlaying(true));
-                audioRef.current.addEventListener('ended', () => setIsMusicPlaying(false));
-                audioRef.current.addEventListener('canplaythrough', () => setIsMusicLoading(false));
-                audioRef.current.addEventListener('error', () => setIsMusicLoading(false));
-            }
-            // Toggle logic: pause if currently playing same source; otherwise (re)load and play
-            if (isMusicPlaying && audioRef.current.src.includes(id)) {
-                audioRef.current.pause();
-                setIsMusicPlaying(false);
-                return;
-            }
-            // If the same id was already loaded previously, do not reload; just resume
-            if (lastMusicIdLoaded === id && audioRef.current.src.includes(id)) {
-                setIsMusicLoading(false);
-            } else {
-                setIsMusicLoading(true);
-                if (!audioRef.current.src.includes(id)) {
-                    audioRef.current.src = src;
-                }
-                setLastMusicIdLoaded(id);
-            }
-            await audioRef.current.play();
-        } catch {
-            setIsMusicLoading(false);
-            setIsMusicPlaying(false);
-        }
     };
 
     // Function to upload JSON to Google Drive
@@ -470,31 +393,31 @@ const ScriptProductionClient = () => {
         setLoading(true);
         try {
             // Ensure each SceneData has assets.images populated with all selected sources
-            const SceneDataForUpload: SceneData[] = scenesData.map((ch) => {
-                const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
-                const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
-                const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
-                const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
-                const combined = Array.from(new Set([
-                    ...existingImages,
-                    ...googleImages,
-                    ...envatoImages,
-                    ...keywordImages,
-                ].filter(Boolean)));
-                return {
-                    ...ch,
-                    assets: {
-                        ...ch.assets,
-                        images: combined,
-                        imagesGoogle: googleImages,
-                        imagesEnvato: envatoImages,
-                    }
-                } as SceneData;
-            });
+            // const SceneDataForUpload: SceneData[] = scenesData.map((ch) => {
+            //     const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
+            //     const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
+            //     const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
+            //     const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
+            //     const combined = Array.from(new Set([
+            //         ...existingImages,
+            //         ...googleImages,
+            //         ...envatoImages,
+            //         ...keywordImages,
+            //     ].filter(Boolean)));
+            //     return {
+            //         ...ch,
+            //         assets: {
+            //             ...ch.assets,
+            //             images: combined,
+            //             imagesGoogle: googleImages,
+            //             imagesEnvato: envatoImages,
+            //         }
+            //     } as SceneData;
+            // });
 
             const scriptProductionJSON = {
                 project: {
-                    jobName: jobId,
+                    jobId: jobId,
                     topic: scriptData?.topic || null,
                     title: scriptData?.title || null,
                     description: scriptData?.description || null,
@@ -507,17 +430,16 @@ const ScriptProductionClient = () => {
                     narrator_chroma_key_link: scriptData?.narrator_chroma_key_link || null,
                     transcription: scriptData?.transcription || null,
                     // Project-level settings
-                    videoEffects: {
-                        transition: projectTransitionId || '',
-                        logo: projectLogo,
-                        backgroundMusic: projectMusic,
-                        clip: projectVideoClip,
-                        transitionEffects: projectTransitionEffects,
+                    projectSettings: {
+                        videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
+                        videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
+                        videoBackgroundVideo: projectSettings?.videoBackgroundVideo as SettingItemInterface,
+                        videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
                     },
                 },
                 // Use SceneDataForUpload to ensure merged images are included
                 script: scenesData.map(sceneData => ({
-                    jobId: '',
+                    jobId: jobId,
                     id: sceneData.id,
                     narration: sceneData.narration,
                     duration: sceneData.duration,
@@ -530,6 +452,15 @@ const ScriptProductionClient = () => {
                     assets: {
                         images: sceneData.assets?.images || [],
                     },
+                    gammaGenId: sceneData?.gammaGenId || '',
+                    gammaUrl: sceneData?.gammaUrl || '',
+                    previewImage: sceneData?.gammaPreviewImage || '',
+                    sceneSettings: {
+                        videoLogo: sceneData.sceneSettings?.videoLogo as LogoOverlayInterface,
+                        videoTransitionEffect: sceneData.sceneSettings?.videoTransitionEffect as SettingItemInterface,
+                        videoBackgroundMusic: sceneData.sceneSettings?.videoBackgroundMusic as SettingItemInterface,
+                        videoBackgroundVideo: sceneData.sceneSettings?.videoBackgroundVideo as SettingItemInterface,
+                    },
                 })),
             };
 
@@ -538,44 +469,18 @@ const ScriptProductionClient = () => {
             form.append('fileName', `project-config.json`);
             form.append('jsonData', JSON.stringify(scriptProductionJSON));
 
-            // // Add chroma key file if available
-            // if (chromaKeyFile) {
-            //     form.append('file', chromaKeyFile);
+            console.log('scriptProductionJSON: ', JSON.stringify(scriptProductionJSON, null, 2));
+
+            // const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
+            // if (!uploadResult.success) {
+            //     toast.error(uploadResult.result || 'Failed to upload to Google Drive');
+            //     return;
             // }
+            // // console.log('Drive result:', uploadResult.result);
 
-            const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
-            if (!uploadResult.success) {
-                toast.error(uploadResult.result || 'Failed to upload to Google Drive');
-                return;
-            }
-            console.log('Drive result:', uploadResult.result);
-            setCompleteProjectUploaded(true);
-
-            // Store scene folder mapping for future updates
-            // const sceneFolderMap: Record<string, string> = {};
-            // if (result.images?.scenes) {
-            //     result.images.scenes.forEach((scene: any) => {            
-            //         sceneFolderMap[scene.sceneId] = scene.folderId;
-            //     });
-            // }
-
-            // const jobId = result.projectFolderId;
-
-            // // Update SceneData with their corresponding folder IDs
-            // const updatedSceneData = SceneData.map((SceneData, index) => {
-            //     const sceneId = `Scene ${index + 1}`;
-            //     // const folderId = sceneFolderMap[sceneId];
-            //     return {
-            //         ...SceneData,
-            //         // id: folderId || SceneData.id, // Replace with folder ID if available
-            //         jobId: jobId,
-            //         jobName: jobName,
-            //     };
-            // });
-            // setScenesData(updatedSceneData);
-
-            setLoading(false);
-            setShowBackConfirmation(true);
+            // setCompleteProjectUploaded(true);
+            // setLoading(false);
+            // setShowBackConfirmation(true);
 
         } catch (e: any) {
             console.error(e);
@@ -612,7 +517,7 @@ const ScriptProductionClient = () => {
                         SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                         // PDF -> Images (one per scene) and populate preview images
-                        convertPdfToImages(updatedScriptData);
+                        convertGammaPdfToImages(updatedScriptData);
                     } else {
                         setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
                     }
@@ -624,7 +529,7 @@ const ScriptProductionClient = () => {
         } catch { }
     };
 
-    const convertPdfToImages = async (scriptData: ScriptData) => {
+    const convertGammaPdfToImages = async (scriptData: ScriptData) => {
         try {
             const arrayBuffer = await PdfService.fetchPdfArrayBuffer(scriptData.gammaExportUrl!);
             // First, split: get total pages
@@ -657,9 +562,10 @@ const ScriptProductionClient = () => {
                         }
                     } catch { }
                 }
+
+                SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
             }
 
-            SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
         } catch (e: any) {
             console.error('Failed to convert PDF to images:', e?.message || 'Unknown error');
         }
@@ -690,32 +596,66 @@ const ScriptProductionClient = () => {
                             images: ch.assets?.images || [],
                         },
                         gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
+                        sceneSettings: ch.sceneSettings || scriptData.scenesData![index]?.sceneSettings || {
+                            videoLogo: ch.sceneSettings?.videoLogo || scriptData.scenesData![index]?.sceneSettings?.videoLogo || '',
+                            videoTransitionEffect: ch.sceneSettings?.videoTransitionEffect || scriptData.scenesData![index]?.sceneSettings?.videoTransitionEffect || '',
+                            videoBackgroundMusic: ch.sceneSettings?.videoBackgroundMusic || scriptData.scenesData![index]?.sceneSettings?.videoBackgroundMusic || '',
+                            videoBackgroundVideo: ch.sceneSettings?.videoBackgroundVideo || scriptData.scenesData![index]?.sceneSettings?.videoBackgroundVideo || '',
+                        },
                     }));
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
-                    setScenesData(normalizedFromStorage);
-                    // Kick off or check Gamma generation at SCRIPT level
-                    if (!scriptData.gammaGenId) {
-                        GenerateGammaId(scriptData);
-                    } else if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {
-                        checkGammaAPIStatus(scriptData);
-                    } else if (
-                        scriptData.gammaGenId &&
-                        scriptData.gammaExportUrl &&
-                        scriptData.scenesData &&
-                        scriptData.scenesData.length > 0
-                    ) {
-                        // Determine if any scene is missing a previewImage
-                        const hasMissingPreviewImages = scriptData.scenesData.some(
-                            (scene: any) => !scene.gammaPreviewImage
-                        );
-                        if (hasMissingPreviewImages) {
-                            convertPdfToImages(scriptData);
-                        } else {
-                            console.log('All scenes have preview images');
-                        }
-                    }
+
+                    applyHighlights(scriptData, normalizedFromStorage);
+
                 }
             } catch { }
+        }
+    };
+
+    const applyHighlights = async (scriptData: ScriptData, scenesData: SceneData[]) => {
+        const needsHighlights = scenesData.some(ch => !Array.isArray(ch.highlightedKeywords) || ch.highlightedKeywords.length === 0);
+        if (needsHighlights) {
+            setLoading(true);
+            HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setScenesData, (scenesData) => {
+                // console.log('SceneData with highlights', SceneData);
+                setLoading(false);
+                // save updated SceneData
+                const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
+                setScriptData(updatedScriptData);
+                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+
+                setScenesData(scenesData);
+                checkAndProcessGamma(updatedScriptData);
+            });
+        } else {
+            setLoading(false);
+            setScenesData(scenesData);
+            checkAndProcessGamma(scriptData);
+        }
+
+    };
+
+    const checkAndProcessGamma = async (scriptData: ScriptData) => {
+        // Kick off or check Gamma generation at SCRIPT level
+        if (!scriptData.gammaGenId) {
+            GenerateGammaId(scriptData);
+        } else if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {
+            checkGammaAPIStatus(scriptData);
+        } else if (
+            scriptData.gammaGenId &&
+            scriptData.gammaExportUrl &&
+            scriptData.scenesData &&
+            scriptData.scenesData.length > 0
+        ) {
+            // Determine if any scene is missing a previewImage
+            const hasMissingPreviewImages = scriptData.scenesData.some(
+                (scene: any) => !scene.gammaPreviewImage
+            );
+            if (hasMissingPreviewImages) {
+                convertGammaPdfToImages(scriptData);
+            } else {
+                console.log('All scenes have preview images');
+            }
         }
     };
     // SceneData Management Functions
@@ -1262,6 +1202,8 @@ const ScriptProductionClient = () => {
         </Container>
     }
 
+    const showDownloadGatePanel = isScriptApproved && !hasDownloadedScript && scenesData.length === 0;
+
     return (
         <Box
             sx={{ width: '100vw', height: '100vh', overflow: 'auto', display: 'flex', flexDirection: 'column' }}
@@ -1282,22 +1224,40 @@ const ScriptProductionClient = () => {
                     </Typography>
                 </Box>
 
-                {/* Duration Display */}
-                {
-                    !isInitialLoading && isScriptApproved && videoDuration !== null &&
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.25rem', lineHeight: 1.5 }}>
-                            Video Duration:
-                        </Typography>
-                        <Chip
-                            label={`${HelperFunctions.formatTime(videoDuration)}`}
-                            size="medium"
-                            color="success"
-                            sx={{ fontSize: '1.25rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
-                        />
-                    </Box>
-                }
+                {/* Top-right controls: Download Script + Duration */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {isScriptApproved && !showDownloadGatePanel && (
+                        <Button variant="contained" size="medium" startIcon={<DownloadIcon />} sx={{ textTransform: 'none', fontSize: '1.25rem' }}
+                            onClick={() => {
+                                HelperFunctions.handleDownloadAllNarrations(scriptData as ScriptData);
+                                setHasDownloadedScript(true);
+                                // Persist flag in script metadata
+                                try {
+                                    const updated = { ...(scriptData as ScriptData), isScriptDownloaded: true, updated_at: new Date().toISOString() } as ScriptData;
+                                    setScriptData(updated);
+                                    SecureStorageHelpers.setScriptMetadata(updated);
+                                } catch { }
+                            }}
+                        >
+                            Download Script
+                        </Button>
+                    )}
+
+                    {!isInitialLoading && isScriptApproved && videoDuration !== null && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <TimeIcon sx={{ color: 'success.main', fontSize: '1.25rem' }} />
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.25rem', lineHeight: 1.5 }}>
+                                Video Duration:
+                            </Typography>
+                            <Chip
+                                label={`${HelperFunctions.formatTime(videoDuration)}`}
+                                size="medium"
+                                color="success"
+                                sx={{ fontSize: '1.25rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
+                            />
+                        </Box>
+                    )}
+                </Box>
             </Box>
 
             <Box sx={{ flex: 1, overflow: 'auto', px: 3 }}>
@@ -1343,22 +1303,8 @@ const ScriptProductionClient = () => {
                             >
                                 📋 {scriptData?.title}
                             </Typography>
-                            {isScriptApproved && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                    <Button variant="contained" size="medium" sx={{
-                                        textTransform: 'none',
-                                        fontSize: '1.25rem',
-                                        px: 2,
-                                        py: 1.5,
-                                        lineHeight: 1.5,
-                                        gap: 1,
-                                    }}
-                                        startIcon={<DownloadIcon />}
-                                        onClick={() => HelperFunctions.handleDownloadAllNarrations(scriptData as ScriptData)}
-                                    >
-                                        Download Script
-                                    </Button>
-                                </Box>
+                            {false && (
+                                <Box />
                             )}
 
                             {!isScriptApproved && (
@@ -1603,7 +1549,7 @@ const ScriptProductionClient = () => {
                         </Paper>
                     )}
 
-                    {(isNarrationUploadView || isNarratorVideoUploaded) && scenesData.length === 0 &&
+                    {(isNarrationUploadView || isNarratorVideoUploaded || (isScriptApproved && !hasDownloadedScript)) && scenesData.length === 0 &&
                         //show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation
                         <Paper sx={{
                             flex: 1,
@@ -1615,52 +1561,125 @@ const ScriptProductionClient = () => {
                             // overflow: 'auto',
                         }}>
                             <Box sx={{ p: 2 }}>
-                                <ChromaKeyUpload
-                                    jobId={jobId || 'job-chroma-key'}
-                                    scriptData={scriptData as ScriptData}
-                                    setScriptData={setScriptData}
-                                    videoDurationCaptured={(duration: number) => {
-                                        setVideoDuration(duration);
-                                        const updatedScriptData = {
-                                            ...scriptData,
-                                            videoDuration: duration,
-                                            updated_at: new Date().toISOString(),
-                                        } as ScriptData;
-                                        setScriptData(updatedScriptData);
-                                        SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-                                    }}
-                                    onUploadComplete={async (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
-                                        setPageTitle('Final Step: Scene Composition & Video Generation');
-                                        setIsNarratorVideoUploaded(true);
-                                        setIsNarrationUploadView(false);
+                                {(isScriptApproved && hasDownloadedScript) ? (
+                                    <ChromaKeyUpload
+                                        jobId={jobId || 'job-chroma-key'}
+                                        scriptData={scriptData as ScriptData}
+                                        setScriptData={setScriptData}
+                                        videoDurationCaptured={(duration: number) => {
+                                            setVideoDuration(duration);
+                                            const updatedScriptData = {
+                                                ...scriptData,
+                                                videoDuration: duration,
+                                                updated_at: new Date().toISOString(),
+                                            } as ScriptData;
+                                            setScriptData(updatedScriptData);
+                                            SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                                        }}
+                                        onUploadComplete={async (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
+                                            setPageTitle('Final Step: Scene Composition & Video Generation');
+                                            setIsNarratorVideoUploaded(true);
+                                            setIsNarrationUploadView(false);
 
-                                        const updatedScriptData = {
-                                            ...scriptData,
-                                            videoBackground: backgroundType,
-                                            status: SCRIPT_STATUS.UPLOADED,
-                                            narrator_chroma_key_link: driveUrl,
-                                            transcription: transcriptionData.text,
-                                            scenesData: transcriptionData.scenes,
-                                            updated_at: new Date().toISOString(),
-                                        } as ScriptData;
-                                        setScriptData(updatedScriptData);
-                                        SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-                                        updateParagraphs(updatedScriptData);
+                                            const updatedScriptData = {
+                                                ...scriptData,
+                                                videoBackground: backgroundType,
+                                                status: SCRIPT_STATUS.UPLOADED,
+                                                narrator_chroma_key_link: driveUrl,
+                                                transcription: transcriptionData.text,
+                                                scenesData: transcriptionData.scenes,
+                                                updated_at: new Date().toISOString(),
+                                            } as ScriptData;
+                                            // console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
+                                            setScriptData(updatedScriptData);
+                                            SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                                            updateParagraphs(updatedScriptData);
 
-                                        // generate scene folder in google drive by using googleDriveService function
-                                        const sceneFolderResult = await GoogleDriveServiceFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
-                                        if (!sceneFolderResult.success) {
-                                            toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
-                                            return;
-                                        }
-                                        // console.log('Scene folder result:', sceneFolderResult.result);
+                                            // generate scene folder in google drive by using googleDriveService function
+                                            const sceneFolderResult = await GoogleDriveServiceFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
+                                            if (!sceneFolderResult.success) {
+                                                toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
+                                                return;
+                                            }
+                                            // console.log('Scene folder result:', sceneFolderResult.result);
 
-                                    }}
-                                    onUploadFailed={(errorMessage: string) => {
-                                        toast.error(errorMessage);
-                                        console.log("errorMessage: ", errorMessage);
-                                    }}
-                                />
+                                        }}
+                                        onUploadFailed={(errorMessage: string) => {
+                                            toast.error(errorMessage);
+                                            console.log("errorMessage: ", errorMessage);
+                                        }}
+                                    />
+                                ) : (
+                                    <Paper
+                                        elevation={3}
+                                        sx={{
+                                            p: 4,
+                                            borderRadius: 3,
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            background: 'linear-gradient(135deg, rgba(25,118,210,0.06), rgba(102,187,106,0.06))',
+                                            border: '1px dashed',
+                                            borderColor: 'divider'
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 3, flexWrap: 'wrap' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 280 }}>
+                                                <Box sx={{
+                                                    width: 56, height: 56, borderRadius: '50%',
+                                                    bgcolor: 'primary.main', color: 'primary.contrastText',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    boxShadow: 2
+                                                }}>
+                                                    <DownloadIcon sx={{ fontSize: 30 }} />
+                                                </Box>
+                                                <Box>
+                                                    <Typography variant="h6" sx={{ mb: 0.5, fontSize: '1.4rem' }}>
+                                                        Download your script to proceed
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                                                        We’ll unlock the narrator video upload right after you download.
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2, flexGrow: 1, }}>
+                                                <Chip label="1. Review" color="default" sx={{ fontSize: '1rem' }} icon={<svg style={{ fontSize: 25, marginLeft: 5, marginRight: -10 }} viewBox="0 0 24 24" width="1em" height="1em"><path fill="currentColor" d="M9.29 16.29a1 1 0 0 1-1.42 0l-3.29-3.3a1 1 0 1 1 1.42-1.41l2.29 2.29 6.29-6.3a1 1 0 0 1 1.42 1.42l-7 7Z"></path></svg>} />
+                                                <Chip label="2. Download" color="primary" sx={{ fontSize: '1rem' }} />
+                                                <Chip label="3. Upload Narrator Video" color="success" variant="outlined" sx={{ fontSize: '1rem' }} />
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1, justifyContent: 'center', minWidth: 260 }}>
+                                                <Button
+                                                    variant="contained"
+                                                    size="large"
+                                                    startIcon={<DownloadIcon />}
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        fontSize: '1.2rem',
+                                                        px: 3,
+                                                        py: 1.2,
+                                                        boxShadow: 2
+                                                    }}
+                                                    onClick={() => {
+                                                        HelperFunctions.handleDownloadAllNarrations(scriptData as ScriptData);
+                                                        setHasDownloadedScript(true);
+                                                        setIsNarrationUploadView(true);
+                                                        // Persist flag in script metadata
+                                                        try {
+                                                            const updated = { ...(scriptData as ScriptData), isScriptDownloaded: true, updated_at: new Date().toISOString() } as ScriptData;
+                                                            setScriptData(updated);
+                                                            SecureStorageHelpers.setScriptMetadata(updated);
+                                                        } catch { }
+                                                    }}
+                                                >
+                                                    Download Script
+                                                </Button>
+
+                                            </Box>
+                                        </Box>
+
+                                    </Paper>
+                                )}
                             </Box>
                         </Paper>
                     }
@@ -1675,209 +1694,10 @@ const ScriptProductionClient = () => {
                             // maxHeight: '85vh',
                             overflow: 'auto',
                         }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-
-                                {/* Project-level Settings (moved into dialog) */}
-                                <Paper sx={{ p: 2, mb: 2, }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end' }}>
-                                        <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
-                                    </Box>
-                                    <Grid container spacing={2} sx={{ display: 'none' }}>
-                                        {/* Transition selector */}
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Transition Effect</Typography>
-                                            <TextField
-                                                select
-                                                fullWidth
-                                                size="small"
-                                                value={projectTransitionId}
-                                                onChange={(e) => setProjectTransitionId(String(e.target.value))}
-                                                SelectProps={{ native: true }}
-                                                sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
-                                            >
-                                                <option value="">Select transition...</option>
-                                                {predefinedTransitions.map((t: string) => (
-                                                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
-                                                ))}
-                                            </TextField>
-                                        </Grid>
-
-                                        {/* Logo Overlay (single) */}
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Logo Overlay</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                                <TextField size="small" select label="Position" value={projectLogo?.position || 'top-right'} onChange={(e) => setProjectLogo({ ...(projectLogo || { url: '' }), position: String(e.target.value) })} SelectProps={{ native: true }} sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}>
-                                                    <option value="top-left">top-left</option>
-                                                    <option value="top-right">top-right</option>
-                                                    <option value="bottom-left">bottom-left</option>
-                                                    <option value="bottom-right">bottom-right</option>
-                                                </TextField>
-                                                <Button
-                                                    variant="contained"
-                                                    color="secondary"
-                                                    size="small"
-                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'image/*';
-                                                        input.onchange = (e) => {
-                                                            const file = (e.target as HTMLInputElement).files?.[0];
-                                                            if (!file) return;
-                                                            const objectUrl = URL.createObjectURL(file);
-                                                            setProjectLogo({ name: file.name, url: objectUrl, position: projectLogo?.position || 'top-right' });
-                                                        };
-                                                        input.click();
-                                                    }}
-                                                >
-                                                    Upload Logo
-                                                </Button>
-                                                {projectLogo?.url && (
-                                                    <>
-                                                        <Button
-                                                            variant="outlined"
-                                                            size="small"
-                                                            sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                            onClick={() => window.open(projectLogo.url, '_blank')}
-                                                        >
-                                                            Preview
-                                                        </Button>
-                                                        <Button
-                                                            variant="outlined"
-                                                            color="error"
-                                                            size="small"
-                                                            sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                            onClick={() => setProjectLogo(null)}
-                                                        >
-                                                            Remove
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                {projectLogo?.url && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <img
-                                                            src={projectLogo.url}
-                                                            alt={projectLogo.name || 'Logo'}
-                                                            style={{ width: 100, height: 100, objectFit: 'contain', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: '#111', cursor: 'pointer' }}
-                                                            onClick={() => window.open(projectLogo.url, '_blank')}
-                                                        />
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        </Grid>
-
-                                        {/* Background Music (single) */}
-                                        <Grid item xs={12} md={6}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Background Music</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                                <TextField
-                                                    select
-                                                    fullWidth
-                                                    sx={{ '& .MuiInputBase-root': { height: CONTROL_HEIGHT, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
-                                                    size="small"
-                                                    value={(projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
-                                                    onChange={(e) => {
-                                                        const selId = String(e.target.value);
-                                                        setProjectMusic({ selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '', volume: projectMusic?.volume ?? 0.3, autoAdjust: projectMusic?.autoAdjust ?? true, fadeIn: projectMusic?.fadeIn ?? true, fadeOut: projectMusic?.fadeOut ?? true });
-                                                        // Stop currently playing audio when changing selection
-                                                        try { audioRef.current?.pause(); } catch { }
-                                                        setIsMusicPlaying(false);
-                                                        setIsMusicLoading(false);
-                                                        setLastMusicIdLoaded(null);
-                                                    }}
-                                                    SelectProps={{ native: true }}
-                                                >
-                                                    <option value="">Select music...</option>
-                                                    {(driveLibrary?.music || []).map((t: any) => (
-                                                        <option key={t.id} value={t.id}>{t.name}</option>
-                                                    ))}
-                                                </TextField>
-                                                <Button
-                                                    variant="contained"
-                                                    color="primary"
-                                                    size="small"
-                                                    disabled={!((projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '') || isMusicLoading}
-                                                    onClick={handleToggleBackgroundMusic}
-                                                    sx={{ height: CONTROL_HEIGHT, minWidth: 90, textTransform: 'none', display: 'inline-flex', alignItems: 'center', gap: 1 }}
-                                                >
-                                                    {isMusicLoading ? <CircularProgress size={18} sx={{ color: 'white' }} /> : (isMusicPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />)}
-                                                    {isMusicPlaying ? 'Pause' : 'Play'}
-                                                </Button>
-                                                {/* Volume option removed as per requirement */}
-                                            </Box>
-                                        </Grid>
-
-                                        {/* Video Clip (single) */}
-                                        <Grid xs={12} md={6} sx={{ mt: 2, pl: 2 }}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '1.25rem' }}>Video Clips</Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                                                <Button
-                                                    variant="contained"
-                                                    color="secondary"
-                                                    size="small"
-                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                    onClick={() => {
-                                                        const input = document.createElement('input');
-                                                        input.type = 'file';
-                                                        input.accept = 'video/*';
-                                                        input.onchange = (e) => {
-                                                            const file = (e.target as HTMLInputElement).files?.[0];
-                                                            if (!file) return;
-                                                            const objectUrl = URL.createObjectURL(file);
-                                                            setProjectVideoClip({ name: file.name, url: objectUrl });
-                                                        };
-                                                        input.click();
-                                                    }}
-                                                >
-                                                    Upload Clip
-                                                </Button>
-                                                <Button
-                                                    variant="outlined"
-                                                    color="error"
-                                                    size="small"
-                                                    sx={{ height: CONTROL_HEIGHT, textTransform: 'none' }}
-                                                    onClick={() => setProjectVideoClip(null)}
-                                                >
-                                                    Remove
-                                                </Button>
-                                                {projectVideoClip?.url && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Box sx={{ position: 'relative', width: 160, height: 90 }} onClick={() => { setVideoPreviewUrl(projectVideoClip.url); setVideoPreviewOpen(true); }}>
-                                                            <video
-                                                                src={projectVideoClip.url}
-                                                                muted
-                                                                playsInline
-                                                                loop
-                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(255,255,255,0.15)', background: '#000', cursor: 'pointer' }}
-                                                            />
-                                                            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                                                                <Box sx={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <PlayIcon sx={{ color: '#fff' }} fontSize="small" />
-                                                                </Box>
-                                                            </Box>
-                                                        </Box>
-
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        </Grid>
-                                        {/* Video Effects (project-level) */}
-                                        {/* <Grid xs={12} sx={{ mt: 2, pl: 2 }}>
-                                            <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
-                                            <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
-                                                <EffectsPanel
-                                                    selectedEffects={projectTransitionEffects}
-                                                    onEffectToggle={(id: string) => {
-                                                        setProjectTransitionEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-                                                    }}
-                                                    onApplyToAllScenes={(effects: string[]) => {
-                                                        setProjectTransitionEffects(effects);
-                                                    }}
-                                                />
-                                            </Box>
-                                        </Grid> */}
-                                    </Grid>
-                                </Paper>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', pr: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', mb: 2, }}>
+                                    <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
+                                </Box>
 
                                 <SceneDataSection
                                     jobId={jobId}
@@ -1949,13 +1769,7 @@ const ScriptProductionClient = () => {
                                     driveBackgrounds={driveLibrary?.backgrounds || []}
                                     driveMusic={driveLibrary?.music || []}
                                     driveTransitions={predefinedTransitions.map((t) => ({ id: t, name: t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) }))}
-                                    projectSettings={{
-                                        transition: projectTransitionId,
-                                        musicId: (projectMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '',
-                                        logo: projectLogo,
-                                        clip: projectVideoClip,
-                                        transitionEffects: projectTransitionEffects,
-                                    }}
+                                    projectSettings={projectSettings}
                                     onOpenProjectSettingsDialog={(sceneIndex: number) => openProjectSettingsDialog('scene', sceneIndex)}
                                     scriptTitle={scriptData?.title || ''}
                                     trendingTopic={scriptData?.topic || ''}
@@ -1974,17 +1788,12 @@ const ScriptProductionClient = () => {
                                         <Grid item xs={12}>
                                             <Button
                                                 variant="contained"
+                                                size="medium"
                                                 fullWidth
                                                 startIcon={<VideoIcon />}
                                                 onClick={() => uploadCompleteProjectToDrive()}
                                                 disabled={!scenesData.length}
-                                                sx={{
-                                                    bgcolor: SUCCESS.main,
-                                                    '&:hover': { bgcolor: SUCCESS.dark },
-                                                    mb: 1,
-                                                    fontSize: '1.25rem',
-                                                    lineHeight: 1.5
-                                                }}
+                                                sx={{ textTransform: 'none', fontSize: '1.25rem' }}
                                             >
                                                 Generate Video
                                             </Button>
@@ -2012,21 +1821,10 @@ const ScriptProductionClient = () => {
             <ProjectSettingsDialog
                 open={projectSettingsDialogOpen}
                 onClose={closeProjectSettingsDialog}
-                onApply={applyProjectSettingsDialog}
-                context={projectSettingsContext}
-                tmpTransitionId={tmpTransitionId}
-                tmpMusic={tmpMusic}
-                tmpLogo={tmpLogo}
-                tmpClip={tmpClip}
-                tmpEffects={tmpEffects}
-                onTmpTransitionIdChange={setTmpTransitionId}
-                onTmpMusicChange={setTmpMusic}
-                onTmpLogoChange={setTmpLogo}
-                onTmpClipChange={setTmpClip}
-                onTmpEffectsChange={setTmpEffects}
-                onEffectToggle={(id: string) => {
-                    setTmpEffects(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-                }}
+                onApply={(mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => applyProjectSettingsDialog(mode, projectSettings, sceneSettings)}
+                projectSettingsContext={projectSettingsContext}
+                pSettings={projectSettings}
+                sSettings={sceneSettings}
                 isMusicLoading={isMusicLoading}
                 isMusicPlaying={isMusicPlaying}
                 setIsMusicPlaying={setIsMusicPlaying}

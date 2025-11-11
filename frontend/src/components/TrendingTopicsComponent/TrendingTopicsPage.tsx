@@ -212,6 +212,7 @@ const TrendingTopics: React.FC = () => {
           narrator_chroma_key_link: '',
           transcription: '',
           videoBackground: null,
+          isScriptDownloaded: false,
         };
 
         // Store metadata in secure storage for the script production page

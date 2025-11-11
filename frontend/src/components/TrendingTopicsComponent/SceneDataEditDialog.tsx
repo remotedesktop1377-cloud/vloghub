@@ -45,6 +45,7 @@ import { TransitionSelector } from '../videoEffects/TransitionSelector';
 import { MediaPlayer } from '../videoEffects/MediaPlayer';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../styles/colors';
 import { preStoredMusic } from '@/data/DefaultData';
+import { LogoOverlayInterface, SettingItemInterface } from '@/types/scriptData';
 
 interface SceneDataEditDialogProps {
     open: boolean;
@@ -70,16 +71,11 @@ export function SceneDataEditDialog({
         if (sceneData) {
             setEditData({
                 ...sceneData,
-                videoEffects: {
-                    clips: sceneData.videoEffects?.clips || [],
-                    logos: sceneData.videoEffects?.logos || [],
-                    backgroundMusic: Array.isArray(sceneData.videoEffects?.backgroundMusic)
-                        ? sceneData.videoEffects?.backgroundMusic
-                        : (sceneData.videoEffects?.backgroundMusic
-                            ? [sceneData.videoEffects.backgroundMusic as unknown as BackgroundMusic]
-                            : []),
-                    transition: sceneData.videoEffects?.transition || 'quantum_dissolve',
-                    transitionEffects: sceneData.videoEffects?.transitionEffects || []
+                sceneSettings: {
+                    videoLogo: sceneData.sceneSettings?.videoLogo as LogoOverlayInterface,
+                    videoBackgroundMusic: sceneData.sceneSettings?.videoBackgroundMusic as SettingItemInterface,
+                    videoBackgroundVideo: sceneData.sceneSettings?.videoBackgroundVideo as SettingItemInterface,
+                    videoTransitionEffect: sceneData.sceneSettings?.videoTransitionEffect as SettingItemInterface
                 }
             });
         }
@@ -105,37 +101,37 @@ export function SceneDataEditDialog({
             url: '',
             duration: 30
         };
-        setEditData(prev => ({
-            ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                clips: [...(prev!.videoEffects?.clips || []), newClip]
-            }
-        }));
+        // setEditData(prev => ({
+        //     ...prev!,
+        //     sceneSettings: {
+        //         ...prev!.sceneSettings!,
+        //         clips: [...(prev!.videoEffects?.clips || []), newClip]
+        //     }
+        // }));
     };
 
     const updateClip = (id: string, field: keyof VideoClip, value: string | number) => {
         if (!editData) return;
-        setEditData(prev => ({
-            ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                clips: prev!.videoEffects?.clips?.map(clip =>
-                    clip.id === id ? { ...clip, [field]: value } : clip
-                ) || []
-            }
-        }));
+        // setEditData(prev => ({
+        //     ...prev!,
+        //     videoEffects: {
+        //         ...prev!.videoEffects!,
+        //         clips: prev!.videoEffects?.clips?.map(clip =>
+        //             clip.id === id ? { ...clip, [field]: value } : clip
+        //         ) || []
+        //     }
+        // }));
     };
 
     const removeClip = (id: string) => {
         if (!editData) return;
-        setEditData(prev => ({
-            ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                clips: prev!.videoEffects?.clips?.filter(clip => clip.id !== id) || []
-            }
-        }));
+        // setEditData(prev => ({
+        //     ...prev!,
+        //     videoEffects: {
+        //         ...prev!.videoEffects!,
+        //         clips: prev!.videoEffects?.clips?.filter(clip => clip.id !== id) || []
+        //     }
+        // }));
     };
 
     const addLogo = () => {
@@ -148,9 +144,9 @@ export function SceneDataEditDialog({
         };
         setEditData(prev => ({
             ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                logos: [...(prev!.videoEffects?.logos || []), newLogo]
+            sceneSettings: {
+                ...prev!.sceneSettings!,
+                videoLogo: { name: newLogo.name, url: newLogo.url, position: newLogo.position } as LogoOverlayInterface
             }
         }));
     };
@@ -159,11 +155,9 @@ export function SceneDataEditDialog({
         if (!editData) return;
         setEditData(prev => ({
             ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                logos: prev!.videoEffects?.logos?.map(logo =>
-                    logo.id === id ? { ...logo, [field]: value } : logo
-                ) || []
+            sceneSettings: {
+                ...prev!.sceneSettings!,
+                videoLogo: prev!.sceneSettings?.videoLogo?.url === id ? { ...prev!.sceneSettings?.videoLogo!, [field]: value } : prev!.sceneSettings?.videoLogo!
             }
         }));
     };
@@ -172,52 +166,36 @@ export function SceneDataEditDialog({
         if (!editData) return;
         setEditData(prev => ({
             ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                logos: prev!.videoEffects?.logos?.filter(logo => logo.id !== id) || []
+            sceneSettings: {
+                ...prev!.sceneSettings!,
+                videoLogo: prev!.sceneSettings?.videoLogo?.url !== id ? { ...prev!.sceneSettings?.videoLogo!, url: '' } : prev!.sceneSettings?.videoLogo!
             }
         }));
     };
 
     const toggleEffect = (effect: string) => {
-        if (!editData) return;
-        const currentEffects = editData.videoEffects?.transitionEffects || [];
-        const newEffects = currentEffects.includes(effect)
-            ? currentEffects.filter(e => e !== effect)
-            : [...currentEffects, effect];
+        // if (!editData) return;
+        // const currentEffects = editData.assets?.clips?.transitionEffects || [];
+        // const newEffects = currentEffects.includes(effect)
+        //     ? currentEffects.filter(e => e !== effect)
+        //     : [...currentEffects, effect];
 
-        setEditData(prev => ({
-            ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                effects: newEffects
-            }
-        }));
+        // setEditData(prev => ({
+        //     ...prev!,
+        //     videoEffects: {
+        //         ...prev!.videoEffects!,
+        //         effects: newEffects
+        //     }
+        // }));
     };
 
     const updateBackgroundMusic = (field: keyof BackgroundMusic, value: any) => {
         if (!editData) return;
         setEditData(prev => ({
             ...prev!,
-            videoEffects: {
-                ...prev!.videoEffects!,
-                backgroundMusic: (() => {
-                    const list = Array.isArray(prev!.videoEffects?.backgroundMusic)
-                        ? [...(prev!.videoEffects!.backgroundMusic as BackgroundMusic[])]
-                        : [] as BackgroundMusic[];
-                    const ensure = (bm?: BackgroundMusic): BackgroundMusic => bm || {
-                        id: Date.now().toString(),
-                        selectedMusic: '',
-                        volume: 0.3,
-                        autoAdjust: true,
-                        fadeIn: true,
-                        fadeOut: true
-                    };
-                    const first = ensure(list[0]);
-                    (first as any)[field] = value;
-                    list[0] = first;
-                    return list;
-                })()
+            sceneSettings: {
+                ...prev!.sceneSettings!,
+                videoBackgroundMusic: prev!.sceneSettings?.videoBackgroundMusic?.id === field ? { ...prev!.sceneSettings?.videoBackgroundMusic!, [field]: value } as SettingItemInterface : prev!.sceneSettings?.videoBackgroundMusic!
             }
         }));
     };
@@ -342,7 +320,7 @@ export function SceneDataEditDialog({
                             </Box>
 
                             <Grid container spacing={2}>
-                                {editData.videoEffects?.clips?.map((clip) => (
+                                {editData.assets?.clips?.map((clip: VideoClip) => (
                                     <Grid item xs={12} key={clip.id}>
                                         <Card sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                                             <CardContent>
@@ -445,7 +423,7 @@ export function SceneDataEditDialog({
                             </Box>
 
                             <Grid container spacing={2}>
-                                {editData.videoEffects?.logos?.map((logo) => (
+                                {/* {editData.videoEffects?.logos?.map((logo) => (
                                     <Grid item xs={12} key={logo.id}>
                                         <Card sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                                             <CardContent>
@@ -515,7 +493,7 @@ export function SceneDataEditDialog({
                                             </CardContent>
                                         </Card>
                                     </Grid>
-                                ))}
+                                ))} */}
                             </Grid>
                         </Box>
                     )}
@@ -529,7 +507,7 @@ export function SceneDataEditDialog({
                             </Typography>
 
                             <Card sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <CardContent>
+                                {/* <CardContent>
                                     <Grid container spacing={3}>
                                         <Grid item xs={12} md={6}>
                                             <FormControl fullWidth>
@@ -613,7 +591,7 @@ export function SceneDataEditDialog({
                                             />
                                         </Box>
                                     )}
-                                </CardContent>
+                                </CardContent> */}
                             </Card>
                         </Box>
                     )}
@@ -625,7 +603,7 @@ export function SceneDataEditDialog({
                                 <WandIcon sx={{ color: PURPLE.main }} />
                                 Transition Effects
                             </Typography>
-                            <TransitionSelector
+                            {/* <TransitionSelector
                                 selectedTransition={editData.videoEffects?.transition || 'quantum_dissolve'}
                                 onTransitionSelect={(transition) => setEditData(prev => ({
                                     ...prev!,
@@ -634,7 +612,7 @@ export function SceneDataEditDialog({
                                         transition
                                     }
                                 }))}
-                            />
+                            /> */}
                         </Box>
                     )}
 
@@ -645,10 +623,10 @@ export function SceneDataEditDialog({
                                 <WandIcon sx={{ color: PURPLE.main }} />
                                 Video Effects
                             </Typography>
-                            <EffectsPanel
+                            {/* <EffectsPanel
                                 selectedEffects={editData.videoEffects?.transitionEffects || []}
                                 onEffectToggle={toggleEffect}
-                            />
+                            /> */}
                         </Box>
                     )}
                 </Box>

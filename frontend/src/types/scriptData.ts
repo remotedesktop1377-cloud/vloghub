@@ -25,20 +25,35 @@ export interface ScriptData {
     narrator_chroma_key_link: string;
     transcription: string;
     videoBackground: BackgroundType | null;
-    userLogo?: {
-        url: string;
-        fileName: string;
-        uploadedAt: string;
-    };
-    selectedBackground?: {
-        id: string;
-        name: string;
-        url: string;
-        thumbnailUrl?: string;
-    };
-    scenesData?: SceneData[];
-    // Gamma video preview (script-level)
+    isScriptDownloaded?: boolean;
     gammaGenId?: string;
     gammaExportUrl?: string;
     videoDuration?: number;
+    projectSettings?: Settings,
+    scenesData?: SceneData[];
+}
+
+export interface Settings {
+    videoLogo: LogoOverlayInterface;
+    videoBackgroundMusic: SettingItemInterface;
+    videoBackgroundVideo: SettingItemInterface;
+    videoTransitionEffect: SettingItemInterface;
+}
+
+export interface SettingItemInterface {
+    id?: string;
+    name?: string;
+    mimeType?: string;
+    webViewLink?: string;
+    webContentLink?: string;
+    thumbnailLink?: string | null;
+    iconLink?: string;
+    isVideo?: boolean;
+}
+
+export interface LogoOverlayInterface {
+    id?: string;
+    name?: string;
+    url: string;
+    position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
 }

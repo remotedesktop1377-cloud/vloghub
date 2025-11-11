@@ -4,6 +4,7 @@ import { HelperFunctions, secure } from '@/utils/helperFunctions';
 import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
 import { profileService, BackgroundItem, LibraryData } from './profileService';
 import { toast } from 'react-toastify';
+import { LogoOverlayInterface, SettingItemInterface, Settings } from '@/types/scriptData';
 
 interface CachedLibraryData {
     data: LibraryData;
@@ -100,42 +101,18 @@ export const GoogleDriveServiceFunctions = {
     async updateSceneDataceneOnDrive(jobId: string, sceneData: SceneData): Promise<boolean> {
         try {
             const SceneDataWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(sceneData);
-            const ve: any = (SceneDataWithAssets as any).videoEffects || {};
-            const sceneSettings = {
-                transition: ve.transition || '',
-                backgroundMusic: ve.backgroundMusic && typeof ve.backgroundMusic === 'object'
-                    ? ({ selectedMusic: ve.backgroundMusic.selectedMusic || '' } as any)
-                    : null,
-                logo: ve.logo || null,
-                backgroundvideo: ve.clip || null,
-                // transitionEffects: Array.isArray(ve.transitionEffects) ? ve.transitionEffects : [],
+            const settings: Settings = SceneDataWithAssets.sceneSettings as Settings;
+            const sceneSettings: Settings = {
+                videoLogo: settings.videoLogo as LogoOverlayInterface,
+                videoBackgroundMusic: settings.videoBackgroundMusic as SettingItemInterface,
+                videoBackgroundVideo: settings.videoBackgroundVideo as SettingItemInterface,
+                videoTransitionEffect: settings.videoTransitionEffect as SettingItemInterface,
             };
 
             // Build assets with logo image and video clip included
             const existingImages: string[] = Array.isArray(SceneDataWithAssets.assets?.images) ? (SceneDataWithAssets.assets!.images as string[]) : [];
-            const logoUrl: string | undefined = ve?.logo?.url;
-            const mergedImages = Array.from(new Set<string>([
-                ...existingImages,
-                ...(logoUrl ? [logoUrl] : []),
-            ].filter(Boolean) as string[]));
-
             const existingVideos: string[] = Array.isArray((SceneDataWithAssets as any).assets?.videos) ? ((SceneDataWithAssets as any).assets.videos as string[]) : [];
-            let mergedVideos = existingVideos;
-            const clipUrl: string | undefined = ve?.clip?.url;
-            if (clipUrl) {
-                try {
-                    // Upload clip to Drive/videos for this scene folder path and use returned link
-                    const jobFolderName = jobId || `job-${HelperFunctions.generateRandomId()}`;
-                    const uploadResult = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobFolderName, `${sceneData.id}/images/videos`, await HelperFunctions.fetchBlobAsFile(clipUrl, ve?.clip?.name || 'clip.mp4'));
-                    if (uploadResult && uploadResult.success && uploadResult.fileId) {
-                        mergedVideos = Array.from(new Set<string>([...existingVideos, `https://drive.google.com/uc?id=${uploadResult.fileId}`]));
-                    } else {
-                        mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
-                    }
-                } catch {
-                    mergedVideos = Array.from(new Set<string>([...existingVideos, clipUrl]));
-                }
-            }
+          
             const scene = {
                 id: SceneDataWithAssets.id,
                 narration: SceneDataWithAssets.narration,
@@ -146,12 +123,14 @@ export const GoogleDriveServiceFunctions = {
                 endTime: (SceneDataWithAssets as any).endTime,
                 highlightedKeywords: SceneDataWithAssets.highlightedKeywords || [],
                 keywordsSelected: Array.isArray((SceneDataWithAssets as any).keywordsSelected) ? (SceneDataWithAssets as any).keywordsSelected : [],
-                assets: {
-                    images: mergedImages,
-                    ...(mergedVideos.length > 0 ? { videos: mergedVideos } : {}),
-                },
-                sceneSettings,
+                gammaGenId: SceneDataWithAssets.gammaGenId || '',
+                gammaUrl: SceneDataWithAssets.gammaUrl || '',
                 gammaPreviewImage: SceneDataWithAssets.gammaPreviewImage || '',
+                assets: {
+                    images: existingImages,
+                    ...(existingVideos.length > 0 ? { clips: existingVideos } : {}),
+                },
+                sceneSettings: sceneSettings,
             };
             console.log('Updating scene on Drive:', scene);
 

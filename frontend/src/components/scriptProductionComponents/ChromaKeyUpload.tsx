@@ -258,7 +258,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 // Extract video duration
                 try {
                     const duration = await HelperFunctions.extractVideoDuration(file);
-                    videoDurationCaptured(duration);                    
+                    videoDurationCaptured(duration);
                 } catch (error) {
                     console.error('Failed to extract video duration:', error);
                 }

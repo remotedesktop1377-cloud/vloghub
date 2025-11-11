@@ -1,4 +1,8 @@
-export type BackgroundType = 'chroma' | 'fixed' | 'event';
+export enum BackgroundType {
+    CHROMA = 'chroma',
+    COLOR = 'color',
+    EVENT = 'event'
+}
 
 export interface BackgroundTypeDialogProps {
     open: boolean;

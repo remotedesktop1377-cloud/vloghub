@@ -1,3 +1,5 @@
+import { Settings } from "./scriptData";
+
 export interface SceneData {
     id: string;
     jobId?: string;
@@ -23,15 +25,10 @@ export interface SceneData {
         images?: string[] | null;
         imagesGoogle?: string[] | null;
         imagesEnvato?: string[] | null;
+        clips?: VideoClip[] | null;
     };
     // Video effects and editing properties
-    videoEffects?: {
-        clips?: VideoClip[];
-        logos?: LogoOverlay[];
-        backgroundMusic?: BackgroundMusic[]; // array
-        transition?: string;
-        transitionEffects?: string[];
-    };
+    sceneSettings?: Settings,
 }
 
 export interface SceneKeywordSelection {

@@ -57,6 +57,7 @@ import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import Image from 'next/image';
+import { Settings } from '@/types/scriptData';
 
 // Map effect ids to human-readable names for project-level effects display
 const EFFECT_NAME_MAP: Record<string, string> = {
@@ -153,13 +154,8 @@ interface SceneDataSectionProps {
   driveBackgrounds?: Array<{ id: string; name: string; webViewLink?: string; webContentLink?: string }>;
   driveMusic?: Array<{ id: string; name: string; webContentLink?: string }>;
   driveTransitions?: Array<{ id: string; name: string; webViewLink?: string }>;
-  projectSettings?: {
-    transition?: string;
-    musicId?: string;
-    logo?: { name?: string; url: string; position?: string } | null;
-    clip?: { name?: string; url: string } | null;
-    transitionEffects?: string[];
-  };
+  projectSettings: Settings | null;
+
   // Open project settings dialog in scene context
   onOpenProjectSettingsDialog?: (sceneIndex: number) => void;
   // Context for refining image search queries
@@ -172,7 +168,6 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   jobId,
   scenesData,
   SceneDataGenerated,
-  generatingSceneData,
   editingSceneData,
   editNarration,
   selectedSceneDataIndex,
@@ -205,9 +200,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   SceneDataEditDialogOpen,
   onSceneDataEditDialogOpen,
   onSceneDataEditDialogSceneDataIndex,
-  driveBackgrounds,
   driveMusic,
-  driveTransitions,
   projectSettings,
   onOpenProjectSettingsDialog,
   scriptTitle,
@@ -219,7 +212,6 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   const [volumeOpenIndex, setVolumeOpenIndex] = React.useState<number | null>(null);
   // Image viewer hook for enhanced image viewing
   const imageViewer = useImageViewer();
-
 
   // Handle opening image viewer for a SceneData
   const handleImageClick = (SceneDataIndex: number, imageIndex: number = 0, isPreview: boolean) => {
@@ -885,47 +877,35 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                               ))}
                                             </Box>
                                             {/* Media Selected (prefer scene-level videoEffects, fallback to project-level) */}
-                                            {projectSettings && (() => {
-                                              const ve: any = (scenesData[index] as any)?.videoEffects || {};
-                                              const driveIdFromLink = (link: string): string => {
-                                                if (!link) return '';
-                                                const idParam = /[?&]id=([\w-]+)/.exec(link);
-                                                if (idParam && idParam[1]) return idParam[1];
-                                                const pathMatch = /\/d\/([\w-]+)/.exec(link);
-                                                if (pathMatch && pathMatch[1]) return pathMatch[1];
-                                                return '';
-                                              };
+                                            {(sceneData.sceneSettings || projectSettings) && (() => {
+                                              const settings: Settings = sceneData.sceneSettings || projectSettings as Settings;
+
                                               const effective = {
-                                                transition: ve.transition || projectSettings.transition,
-                                                musicId: ve.backgroundMusic?.selectedMusic ? driveIdFromLink(ve.backgroundMusic.selectedMusic) : projectSettings.musicId,
-                                                logo: ve.logo || projectSettings.logo,
-                                                clip: ve.clip || projectSettings.clip,
-                                                transitionEffects: Array.isArray(ve.transitionEffects) && ve.transitionEffects.length > 0 ? ve.transitionEffects : (projectSettings.transitionEffects || []),
-                                              } as typeof projectSettings;
+                                                videoLogo: settings.videoLogo?.name ? settings.videoLogo?.name : projectSettings?.videoLogo?.name,
+                                                videoTransitionEffect: settings.videoTransitionEffect?.name ? settings.videoTransitionEffect?.name : projectSettings?.videoTransitionEffect?.name,
+                                                videoBackgroundMusic: settings.videoBackgroundMusic?.name ? settings.videoBackgroundMusic?.name : projectSettings?.videoBackgroundMusic?.name,
+                                                videoBackgroundVideo: settings.videoBackgroundVideo?.name ? settings.videoBackgroundVideo?.name : projectSettings?.videoBackgroundVideo?.name,
+                                              };
+
                                               return (
                                                 <Box sx={{ mt: 1 }}>
-                                                  {/* <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '1.1rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                                    {effective.transition || effective.musicId || effective.logo?.url || effective.clip?.url
-                                                      || (Array.isArray(effective.transitionEffects) && effective.transitionEffects.length > 0) && <span>Selected Media:</span>}
-                                                  </Typography> */}
                                                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                                    {effective.transition && (
-                                                      <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>Transition: {String(effective.transition).replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
+                                                    {effective.videoLogo && (
+                                                      <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>
+                                                        Logo: {effective.videoLogo}</Box>
                                                     )}
-                                                    {effective.musicId && (
+                                                    {effective.videoTransitionEffect && (
+                                                      <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: INFO.light, color: 'text.white', border: `1px solid ${INFO.main}` }}>
+                                                        Transition: {String(effective.videoTransitionEffect).replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</Box>
+                                                    )}
+                                                    {effective.videoBackgroundMusic && (
                                                       <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: SUCCESS.light, color: 'text.white', border: `1px solid ${SUCCESS.main}` }}>
-                                                        Music: {((driveMusic as Array<{ id: string; name: string }> | undefined) || []).find(m => m.id === effective.musicId)?.name || effective.musicId}
+                                                        Background Music: {effective.videoBackgroundMusic}
                                                       </Box>
                                                     )}
-                                                    {effective.logo?.url && (
-                                                      <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PRIMARY.light, color: 'text.white', border: `1px solid ${PRIMARY.main}` }}>Logo: {effective.logo.name || 'Selected'}</Box>
-                                                    )}
-                                                    {effective.clip?.url && (
-                                                      <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: WARNING.light, color: 'text.white', border: `1px solid ${WARNING.main}` }}>Clip: {effective.clip.name || 'Selected'}</Box>
-                                                    )}
-                                                    {Array.isArray(effective.transitionEffects) && effective.transitionEffects.length > 0 && (
+                                                    {effective.videoBackgroundVideo && (
                                                       <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PURPLE.light, color: 'text.white', border: `1px solid ${PURPLE.main}` }}>
-                                                        Effects: {effective.transitionEffects.map((id) => EFFECT_NAME_MAP[id] || id).join(', ')}
+                                                        Background Video: {effective.videoBackgroundVideo}
                                                       </Box>
                                                     )}
                                                   </Box>

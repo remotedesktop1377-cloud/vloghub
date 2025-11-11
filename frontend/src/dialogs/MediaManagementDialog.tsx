@@ -237,7 +237,6 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
               onDoneWithSelected={(selectedUrls, modifiedKeyword) => {
                 const SceneDataIdx = mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex;
                 const kw = typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword;
-                debugger;
                 if (kw) {
                   // add selected urls to the images array and keywordsSelected
                   const updated: SceneData[] = scenesData.map((ch, idx) => {

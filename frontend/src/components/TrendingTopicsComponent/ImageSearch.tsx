@@ -533,14 +533,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     updatedSceneData.modifiedKeywordForMapping = typed;
                 }
             }
-            // // Persist effects into SceneData videoEffects
-            // if (selectedTransitionsEffects && selectedTransitionsEffects.length > 0) {
-            //     updatedSceneData.videoEffects = {
-            //         ...(updatedSceneData.videoEffects || {}),
-            //         effects: selectedTransitionsEffects
-            //     };
-            // }
-
+            
             // Also add to keywordsSelected array with media and selected transition effects
             try {
                 // Find the selected image object to pick a thumbnail for lowResMedia

@@ -27,25 +27,7 @@ import { toast } from 'react-toastify';
 import Image from 'next/image';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { LibraryData } from '@/services/profileService';
-
-interface LogoType {
-    name?: string;
-    url: string;
-    position?: string;
-}
-
-interface MusicType {
-    selectedMusic: string;
-    volume: number;
-    autoAdjust?: boolean;
-    fadeIn?: boolean;
-    fadeOut?: boolean;
-}
-
-interface ClipType {
-    name?: string;
-    url: string;
-}
+import { LogoOverlayInterface, SettingItemInterface, Settings } from '@/types/scriptData';
 
 interface ProjectSettingsContext {
     mode: 'project' | 'scene';
@@ -55,23 +37,12 @@ interface ProjectSettingsContext {
 interface ProjectSettingsDialogProps {
     open: boolean;
     onClose: () => void;
-    onApply: () => void;
-    context: ProjectSettingsContext;
+    onApply: (mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => void;
+    projectSettingsContext: ProjectSettingsContext;
 
     // Temporary state values
-    tmpTransitionId: string;
-    tmpMusic: MusicType | null;
-    tmpLogo: LogoType | null;
-    tmpClip: ClipType | null;
-    tmpEffects: string[];
-
-    // State setters
-    onTmpTransitionIdChange: (value: string) => void;
-    onTmpMusicChange: (music: MusicType | null) => void;
-    onTmpLogoChange: (logo: LogoType | null) => void;
-    onTmpClipChange: (clip: ClipType | null) => void;
-    onTmpEffectsChange: (effects: string[]) => void;
-    onEffectToggle: (id: string) => void;
+    pSettings: Settings | null;
+    sSettings: Settings | null;
 
     // Music player state
     isMusicLoading: boolean;
@@ -91,18 +62,9 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     open,
     onClose,
     onApply,
-    context,
-    tmpTransitionId,
-    tmpMusic,
-    tmpLogo,
-    tmpClip,
-    tmpEffects,
-    onTmpTransitionIdChange,
-    onTmpMusicChange,
-    onTmpLogoChange,
-    onTmpClipChange,
-    onTmpEffectsChange,
-    onEffectToggle,
+    projectSettingsContext,
+    pSettings,
+    sSettings,
     isMusicLoading,
     isMusicPlaying,
     setIsMusicPlaying,
@@ -116,16 +78,33 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
-    const [backgrounds, setBackgrounds] = useState<any[]>(driveLibrary?.backgrounds || []);
+
     const [music, setMusic] = useState<any[]>(driveLibrary?.music || []);
+    const [backgrounds, setBackgrounds] = useState<any[]>(driveLibrary?.backgrounds || []);
     const [transitions, setTransitions] = useState<any[]>(driveLibrary?.transitions || []);
     const [transitionEffects, setTransitionEffects] = useState<any[]>(driveLibrary?.transitionEffects || []);
-    const [selectedBackground, setSelectedBackground] = useState<any>(null);
-    const [loadingLibraryData, setLoadingLibraryData] = useState<boolean>(false);
-    const [videoError, setVideoError] = useState(false);
-    const [videoLoading, setVideoLoading] = useState(false);
     const [currentMusicId, setCurrentMusicId] = useState<string | null>(null);
-    const [uploadingLogo, setUploadingLogo] = useState(false);
+
+    const [loading, setLoading] = useState(false);
+    const [logoUploading, setLogoUploading] = useState(false);
+    const [videoError, setVideoError] = useState(false);
+
+    const [projectSettings, setProjectSettings] = useState<Settings | null>(pSettings || null);
+    const [sceneSettings, setSceneSettings] = useState<Settings | null>(sSettings || null);
+
+    const isProjectSettings = projectSettingsContext.mode === 'project';
+    // console.log(isProjectSettings ? 'Settings for Project' : 'Settings for Scene', ' are: ', isProjectSettings ? pSettings : sSettings);
+
+    // Update settings state when dialog opens or props change
+    React.useEffect(() => {
+        if (open) {
+            if (isProjectSettings) {
+                setProjectSettings(pSettings || null);
+            } else {
+                setSceneSettings(sSettings || null);
+            }
+        }
+    }, [open, isProjectSettings, pSettings, sSettings]);
 
     // Cleanup audio when dialog closes
     React.useEffect(() => {
@@ -152,7 +131,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                 setBackgrounds(cachedLibraryData.backgrounds);
                 // Set music from cache
                 setMusic(cachedLibraryData.music);
-                setTransitions(cachedLibraryData.transitions);
+                // setTransitions(cachedLibraryData.transitionEffects);
             } else {
                 // Fallback to driveLibrary if cache is empty or missing
                 if (driveLibrary && driveLibrary.backgrounds) {
@@ -163,9 +142,9 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                     setMusic(driveLibrary.music);
                 }
 
-                if (driveLibrary.transitions) {
-                    setTransitions(driveLibrary.transitions);
-                }
+                // if (driveLibrary.transitionEffects) {
+                //     setTransitions(driveLibrary.transitionEffects);
+                // }
 
                 if (driveLibrary.transitionEffects) {
                     setTransitionEffects(driveLibrary.transitionEffects);
@@ -178,36 +157,40 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     // Uses the authenticated proxy endpoint like images do
     const getPlayableVideoUrl = (background: any): string => {
         if (!background) return '';
-        
+
         // If webContentLink exists, normalize it (extract file ID and use proxy)
         if (background.webContentLink) {
             return HelperFunctions.normalizeGoogleDriveUrl(background.webContentLink);
         }
-        
+
         // If we have an ID, use the proxy endpoint directly
         if (background.id) {
             return `/api/google-drive-media?id=${encodeURIComponent(background.id)}`;
         }
-        
+
         return '';
     };
 
     // Update video source when selectedBackground changes
     useEffect(() => {
-        if (selectedBackground && videoRef.current) {
-            const videoUrl = getPlayableVideoUrl(selectedBackground);
+        if (isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo && videoRef.current) {
+            const videoUrl = getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo);
             if (videoUrl) {
-                videoRef.current.src = videoUrl;
-                videoRef.current.load(); // Force reload the video
+                if (videoRef.current) {
+                    videoRef.current.src = videoUrl;
+                    videoRef.current.load(); // Force reload the video
+                }
             }
-        } else if (!selectedBackground && videoRef.current) {
+        } else if (!isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo && videoRef.current) {
             // Clear video source when no background is selected
-            videoRef.current.src = '';
+            if (videoRef.current) {
+                videoRef.current.src = '';
+            }
         }
-    }, [selectedBackground]);
+    }, [isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo]);
 
     const refreshLibraryData = async () => {
-        setLoadingLibraryData(true);
+        setLoading(true);
         try {
             // Use loadBackgrounds which calls the main API, then fetch full library to get music
             const response: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(true);
@@ -216,28 +199,28 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
         } catch (error) {
             console.error('Error refreshing music:', error);
         } finally {
-            setLoadingLibraryData(false);
+            setLoading(false);
         }
     }
 
     const handleVideoError = () => {
         setVideoError(true);
-        setVideoLoading(false);
+        setLoading(false);
     };
 
     const handleVideoLoadStart = () => {
-        setVideoLoading(true);
+        setLoading(true);
         setVideoError(false);
     };
 
     const handleVideoLoaded = () => {
-        setVideoLoading(false);
+        setLoading(false);
         setVideoError(false);
     };
 
     const handleToggleBackgroundMusic = async () => {
         try {
-            const id = (tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || '';
+            const id = (isProjectSettings ? projectSettings?.videoBackgroundMusic?.id : sceneSettings?.videoBackgroundMusic?.id);
             if (!id) return;
 
             // If no audio element exists, create it
@@ -308,20 +291,13 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             aria-labelledby="project-settings-dialog-title"
             maxWidth="xl"
             fullWidth
-            disableEscapeKeyDown={uploadingLogo}
-            onKeyDown={(e) => {
-                if (e.key === 'Escape') onClose();
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (tmpTransitionId !== undefined) onApply();
-                }
-            }}
+            disableEscapeKeyDown={loading}
         >
             <DialogTitle id="project-settings-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography component="div" sx={{ fontSize: '1.25rem' }}>Project Settings {context.mode === 'scene' ? `(Scene ${(context.sceneIndex || 0) + 1})` : ''}</Typography>
+                <Typography component="div" sx={{ fontSize: '1.25rem' }}>Project Settings {projectSettingsContext.mode === 'scene' ? `(Scene ${(projectSettingsContext.sceneIndex || 0) + 1})` : ''}</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button onClick={onApply} variant="contained" size="medium" disabled={uploadingLogo} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✔ Save Changes</Button>
-                    <Button onClick={onClose} variant="outlined" size="medium" disabled={uploadingLogo} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✕ Close</Button>
+                    <Button onClick={() => onApply(projectSettingsContext.mode, projectSettings, sceneSettings)} variant="contained" size="medium" disabled={logoUploading} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✔ Save Changes</Button>
+                    <Button onClick={onClose} variant="outlined" size="medium" disabled={logoUploading} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✕ Close</Button>
                 </Box>
             </DialogTitle>
             <DialogContent>
@@ -340,17 +316,27 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                 select
                                 fullWidth
                                 size="small"
-                                value={tmpTransitionId}
-                                onChange={(e) => onTmpTransitionIdChange(String(e.target.value))}
+                                value={isProjectSettings ? projectSettings?.videoTransitionEffect?.name : sceneSettings?.videoTransitionEffect?.name}
+                                onChange={(e) => {
+                                    const selectedTransitionId = e.target.value;
+                                    const fullTransitionObj = (transitionEffects || []).find((t: any) => t.id === selectedTransitionId);
+                                    if (fullTransitionObj) {
+                                        if (isProjectSettings) {
+                                            setProjectSettings({ ...projectSettings, videoTransitionEffect: fullTransitionObj as SettingItemInterface } as Settings);
+                                        } else {
+                                            setSceneSettings({ ...sceneSettings, videoTransitionEffect: fullTransitionObj as SettingItemInterface } as Settings);
+                                        }
+                                    }
+                                }}
                                 SelectProps={{ native: true }}
                                 sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
                             >
                                 <option value="">Select transition...</option>
-                                {predefinedTransitions.map((t: string) => (
+                                {transitionEffects.map((t: string) => (
                                     <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
                                 ))}
                             </TextField>
-                            {tmpTransitionId && (
+                            {isProjectSettings ? projectSettings?.videoTransitionEffect?.name : sceneSettings?.videoTransitionEffect?.name && (
                                 <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
                                     <Box sx={{
                                         display: 'flex',
@@ -374,7 +360,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         </Box>
                                         <Box sx={{ flex: 1 }}>
                                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                {tmpTransitionId.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                                                {isProjectSettings ? projectSettings?.videoTransitionEffect?.name : sceneSettings?.videoTransitionEffect?.name?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -390,7 +376,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             <IconButton
                                 size="small"
                                 onClick={refreshLibraryData}
-                                disabled={loadingLibraryData}
+                                disabled={loading}
                                 sx={{ color: 'primary.main' }}
                                 title="Refresh music list"
                             >
@@ -410,9 +396,17 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     fullWidth
                                     sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
                                     size="small"
-                                    value={(tmpMusic?.selectedMusic.match(/\/d\/([\w-]+)/)?.[1]) || ''}
+                                    value={(isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name)}
                                     onChange={(e) => {
-                                        const selId = String(e.target.value);
+                                        const selectedMusicId = e.target.value;
+                                        const fullMusicObj = (music || []).find((m: any) => m.id === selectedMusicId);
+                                        if (fullMusicObj) {
+                                            if (isProjectSettings) {
+                                                setProjectSettings({ ...projectSettings, videoBackgroundMusic: fullMusicObj as SettingItemInterface } as Settings);
+                                            } else {
+                                                setSceneSettings({ ...sceneSettings, videoBackgroundMusic: fullMusicObj as SettingItemInterface } as Settings);
+                                            }
+                                        }
 
                                         // Stop current music if playing
                                         if (audioRef.current && isMusicPlaying) {
@@ -428,20 +422,11 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         setIsMusicLoading(false);
                                         setCurrentMusicId(null);
                                         setLastMusicIdLoaded(null);
-
-                                        // Update music selection
-                                        onTmpMusicChange({
-                                            selectedMusic: selId ? `https://drive.google.com/file/d/${selId}/view?usp=drive_link` : '',
-                                            volume: tmpMusic?.volume ?? 0.3,
-                                            autoAdjust: tmpMusic?.autoAdjust ?? true,
-                                            fadeIn: tmpMusic?.fadeIn ?? true,
-                                            fadeOut: tmpMusic?.fadeOut ?? true
-                                        });
                                     }}
                                     SelectProps={{ native: true }}
                                 >
                                     <option value="">Select music...</option>
-                                    {loadingLibraryData ? (
+                                    {loading ? (
                                         <option disabled>Loading music...</option>
                                     ) : music.length === 0 ? (
                                         <option disabled>No music available</option>
@@ -452,8 +437,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     )}
                                 </TextField>
                             </Box>
-                            {tmpMusic?.selectedMusic && (() => {
-                                const selectedMusicItem = music.find((t: any) => tmpMusic.selectedMusic.includes(t.id));
+                            {(isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name) && (() => {
+                                const selectedMusicItem = music.find((t: any) => (isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name)?.includes(t.name));
                                 if (selectedMusicItem) {
                                     return (
                                         <Box sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
@@ -515,8 +500,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
 
                     {/* Logo Upload Section */}
                     <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Logo Overlay</Typography>
-                        {tmpLogo?.url ? (
+                        <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Project Logo</Typography>
+                        {(isProjectSettings ? projectSettings?.videoLogo?.url : sceneSettings?.videoLogo?.url) ? (
                             <Box sx={{
                                 border: '1px solid',
                                 borderColor: 'divider',
@@ -528,8 +513,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     <img
                                         // width={120}
                                         // height={120}
-                                        src={HelperFunctions.normalizeGoogleDriveUrl(tmpLogo.url)}
-                                        alt={tmpLogo.name || 'Logo'}
+                                        src={HelperFunctions.normalizeGoogleDriveUrl(isProjectSettings ? projectSettings?.videoLogo?.url || '' : sceneSettings?.videoLogo?.url || '')}
+                                        alt={isProjectSettings ? projectSettings?.videoLogo?.name : sceneSettings?.videoLogo?.name}
                                         loading="lazy"
                                         style={{
                                             width: '45%',
@@ -560,18 +545,24 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                 </Box>
                                 <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary' }}>
-                                        {tmpLogo.name}
+                                        {isProjectSettings ? projectSettings?.videoLogo?.name : sceneSettings?.videoLogo?.name}
                                     </Typography>
                                     <IconButton
                                         size="small"
-                                        onClick={() => window.open(tmpLogo.url, '_blank')}
+                                        onClick={() => window.open(isProjectSettings ? projectSettings?.videoLogo?.url : sceneSettings?.videoLogo?.url, '_blank')}
                                         sx={{ color: 'primary.main' }}
                                     >
                                         <ViewIcon fontSize="small" />
                                     </IconButton>
                                     <IconButton
                                         size="small"
-                                        onClick={() => onTmpLogoChange(null)}
+                                        onClick={() => {
+                                            if (isProjectSettings) {
+                                                setProjectSettings({ ...projectSettings, videoLogo: { name: '', url: '', position: 'top-right' } as LogoOverlayInterface } as Settings);
+                                            } else {
+                                                setSceneSettings({ ...sceneSettings, videoLogo: { name: '', url: '', position: 'top-right' } as LogoOverlayInterface } as Settings);
+                                            }
+                                        }}
                                         sx={{ color: 'error.main' }}
                                     >
                                         <DeleteIcon fontSize="small" />
@@ -581,8 +572,14 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     size="small"
                                     select
                                     label="Position"
-                                    value={tmpLogo?.position || 'top-right'}
-                                    onChange={(e) => onTmpLogoChange({ ...tmpLogo, position: String(e.target.value) })}
+                                    value={isProjectSettings ? projectSettings?.videoLogo?.position || 'top-right' : sceneSettings?.videoLogo?.position || 'top-right'}
+                                    onChange={(e) => {
+                                        if (isProjectSettings) {
+                                            setProjectSettings({ ...projectSettings, videoLogo: { ...projectSettings?.videoLogo, position: String(e.target.value) } as SettingItemInterface } as Settings);
+                                        } else {
+                                            setSceneSettings({ ...sceneSettings, videoLogo: { ...sceneSettings?.videoLogo, position: String(e.target.value) } as SettingItemInterface } as Settings);
+                                        }
+                                    }}
                                     SelectProps={{ native: true }}
                                     fullWidth
                                     sx={{ mt: 1.5 }}
@@ -605,16 +602,16 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     cursor: 'pointer',
                                     bgcolor: 'action.hover',
                                     transition: 'all 0.2s',
-                                    opacity: uploadingLogo ? 0.5 : 1,
-                                    pointerEvents: uploadingLogo ? 'none' : 'auto',
+                                    opacity: logoUploading ? 0.5 : 1,
+                                    pointerEvents: logoUploading ? 'none' : 'auto',
                                     '&:hover': {
                                         borderColor: 'primary.dark',
                                         bgcolor: 'action.selected'
                                     }
                                 }}
                             >
-                                {uploadingLogo ? <CircularProgress size={20} /> : <EditIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />}
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{uploadingLogo ? 'Uploading logo to Google Drive...' : 'Upload Logo'}</Typography>
+                                {logoUploading ? <CircularProgress size={20} /> : <EditIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />}
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{logoUploading ? 'Uploading logo to Google Drive...' : 'Upload Logo'}</Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     PNG, JPG, GIF up to 5MB
                                 </Typography>
@@ -631,7 +628,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
 
                                 // If jobId is available, upload to Google Drive
                                 if (jobId) {
-                                    setUploadingLogo(true);
+                                    setLogoUploading(true);
                                     try {
                                         // Get file extension
                                         const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
@@ -652,12 +649,11 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             const logoUrl = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view?usp=drive_link`;
 
                                             // Update logo with Google Drive webViewLink and renamed file
-                                            onTmpLogoChange({
-                                                name: logoFileName,
-                                                url: logoUrl,
-                                                position: tmpLogo?.position || 'top-right'
-                                            });
-                                            toast.success(`Logo uploaded successfully as ${logoFileName}`);
+                                            if (isProjectSettings) {
+                                                setProjectSettings({ ...projectSettings, videoLogo: { name: logoFileName, url: logoUrl, position: projectSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                            } else {
+                                                setSceneSettings({ ...sceneSettings, videoLogo: { name: logoFileName, url: logoUrl, position: sceneSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                            }
                                         } else {
                                             throw new Error('Upload failed');
                                         }
@@ -666,22 +662,22 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         toast.error('Failed to upload logo to Google Drive. Using local preview.');
                                         // Fallback to blob URL if upload fails
                                         const objectUrl = URL.createObjectURL(file);
-                                        onTmpLogoChange({
-                                            name: file.name,
-                                            url: objectUrl,
-                                            position: tmpLogo?.position || 'top-right'
-                                        });
+                                        if (isProjectSettings) {
+                                            setProjectSettings({ ...projectSettings, videoLogo: { name: file.name, url: objectUrl, position: projectSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                        } else {
+                                            setSceneSettings({ ...sceneSettings, videoLogo: { name: file.name, url: objectUrl, position: sceneSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                        }
                                     } finally {
-                                        setUploadingLogo(false);
+                                        setLogoUploading(false);
                                     }
                                 } else {
                                     // No jobId, use blob URL as fallback
                                     const objectUrl = URL.createObjectURL(file);
-                                    onTmpLogoChange({
-                                        name: file.name,
-                                        url: objectUrl,
-                                        position: tmpLogo?.position || 'top-right'
-                                    });
+                                    if (isProjectSettings) {
+                                        setProjectSettings({ ...projectSettings, videoLogo: { name: file.name, url: objectUrl, position: projectSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                    } else {
+                                        setSceneSettings({ ...sceneSettings, videoLogo: { name: file.name, url: objectUrl, position: sceneSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                    }
                                 }
                             }}
                         />
@@ -694,7 +690,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             <IconButton
                                 size="small"
                                 onClick={refreshLibraryData}
-                                disabled={loadingLibraryData}
+                                disabled={loading}
                                 sx={{ color: 'primary.main' }}
                             >
                                 <RefreshIcon fontSize="small" />
@@ -708,12 +704,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             backgroundColor: 'background.paper',
                             minHeight: 200
                         }}>
-                            {loadingLibraryData ? (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', py: 4 }}>
-                                    <CircularProgress size={24} />
-                                    <Typography variant="caption" sx={{ mt: 1 }}>Loading backgrounds...</Typography>
-                                </Box>
-                            ) : backgrounds.length === 0 ? (
+                            {backgrounds.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 4 }}>
                                     <Typography variant="body2" color="text.secondary">No backgrounds available</Typography>
                                 </Box>
@@ -722,19 +713,15 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     select
                                     fullWidth
                                     size="small"
-                                    value={selectedBackground?.id || ''}
+                                    value={isProjectSettings ? projectSettings?.videoBackgroundVideo?.id : sceneSettings?.videoBackgroundVideo?.id}
                                     onChange={(e) => {
-                                        const background = backgrounds.find(bg => bg.id === e.target.value);
-                                        if (background) {
-                                            setSelectedBackground(background);
-                                            setVideoError(false);
-                                            setVideoLoading(false);
-                                            // Set as clip - normalize the URL for proper playback
-                                            const normalizedUrl = HelperFunctions.normalizeGoogleDriveUrl(background.webContentLink || `https://drive.google.com/file/d/${background.id}/view`);
-                                            onTmpClipChange({
-                                                name: background.name,
-                                                url: normalizedUrl
-                                            });
+                                        const backgroundVideoObj = backgrounds.find(bg => bg.id === e.target.value);
+                                        if (backgroundVideoObj) {
+                                            if (isProjectSettings) {
+                                                setProjectSettings({ ...projectSettings, videoBackgroundVideo: backgroundVideoObj as SettingItemInterface } as Settings);
+                                            } else {
+                                                setSceneSettings({ ...sceneSettings, videoBackgroundVideo: backgroundVideoObj as SettingItemInterface } as Settings);
+                                            }
                                         }
                                     }}
                                     SelectProps={{ native: true }}
@@ -747,7 +734,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                     ))}
                                 </TextField>
                             )}
-                            {selectedBackground && (
+                            {(isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo) && (
                                 <Box sx={{ mt: 2 }}>
                                     <Box sx={{
                                         position: 'relative',
@@ -777,7 +764,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                                 <Button
                                                     variant="contained"
                                                     size="small"
-                                                    onClick={() => window.open(selectedBackground.webViewLink || `https://drive.google.com/file/d/${selectedBackground.id}/view`, '_blank')}
+                                                    onClick={() => window.open(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink, '_blank')}
                                                     startIcon={<PlayIcon />}
                                                     sx={{ textTransform: 'none' }}
                                                 >
@@ -788,7 +775,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             <>
                                                 <video
                                                     ref={videoRef}
-                                                    src={getPlayableVideoUrl(selectedBackground)}
+                                                    src={getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo)}
                                                     muted
                                                     autoPlay
                                                     loop
@@ -800,7 +787,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                                 >
                                                     Your browser does not support the video tag.
                                                 </video>
-                                                {videoLoading && (
+                                                {loading && (
                                                     <Box sx={{
                                                         position: 'absolute',
                                                         inset: 0,
@@ -812,16 +799,16 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                                         <CircularProgress size={24} sx={{ color: 'white' }} />
                                                     </Box>
                                                 )}
-                                                
+
                                             </>
                                         )}
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                                        {selectedBackground.webViewLink && (
+                                        {(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink) && (
                                             <Button
                                                 size="small"
                                                 variant="outlined"
-                                                onClick={() => window.open(selectedBackground.webViewLink || `https://drive.google.com/file/d/${selectedBackground.id}/view`, '_blank')}
+                                                onClick={() => window.open(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink, '_blank')}
                                                 sx={{ textTransform: 'none', fontSize: '1.25rem', py: 0.25, px: 1 }}
                                                 startIcon={<PlayIcon fontSize="small" />}
                                             >
@@ -833,20 +820,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             )}
                         </Box>
                     </Grid>
-
-                    {/* Video Effects (project-level) */}
-                    {/* <Grid item xs={12} sx={{ mt: 2, pl: 2 }}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, fontSize: '1.25rem' }}>Video Effects</Typography>
-                        <Box sx={{ p: 1, borderRadius: 2, border: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
-                            <EffectsPanel
-                                selectedEffects={tmpEffects}
-                                onEffectToggle={onEffectToggle}
-                                onApplyToAllScenes={(effects: string[]) => {
-                                    onTmpEffectsChange(effects);
-                                }}
-                            />
-                        </Box>
-                    </Grid> */}
                 </Grid>
             </DialogContent>
         </Dialog>
