@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Paper, Typography, TextField, Box, Chip, Button, CircularProgress, Switch, FormControlLabel } from '@mui/material';
-import { TrendingTopic } from '../../types/TrendingTopics';      
+import { TrendingTopic } from '../../types/TrendingTopics';
 
 interface TopicDetailsSectionProps {
   selectedTopic: TrendingTopic;
@@ -13,8 +13,8 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
 }) => {
   return (
     <Paper sx={{ p: 1.5 }} data-section="topic-details">
-      <Typography variant="h5" gutterBottom sx={{ fontWeight: 500, mb: 1 }}>
-      {selectedTopic.topic}
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 500, mb: 1, color: 'primary.main' }}>
+        {`Topic: ${selectedTopic.topic}`} <span style={{ fontSize: '0.8rem', color: 'text.secondary' }}>{`(${selectedTopic.category})`}</span>
       </Typography>
       {selectedTopic.description && (
         <Typography variant="subtitle1" gutterBottom sx={{
@@ -26,7 +26,7 @@ const TopicDetailsSection: React.FC<TopicDetailsSectionProps> = ({
           {selectedTopic.description}
         </Typography>
       )}
-      
+
     </Paper>
   );
 };

@@ -18,6 +18,7 @@ import {
   Typography,
   Paper,
 } from '@mui/material';
+import { TextField, Button } from '@mui/material';
 import { WordCloudChart } from './WordCloudChart/WordCloudChart';
 import LoadingOverlay from '../ui/LoadingOverlay';
 import TopicDetailsSection from './TopicDetailsSection';
@@ -59,6 +60,7 @@ const TrendingTopics: React.FC = () => {
   const [selectedPreviousCountry, setSelectedPreviousCountry] = useState<string>('');
   const [dialogTitle, setDialogTitle] = useState<string>('');
   const [dialogDescription, setDialogDescription] = useState<string>('');
+  const [customTopic, setCustomTopic] = useState<string>('');
 
   const fetchTrendingTopics = async () => {
     try {
@@ -288,6 +290,32 @@ const TrendingTopics: React.FC = () => {
     }
   };
 
+  const handleCustomTopicGo = () => {
+    const trimmed = customTopic.trim();
+    if (!trimmed) {
+      return;
+    }
+    const nowIso = new Date().toISOString();
+    const userTopic: TrendingTopic = {
+      id: `user_custom_${Date.now()}`,
+      topic: trimmed,
+      category: 'custom',
+      value: 1,
+      timestamp: nowIso,
+      description: '',
+      source_reference: 'user_input',
+      engagement_count: 0,
+      location: selectedLocationType === 'global'
+        ? selectedLocationType
+        : selectedLocationType === 'region'
+          ? selectedLocation
+          : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry)),
+      date_range: selectedDateRange,
+      related_keywords: []
+    };
+    handleTopicSelect(userTopic);
+  };
+
   return (
     <Box className={styles.trendingTopicsContainer}>
       {(loading || generatingSceneData) && (
@@ -317,31 +345,46 @@ const TrendingTopics: React.FC = () => {
       {
         /* Cloud View - Centered word cloud with permanent details panel on right */
         Array.isArray(trendingTopics) && trendingTopics.length > 0 ? (
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              {/* Centered Word Cloud Container */}
-              <Box sx={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'relative'
-              }}>
+          <Box sx={{ display: 'flex', gap: 3 }}>
+            {/* Centered Word Cloud Container */}
+            <Box sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              position: 'relative'
+            }}>
 
-                <WordCloudChart
-                  width={900}
-                  height={600}
-                  data={Array.isArray(trendingTopics) ? trendingTopics.map(topic => ({
-                    text: topic.topic,
-                    value: topic.value || 1,
-                    category: topic.category,
-                    description: topic.description,
-                    source_reference: topic.source_reference,
-                    id: topic.id
-                  })) : []}
-                  handleWordClick={wordClickHandler}
+              <WordCloudChart
+                width={900}
+                height={600}
+                data={Array.isArray(trendingTopics) ? trendingTopics.map(topic => ({
+                  text: topic.topic,
+                  value: topic.value || 1,
+                  category: topic.category,
+                  description: topic.description,
+                  source_reference: topic.source_reference,
+                  id: topic.id
+                })) : []}
+                handleWordClick={wordClickHandler}
+              />
+
+              <Box sx={{ display: 'flex', gap: 1, mb: 2, width: '100%', justifyContent: 'center' }}>
+                <TextField
+                  placeholder="Enter your own topic(optional)"
+                  value={customTopic}
+                  onChange={(e) => setCustomTopic(e.target.value)}
+                  size="small"
+                  sx={{ width: 500, maxWidth: '80%' }}
                 />
+                <Button
+                  variant="contained"
+                  onClick={handleCustomTopicGo}
+                  disabled={!customTopic.trim()}
+                >
+                  Go
+                </Button>
               </Box>
 
             </Box>
