@@ -326,6 +326,8 @@ const ScriptProductionClient = () => {
         if (mode === 'scene' && typeof sceneIndex === 'number') {
             const ch = scenesData[sceneIndex];
             setSceneSettings(ch?.sceneSettings || null);
+        } else {
+            setProjectSettings(scriptData?.projectSettings || null);
         }
         setProjectSettingsDialogOpen(true);
     };
@@ -471,16 +473,16 @@ const ScriptProductionClient = () => {
 
             console.log('scriptProductionJSON: ', JSON.stringify(scriptProductionJSON, null, 2));
 
-            // const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
-            // if (!uploadResult.success) {
-            //     toast.error(uploadResult.result || 'Failed to upload to Google Drive');
-            //     return;
-            // }
-            // // console.log('Drive result:', uploadResult.result);
+            const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
+            if (!uploadResult.success) {
+                toast.error(uploadResult.result || 'Failed to upload to Google Drive');
+                return;
+            }
+            // console.log('Drive result:', uploadResult.result);
 
-            // setCompleteProjectUploaded(true);
-            // setLoading(false);
-            // setShowBackConfirmation(true);
+            setCompleteProjectUploaded(true);
+            setLoading(false);
+            setShowBackConfirmation(true);
 
         } catch (e: any) {
             console.error(e);

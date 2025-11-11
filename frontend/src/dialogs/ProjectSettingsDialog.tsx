@@ -78,16 +78,18 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const transitionVideoRef = useRef<HTMLVideoElement | null>(null);
 
     const [music, setMusic] = useState<any[]>(driveLibrary?.music || []);
     const [backgrounds, setBackgrounds] = useState<any[]>(driveLibrary?.backgrounds || []);
-    const [transitions, setTransitions] = useState<any[]>(driveLibrary?.transitions || []);
     const [transitionEffects, setTransitionEffects] = useState<any[]>(driveLibrary?.transitionEffects || []);
     const [currentMusicId, setCurrentMusicId] = useState<string | null>(null);
 
     const [loading, setLoading] = useState(false);
     const [logoUploading, setLogoUploading] = useState(false);
     const [videoError, setVideoError] = useState(false);
+    const [transitionVideoError, setTransitionVideoError] = useState(false);
+    const [transitionVideoLoading, setTransitionVideoLoading] = useState(false);
 
     const [projectSettings, setProjectSettings] = useState<Settings | null>(pSettings || null);
     const [sceneSettings, setSceneSettings] = useState<Settings | null>(sSettings || null);
@@ -131,7 +133,10 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                 setBackgrounds(cachedLibraryData.backgrounds);
                 // Set music from cache
                 setMusic(cachedLibraryData.music);
-                // setTransitions(cachedLibraryData.transitionEffects);
+                // Set transition effects from cache if available
+                if (cachedLibraryData.transitionEffects) {
+                    setTransitionEffects(cachedLibraryData.transitionEffects);
+                }
             } else {
                 // Fallback to driveLibrary if cache is empty or missing
                 if (driveLibrary && driveLibrary.backgrounds) {
@@ -189,6 +194,24 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
         }
     }, [isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo]);
 
+    // Update transition video source when selectedTransitionEffect changes
+    useEffect(() => {
+        if (isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect && transitionVideoRef.current) {
+            const videoUrl = getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect);
+            if (videoUrl) {
+                if (transitionVideoRef.current) {
+                    transitionVideoRef.current.src = videoUrl;
+                    transitionVideoRef.current.load(); // Force reload the video
+                }
+            }
+        } else if (!isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect && transitionVideoRef.current) {
+            // Clear video source when no transition is selected
+            if (transitionVideoRef.current) {
+                transitionVideoRef.current.src = '';
+            }
+        }
+    }, [isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect]);
+
     const refreshLibraryData = async () => {
         setLoading(true);
         try {
@@ -196,8 +219,11 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             const response: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(true);
             setMusic(response.music);
             setBackgrounds(response.backgrounds);
+            if (response.transitionEffects) {
+                setTransitionEffects(response.transitionEffects);
+            }
         } catch (error) {
-            console.error('Error refreshing music:', error);
+            console.error('Error refreshing library data:', error);
         } finally {
             setLoading(false);
         }
@@ -216,6 +242,21 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     const handleVideoLoaded = () => {
         setLoading(false);
         setVideoError(false);
+    };
+
+    const handleTransitionVideoError = () => {
+        setTransitionVideoError(true);
+        setTransitionVideoLoading(false);
+    };
+
+    const handleTransitionVideoLoadStart = () => {
+        setTransitionVideoLoading(true);
+        setTransitionVideoError(false);
+    };
+
+    const handleTransitionVideoLoaded = () => {
+        setTransitionVideoLoading(false);
+        setTransitionVideoError(false);
     };
 
     const handleToggleBackgroundMusic = async () => {
@@ -302,204 +343,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             </DialogTitle>
             <DialogContent>
                 <Grid container spacing={2}>
-                    {/* Transition Effect Section */}
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Transition Effect</Typography>
-                        <Box sx={{
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 2,
-                            p: 2,
-                            backgroundColor: 'background.paper'
-                        }}>
-                            <TextField
-                                select
-                                fullWidth
-                                size="small"
-                                value={isProjectSettings ? projectSettings?.videoTransitionEffect?.name : sceneSettings?.videoTransitionEffect?.name}
-                                onChange={(e) => {
-                                    const selectedTransitionId = e.target.value;
-                                    const fullTransitionObj = (transitionEffects || []).find((t: any) => t.id === selectedTransitionId);
-                                    if (fullTransitionObj) {
-                                        if (isProjectSettings) {
-                                            setProjectSettings({ ...projectSettings, videoTransitionEffect: fullTransitionObj as SettingItemInterface } as Settings);
-                                        } else {
-                                            setSceneSettings({ ...sceneSettings, videoTransitionEffect: fullTransitionObj as SettingItemInterface } as Settings);
-                                        }
-                                    }
-                                }}
-                                SelectProps={{ native: true }}
-                                sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem' }, '& select': { fontSize: '1.25rem' } }}
-                            >
-                                <option value="">Select transition...</option>
-                                {transitionEffects.map((t: string) => (
-                                    <option key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}</option>
-                                ))}
-                            </TextField>
-                            {isProjectSettings ? projectSettings?.videoTransitionEffect?.name : sceneSettings?.videoTransitionEffect?.name && (
-                                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                                    <Box sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        p: 2,
-                                        bgcolor: 'action.hover',
-                                        borderRadius: 1
-                                    }}>
-                                        <Box sx={{
-                                            width: 40,
-                                            height: 40,
-                                            borderRadius: '50%',
-                                            bgcolor: 'primary.main',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            color: 'white'
-                                        }}>
-                                            ✨
-                                        </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                {isProjectSettings ? projectSettings?.videoTransitionEffect?.name : sceneSettings?.videoTransitionEffect?.name?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                </Box>
-                            )}
-                        </Box>
-                    </Grid>
-
-                    {/* Background Music Section */}
-                    <Grid item xs={12} md={6}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                            <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Music</Typography>
-                            <IconButton
-                                size="small"
-                                onClick={refreshLibraryData}
-                                disabled={loading}
-                                sx={{ color: 'primary.main' }}
-                                title="Refresh music list"
-                            >
-                                <RefreshIcon fontSize="small" />
-                            </IconButton>
-                        </Box>
-                        <Box sx={{
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 2,
-                            p: 2,
-                            backgroundColor: 'background.paper'
-                        }}>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                <TextField
-                                    select
-                                    fullWidth
-                                    sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
-                                    size="small"
-                                    value={(isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name)}
-                                    onChange={(e) => {
-                                        const selectedMusicId = e.target.value;
-                                        const fullMusicObj = (music || []).find((m: any) => m.id === selectedMusicId);
-                                        if (fullMusicObj) {
-                                            if (isProjectSettings) {
-                                                setProjectSettings({ ...projectSettings, videoBackgroundMusic: fullMusicObj as SettingItemInterface } as Settings);
-                                            } else {
-                                                setSceneSettings({ ...sceneSettings, videoBackgroundMusic: fullMusicObj as SettingItemInterface } as Settings);
-                                            }
-                                        }
-
-                                        // Stop current music if playing
-                                        if (audioRef.current && isMusicPlaying) {
-                                            try {
-                                                audioRef.current.pause();
-                                            } catch (error) {
-                                                console.error('Error stopping music:', error);
-                                            }
-                                        }
-
-                                        // Reset states
-                                        setIsMusicPlaying(false);
-                                        setIsMusicLoading(false);
-                                        setCurrentMusicId(null);
-                                        setLastMusicIdLoaded(null);
-                                    }}
-                                    SelectProps={{ native: true }}
-                                >
-                                    <option value="">Select music...</option>
-                                    {loading ? (
-                                        <option disabled>Loading music...</option>
-                                    ) : music.length === 0 ? (
-                                        <option disabled>No music available</option>
-                                    ) : (
-                                        music.map((t: any) => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))
-                                    )}
-                                </TextField>
-                            </Box>
-                            {(isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name) && (() => {
-                                const selectedMusicItem = music.find((t: any) => (isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name)?.includes(t.name));
-                                if (selectedMusicItem) {
-                                    return (
-                                        <Box sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                                            <Box sx={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 2,
-                                                p: 2,
-                                                bgcolor: 'action.hover',
-                                                borderRadius: 1
-                                            }}>
-                                                <Box sx={{
-                                                    width: 50,
-                                                    height: 50,
-                                                    borderRadius: 1,
-                                                    bgcolor: 'secondary.main',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: 'white'
-                                                }}>
-                                                    <Typography variant="h6">🎵</Typography>
-                                                </Box>
-                                                <Box sx={{ flex: 1 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                                        {selectedMusicItem.name}
-                                                    </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {isMusicLoading ? 'Loading...' : isMusicPlaying ? 'Playing...' : 'Ready to play'}
-                                                    </Typography>
-                                                </Box>
-                                                {isMusicLoading ? (
-                                                    <CircularProgress size={20} sx={{ color: 'primary.main' }} />
-                                                ) : isMusicPlaying ? (
-                                                    <IconButton
-                                                        size="small"
-                                                        sx={{ color: 'primary.main' }}
-                                                        onClick={handleToggleBackgroundMusic}
-                                                    >
-                                                        <PauseIcon />
-                                                    </IconButton>
-                                                ) : (
-                                                    <IconButton
-                                                        size="small"
-                                                        sx={{ color: 'primary.main' }}
-                                                        onClick={handleToggleBackgroundMusic}
-                                                    >
-                                                        <PlayIcon />
-                                                    </IconButton>
-                                                )}
-                                            </Box>
-                                        </Box>
-                                    );
-                                }
-                                return null;
-                            })()}
-                        </Box>
-                    </Grid>
-
                     {/* Logo Upload Section */}
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={6} sx={{ minHeight: 320, maxHeight: 320 }}>
                         <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Project Logo</Typography>
                         {(isProjectSettings ? projectSettings?.videoLogo?.url : sceneSettings?.videoLogo?.url) ? (
                             <Box sx={{
@@ -523,30 +368,22 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             borderRadius: 2,
                                             border: '1px solid rgba(255,255,255,0.15)',
                                             background: '#111',
-                                            display: 'block'
+                                            display: 'block',
+                                            justifySelf: 'center'
                                         }}
                                     />
-                                    <IconButton
-                                        onClick={() => fileInputRef.current?.click()}
-                                        sx={{
-                                            position: 'absolute',
-                                            top: 4,
-                                            right: 4,
-                                            bgcolor: 'rgba(0,0,0,0.7)',
-                                            color: 'white',
-                                            '&:hover': { bgcolor: 'rgba(0,0,0,0.9)' },
-                                            width: 28,
-                                            height: 28
-                                        }}
-                                        size="small"
-                                    >
-                                        <EditIcon fontSize="small" />
-                                    </IconButton>
+
                                 </Box>
                                 <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary' }}>
                                         {isProjectSettings ? projectSettings?.videoLogo?.name : sceneSettings?.videoLogo?.name}
                                     </Typography>
+                                    <IconButton
+                                        onClick={() => fileInputRef.current?.click()}
+                                        size="small"
+                                    >
+                                        <EditIcon fontSize="small" />
+                                    </IconButton>
                                     <IconButton
                                         size="small"
                                         onClick={() => window.open(isProjectSettings ? projectSettings?.videoLogo?.url : sceneSettings?.videoLogo?.url, '_blank')}
@@ -683,6 +520,276 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                         />
                     </Grid>
 
+                    {/* Background Music Section */}
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Music</Typography>
+                            <IconButton
+                                size="small"
+                                onClick={refreshLibraryData}
+                                disabled={loading}
+                                sx={{ color: 'primary.main' }}
+                                title="Refresh music list"
+                            >
+                                <RefreshIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                        <Box sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            p: 2,
+                            backgroundColor: 'background.paper',
+                            minHeight: 320,
+                            maxHeight: 320,
+                        }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField
+                                    select
+                                    fullWidth
+                                    sx={{ '& .MuiInputBase-root': { height: 44, fontSize: '1.25rem', }, '& select': { fontSize: '1.25rem' } }}
+                                    size="small"
+                                    value={(isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name)}
+                                    onChange={(e) => {
+                                        const selectedMusicId = e.target.value;
+                                        const fullMusicObj = (music || []).find((m: any) => m.id === selectedMusicId);
+                                        if (fullMusicObj) {
+                                            if (isProjectSettings) {
+                                                setProjectSettings({ ...projectSettings, videoBackgroundMusic: fullMusicObj as SettingItemInterface } as Settings);
+                                            } else {
+                                                setSceneSettings({ ...sceneSettings, videoBackgroundMusic: fullMusicObj as SettingItemInterface } as Settings);
+                                            }
+                                        }
+
+                                        // Stop current music if playing
+                                        if (audioRef.current && isMusicPlaying) {
+                                            try {
+                                                audioRef.current.pause();
+                                            } catch (error) {
+                                                console.error('Error stopping music:', error);
+                                            }
+                                        }
+
+                                        // Reset states
+                                        setIsMusicPlaying(false);
+                                        setIsMusicLoading(false);
+                                        setCurrentMusicId(null);
+                                        setLastMusicIdLoaded(null);
+                                    }}
+                                    SelectProps={{ native: true }}
+                                >
+                                    <option value="">Select music...</option>
+                                    {loading ? (
+                                        <option disabled>Loading music...</option>
+                                    ) : music.length === 0 ? (
+                                        <option disabled>No music available</option>
+                                    ) : (
+                                        music.map((t: any) => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))
+                                    )}
+                                </TextField>
+                            </Box>
+                            {(isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name) && (() => {
+                                const selectedMusicItem = music.find((t: any) => (isProjectSettings ? projectSettings?.videoBackgroundMusic?.name : sceneSettings?.videoBackgroundMusic?.name)?.includes(t.name));
+                                if (selectedMusicItem) {
+                                    return (
+                                        <Box sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                                            <Box sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 2,
+                                                p: 2,
+                                                bgcolor: 'action.hover',
+                                                borderRadius: 1
+                                            }}>
+                                                <Box sx={{
+                                                    width: 50,
+                                                    height: 50,
+                                                    borderRadius: 1,
+                                                    bgcolor: 'secondary.main',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: 'white'
+                                                }}>
+                                                    <Typography variant="h6">🎵</Typography>
+                                                </Box>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                        {selectedMusicItem.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {isMusicLoading ? 'Loading...' : isMusicPlaying ? 'Playing...' : 'Ready to play'}
+                                                    </Typography>
+                                                </Box>
+                                                {isMusicLoading ? (
+                                                    <CircularProgress size={20} sx={{ color: 'primary.main' }} />
+                                                ) : isMusicPlaying ? (
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: 'primary.main' }}
+                                                        onClick={handleToggleBackgroundMusic}
+                                                    >
+                                                        <PauseIcon />
+                                                    </IconButton>
+                                                ) : (
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ color: 'primary.main' }}
+                                                        onClick={handleToggleBackgroundMusic}
+                                                    >
+                                                        <PlayIcon />
+                                                    </IconButton>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    );
+                                }
+                                return null;
+                            })()}
+                        </Box>
+                    </Grid>
+
+                    {/* Transition Effect Section */}
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Transition Effect</Typography>
+                            <IconButton
+                                size="small"
+                                onClick={refreshLibraryData}
+                                disabled={loading}
+                                sx={{ color: 'primary.main' }}
+                            >
+                                <RefreshIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
+                        <Box sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            p: 2,
+                            backgroundColor: 'background.paper',
+                            minHeight: 320,
+                            maxHeight: 320,
+
+                        }}>
+                            {transitionEffects.length === 0 ? (
+                                <Box sx={{ textAlign: 'center', py: 4 }}>
+                                    <Typography variant="body2" color="text.secondary">No transition effects available</Typography>
+                                </Box>
+                            ) : (
+                                <TextField
+                                    select
+                                    fullWidth
+                                    size="small"
+                                    value={isProjectSettings ? projectSettings?.videoTransitionEffect?.id : sceneSettings?.videoTransitionEffect?.id}
+                                    onChange={(e) => {
+                                        const transitionEffectObj = transitionEffects.find(te => te.id === e.target.value);
+                                        if (transitionEffectObj) {
+                                            if (isProjectSettings) {
+                                                setProjectSettings({ ...projectSettings, videoTransitionEffect: transitionEffectObj as SettingItemInterface } as Settings);
+                                            } else {
+                                                setSceneSettings({ ...sceneSettings, videoTransitionEffect: transitionEffectObj as SettingItemInterface } as Settings);
+                                            }
+                                        }
+                                    }}
+                                    SelectProps={{ native: true }}
+                                >
+                                    <option value="">Select a transition effect</option>
+                                    {transitionEffects.map((transitionEffect) => (
+                                        <option key={transitionEffect.id} value={transitionEffect.id}>
+                                            {transitionEffect.name}
+                                        </option>
+                                    ))}
+                                </TextField>
+                            )}
+                            {(isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect) && (
+                                <Box sx={{ mt: 2 }}>
+                                    <Box sx={{
+                                        position: 'relative',
+                                        width: '100%',
+                                        height: 180,
+                                        borderRadius: 2,
+                                        overflow: 'hidden',
+                                        border: '1px solid rgba(255,255,255,0.15)',
+                                        bgcolor: '#000'
+                                    }}>
+                                        {transitionVideoError ? (
+                                            // Show error message with external link option
+                                            <Box sx={{
+                                                width: '100%',
+                                                height: '100%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: 2,
+                                                p: 2,
+                                                bgcolor: 'rgba(0,0,0,0.8)'
+                                            }}>
+                                                <Typography variant="body2" color="error" sx={{ textAlign: 'center' }}>
+                                                    Video cannot be played in browser
+                                                </Typography>
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={() => window.open(isProjectSettings ? projectSettings?.videoTransitionEffect?.webViewLink : sceneSettings?.videoTransitionEffect?.webViewLink, '_blank')}
+                                                    startIcon={<PlayIcon />}
+                                                    sx={{ textTransform: 'none' }}
+                                                >
+                                                    Open in Google Drive
+                                                </Button>
+                                            </Box>
+                                        ) : (
+                                            <>
+                                                <video
+                                                    ref={transitionVideoRef}
+                                                    src={getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect)}
+                                                    muted
+                                                    autoPlay
+                                                    loop
+                                                    onError={handleTransitionVideoError}
+                                                    onLoadStart={handleTransitionVideoLoadStart}
+                                                    onLoadedData={handleTransitionVideoLoaded}
+                                                    onCanPlay={handleTransitionVideoLoaded}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
+                                                >
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                                {transitionVideoLoading && (
+                                                    <Box sx={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        bgcolor: 'rgba(0,0,0,0.5)'
+                                                    }}>
+                                                        <CircularProgress size={24} sx={{ color: 'white' }} />
+                                                    </Box>
+                                                )}
+                                            </>
+                                        )}
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                                        {(isProjectSettings ? projectSettings?.videoTransitionEffect?.webViewLink : sceneSettings?.videoTransitionEffect?.webViewLink) && (
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                onClick={() => window.open(isProjectSettings ? projectSettings?.videoTransitionEffect?.webViewLink : sceneSettings?.videoTransitionEffect?.webViewLink, '_blank')}
+                                                sx={{ textTransform: 'none', fontSize: '1.25rem', py: 0.25, px: 1 }}
+                                                startIcon={<PlayIcon fontSize="small" />}
+                                            >
+                                                Open in Drive
+                                            </Button>
+                                        )}
+                                    </Box>
+                                </Box>
+                            )}
+                        </Box>
+                    </Grid>
+
                     {/* Background Selection Section */}
                     <Grid item xs={12} md={6}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -702,7 +809,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             borderRadius: 2,
                             p: 2,
                             backgroundColor: 'background.paper',
-                            minHeight: 200
+                            minHeight: 320,
+                            maxHeight: 320,
                         }}>
                             {backgrounds.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 4 }}>
