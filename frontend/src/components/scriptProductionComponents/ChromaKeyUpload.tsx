@@ -78,7 +78,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             setError(`Transcription failed: ${error}`);
             setErrorType('transcribe');
             setUploading(false);
-            onUploadFailed(error);
         },
     });
 
@@ -115,7 +114,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     setCurrentStep('idle');
                     setError('Failed to upload video to Drive');
                     setErrorType('upload');
-                    onUploadFailed('Failed to upload video to Drive');
                     return;
                 }
                 const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
@@ -172,7 +170,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 console.log("transcription failed: ", transcriptionData?.error);
                 setError(`Transcription failed: ${transcriptionData?.error || 'Unknown error'}`);
                 setErrorType('transcribe');
-                onUploadFailed('Transcription failed');
                 return;
             }
 
@@ -410,7 +407,10 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                     <Tooltip title="Close">
                                         <IconButton
                                             size="small"
-                                            onClick={clearError}
+                                            onClick={() => {
+                                                clearError();
+                                                onUploadFailed('Upload failed. Please try again.');
+                                            }}
                                             color="inherit"
                                         >
                                             <CloseIcon />

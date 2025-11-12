@@ -19,12 +19,9 @@ import {
     Delete as DeleteIcon,
     Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { EffectsPanel } from '@/components/videoEffects/EffectsPanel';
-import { predefinedTransitions } from '@/data/DefaultData';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { toast } from 'react-toastify';
-import Image from 'next/image';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { LibraryData } from '@/services/profileService';
 import { LogoOverlayInterface, SettingItemInterface, Settings } from '@/types/scriptData';
@@ -38,42 +35,24 @@ interface ProjectSettingsDialogProps {
     open: boolean;
     onClose: () => void;
     onApply: (mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => void;
+    jobId: string | null;
+    userId: string;
     projectSettingsContext: ProjectSettingsContext;
-
-    // Temporary state values
     pSettings: Settings | null;
     sSettings: Settings | null;
-
-    // Music player state
-    isMusicLoading: boolean;
-    isMusicPlaying: boolean;
-    setIsMusicPlaying: (playing: boolean) => void;
-    setIsMusicLoading: (loading: boolean) => void;
-    setLastMusicIdLoaded: (id: string | null) => void;
-
-    // External dependencies
     driveLibrary: { backgrounds?: any[]; music?: any[]; transitions?: any[], transitionEffects?: any[] };
-    setVideoPreviewUrl: (url: string) => void;
-    setVideoPreviewOpen: (open: boolean) => void;
-    jobId?: string;
 }
 
 const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     open,
     onClose,
     onApply,
+    jobId,
+    userId,
     projectSettingsContext,
     pSettings,
     sSettings,
-    isMusicLoading,
-    isMusicPlaying,
-    setIsMusicPlaying,
-    setIsMusicLoading,
-    setLastMusicIdLoaded,
     driveLibrary,
-    setVideoPreviewUrl,
-    setVideoPreviewOpen,
-    jobId
 }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,6 +72,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
 
     const [projectSettings, setProjectSettings] = useState<Settings | null>(pSettings || null);
     const [sceneSettings, setSceneSettings] = useState<Settings | null>(sSettings || null);
+    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+    const [isMusicLoading, setIsMusicLoading] = useState(false);
 
     const isProjectSettings = projectSettingsContext.mode === 'project';
     // console.log(isProjectSettings ? 'Settings for Project' : 'Settings for Scene', ' are: ', isProjectSettings ? pSettings : sSettings);
@@ -120,8 +101,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                     console.error('Error cleaning up audio:', error);
                 }
             }
-            setIsMusicPlaying(false);
-            setIsMusicLoading(false);
             setCurrentMusicId(null);
         } else {
             // Load backgrounds and music from cache or driveLibrary on mount
@@ -310,7 +289,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             if (currentId !== id || !audioRef.current.src.includes(id)) {
                 setIsMusicLoading(true);
                 setCurrentMusicId(id);
-                setLastMusicIdLoaded(id);
                 audioRef.current.src = src;
                 // Wait a bit for the source to be set
                 await new Promise(resolve => setTimeout(resolve, 100));
@@ -508,12 +486,22 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         setLogoUploading(false);
                                     }
                                 } else {
-                                    // No jobId, use blob URL as fallback
-                                    const objectUrl = URL.createObjectURL(file);
+                                    // No jobId, first check the folder exist or not, if not, generate a new folder
+                                    const uploadResult = await GoogleDriveServiceFunctions.uploadMediaToDrive(
+                                        'users',
+                                        `${userId}/logo`,
+                                        file
+                                    );
+                                    if (!uploadResult.success || !uploadResult.fileId) {
+                                        console.error('Failed to upload logo to Google Drive:');
+                                        toast.error('Failed to upload logo to Google Drive. Using local preview.');
+                                        return;
+                                    }
+                                    const logoUrl = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view?usp=drive_link`;
                                     if (isProjectSettings) {
-                                        setProjectSettings({ ...projectSettings, videoLogo: { name: file.name, url: objectUrl, position: projectSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                        setProjectSettings({ ...projectSettings, videoLogo: { name: file.name, url: logoUrl, position: projectSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
                                     } else {
-                                        setSceneSettings({ ...sceneSettings, videoLogo: { name: file.name, url: objectUrl, position: sceneSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
+                                        setSceneSettings({ ...sceneSettings, videoLogo: { name: file.name, url: logoUrl, position: sceneSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
                                     }
                                 }
                             }}
@@ -574,7 +562,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         setIsMusicPlaying(false);
                                         setIsMusicLoading(false);
                                         setCurrentMusicId(null);
-                                        setLastMusicIdLoaded(null);
                                     }}
                                     SelectProps={{ native: true }}
                                 >
@@ -812,7 +799,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             minHeight: 320,
                             maxHeight: 320,
                         }}>
-                            {backgrounds.length === 0 ? (
+                            {!backgrounds || backgrounds?.length === 0 ? (
                                 <Box sx={{ textAlign: 'center', py: 4 }}>
                                     <Typography variant="body2" color="text.secondary">No backgrounds available</Typography>
                                 </Box>

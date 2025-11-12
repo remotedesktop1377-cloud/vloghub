@@ -9,3 +9,10 @@ export interface BackgroundTypeDialogProps {
     onClose: () => void;
     onSelectBackgroundType: (type: BackgroundType) => void;
 }
+
+export interface SocialKeys {
+    tiktok?: string;
+    instagram?: string;
+    facebook?: string;
+    youtube?: string;
+}

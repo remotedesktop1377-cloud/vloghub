@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       send(JSON.stringify({ type: 'transcribing', jobId }));
 
       let pollCount = 0;
-      const MAX_POLLS = 600; // 5 minutes (600 * 500ms)
+      const MAX_POLLS = 600 * 5; // 5 minutes (600 * 500ms) = 5 minutes
 
       // Poll for progress updates
       const interval = setInterval(() => {
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
           clearInterval(interval);
           setTimeout(() => controller.close(), 1000);
         }
-      }, 500); // Poll every 500ms
+      }, 500); // Poll every 500ms  
 
       // Cleanup on close
       request.signal.addEventListener('abort', () => {

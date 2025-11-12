@@ -1,6 +1,8 @@
+import { Settings } from '@/types/scriptData';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 import { HelperFunctions, secure } from '../utils/helperFunctions';
 import { SupabaseHelpers } from '../utils/SupabaseHelpers';
+import { SocialKeys } from '@/types/backgroundType';
 
 export interface BackgroundItem {
     id: string;
@@ -23,8 +25,8 @@ export interface ProfileService {
     fetchLibraryData: () => Promise<LibraryData>;
     uploadLogo: (file: File, userId: string) => Promise<{ success: boolean; url?: string; fileName?: string }>;
     removeLogo: (fileName: string, url: string, userId: string) => Promise<{ success: boolean }>;
-    saveProfileSettings: (userId: string, settings: { logo?: any; background?: any; textMode?: any; format?: any; themeName?: any }) => Promise<boolean>;
-    getProfileSettings: (userId: string) => Promise<{ logo?: any; background?: any }>;
+    saveProfileSettings: (userId: string, projectSettings: Settings, socialKeys: SocialKeys, gammaTextMode?: string, gammaFormat?: string, gammaThemeName?: string) => Promise<boolean>;
+    getProfileSettings: (userId: string) => Promise<{ projectSettings?: Settings | null; socialKeys?: SocialKeys | null; gammaTextMode?: string | null; gammaFormat?: string | null; gammaThemeName?: string | null }>;
 }
 
 class ProfileServiceImpl implements ProfileService {
@@ -44,7 +46,7 @@ class ProfileServiceImpl implements ProfileService {
             }
 
             const data = await response.json();
-            console.log('API Response:', data);
+            // console.log('API Response:', data);
 
             if (data.error) {
                 throw new Error(data.error);
@@ -142,19 +144,32 @@ class ProfileServiceImpl implements ProfileService {
     /**
      * Save profile settings (logo and background) to Supabase and secure storage
      */
-    async saveProfileSettings(userId: string, settings: { logo?: any; background?: any; textMode?: any; format?: any; themeName?: any }): Promise<boolean> {
+    async saveProfileSettings(userId: string, projectSettings: Settings | null, socialKeys: SocialKeys, gammaTextMode?: string, gammaFormat?: string, gammaThemeName?: string): Promise<boolean> {
         try {
             // Save background to Supabase if provided
-            if (settings.background) {
-                await SupabaseHelpers.updateSelectedBackground(userId, settings.background);
-            }
+            // if (settings.background) {
+            //     await SupabaseHelpers.updateSelectedBackground(userId, settings.background);
+            // }
 
             // Save to local secure storage for immediate access
+            console.log('Saving profile settings to secure storage:', {
+                projectSettings: projectSettings,
+                socialKeys: socialKeys,
+                gammaTextMode: gammaTextMode,
+                gammaFormat: gammaFormat,
+                gammaThemeName: gammaThemeName
+            });
+            debugger;
             const key = `profileSettings_${userId}`;
             const currentSettings = secure.j[key as any].get() || {};
             secure.j[key as any].set({
                 ...currentSettings,
-                ...settings
+                projectSettings: projectSettings,
+                socialKeys: socialKeys,
+                gammaTextMode: gammaTextMode,
+                gammaFormat: gammaFormat,
+                gammaThemeName: gammaThemeName
+                
             });
 
             HelperFunctions.showSuccess('Profile settings saved');
@@ -169,44 +184,47 @@ class ProfileServiceImpl implements ProfileService {
     /**
      * Get profile settings from Supabase and secure storage
      */
-    async getProfileSettings(userId: string): Promise<{ logo?: any; background?: any; textMode?: any; format?: any; themeName?: any }> {
+    async getProfileSettings(userId: string): Promise<{ projectSettings?: Settings | null; socialKeys?: SocialKeys | null; gammaTextMode?: string | null; gammaFormat?: string | null; gammaThemeName?: string | null }> {
         try {
             // First try to get from Supabase
-            const { data: profileData } = await SupabaseHelpers.getUserProfileWithAssets(userId);
+            // const { data: profileData } = await SupabaseHelpers.getUserProfileWithAssets(userId);
 
-            const settings: { logo?: any; background?: any; textMode?: any; format?: any; themeName?: any } = {};
+            // const settings: { logo?: any; background?: any; gammaTextMode?: any; gammaFormat?: any; gammaThemeName?: any } = {};
 
-            // Get logo from Supabase profile
-            if ((profileData as any)?.logo_url) {
-                settings.logo = {
-                    url: (profileData as any).logo_url,
-                    fileName: (profileData as any).logo_filename,
-                    uploadedAt: (profileData as any).updated_at
-                };
-            }
+            // // Get logo from Supabase profile
+            // if ((profileData as any)?.logo_url) {
+            //     settings.logo = {
+            //         url: (profileData as any).logo_url,
+            //         fileName: (profileData as any).logo_filename,
+            //         uploadedAt: (profileData as any).updated_at
+            //     };
+            // }
 
-            // Get background from Supabase profile
-            if ((profileData as any)?.selected_background) {
-                settings.background = (profileData as any).selected_background;
-            }
+            // // Get background from Supabase profile
+            // if ((profileData as any)?.selected_background) {
+            //     settings.background = (profileData as any).selected_background;
+            // }
 
-            if ((profileData as any)?.textMode) {
-                settings.textMode = (profileData as any).textMode;
-            }
-            if ((profileData as any)?.format) {
-                settings.format = (profileData as any).format;
-            }
-            if ((profileData as any)?.themeName) {
-                settings.themeName = (profileData as any).themeName;
-            }
+            // if ((profileData as any)?.gammaTextMode) {
+            //     settings.gammaTextMode = (profileData as any).gammaTextMode;
+            // }
+            // if ((profileData as any)?.gammaFormat) {
+            //     settings.gammaFormat = (profileData as any).gammaFormat;
+            // }
+            // if ((profileData as any)?.gammaThemeName) {
+            //     settings.gammaThemeName = (profileData as any).gammaThemeName;
+            // }
 
             // Fallback to local storage if Supabase data is incomplete
             const key = `profileSettings_${userId}`;
             const localSettings = secure.j[key as any].get() || {};
 
             return {
-                logo: settings.logo || localSettings.logo,
-                background: settings.background || localSettings.background
+                projectSettings: localSettings.projectSettings || null,
+                socialKeys: localSettings.socialKeys || null,
+                gammaTextMode: localSettings.gammaTextMode || null,
+                gammaFormat: localSettings.gammaFormat || null,
+                gammaThemeName: localSettings.gammaThemeName || null
             };
         } catch (error) {
             console.error('Error getting profile settings:', error);

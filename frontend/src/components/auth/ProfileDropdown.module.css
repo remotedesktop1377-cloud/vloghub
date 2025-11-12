@@ -122,8 +122,8 @@
 .dialogClose {
   background: transparent;
   border: 1px solid #e5e7eb;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   color: #6b7280;
   cursor: pointer;
@@ -131,6 +131,25 @@
 
 .dialogClose:hover {
   background: #f9fafb;
+}
+
+.projectSettingsBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.projectSettingsBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.2);
 }
 
 .dialogContent {

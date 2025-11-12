@@ -36,13 +36,11 @@ import {
     PlayArrow as PlayIcon,
     Pause as PauseIcon
 } from '@mui/icons-material';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { LibraryData, profileService } from '@/services/profileService';
 import { toast, ToastContainer } from 'react-toastify';
-import { secure } from '@/utils/helperFunctions';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
@@ -52,11 +50,8 @@ import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection'
 import ChromaKeyUpload from '@/components/scriptProductionComponents/ChromaKeyUpload';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
-import { SUCCESS } from '@/styles/colors';
 import { PDF_TO_IMAGES_INTERVAL, ROUTES_KEYS, SCRIPT_STATUS } from '@/data/constants';
 import LoadingOverlay from '@/components/ui/LoadingOverlay';
-import CustomAudioPlayer from '@/components/scriptProductionComponents/CustomAudioPlayer';
-import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from '@/types/scriptData';
 import { BackgroundType } from '@/types/backgroundType';
 import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
@@ -116,18 +111,10 @@ const ScriptProductionClient = () => {
         transitionEffects: []
     });
     // Project-level settings
-    const [projectLogo, setProjectLogo] = useState<{ name?: string; url: string; position?: string } | null>(null);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
-    const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
-    const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
-    const [isMusicLoading, setIsMusicLoading] = useState(false);
-    const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-    const [lastMusicIdLoaded, setLastMusicIdLoaded] = useState<string | null>(null);
     const [completeProjectUploaded, setCompleteProjectUploaded] = useState(false);
     const [pageTitle, setPageTitle] = useState('Script Review & Approval');
 
-    const CONTROL_HEIGHT = 44;
     const [jobId, setJobId] = useState<string>('');
     // SceneData edit dialog states
     const [SceneDataEditDialogOpen, setScenesDataEditDialogOpen] = useState(false);
@@ -357,7 +344,7 @@ const ScriptProductionClient = () => {
                 }
             }));
             setScenesData(updated);
-            
+
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, projectSettings: updatedProjectSettings, scenesData: updated });
 
             try {
@@ -480,8 +467,8 @@ const ScriptProductionClient = () => {
             }
             // console.log('Drive result:', uploadResult.result);
 
-            setCompleteProjectUploaded(true);
             setLoading(false);
+            setCompleteProjectUploaded(true);
             setShowBackConfirmation(true);
 
         } catch (e: any) {
@@ -961,7 +948,11 @@ const ScriptProductionClient = () => {
         }
         // console.log('Scene folder result:', sceneFolderResult.result);
         // push this script data to the scripts_approved table in supabase
-        const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, updated_at: new Date().toISOString() } as any;
+
+
+        // save the profile settings to the secure storage
+        const profileSettings = await profileService.getProfileSettings(scriptData?.user_id || '');
+        const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, projectSettings: profileSettings.projectSettings, updated_at: new Date().toISOString() } as any;
         setScriptData(approvedData);
         SecureStorageHelpers.setScriptMetadata(approvedData);
         // const { error } = await SupabaseHelpers.saveApprovedScript(data);
@@ -1608,7 +1599,10 @@ const ScriptProductionClient = () => {
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
                                             toast.error(errorMessage);
-                                            console.log("errorMessage: ", errorMessage);
+                                            console.log("onUploadFailed: ", errorMessage);
+                                            setIsNarrationUploadView(true);
+                                            setIsNarratorVideoUploaded(false);
+                                            setHasDownloadedScript(true);
                                         }}
                                     />
                                 ) : (
@@ -1821,66 +1815,16 @@ const ScriptProductionClient = () => {
 
             {/* Project Settings Dialog */}
             <ProjectSettingsDialog
+                jobId={jobId}
+                userId={scriptData?.user_id || ''}
                 open={projectSettingsDialogOpen}
                 onClose={closeProjectSettingsDialog}
                 onApply={(mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => applyProjectSettingsDialog(mode, projectSettings, sceneSettings)}
                 projectSettingsContext={projectSettingsContext}
                 pSettings={projectSettings}
                 sSettings={sceneSettings}
-                isMusicLoading={isMusicLoading}
-                isMusicPlaying={isMusicPlaying}
-                setIsMusicPlaying={setIsMusicPlaying}
-                setIsMusicLoading={setIsMusicLoading}
-                setLastMusicIdLoaded={setLastMusicIdLoaded}
                 driveLibrary={driveLibrary}
-                setVideoPreviewUrl={setVideoPreviewUrl}
-                setVideoPreviewOpen={setVideoPreviewOpen}
-                jobId={jobId}
             />
-
-            {/* Video Preview Dialog */}
-            <Dialog
-                open={videoPreviewOpen}
-                onClose={() => setVideoPreviewOpen(false)}
-                aria-labelledby="clip-preview-dialog-title"
-                maxWidth="md"
-                fullWidth
-            >
-                <DialogTitle id="clip-preview-dialog-title" variant="h6">Clip Preview</DialogTitle>
-                <DialogContent>
-                    {videoPreviewUrl && (() => {
-                        const driveIdMatch = /\/d\/([\w-]+)/.exec(videoPreviewUrl || '') || /[?&]id=([\w-]+)/.exec(videoPreviewUrl || '');
-                        const effectiveSrc = driveIdMatch && driveIdMatch[1]
-                            ? `${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${driveIdMatch[1]}`
-                            : videoPreviewUrl;
-                        return (
-                            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ width: '100%' }}>
-                                    <video
-                                        key={effectiveSrc}
-                                        controls
-                                        playsInline
-                                        preload="auto"
-                                        muted={false}
-                                        autoPlay
-                                        style={{ width: '100%', maxHeight: 540, borderRadius: 8, backgroundColor: '#000' }}
-                                    >
-                                        <source src={effectiveSrc} type="video/mp4" />
-                                        <source src={effectiveSrc} type="video/webm" />
-                                        Your browser does not support the video tag.
-                                    </video>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                        If the video does not play, <a href={effectiveSrc} target="_blank" rel="noreferrer">open in a new tab</a>.
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        );
-                    })()}
-                </DialogContent>
-                <DialogActions sx={{ p: 2 }}>
-                    <Button onClick={() => setVideoPreviewOpen(false)} variant="contained">Close</Button>
-                </DialogActions>
-            </Dialog>
         </Box>
     );
 };
