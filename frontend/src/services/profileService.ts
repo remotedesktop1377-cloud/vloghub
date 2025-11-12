@@ -159,7 +159,6 @@ class ProfileServiceImpl implements ProfileService {
                 gammaFormat: gammaFormat,
                 gammaThemeName: gammaThemeName
             });
-            debugger;
             const key = `profileSettings_${userId}`;
             const currentSettings = secure.j[key as any].get() || {};
             secure.j[key as any].set({

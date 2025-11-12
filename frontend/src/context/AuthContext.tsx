@@ -41,22 +41,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         if (!u) return;
         await SupabaseHelpers.saveUserProfile(u);
-        router.push(ROUTES_KEYS.TRENDING_TOPICS);
-      } catch {}
+      } catch (error) {
+        console.error('Error ensuring profile:', error);
+      }
     };
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const supabase = getSupabase();
-        const { data: { session }, error } = await supabase.auth.getSession();
 
+    // Initialize auth state on mount
+    const initAuth = async () => {
+      try {
+        setLoading(true);
+        const supabase = getSupabase();
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
         if (error) {
           console.error('Error getting session:', error);
-        } else {
-          setSession(session);
-          setUser(session?.user ?? null);
-          // Ensure profile row exists for already-authenticated user
-          await ensureProfile(session?.user ?? null);
+        }
+        
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        
+        if (initialSession?.user) {
+          await ensureProfile(initialSession.user);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -66,50 +71,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    getInitialSession();
+    initAuth();
 
     // Safety fallback: if auth doesn't resolve within 8s, stop loading to avoid UI lock
     const safetyTimer = setTimeout(() => {
-      if (loading) {
-        // console.warn('Auth init timeout fallback triggered');
-        setLoading(false);
-        setIsInitialized(true);
-      }
+      setLoading(false);
+      setIsInitialized(true);
     }, 8000);
 
     // Listen for auth changes
     const supabase = getSupabase();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // console.log('Auth state changed:', event);
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (event, newSession) => {
+        console.log('Auth state changed:', event);
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         setLoading(false);
-
+        
         // Handle auth events
         switch (event) {
           case 'SIGNED_IN':
-            toast.success('Successfully signed in!');
-
-            await ensureProfile(session?.user ?? null);
-            // Redirect to trending topics after successful sign in
-            try { router.push(ROUTES_KEYS.TRENDING_TOPICS); } catch {}
+            if (newSession?.user) {
+              await ensureProfile(newSession.user);
+              // Don't redirect if we're on the callback page - let the callback page handle it
+              // Only redirect if not already on trending topics page or callback page
+              if (typeof window !== 'undefined' 
+                  && !window.location.pathname.includes('trending-topics')
+                  && !window.location.pathname.includes('auth/callback')) {
+                try { 
+                  router.push(ROUTES_KEYS.TRENDING_TOPICS); 
+                } catch (error) {
+                  console.error('Error redirecting:', error);
+                }
+              }
+            }
             break;
           case 'SIGNED_OUT':
-            toast.success('Successfully signed out!');
-            console.log('Signed out!');
-            // Redirect to home after sign out
-            try { router.push(ROUTES_KEYS.HOME); } catch {}
+            setUser(null);
+            setSession(null);
+            // Only redirect if not already on home page
+            if (typeof window !== 'undefined' && !window.location.pathname.includes('home') && window.location.pathname !== '/') {
+              try { 
+                router.push(ROUTES_KEYS.HOME); 
+              } catch (error) {
+                console.error('Error redirecting:', error);
+              }
+            }
             break;
           case 'PASSWORD_RECOVERY':
             toast.success('Password recovery email sent!');
             break;
           case 'TOKEN_REFRESHED':
-            // console.log('Token refreshed');
+            // Token refreshed, session is still valid
             break;
           case 'USER_UPDATED':
-            toast.success('Profile updated successfully!');
-            await ensureProfile(session?.user ?? null);
+            if (newSession?.user) {
+              await ensureProfile(newSession.user);
+            }
             break;
         }
       }
@@ -119,7 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
       clearTimeout(safetyTimer);
     };
-  }, []);
+  }, [router]);
 
   const signIn = async (email: string, password: string) => {
     try {

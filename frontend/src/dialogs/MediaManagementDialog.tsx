@@ -205,7 +205,6 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
                 //   }
                 //   return sceneData;
                 // });
-                // debugger;
                 // try {
                 //   // console.log('SceneData modified (onSceneDataUpdate):', JSON.stringify(updatedSceneData[SceneDataIndex]));
                 //   const sceneId = modifiedScenesData[SceneDataIndex].id || '';

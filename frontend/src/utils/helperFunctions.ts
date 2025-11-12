@@ -365,41 +365,6 @@ export class HelperFunctions {
     });
     return normalized;
   }
-
-  /**
-   * Get saved social auth keys for a user (stored securely in local storage)
-   */
-  static getSocialAuthKeys(userId: string): { tiktok?: string; instagram?: string; facebook?: string; youtube?: string } {
-    try {
-      const key = `socialAuthKeys_${userId}`;
-      const data = secure.j[key as any].get();
-      if (data && typeof data === 'object') {
-        return data as any;
-      }
-    } catch (e) {
-      console.warn('getSocialAuthKeys failed', e);
-    }
-    return {};
-  }
-
-  /**
-   * Save social auth keys for a user (stored securely in local storage)
-   */
-  static saveSocialAuthKeys(userId: string, keys: { tiktok?: string; instagram?: string; facebook?: string; youtube?: string }): void {
-    try {
-      const key = `socialAuthKeys_${userId}`;
-      secure.j[key as any].set({
-        tiktok: keys.tiktok || '',
-        instagram: keys.instagram || '',
-        facebook: keys.facebook || '',
-        youtube: keys.youtube || ''
-      });
-      HelperFunctions.showSuccess('Social auth keys saved');
-    } catch (e) {
-      console.error('saveSocialAuthKeys failed', e);
-      HelperFunctions.showError('Failed to save social auth keys');
-    }
-  }
   /**
    * Show success toast notification
    */

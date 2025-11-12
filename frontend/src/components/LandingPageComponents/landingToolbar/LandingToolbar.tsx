@@ -5,8 +5,6 @@ import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@
 import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../../styles/colors';
 import { ROUTES_KEYS } from '../../../data/constants';
 import { AuthenticatedButton } from '../../auth/AuthenticatedButton';
-import { useAuth } from '../../../context/AuthContext';
-import SigninDialog from '../../../dialogs/SigninDialog';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,8 +12,6 @@ interface LayoutProps {
 }
 
 const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
-  const { user, loading, signOut } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {(

@@ -60,7 +60,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      const { error } = await getSupabase().auth.signInWithOAuth({
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,

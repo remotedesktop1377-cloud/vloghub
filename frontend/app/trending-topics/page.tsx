@@ -14,8 +14,12 @@ const TrendingTopicsRoute = () => {
     );
   }
 
+  // Redirect to home if user is not authenticated
   if (!user) {
-    window.location.replace(ROUTES_KEYS.HOME);
+    if (typeof window !== 'undefined') {
+      window.location.replace(ROUTES_KEYS.HOME);
+    }
+    return <AppLoadingOverlay />;
   }
 
   // User is authenticated, show the enhanced trending topics with Supabase integration

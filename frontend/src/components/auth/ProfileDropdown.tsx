@@ -14,9 +14,10 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { Button } from '@mui/material';
 import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 import { SocialKeys } from '@/types/backgroundType';
-import { SaveIcon } from 'lucide-react';
+import { getSupabase } from '@/utils/supabase';
+import { ROUTES_KEYS } from '@/data/constants';
 
-export const ProfileDropdown: React.FC = () => {
+export const ProfileDropdown = () => {
   const { user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [socialKeys, setSocialKeys] = useState<SocialKeys>({ tiktok: '', instagram: '', facebook: '', youtube: '' });
@@ -109,7 +110,23 @@ export const ProfileDropdown: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      setMenuOpen(false);
+      HelperFunctions.clearSecureStorage();
+      
+      // Use window.location since router might not be mounted in all contexts
+      // This is a client component, so window is always available
+      window.location.href = ROUTES_KEYS.HOME;
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.signOut({ scope: 'local' })
+      if (error) {
+        console.error(error);
+        toast.error("Failed to logout");
+        return;
+      }
+     
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      toast.error('An error occurred during sign out');
     } finally {
       setMenuOpen(false);
     }
