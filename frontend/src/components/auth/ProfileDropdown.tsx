@@ -37,12 +37,6 @@ export const ProfileDropdown = () => {
   const [projectSettingsContext, setProjectSettingsContext] = useState<{ mode: 'project' | 'scene'; sceneIndex?: number }>({ mode: 'project' });
   const [projectSettings, setProjectSettings] = useState<Settings | null>(null);
   const [sceneSettings, setSceneSettings] = useState<Settings | null>(null);
-  const [driveLibrary, setDriveLibrary] = useState<LibraryData>({
-    backgrounds: [],
-    music: [],
-    transitions: [],
-    transitionEffects: []
-  });
 
   // Close on ESC
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -66,28 +60,6 @@ export const ProfileDropdown = () => {
       HelperFunctions.showError('Failed to load profile settings');
     }
   }, [user?.id, menuOpen]);
-
-  // Load driveLibrary for ProjectSettingsDialog
-  useEffect(() => {
-    const initDriveLibrary = async () => {
-      setLoading(true);
-      try {
-        const response: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(true);
-        setDriveLibrary(response);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading library data:', error);
-        setDriveLibrary({
-          backgrounds: [],
-          music: [],
-          transitions: [],
-          transitionEffects: []
-        });
-        setLoading(false);
-      }
-    };
-    initDriveLibrary();
-  }, []);
 
   const loadProfileSettings = async () => {
     const profileSettings = await profileService.getProfileSettings(user.id);
@@ -363,7 +335,6 @@ export const ProfileDropdown = () => {
         projectSettingsContext={projectSettingsContext}
         pSettings={projectSettings}
         sSettings={sceneSettings}
-        driveLibrary={driveLibrary}
       />
     </>
   );

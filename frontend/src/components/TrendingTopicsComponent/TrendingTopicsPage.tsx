@@ -99,10 +99,6 @@ const TrendingTopics: React.FC = () => {
         setTrendingTopics(geminiData);
         if (geminiData.length > 0) {
           setCachedData(searchQuery, geminiData);
-          // Load backgrounds when trending topics are fetched
-          GoogleDriveServiceFunctions.loadLibraryData(false).catch((error: any) => {
-            console.error('Error loading backgrounds:', error);
-          });
         }
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);

@@ -134,7 +134,7 @@ const ScriptProductionClient = () => {
             const storedMetadata = SecureStorageHelpers.getScriptMetadata();
             if (storedMetadata && typeof storedMetadata === 'object') {
                 storedData = storedMetadata;
-                console.log('storedData', JSON.stringify(storedData, null, 2));
+                // console.log('storedData', JSON.stringify(storedData, null, 2));
                 setScriptData(storedData);
 
                 // Use scriptData flag to restore download state
@@ -164,8 +164,6 @@ const ScriptProductionClient = () => {
                 setNoScriptFound(true);
                 setLoading(false);
             }
-
-            initDropDownsData();
 
             // Mark initial loading as complete
             setIsInitialLoading(false);
@@ -289,24 +287,6 @@ const ScriptProductionClient = () => {
             }
         };
     }, []);
-
-    // Fetch and cache library data (backgrounds, music, transitions) on mount
-    const initDropDownsData = async () => {
-        try {
-            // Use loadBackgrounds which calls the main API, then fetch full library to get music
-            const response: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(true);
-            setDriveLibrary(response);
-        } catch (error) {
-            console.error('Error loading library data:', error);
-            // Keep default empty arrays on error
-            setDriveLibrary({
-                backgrounds: [],
-                music: [],
-                transitions: [],
-                transitionEffects: []
-            });
-        }
-    };
 
     const openProjectSettingsDialog = (mode: 'project' | 'scene', sceneIndex?: number) => {
         setProjectSettingsContext({ mode, sceneIndex });
@@ -1823,7 +1803,6 @@ const ScriptProductionClient = () => {
                 projectSettingsContext={projectSettingsContext}
                 pSettings={projectSettings}
                 sSettings={sceneSettings}
-                driveLibrary={driveLibrary}
             />
         </Box>
     );

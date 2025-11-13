@@ -40,7 +40,6 @@ interface ProjectSettingsDialogProps {
     projectSettingsContext: ProjectSettingsContext;
     pSettings: Settings | null;
     sSettings: Settings | null;
-    driveLibrary: { backgrounds?: any[]; music?: any[]; transitions?: any[], transitionEffects?: any[] };
 }
 
 const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
@@ -52,16 +51,15 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     projectSettingsContext,
     pSettings,
     sSettings,
-    driveLibrary,
 }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const transitionVideoRef = useRef<HTMLVideoElement | null>(null);
 
-    const [music, setMusic] = useState<any[]>(driveLibrary?.music || []);
-    const [backgrounds, setBackgrounds] = useState<any[]>(driveLibrary?.backgrounds || []);
-    const [transitionEffects, setTransitionEffects] = useState<any[]>(driveLibrary?.transitionEffects || []);
+    const [music, setMusic] = useState<any[]>([]);
+    const [backgrounds, setBackgrounds] = useState<any[]>([]);
+    const [transitionEffects, setTransitionEffects] = useState<any[]>([]);
     const [currentMusicId, setCurrentMusicId] = useState<string | null>(null);
 
     const [loading, setLoading] = useState(false);
@@ -104,38 +102,22 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             setCurrentMusicId(null);
         } else {
             // Load backgrounds and music from cache or driveLibrary on mount
-            // Use single cache call to get both backgrounds and music efficiently
-            const cachedLibraryData = GoogleDriveServiceFunctions.getCachedLibraryData();
-
-            if (cachedLibraryData && cachedLibraryData.backgrounds && cachedLibraryData.music) {
-                // Set backgrounds from cache
-                setBackgrounds(cachedLibraryData.backgrounds);
-                // Set music from cache
-                setMusic(cachedLibraryData.music);
-                // Set transition effects from cache if available
-                if (cachedLibraryData.transitionEffects) {
-                    setTransitionEffects(cachedLibraryData.transitionEffects);
-                }
-            } else {
-                // Fallback to driveLibrary if cache is empty or missing
-                if (driveLibrary && driveLibrary.backgrounds) {
-                    setBackgrounds(driveLibrary.backgrounds);
-                }
-
-                if (driveLibrary.music) {
-                    setMusic(driveLibrary.music);
-                }
-
-                // if (driveLibrary.transitionEffects) {
-                //     setTransitions(driveLibrary.transitionEffects);
-                // }
-
-                if (driveLibrary.transitionEffects) {
-                    setTransitionEffects(driveLibrary.transitionEffects);
-                }
-            }
+            initLibraryData(false);
         }
     }, [open]);
+
+    const initLibraryData = async (isRefreshingData: boolean) => {
+        if (isRefreshingData) {
+            setLoading(true);
+        }
+
+        const libraryData: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(isRefreshingData);
+        setBackgrounds(libraryData.backgrounds);
+        setMusic(libraryData.music);
+        setTransitionEffects(libraryData.transitionEffects);
+
+        setLoading(false);
+    }
 
     // Utility function to get playable video URL from Google Drive
     // Uses the authenticated proxy endpoint like images do
@@ -190,23 +172,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             }
         }
     }, [isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect]);
-
-    const refreshLibraryData = async () => {
-        setLoading(true);
-        try {
-            // Use loadBackgrounds which calls the main API, then fetch full library to get music
-            const response: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(true);
-            setMusic(response.music);
-            setBackgrounds(response.backgrounds);
-            if (response.transitionEffects) {
-                setTransitionEffects(response.transitionEffects);
-            }
-        } catch (error) {
-            console.error('Error refreshing library data:', error);
-        } finally {
-            setLoading(false);
-        }
-    }
 
     const handleVideoError = () => {
         setVideoError(true);
@@ -514,7 +479,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Music</Typography>
                             <IconButton
                                 size="small"
-                                onClick={refreshLibraryData}
+                                onClick={() => initLibraryData(true)}
                                 disabled={loading}
                                 sx={{ color: 'primary.main' }}
                                 title="Refresh music list"
@@ -644,7 +609,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Transition Effect</Typography>
                             <IconButton
                                 size="small"
-                                onClick={refreshLibraryData}
+                                onClick={() => initLibraryData(true)}
                                 disabled={loading}
                                 sx={{ color: 'primary.main' }}
                             >
@@ -783,7 +748,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Video</Typography>
                             <IconButton
                                 size="small"
-                                onClick={refreshLibraryData}
+                                onClick={() => initLibraryData(true)}
                                 disabled={loading}
                                 sx={{ color: 'primary.main' }}
                             >
