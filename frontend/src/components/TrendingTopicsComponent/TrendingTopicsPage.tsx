@@ -66,7 +66,7 @@ const TrendingTopics: React.FC = () => {
     try {
 
       // Guard: avoid duplicate calls with identical params within a short window (dev StrictMode)
-      const cacheKey = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
+      const cacheKey = HelperFunctions.getCacheKey(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
       const now = Date.now();
       if (lastFetchRef.current && lastFetchRef.current.key === cacheKey && (now - lastFetchRef.current.ts) < 1500) {
         // console.log('Skipping duplicate fetch for key:', fetchKey);
@@ -129,7 +129,7 @@ const TrendingTopics: React.FC = () => {
       }
 
       // Try to load from cache first
-      const cacheKey = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
+      const cacheKey = HelperFunctions.getCacheKey(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
       const cachedData = getCachedData<TrendingTopic[]>(cacheKey);
 
       // Check if cachedData exists, cache is valid, and lastUpdated is less than 1 hour old
@@ -371,22 +371,7 @@ const TrendingTopics: React.FC = () => {
                 handleWordClick={wordClickHandler}
               />
 
-              <Box sx={{ display: 'flex', gap: 1, mb: 2, width: '100%', justifyContent: 'center' }}>
-                <TextField
-                  placeholder="Enter your own topic(optional)"
-                  value={customTopic}
-                  onChange={(e) => setCustomTopic(e.target.value)}
-                  size="small"
-                  sx={{ width: 500, maxWidth: '80%' }}
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleCustomTopicGo}
-                  disabled={!customTopic.trim()}
-                >
-                  Go
-                </Button>
-              </Box>
+
 
             </Box>
           </Box>
@@ -411,8 +396,26 @@ const TrendingTopics: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
               Choose a location type, location, and time range to get started
             </Typography>
+
           </Box>
       }
+
+      <Box sx={{ display: 'flex', gap: 1, mb: 2, width: '100%', justifyContent: 'center' }}>
+        <TextField
+          placeholder="Enter your own topic(optional)"
+          value={customTopic}
+          onChange={(e) => setCustomTopic(e.target.value)}
+          size="small"
+          sx={{ width: 500, maxWidth: '80%' }}
+        />
+        <Button
+          variant="contained"
+          onClick={handleCustomTopicGo}
+          disabled={!customTopic.trim()}
+        >
+          Go
+        </Button>
+      </Box>
 
       {/* Topic Details Section */}
       {selectedTopic && (

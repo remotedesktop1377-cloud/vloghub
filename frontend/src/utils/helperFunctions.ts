@@ -184,13 +184,23 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 
 export class HelperFunctions {
 
-  static getSearchQuery(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string): string {
+  static getCacheKey(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string): string {
     const location = selectedLocationType === 'global'
       ? selectedLocationType
       : selectedLocationType === 'region'
         ? selectedLocation
         : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
     return `${location}|${selectedDateRange}`;
+  }
+
+  static getSearchQuery(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string): string {
+    const location = selectedLocationType === 'global'
+      ? selectedLocationType
+      : selectedLocationType === 'region'
+        ? selectedLocation
+        : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
+    console.log(`${location}`);
+    return `${location}`;
   }
 
   // Check if all required fields are selected
