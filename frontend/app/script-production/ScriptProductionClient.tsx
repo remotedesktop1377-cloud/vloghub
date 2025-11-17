@@ -571,6 +571,7 @@ const ScriptProductionClient = () => {
                             videoBackgroundMusic: ch.sceneSettings?.videoBackgroundMusic || scriptData.scenesData![index]?.sceneSettings?.videoBackgroundMusic || '',
                             videoBackgroundVideo: ch.sceneSettings?.videoBackgroundVideo || scriptData.scenesData![index]?.sceneSettings?.videoBackgroundVideo || '',
                         },
+                        clip: ch.clip || scriptData.scenesData![index]?.clip || '',
                     }));
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
 
@@ -594,14 +595,20 @@ const ScriptProductionClient = () => {
                 SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                 setScenesData(scenesData);
-                checkAndProcessGamma(updatedScriptData);
+                // checkAndProcessGamma(updatedScriptData);
+
+                try {
+                    for (const scene of scenesData) {
+                        GoogleDriveServiceFunctions.persistSceneUpdate(jobId, scene, 'Highlighted keywords applied to scene');
+                    }
+                } catch { }
+
             });
         } else {
             setLoading(false);
             setScenesData(scenesData);
-            checkAndProcessGamma(scriptData);
+            // checkAndProcessGamma(scriptData);
         }
-
     };
 
     const checkAndProcessGamma = async (scriptData: ScriptData) => {
@@ -1563,19 +1570,36 @@ const ScriptProductionClient = () => {
                                                 scenesData: transcriptionData.scenes,
                                                 updated_at: new Date().toISOString(),
                                             } as ScriptData;
-                                            // console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
+                                            console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
                                             setScriptData(updatedScriptData);
                                             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+
+                                            // Loop the scenes data and generate scene folder in google drive by using googleDriveService function
+                                            for (const scene of transcriptionData.scenes) {
+                                                const data = await GoogleDriveServiceFunctions.uploadClipsInSceneFolder(jobId, scene, transcriptionData.scenes.length);
+                                                if (!data?.success) {
+                                                    toast.error('Failed to upload clip');
+                                                    continue;
+                                                }
+                                                console.log('Clip uploaded successfully', data);
+                                                const updatedScriptData = {
+                                                    ...scriptData,
+                                                    scenesData: transcriptionData.scenes?.map((scene: SceneData) => scene.id === scene.id ? { ...scene, clip: data.webViewLink } : scene) || [],
+                                                } as ScriptData;
+                                                console.log('updatedScriptData: ', JSON.stringify(updatedScriptData.scenesData, null, 2));
+                                                setScriptData(updatedScriptData);
+                                                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                                            }
+
                                             updateParagraphs(updatedScriptData);
 
-                                            // generate scene folder in google drive by using googleDriveService function
-                                            const sceneFolderResult = await GoogleDriveServiceFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
-                                            if (!sceneFolderResult.success) {
-                                                toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
-                                                return;
-                                            }
+                                            // // generate scene folder in google drive by using googleDriveService function
+                                            // const sceneFolderResult = await GoogleDriveServiceFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
+                                            // if (!sceneFolderResult.success) {
+                                            //     toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
+                                            //     return;
+                                            // }
                                             // console.log('Scene folder result:', sceneFolderResult.result);
-
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
                                             toast.error(errorMessage);

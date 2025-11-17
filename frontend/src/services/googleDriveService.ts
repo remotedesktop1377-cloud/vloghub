@@ -39,6 +39,75 @@ function dataUrlToFile(dataUrl: string, fileName: string): File {
 }
 
 export const GoogleDriveServiceFunctions = {
+    async uploadClipsInSceneFolder(jobId: string, sceneData: SceneData, scenesCount: number): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
+        try {
+            const folders = await this.generateSceneFoldersInDrive(jobId, scenesCount);
+            if (!folders.success) {
+                console.error('generateSceneFoldersInDrive error', folders);
+                return { success: false };
+            }
+            const sceneFolderId = folders.result?.folderId;
+            if (!sceneFolderId) {
+                console.error('sceneFolderId not found');
+                return { success: false };
+            }
+            
+            // Fetch the clip file from the server
+            if (!sceneData.clip) {
+                console.error('No clip path provided in sceneData');
+                return { success: false };
+            }
+            
+            const clipFile = await this.fetchClipFile(sceneData.clip);
+            if (!clipFile) {
+                console.error('Failed to fetch clip file from server');
+                return { success: false };
+            }
+            
+            // Upload the clip to the scene folder
+            const data = await this.uploadMediaToDrive(jobId, sceneData.id, clipFile);
+            if (!data.success) {
+                console.error('uploadMediaToDrive error', data);
+                return { success: false };
+            }
+            return data;
+        } catch (e) {
+            console.error('generateSceneFolderInDrive error', e);
+            return { success: false };
+        }
+    },
+    
+    /**
+     * Fetch a clip file from the server using the absolute path
+     * @param clipPath - Absolute path to the clip file on the server
+     * @returns File object ready for upload
+     */
+    async fetchClipFile(clipPath: string): Promise<File | null> {
+        try {
+            // Encode the path for URL
+            const encodedPath = encodeURIComponent(clipPath);
+            const response = await fetch(`/api/serve-clip?path=${encodedPath}`);
+            
+            if (!response.ok) {
+                console.error('Failed to fetch clip:', response.statusText);
+                return null;
+            }
+            
+            // Get the blob from the response
+            const blob = await response.blob();
+            
+            // Extract filename from path
+            const fileName = clipPath.split(/[/\\]/).pop() || 'clip.mp4';
+            
+            // Convert blob to File
+            const file = new File([blob], fileName, { type: blob.type || 'video/mp4' });
+            
+            return file;
+        } catch (error) {
+            console.error('Error fetching clip file:', error);
+            return null;
+        }
+    },
     /**
  * Upload a media file (e.g., chroma key or any video) to Google Drive under the given job folder and target subfolder.
  * Returns Drive identifiers on success.
@@ -112,7 +181,7 @@ export const GoogleDriveServiceFunctions = {
             // Build assets with logo image and video clip included
             const existingImages: string[] = Array.isArray(SceneDataWithAssets.assets?.images) ? (SceneDataWithAssets.assets!.images as string[]) : [];
             const existingVideos: string[] = Array.isArray((SceneDataWithAssets as any).assets?.videos) ? ((SceneDataWithAssets as any).assets.videos as string[]) : [];
-          
+
             const scene = {
                 id: SceneDataWithAssets.id,
                 narration: SceneDataWithAssets.narration,
@@ -131,6 +200,7 @@ export const GoogleDriveServiceFunctions = {
                     ...(existingVideos.length > 0 ? { clips: existingVideos } : {}),
                 },
                 sceneSettings: sceneSettings,
+                clip: SceneDataWithAssets.clip || '',
             };
             console.log('Updating scene on Drive:', scene);
 

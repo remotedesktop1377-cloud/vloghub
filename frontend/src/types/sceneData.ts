@@ -29,6 +29,7 @@ export interface SceneData {
     };
     // Video effects and editing properties
     sceneSettings?: Settings,
+    clip: string;
 }
 
 export interface SceneKeywordSelection {

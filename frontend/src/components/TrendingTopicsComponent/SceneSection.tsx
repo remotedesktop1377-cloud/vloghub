@@ -1083,11 +1083,32 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                             }}>
                                               {(() => {
                                                 const previewUrl = sceneData.gammaPreviewImage || '';
-                                                // console.log('Preview URL:', previewUrl);
+                                                const clipPath = sceneData.clip || '';
+                                                
+                                                // Determine if clip is a local path or Google Drive URL
+                                                const getClipUrl = () => {
+                                                  if (!clipPath) return null;
+                                                  
+                                                  // Check if it's an absolute path (Windows: C:\ or Unix: /)
+                                                  const isAbsolutePath = /^[A-Za-z]:[\\/]/.test(clipPath) || clipPath.startsWith('/');
+                                                  
+                                                  if (isAbsolutePath) {
+                                                    // Local file path - use serve-clip endpoint
+                                                    const encodedPath = encodeURIComponent(clipPath);
+                                                    return `/api/serve-clip?path=${encodedPath}`;
+                                                  } else {
+                                                    // Assume it's a Google Drive URL or relative path
+                                                    return HelperFunctions.normalizeGoogleDriveUrl(clipPath);
+                                                  }
+                                                };
+                                                
+                                                const clipUrl = getClipUrl();
+                                                
                                                 const handlePreviewClick = (e: any) => {
                                                   e.stopPropagation();
                                                   handleImageClick(index, 0, true);
                                                 };
+                                                
                                                 return (
                                                   <Box sx={{
                                                     position: 'relative',
@@ -1097,12 +1118,25 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     overflow: 'hidden',
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    justifyContent: 'center'
+                                                    justifyContent: 'center',
+                                                    backgroundColor: '#000'
                                                   }} onClick={handlePreviewClick}>
-                                                    {previewUrl ? (
+                                                    {clipUrl ? (
+                                                      <video
+                                                        src={clipUrl}
+                                                        controls
+                                                        style={{ 
+                                                          width: '100%', 
+                                                          height: '100%', 
+                                                          objectFit: 'contain',
+                                                          cursor: 'pointer'
+                                                        }}
+                                                        onError={(e) => {
+                                                          console.error('Video load error for clip:', clipPath, e);
+                                                        }}
+                                                      />
+                                                    ) : previewUrl ? (
                                                       <img
-                                                        // width={100}
-                                                        // height={100}
                                                         src={HelperFunctions.normalizeGoogleDriveUrl(previewUrl)}
                                                         alt={`Preview media ${index + 1}`}
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
