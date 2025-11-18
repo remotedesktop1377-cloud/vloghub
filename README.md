@@ -52,9 +52,38 @@ Create a video on Nelson Mandela's life, focusing on speeches before and after p
 - Annotate clips with metadata (title, location, date, tone, speaker)
 - Support multi-language subtitle detection
 
-## Getting Started
+## Getting Started (Backend)
 
-Coming soon: Development setup instructions and contribution guidelines.
+Follow these steps to run the FastAPI backend locally:
+
+1. **Install prerequisites**
+   - Python 3.11+
+   - FFmpeg (required for video/audio conversion)
+
+2. **Set up the environment**
+   ```powershell
+   cd "C:\Users\haider.ali\Documents\Web Projects\youtubeclipsearcher"
+   py -3 -m venv .venv
+   .\.venv\Scripts\Activate
+   pip install -r requirements.txt
+   ```
+
+3. **Configure environment variables (optional)**
+   - Copy `.env.example` to `.env` if provided.
+   - Set any API keys (Gemini, Google Drive, etc.) referenced in `src/config`.
+
+4. **Run the backend server**
+   ```powershell
+   py -3 -m uvicorn src.app:app --reload
+   ```
+   The API will be available at `http://127.0.0.1:8000` and docs at `/docs`.
+
+5. **Stop the server**
+   - Press `Ctrl + C` in the terminal when finished.
+
+6. **Troubleshooting**
+   - Ensure FFmpeg is accessible via `ffmpeg -version`.
+   - Delete the `.venv` folder and reinstall dependencies if packages become corrupted.
 
 ## License
 

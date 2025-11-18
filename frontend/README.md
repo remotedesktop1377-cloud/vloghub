@@ -2,21 +2,31 @@
 
 This is the frontend application for the YouTube Clip Searcher project, built with Next.js 15 and Material-UI.
 
-## Getting Started
+## Getting Started (Frontend)
 
-First, install the dependencies:
+1. **Install dependencies**
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-```bash
-npm install
-```
+2. **Configure environment variables**
+   - Copy `.env.example` to `.env.local` if provided.
+   - Add API URLs for the Python backend (e.g., `NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000`).
 
-Then, run the development server:
+3. **Run the development server**
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm run dev
-```
+4. **Open the app**
+   - Visit [http://localhost:3000](http://localhost:3000) in your browser.
+   - The dev server auto-reloads when files change.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. **Stop the server**
+   - Use `Ctrl + C` in the terminal.
+
+> 💡 Make sure the FastAPI backend is running before interacting with features that require processing or clip downloads.
 
 ## Available Scripts
 
