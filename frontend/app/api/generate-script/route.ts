@@ -4,24 +4,110 @@ import { AI_CONFIG } from '@/config/aiConfig';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
-  model: AI_CONFIG.GEMINI.MODEL,
+  model: AI_CONFIG.GEMINI.MODEL_PRO,
   generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }
 });
+
+const LANGUAGE_ALIAS_MAP: Record<string, string> = {
+  urdu: 'Urdu',
+  'urdu (pakistan)': 'Urdu',
+  'urdu pakistan': 'Urdu',
+  'urdu (romanized)': 'Urdu',
+  hindi: 'Hindi',
+  'hindi (india)': 'Hindi',
+  english: 'English',
+  'english (uk)': 'English',
+  'english (us)': 'English',
+  arabic: 'Arabic',
+  'arabic (ksa)': 'Arabic',
+  punjabi: 'Punjabi',
+  'punjabi (india)': 'Punjabi',
+  bengali: 'Bengali'
+};
+
+const RTL_LANGS = new Set(['urdu', 'arabic', 'persian', 'pashto', 'sindhi', 'balochi', 'hebrew']);
+const URDU_SPECIFIC_REGEX = /[\u0679\u0686\u0688\u0691\u06BA\u06BE\u06C1\u06D2\u06AF\u06B1\u06CC]/;
+const ARABIC_SCRIPT_REGEX = /[\u0600-\u06FF]/;
+const DEVANAGARI_REGEX = /[\u0900-\u097F]/;
+const GURMUKHI_REGEX = /[\u0A00-\u0A7F]/;
+const BENGALI_REGEX = /[\u0980-\u09FF]/;
+
+const normalizeLanguageName = (lang?: string | null): string => {
+  if (!lang) return '';
+  const trimmed = lang.trim();
+  if (!trimmed) return '';
+  const alias = LANGUAGE_ALIAS_MAP[trimmed.toLowerCase()];
+  if (alias) return alias;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
+const detectSpeakerLanguage = (samples: Array<string | null | undefined>) => {
+  const joined = samples
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(' ');
+
+  if (!joined) {
+    return { language: null as string | null, confidence: 0, reason: 'No speaker-provided text to analyze' };
+  }
+
+  if (URDU_SPECIFIC_REGEX.test(joined)) {
+    return { language: 'Urdu', confidence: 0.98, reason: 'Urdu-specific Perso-Arabic letters detected' };
+  }
+
+  if (ARABIC_SCRIPT_REGEX.test(joined)) {
+    return { language: 'Arabic', confidence: 0.9, reason: 'Arabic script detected' };
+  }
+
+  if (DEVANAGARI_REGEX.test(joined)) {
+    return { language: 'Hindi', confidence: 0.95, reason: 'Devanagari script detected' };
+  }
+
+  if (GURMUKHI_REGEX.test(joined)) {
+    return { language: 'Punjabi', confidence: 0.9, reason: 'Gurmukhi script detected' };
+  }
+
+  if (BENGALI_REGEX.test(joined)) {
+    return { language: 'Bengali', confidence: 0.85, reason: 'Bengali script detected' };
+  }
+
+  return { language: null as string | null, confidence: 0, reason: 'No distinctive script identified' };
+};
+
+const buildLanguageInstructions = (language: string, conflictNote?: string) => {
+  const isRTL = RTL_LANGS.has(language.toLowerCase());
+  const scriptRequirement = isRTL
+    ? `Use the native ${language} Perso-Arabic script (no transliteration) with authentic vocabulary.`
+    : `Use natural ${language} wording, phrasing, and cultural references.`;
+  return `Write the entire script in fluent, natural ${language}. ${scriptRequirement} ${
+    conflictNote ? conflictNote : ''
+  }`.trim();
+};
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { topic, hypothesis, details, region, duration, language, narration_type } = body;
+    const { topic, hypothesis, details, region, duration, language: requestedLanguage, narration_type } = body;
 
     // Validate required fields
-    if (!topic || !region || !duration || !language) {
+    if (!topic || !region || !duration || !requestedLanguage) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    const languageInstructions = `Write the entire script in fluent, natural ${language}. Make sure all content, including instructions, narration, and call-to-actions are written naturally in ${language}. Use native expressions and cultural references appropriate for ${language}-speaking audiences.`;
+    const normalizedRequestedLanguage = normalizeLanguageName(requestedLanguage);
+    const detectedLanguage = detectSpeakerLanguage([topic, hypothesis, details]);
+    const useDetectedLanguage = Boolean(detectedLanguage.language && detectedLanguage.confidence >= 0.5);
+    const finalLanguage = useDetectedLanguage
+      ? detectedLanguage.language!
+      : (normalizedRequestedLanguage || 'English');
+    const languageSource = useDetectedLanguage ? 'detected' : 'requested';
+    const languageConflictNote =
+      useDetectedLanguage && normalizedRequestedLanguage && normalizedRequestedLanguage.toLowerCase() !== finalLanguage.toLowerCase()
+        ? `Detected speaker language (${finalLanguage}) overrides requested language (${normalizedRequestedLanguage}).`
+        : '';
+    const languageInstructions = buildLanguageInstructions(finalLanguage, languageConflictNote);
 
     const prompt = `You are a professional YouTube content scriptwriter specializing in viral, engaging content.
 
@@ -30,7 +116,7 @@ Create a compelling video script based on the following information:
 **Main Topic:** ${topic}
 **Region Focus:** ${region}
 **Video Duration:** ${duration} minute(s)
-**Language:** ${language}
+**Language:** ${finalLanguage} (${languageSource === 'detected' ? `detected automatically - ${detectedLanguage.reason}` : 'user selected preference'})
 **Topic Details:** ${details}
 **Hypothesis/Angle:** ${hypothesis}
 
@@ -46,7 +132,7 @@ Create a compelling video script based on the following information:
 **STYLE:** ${narration_type === 'interview' ? 'Interview (Q/A between host and guest)' : 'Narration (single narrator)'}
 
 For Interview style, write the main_content as alternating question/answer lines with localized labels and natural questions:
-- Use localized labels in ${language}: Host and Guest lines must begin with these labels followed by a colon
+- Use localized labels in ${finalLanguage}: Host and Guest lines must begin with these labels followed by a colon
 - Keep each line short and punchy; make questions derived from the upcoming answer
 - Ensure each question and each answer is on its own line, separated by blank lines between logical blocks
 
@@ -134,13 +220,13 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary). For
         };
 
         // If the model already returned Q/A with localized labels, don't re-wrap
-        const loc = getInterviewLocalization(language);
+        const loc = getInterviewLocalization(finalLanguage);
         const alreadyQA = fullScript.split('\n').some(l => {
           const t = l.trim();
           return t.startsWith(`${loc.interviewerLabel}:`) || t.startsWith(`${loc.guestLabel}:`) || t.startsWith('Interviewer:') || t.startsWith('Guest:');
         });
         if (!alreadyQA) {
-          fullScript = generateInterviewQAFromScript(fullScript, language);
+          fullScript = generateInterviewQAFromScript(fullScript, finalLanguage);
         }
       }
 
@@ -153,7 +239,16 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary). For
         call_to_action: parsedData.call_to_action || '',
         estimated_words: parsedData.estimated_words || 0,
         emotionalTone: parsedData.emotionalTone || 'Engaging',
-        pacing: parsedData.pacing || 'Dynamic'
+        pacing: parsedData.pacing || 'Dynamic',
+        language_used: finalLanguage,
+        language_source: languageSource,
+        language_detection: {
+          requested: normalizedRequestedLanguage || null,
+          detected: detectedLanguage.language,
+          confidence: detectedLanguage.confidence,
+          reason: detectedLanguage.reason,
+          applied: finalLanguage
+        }
       });
 
     } catch (error) {

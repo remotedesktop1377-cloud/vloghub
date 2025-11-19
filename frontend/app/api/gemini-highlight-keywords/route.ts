@@ -5,7 +5,7 @@ import { SceneData } from '@/types/sceneData';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
-  model: AI_CONFIG.GEMINI.MODEL,
+  model: AI_CONFIG.GEMINI.MODEL_PRO,
   generationConfig: { temperature: 0.2 }
 });
 
