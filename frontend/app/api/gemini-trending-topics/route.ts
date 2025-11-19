@@ -12,7 +12,7 @@ const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
       throw new Error('Gemini API key not configured');
     }
 
-    const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL });
+    const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_PRO });
 
     // Get time range description for the prompt
     const timeRangeDescription = HelperFunctions.getTimeRangeDescription(dateRange);
