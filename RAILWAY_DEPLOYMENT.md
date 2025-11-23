@@ -16,6 +16,8 @@ This guide will help you deploy the FastAPI backend to Railway.
 3. Select "Deploy from GitHub repo"
 4. Choose your repository
 
+**Note:** Railway will automatically use Nixpacks (configured via `nixpacks.toml`) instead of Docker. The `Dockerfile` has been renamed to `Dockerfile.full` to prevent Railway from detecting it.
+
 ### 2. Configure Environment Variables
 
 In Railway, go to your service → Variables tab and add:

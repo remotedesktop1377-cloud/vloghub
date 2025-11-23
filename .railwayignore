@@ -34,4 +34,7 @@ tests/
 temp/
 exports/
 uploads/
+Dockerfile.full
+Dockerfile.railway
+docker-compose.yml
 
