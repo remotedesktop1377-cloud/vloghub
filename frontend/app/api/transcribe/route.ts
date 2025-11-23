@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import os from "os";
 // @ts-ignore - types are not complete for fluent-ffmpeg
 import ffmpeg from "fluent-ffmpeg";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -392,12 +393,18 @@ export async function POST(req: Request) {
     updateProgress(jobId, 'audio_extraction', 5, 'Preparing video file...');
 
     // Save video temporarily
+    // Use system temp directory which is writable in serverless environments (Vercel uses /tmp)
+    // os.tmpdir() returns /tmp on Unix-like systems (including Vercel) and appropriate temp dir on Windows
     const buffer = incomingBuffer;
-    const uploadsDir = path.join(process.cwd(), "uploads");
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-
-    const inputPath = path.join(uploadsDir, incomingFileName);
-    const outputPath = path.join(uploadsDir, "output_audio.mp3");
+    
+    // Use system temporary directory (works in both serverless and local environments)
+    const uploadsDir = os.tmpdir();
+    
+    // Generate unique filenames to avoid conflicts
+    const timestamp = Date.now();
+    const inputPath = path.join(uploadsDir, `input_${timestamp}_${incomingFileName}`);
+    const outputPath = path.join(uploadsDir, `output_audio_${timestamp}.mp3`);
+    
     fs.writeFileSync(inputPath, buffer);
 
     // Check file size before processing
@@ -462,7 +469,7 @@ export async function POST(req: Request) {
 
     // Additional compression if still too large (rare case with MP3)
     const maxAudioSizeMB = 500; // Target size for Gemini API
-    const compressedOutputPath = path.join(uploadsDir, "compressed_audio.mp3");
+    const compressedOutputPath = path.join(uploadsDir, `compressed_audio_${Date.now()}.mp3`);
     let compressionUsed = false;
 
     updateProgress(jobId, 'audio_compression', 0, `Checking audio size: ${audioSizeInMB.toFixed(2)} MB...`);
