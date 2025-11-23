@@ -62,19 +62,17 @@ const TrendingTopics: React.FC = () => {
   const [dialogDescription, setDialogDescription] = useState<string>('');
   const [customTopic, setCustomTopic] = useState<string>('');
 
-  const fetchTrendingTopics = async () => {
+  const fetchTrendingTopics = async (searchQuery: string) => {
     try {
 
       // Guard: avoid duplicate calls with identical params within a short window (dev StrictMode)
-      const cacheKey = HelperFunctions.getCacheKey(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
+      const cacheKey = HelperFunctions.getCacheKey(searchQuery, selectedDateRange);
       const now = Date.now();
       if (lastFetchRef.current && lastFetchRef.current.key === cacheKey && (now - lastFetchRef.current.ts) < 1500) {
         // console.log('Skipping duplicate fetch for key:', fetchKey);
         return;
       }
       lastFetchRef.current = { key: cacheKey, ts: now };
-
-      const searchQuery = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
 
       // Fetch fresh data from API
       // console.log('🟢 Fetching fresh data for:', locationKey);
@@ -98,7 +96,7 @@ const TrendingTopics: React.FC = () => {
         // Cache the fresh data
         setTrendingTopics(geminiData);
         if (geminiData.length > 0) {
-          setCachedData(searchQuery, geminiData);
+          setCachedData(searchQuery, selectedDateRange, geminiData);
         }
       } else {
         console.warn('Gemini API not ok, using mock data. Error:', geminiResult.error);
@@ -125,11 +123,11 @@ const TrendingTopics: React.FC = () => {
       }
 
       // Try to load from cache first
-      const cacheKey = HelperFunctions.getCacheKey(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry);
-      const cachedData = getCachedData<TrendingTopic[]>(cacheKey);
+      const searchQuery = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedCountry);
+      const cachedData = getCachedData<TrendingTopic[]>(searchQuery, selectedDateRange);
 
       // Check if cachedData exists, cache is valid, and lastUpdated is less than 1 hour old
-      if (cachedData && isCacheValid(cacheKey)) {
+      if (cachedData && isCacheValid(searchQuery, selectedDateRange)) {
         // Last updated is less than 1 hour old
         console.log('🟡 Using cached data - no API call needed');
         setTrendingTopics(cachedData);
@@ -137,7 +135,7 @@ const TrendingTopics: React.FC = () => {
         return;
       } else {
         console.log('🟠 No valid cache found - calling API to fetch fresh data');
-        fetchTrendingTopics();
+        fetchTrendingTopics(searchQuery);
         setDialogTitle('Please wait');
         setDialogDescription('We are finding the trending topics for you...');
       }
@@ -333,8 +331,9 @@ const TrendingTopics: React.FC = () => {
         selectedCountry={selectedCountry}
         onCountryChange={handleCountryChange}
         onRefresh={() => {
-          clearCache(HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedDateRange, selectedCountry));
-          fetchTrendingTopics();
+          const searchQuery = HelperFunctions.getSearchQuery(selectedLocation, selectedLocationType, selectedCountry);
+          clearCache(searchQuery, selectedDateRange);
+          fetchTrendingTopics(searchQuery);
         }}
         loading={loading}
       />

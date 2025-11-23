@@ -184,16 +184,11 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 
 export class HelperFunctions {
 
-  static getCacheKey(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string): string {
-    const location = selectedLocationType === 'global'
-      ? selectedLocationType
-      : selectedLocationType === 'region'
-        ? selectedLocation
-        : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
-    return `${location}|${selectedDateRange}`;
+  static getCacheKey(searchQuery: string, selectedDateRange: string): string {
+    return `trending_topics_${searchQuery}_${selectedDateRange}`;
   }
 
-  static getSearchQuery(selectedLocation: string, selectedLocationType: string, selectedDateRange: string, selectedCountry: string): string {
+  static getSearchQuery(selectedLocation: string, selectedLocationType: string, selectedCountry: string): string {
     const location = selectedLocationType === 'global'
       ? selectedLocationType
       : selectedLocationType === 'region'

@@ -8,11 +8,12 @@ interface CachedData<T> {
 }
 
 export const useTrendingTopicsCache = () => {
-  const getCacheKey = useCallback((region: string) => `trending_topics_${region}`, []);
+  const getCacheKey = useCallback((searchQuery: string, dateRange: string) => `trending_topics_${searchQuery}_${dateRange}`, []);
 
-  const getCachedData = useCallback(<T>(region: string): T | null => {
+  const getCachedData = useCallback(<T>(searchQuery: string, dateRange: string): T | null => {
     try {
-      const cacheKey = getCacheKey(region);
+      const cacheKey = getCacheKey(searchQuery, dateRange);
+      console.log('🟢 getting cache key:', cacheKey);
       const cached = secure.j[cacheKey].get();
       if (cached) {
         const { data, timestamp }: CachedData<T> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<T>;
@@ -32,9 +33,10 @@ export const useTrendingTopicsCache = () => {
     return null;
   }, [getCacheKey]);
 
-  const setCachedData = useCallback(<T>(region: string, data: T): void => {
+  const setCachedData = useCallback(<T>(searchQuery: string, dateRange: string, data: T): void => {
     try {
-      const cacheKey = getCacheKey(region);
+      const cacheKey = getCacheKey(searchQuery, dateRange);
+      console.log('🟢 saving cache key:', cacheKey);
       const cacheData: CachedData<T> = {
         data,
         timestamp: new Date().toISOString()
@@ -45,10 +47,10 @@ export const useTrendingTopicsCache = () => {
     }
   }, [getCacheKey]);
 
-  const clearCache = useCallback((region?: string): void => {
+  const clearCache = useCallback((searchQuery?: string, dateRange?: string): void => {
     try {
-      if (region) {
-        const cacheKey = getCacheKey(region);
+      if (searchQuery) {
+        const cacheKey = getCacheKey(searchQuery, dateRange || '');
         secure.j[cacheKey].remove();
       } else {
         // Clear all trending topics cache
@@ -61,9 +63,9 @@ export const useTrendingTopicsCache = () => {
     }
   }, [getCacheKey]);
 
-  const isCacheValid = useCallback((region: string): boolean => {
+  const isCacheValid = useCallback((searchQuery: string, dateRange: string): boolean => {
     try {
-      const cacheKey = getCacheKey(region);
+      const cacheKey = getCacheKey(searchQuery, dateRange);
       const cached = secure.j[cacheKey].get();
       if (cached) {
         const { timestamp }: CachedData<any> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<any>;
@@ -77,9 +79,9 @@ export const useTrendingTopicsCache = () => {
     return false;
   }, [getCacheKey]);
 
-  const getCacheAge = useCallback((region: string): number | null => {
+  const getCacheAge = useCallback((searchQuery: string, dateRange: string): number | null => {
     try {
-      const cacheKey = getCacheKey(region);
+      const cacheKey = getCacheKey(searchQuery, dateRange);
       const cached = secure.j[cacheKey].get();
       if (cached) {
         const { timestamp }: CachedData<any> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<any>;
