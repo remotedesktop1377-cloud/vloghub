@@ -547,6 +547,7 @@ export class HelperFunctions {
     const newSceneData: SceneData = {
       id: Date.now().toString(),
       narration: '',
+      clip: '',
       duration: '',
       words: 0,
       startTime: 0,

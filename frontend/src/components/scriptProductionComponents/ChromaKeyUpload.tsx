@@ -53,10 +53,10 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     onUploadComplete,
     onUploadFailed,
 }) => {
+
     const { user } = useAuth();
     const [uploading, setUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [currentStep, setCurrentStep] = useState<'idle' | 'uploading' | 'transcribing' | 'completed'>('idle');
+    const [currentStep, setCurrentStep] = useState<'idle' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'completed'>('idle');
     const [error, setError] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<'upload' | 'transcribe' | 'general' | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -66,6 +66,11 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     const [transcriptionJobId, setTranscriptionJobId] = useState<string | null>(null);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
     const transcriptionStartedRef = useRef(false);
+
+    const [statusMessage, setStatusMessage] = useState('Awaiting file selection');
+    const [progress, setProgress] = useState(0);
+
+    const PY_BACKEND_URL = process.env.NEXT_PUBLIC_PY_BACKEND_URL ?? 'http://127.0.0.1:8000';
 
     // Use transcription progress hook
     const transcriptionProgress = useTranscriptionProgress({
@@ -82,62 +87,127 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     });
 
     // Sync upload progress with transcription progress
-    useEffect(() => {
-        if (scriptData.status === SCRIPT_STATUS.UPLOADED && scriptData.narrator_chroma_key_link && scriptData.transcription === "" && !transcriptionStartedRef.current) {
-            startVideoTranscribing();
-        }
-    }, [scriptData]);
+    // useEffect(() => {
+    //     if (scriptData.status === SCRIPT_STATUS.UPLOADED && scriptData.narrator_chroma_key_link && scriptData.transcription === "" && !transcriptionStartedRef.current) {
+    //         startVideoTranscribing();
+    //     }
+    // }, [scriptData]);
 
-    const startVideoTranscribing = () => {
-        // Prevent double transcription
-        clearError();
-        transcriptionStartedRef.current = true;
-        // Update visual progress based on transcription stage
-        setCurrentStep('transcribing');
-        setUploadProgress(40);
-        setUploading(true);
-        setTranscriptionJobId(jobId);
-        transcribingApiCall(scriptData.narrator_chroma_key_link);
-    }
+    // const startVideoTranscribing = () => {
+    //     // Prevent double transcription
+    //     clearError();
+    //     transcriptionStartedRef.current = true;
+    //     // Update visual progress based on transcription stage
+    //     setCurrentStep('transcribing');
+    //     setUploadProgress(40);
+    //     setUploading(true);
+    //     setTranscriptionJobId(jobId);
+    //     transcribingApiCall(scriptData.narrator_chroma_key_link);
+    // }
 
-    const startVideoUploadingAndTranscribtion = async (status: string, file: File | null) => {
+    const startVideoUploadingAndTranscribtion = async (status: string, file: File) => {
         try {
             setUploading(true);
-            setUploadProgress(5);
+            setProgress(5);
             setCurrentStep('uploading');
+            setStatusMessage('Uploading video to Google Drive...');
 
-            if (status === 'upload' && file !== null && driveUrl === '') {
-                // 1) Upload to Drive first
-                const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', file);
-                if (!upload?.success || !upload?.fileId) {
-                    setUploading(false);
-                    setCurrentStep('idle');
-                    setError('Failed to upload video to Drive');
-                    setErrorType('upload');
-                    return;
-                }
-                const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
-                // currentDriveUrl = 'https://drive.google.com/uc?id=1lDQe0CXoeiFbcfM6DdnpMK-rNNKHusAt'; // long
-                // currentDriveUrl = 'https://drive.google.com/uc?id=1dh2NClbUC5pZw-qlNs0Td2-yaB_4HySo'; // short
-                setDriveUrl(currentDriveUrl);
-                //store the drive url in the script data
-                const updatedScriptData = {
-                    ...scriptData,
-                    status: SCRIPT_STATUS.UPLOADED,
-                    narrator_chroma_key_link: currentDriveUrl,
-                    updated_at: new Date().toISOString(),
-                } as ScriptData;
-                setScriptData(updatedScriptData);
-                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-            } else if (status === 'transcribe' && file !== null && driveUrl !== '') {
-                startVideoTranscribing();
+            // if (status === 'upload' && file !== null && driveUrl === '') {
+            // // 1) Upload to Drive first
+            const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', file as File);
+            if (!upload?.success || !upload?.fileId) {
+                setUploading(false);
+                setCurrentStep('idle');
+                setError('Failed to upload video to Drive');
+                setErrorType('upload');
+                return;
             }
-            // Transcription will be triggered automatically by useEffect when scriptData is updated
-            // No need to call transcribeVideo here - the useEffect handles it
+            const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
+            setDriveUrl(currentDriveUrl);
+            // // store the drive url in the script data
+            // const updatedScriptData = {
+            //     ...scriptData,
+            //     status: SCRIPT_STATUS.UPLOADED,
+            //     narrator_chroma_key_link: currentDriveUrl,
+            //     updated_at: new Date().toISOString(),
+            // } as ScriptData;
+            // setScriptData(updatedScriptData);
+            // SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+            // } else if (status === 'transcribe' && file !== null && driveUrl !== '') {
+            //     startVideoTranscribing();
+            // }
+
+            setProgress(30);
+            setCurrentStep('videoConversion');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file as File);
+                formData.append('jobId', jobId);
+
+                // Progressively set progress over 60s to 70, then step, then again over 60s to 90 and step.
+                let firstInterval: NodeJS.Timeout | null = null;
+                let secondInterval: NodeJS.Timeout | null = null;
+                let progressValue = 30;
+
+                // Step 1: progress from 30 to 70 in 60s
+                let step1 = 0;
+                firstInterval = setInterval(() => {
+                    step1++;
+                    progressValue = 30 + Math.floor((step1 / 60) * 40); // 30 to 70 over 60s
+                    setProgress(progressValue);
+                    if (step1 >= 60) {
+                        clearInterval(firstInterval!);
+                        setProgress(70);
+                        setCurrentStep('llmProcessing');
+
+                        // Step 2: after first 60s, progress from 70 to 90 in 60s
+                        let step2 = 0;
+                        secondInterval = setInterval(() => {
+                            step2++;
+                            progressValue = 70 + Math.floor((step2 / 60) * 20); // 70 to 90 over 60s
+                            setProgress(progressValue);
+                            if (step2 >= 60) {
+                                clearInterval(secondInterval!);
+                                setProgress(90);
+                                setCurrentStep('segmentation');
+                            }
+                        }, 1000);
+                    }
+                }, 1000);
+
+                const response = await fetch(`${PY_BACKEND_URL}/api/process`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                console.log('response: ', response);
+                if (!response.ok) {
+                    const message = await response.text();
+                    throw new Error(message || 'Python pipeline failed');
+                }
+
+                const transcriptionData = await response.json();
+                setProgress(100);
+                setCurrentStep('completed');
+                // console.log('transcriptionData: ', JSON.stringify(transcriptionData, null, 2));
+                onUploadComplete(currentDriveUrl, transcriptionData, selectedBackgroundType as BackgroundType);
+            } catch (pipelineError) {
+                console.error('Python pipeline error:', pipelineError);
+                const message = pipelineError instanceof Error ? pipelineError.message : 'Pipeline failed';
+                setError(message);
+                setStatusMessage('Processing failed');
+                onUploadFailed(message);
+                toast.error(message);
+            } finally {
+                setUploading(true);
+            }
+
+
         } catch (error) {
             setTranscriptionJobId(null); // Stop tracking on error
             setUploading(false);
-            setUploadProgress(0);
+            setProgress(0);
             setCurrentStep('idle');
             toast.error('Failed to upload chroma key');
             setError(error instanceof Error ? error.message : 'Failed to upload chroma key');
@@ -174,7 +244,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             }
 
             // Transcription is complete (API blocks until done)
-            setUploadProgress(100);
+            setProgress(100);
             setCurrentStep('completed');
             setUploading(false);
             setTranscriptionJobId(null); // Stop tracking
@@ -195,42 +265,38 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     };
 
     const getProgressMessage = () => {
-        // If we have transcription progress, show detailed messages
-        if (transcriptionProgress.isLoading && transcriptionProgress.message) {
-            return transcriptionProgress.message;
-        }
-
         switch (currentStep) {
             case 'uploading':
                 return 'Uploading video to Google Drive...';
+            case 'videoConversion':
+                return 'Converting video to audio...';
             case 'transcribing':
                 return 'Transcribing audio to text...';
+            case 'llmProcessing':
+                return 'Processing with LLM...';
+            case 'segmentation':
+                return 'Segmenting video...';
             case 'completed':
-                return 'Upload and transcription complete!';
+                return 'All done! Your video has been processed successfully.';
             default:
                 return 'Processing...';
         }
     };
 
-    const getProgressPercentage = () => {
-        // If we have transcription progress, use that
-        if (transcriptionProgress.isLoading && transcriptionProgress.progress > 0) {
-            // Map transcription progress to our display (upload is 0-40%, transcription is 40-100%)
-            return Math.min(100, 40 + (transcriptionProgress.progress * 0.6));
-        }
-        return uploadProgress;
-    };
-
     const getStepIcon = () => {
         switch (currentStep) {
             case 'uploading':
-                return <CloudDoneIcon sx={{ fontSize: 20, mr: 1 }} />;
+                return <UploadIcon sx={{ fontSize: 20, mr: 1 }} />;
+            case 'videoConversion':
+                return <VideoIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'transcribing':
                 return <TranscriptionIcon sx={{ fontSize: 20, mr: 1 }} />;
+            case 'llmProcessing':
+                return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
+            case 'segmentation':
+                return <VideoIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'completed':
                 return <CheckIcon sx={{ fontSize: 20, mr: 1 }} />;
-            default:
-                return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
         }
     };
 
@@ -292,21 +358,18 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                             setShowBackgroundTypeDialog(true);
                         }}
                     >
-                        {uploadProgress > 0 ? (
+                        {progress > 0 ? (
                             <Box sx={{ textAlign: 'center' }}>
                                 {/* Step Indicator */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-                                    {getStepIcon()}
-                                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                        {getProgressMessage()}
-                                    </Typography>
+                                    {getStepIcon()} <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{getProgressMessage()}</Typography>
                                 </Box>
 
                                 {/* Progress Bar */}
                                 <Box sx={{ mb: 2 }}>
                                     <LinearProgress
                                         variant="determinate"
-                                        value={getProgressPercentage()}
+                                        value={progress}
                                         sx={{
                                             height: 8,
                                             borderRadius: 4,
@@ -317,62 +380,10 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                         }}
                                     />
                                     <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
-                                        {getProgressPercentage().toFixed(0)}%
+                                        {progress.toFixed(0)}%
                                     </Typography>
                                 </Box>
 
-                                {/* Transcription Stage Details */}
-                                {currentStep === 'transcribing' && transcriptionProgress.stage && (
-                                    <Box sx={{ mb: 2, textAlign: 'center' }}>
-                                        <Chip
-                                            label={transcriptionProgress.stage.replace(/_/g, ' ').toUpperCase()}
-                                            color="primary"
-                                            size="small"
-                                            sx={{ textTransform: 'capitalize', mb: 1 }}
-                                        />
-                                        {transcriptionProgress.progress > 0 && (
-                                            <Typography variant="caption" color="text.secondary" display="block">
-                                                {transcriptionProgress.progress.toFixed(0)}% of transcription complete
-                                            </Typography>
-                                        )}
-                                        <CircularProgress size={16} sx={{ mb: 0.5 }} />
-                                    </Box>
-                                )}
-
-                                {/* Step Progress Indicators */}
-                                <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 2 }}>
-                                    <Chip
-                                        icon={<CloudDoneIcon />}
-                                        label="Upload"
-                                        color={currentStep === 'uploading' ? 'primary' : uploadProgress > 40 ? 'success' : 'default'}
-                                        variant={currentStep === 'uploading' ? 'filled' : 'outlined'}
-                                        size="small"
-                                    />
-                                    <Chip
-                                        icon={<TranscriptionIcon />}
-                                        label="Transcribe"
-                                        color={currentStep === 'transcribing' ? 'primary' : uploadProgress === 100 ? 'success' : 'default'}
-                                        variant={currentStep === 'transcribing' ? 'filled' : 'outlined'}
-                                        size="small"
-                                    />
-                                </Stack>
-
-                                {/* Additional Info */}
-                                {currentStep === 'uploading' && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        Please wait while your video is being uploaded...
-                                    </Typography>
-                                )}
-                                {currentStep === 'transcribing' && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        Converting audio to text in {scriptData?.language || 'english'}...
-                                    </Typography>
-                                )}
-                                {currentStep === 'completed' && (
-                                    <Typography variant="caption" color="success.main">
-                                        ✓ All done! Your video has been processed successfully.
-                                    </Typography>
-                                )}
                             </Box>
                         ) : (
                             <Box>
@@ -397,7 +408,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                     <Tooltip title="Retry">
                                         <IconButton
                                             size="small"
-                                            onClick={() => startVideoUploadingAndTranscribtion(errorType || '', uploadedFile)}
+                                            onClick={() => startVideoUploadingAndTranscribtion(errorType || '', uploadedFile as File)}
                                             // disabled={uploading}
                                             color="inherit"
                                         >

@@ -65,3 +65,7 @@ out/
 .env
 
 frontend/uploads/
+
+exports/
+
+temp/
