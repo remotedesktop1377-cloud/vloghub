@@ -933,10 +933,7 @@ const ScriptProductionClient = () => {
             toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
             return;
         }
-        // console.log('Scene folder result:', sceneFolderResult.result);
-        // push this script data to the scripts_approved table in supabase
-
-
+        
         // save the profile settings to the secure storage
         const profileSettings = await profileService.getProfileSettings(scriptData?.user_id || '');
         const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, projectSettings: profileSettings.projectSettings, updated_at: new Date().toISOString() } as any;
@@ -1570,24 +1567,7 @@ const ScriptProductionClient = () => {
                                             } as ScriptData;
                                             console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
                                             setScriptData(updatedScriptData);
-                                            SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-
-                                            // Loop the scenes data and generate scene folder in google drive by using googleDriveService function
-                                            for (const scene of transcriptionData.scenes) {
-                                                const data = await GoogleDriveServiceFunctions.uploadClipsInSceneFolder(jobId, scene, transcriptionData.scenes.length);
-                                                if (!data?.success) {
-                                                    toast.error('Failed to upload clip');
-                                                    continue;
-                                                }
-                                                console.log('Clip uploaded successfully', data);
-                                                const updatedScriptData = {
-                                                    ...scriptData,
-                                                    scenesData: transcriptionData.scenes?.map((scene: SceneData) => scene.id === scene.id ? { ...scene, clip: data.webViewLink } : scene) || [],
-                                                } as ScriptData;
-                                                console.log('updatedScriptData: ', JSON.stringify(updatedScriptData.scenesData, null, 2));
-                                                setScriptData(updatedScriptData);
-                                                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-                                            }
+                                            SecureStorageHelpers.setScriptMetadata(updatedScriptData);                                           
 
                                             updateParagraphs(updatedScriptData);
 

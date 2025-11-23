@@ -86,7 +86,7 @@ async def process_video(
             video_duration_seconds=video_duration_seconds,
         )
 
-        clips, scenes_with_clips = await cut_video_segments(str(video_path), edits)
+        clips, scenes_with_clips = await cut_video_segments(str(video_path), edits, job_id)
 
         processed_json_path = TEMP_DIR / "processed_result.json"
         zip_path = await zip_and_download_files(

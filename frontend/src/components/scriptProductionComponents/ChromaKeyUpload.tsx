@@ -122,7 +122,8 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 const transcriptionData = await response.json();
                 setProgress(100);
                 setCurrentStep('completed');
-                // console.log('transcriptionData: ', JSON.stringify(transcriptionData, null, 2));
+                console.log('transcriptionData: ', JSON.stringify(transcriptionData, null, 2));
+                
                 onUploadComplete(currentDriveUrl, transcriptionData, selectedBackgroundType as BackgroundType);
             } catch (pipelineError) {
                 console.error('Python pipeline error:', pipelineError);

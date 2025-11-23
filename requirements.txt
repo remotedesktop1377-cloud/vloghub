@@ -39,6 +39,7 @@ google-generativeai
 moviepy
 pydantic
 python-dotenv
+httpx
 
 # # File handling
 # python-magic==0.4.27
