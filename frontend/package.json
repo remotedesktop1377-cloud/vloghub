@@ -5,6 +5,8 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
     "@google/genai": "^1.13.0",
     "@google/generative-ai": "^0.24.1",
     "@mui/icons-material": "^5.18.0",

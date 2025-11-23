@@ -4,6 +4,9 @@ import path from "path";
 import os from "os";
 // @ts-ignore - types are not complete for fluent-ffmpeg
 import ffmpeg from "fluent-ffmpeg";
+import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
+import ffprobeInstaller from "@ffprobe-installer/ffprobe";
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AI_CONFIG } from "@/config/aiConfig";
 import { getDriveClient } from "@/services/googleDriveServer";
@@ -184,7 +187,7 @@ const processTranscriptionIntoScenes = async (genAI: GoogleGenerativeAI, transcr
     console.log('No paragraph breaks found, using sentence-level splitting');
     const paragraphText = scriptParagraphs[0] || transcription;
     const wordCount = paragraphText.split(/\s+/).length;
-    
+
     // Split by sentence boundaries (. ! ?)
     let sentences = paragraphText
       .split(/(?<=[.!?])\s+/)
@@ -198,7 +201,7 @@ const processTranscriptionIntoScenes = async (genAI: GoogleGenerativeAI, transcr
       const wordsPerScene = 35;
       const words = paragraphText.split(/\s+/);
       sentences = [];
-      
+
       for (let i = 0; i < words.length; i += wordsPerScene) {
         const segment = words.slice(i, i + wordsPerScene).join(' ');
         if (segment.trim()) {
@@ -396,15 +399,15 @@ export async function POST(req: Request) {
     // Use system temp directory which is writable in serverless environments (Vercel uses /tmp)
     // os.tmpdir() returns /tmp on Unix-like systems (including Vercel) and appropriate temp dir on Windows
     const buffer = incomingBuffer;
-    
+
     // Use system temporary directory (works in both serverless and local environments)
     const uploadsDir = os.tmpdir();
-    
+
     // Generate unique filenames to avoid conflicts
     const timestamp = Date.now();
     const inputPath = path.join(uploadsDir, `input_${timestamp}_${incomingFileName}`);
     const outputPath = path.join(uploadsDir, `output_audio_${timestamp}.mp3`);
-    
+
     fs.writeFileSync(inputPath, buffer);
 
     // Check file size before processing
@@ -417,11 +420,11 @@ export async function POST(req: Request) {
     }
 
     // Extract audio using FFmpeg (library API with explicit binary path)
-    const ffmpegBin = getFfmpegPath();
-    const ffprobeBin = getFfprobePath();
+    // const ffmpegBin = getFfmpegPath();
+    // const ffprobeBin = getFfprobePath();
     try {
-      (ffmpeg as any).setFfmpegPath(ffmpegBin);
-      (ffmpeg as any).setFfprobePath(ffprobeBin);
+      ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+      ffmpeg.setFfprobePath(ffprobeInstaller.path);
     } catch { }
 
     // Extract audio using FFmpeg - use compressed format for efficiency
@@ -433,6 +436,7 @@ export async function POST(req: Request) {
     await new Promise<void>((resolve, reject) => {
       let progressUpdated = false;
       ffmpeg(inputPath)
+        .outputOptions(outputPath)
         .noVideo()
         .audioCodec('libmp3lame') // Use MP3 compression instead of uncompressed PCM
         .audioFrequency(audioQuality === 'low' ? 16000 : 22050) // Lower sample rates for speech
