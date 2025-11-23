@@ -1,45 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Box,
-    Button,
     Typography,
     LinearProgress,
     Alert,
     Card,
     CardContent,
     IconButton,
-    Chip,
     Tooltip,
-    CircularProgress,
-    Stack
 } from '@mui/material';
 import {
     CloudUpload as UploadIcon,
     VideoFile as VideoIcon,
-    Delete as DeleteIcon,
     CheckCircle as CheckIcon,
-    Error as ErrorIcon,
     Refresh as RefreshIcon,
     Close as CloseIcon,
-    CloudDone as CloudDoneIcon,
+    HourglassEmpty as ProcessingIcon,
     RecordVoiceOver as TranscriptionIcon,
-    HourglassEmpty as ProcessingIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
-import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import BackgroundTypeDialog from '../../dialogs/BackgroundTypeDialog';
 import { BackgroundType } from '../../types/backgroundType';
-import { useTranscriptionProgress } from '@/hooks/useTranscriptionProgress';
 import { useAuth } from '@/context/AuthContext';
-import { SCRIPT_STATUS } from '@/data/constants';
-import { ScriptData } from '@/types/scriptData';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
+import { ScriptData } from '@/types/scriptData';
 
 interface ChromaKeyUploadProps {
     jobId: string;
-    scriptData: ScriptData;
-    setScriptData: (scriptData: ScriptData) => void;
     videoDurationCaptured: (duration: number) => void;
     onUploadComplete: (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => void;
     onUploadFailed: (errorMessage: string) => void;
@@ -47,70 +35,27 @@ interface ChromaKeyUploadProps {
 
 const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     jobId,
-    scriptData,
-    setScriptData,
     videoDurationCaptured,
     onUploadComplete,
     onUploadFailed,
 }) => {
-
-    const { user } = useAuth();
     const [uploading, setUploading] = useState(false);
     const [currentStep, setCurrentStep] = useState<'idle' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'completed'>('idle');
     const [error, setError] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<'upload' | 'transcribe' | 'general' | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [driveUrl, setDriveUrl] = useState<string>('');
     const [showBackgroundTypeDialog, setShowBackgroundTypeDialog] = useState(false);
     const [selectedBackgroundType, setSelectedBackgroundType] = useState<BackgroundType | null>(null);
-    const [transcriptionJobId, setTranscriptionJobId] = useState<string | null>(null);
-    const [videoDuration, setVideoDuration] = useState<number | null>(null);
-    const transcriptionStartedRef = useRef(false);
 
-    const [statusMessage, setStatusMessage] = useState('Awaiting file selection');
     const [progress, setProgress] = useState(0);
 
-    const PY_BACKEND_URL = process.env.NEXT_PUBLIC_PY_BACKEND_URL ?? 'http://127.0.0.1:8000';
-
-    // Use transcription progress hook
-    const transcriptionProgress = useTranscriptionProgress({
-        jobId: transcriptionJobId,
-        onComplete: (data) => {
-            console.log('Transcription completed:', data);
-        },
-        onError: (error) => {
-            console.error('Transcription error:', error);
-            setError(`Transcription failed: ${error}`);
-            setErrorType('transcribe');
-            setUploading(false);
-        },
-    });
-
-    // Sync upload progress with transcription progress
-    // useEffect(() => {
-    //     if (scriptData.status === SCRIPT_STATUS.UPLOADED && scriptData.narrator_chroma_key_link && scriptData.transcription === "" && !transcriptionStartedRef.current) {
-    //         startVideoTranscribing();
-    //     }
-    // }, [scriptData]);
-
-    // const startVideoTranscribing = () => {
-    //     // Prevent double transcription
-    //     clearError();
-    //     transcriptionStartedRef.current = true;
-    //     // Update visual progress based on transcription stage
-    //     setCurrentStep('transcribing');
-    //     setUploadProgress(40);
-    //     setUploading(true);
-    //     setTranscriptionJobId(jobId);
-    //     transcribingApiCall(scriptData.narrator_chroma_key_link);
-    // }
+    const PY_BACKEND_URL = process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL ?? 'http://127.0.0.1:8000';
 
     const startVideoUploadingAndTranscribtion = async (status: string, file: File) => {
         try {
             setUploading(true);
             setProgress(5);
             setCurrentStep('uploading');
-            setStatusMessage('Uploading video to Google Drive...');
 
             // if (status === 'upload' && file !== null && driveUrl === '') {
             // // 1) Upload to Drive first
@@ -123,19 +68,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 return;
             }
             const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
-            setDriveUrl(currentDriveUrl);
-            // // store the drive url in the script data
-            // const updatedScriptData = {
-            //     ...scriptData,
-            //     status: SCRIPT_STATUS.UPLOADED,
-            //     narrator_chroma_key_link: currentDriveUrl,
-            //     updated_at: new Date().toISOString(),
-            // } as ScriptData;
-            // setScriptData(updatedScriptData);
-            // SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-            // } else if (status === 'transcribe' && file !== null && driveUrl !== '') {
-            //     startVideoTranscribing();
-            // }
 
             setProgress(30);
             setCurrentStep('videoConversion');
@@ -196,7 +128,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 console.error('Python pipeline error:', pipelineError);
                 const message = pipelineError instanceof Error ? pipelineError.message : 'Pipeline failed';
                 setError(message);
-                setStatusMessage('Processing failed');
                 onUploadFailed(message);
                 toast.error(message);
             } finally {
@@ -205,7 +136,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
 
         } catch (error) {
-            setTranscriptionJobId(null); // Stop tracking on error
             setUploading(false);
             setProgress(0);
             setCurrentStep('idle');
@@ -215,53 +145,10 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
         }
     }
 
-    const transcribingApiCall = async (currentDriveUrl: string) => {
-        try {
-            // Start tracking progress immediately with the jobId
-            setTranscriptionJobId(jobId);
-
-            const res = await fetch(API_ENDPOINTS.API_TRANSCRIBE_VIDEO, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    driveUrl: currentDriveUrl,
-                    scriptLanguage: scriptData?.language || 'english',
-                    jobId: jobId,
-                    userId: user?.id || '',
-                    videoDuration: videoDuration || 0
-                })
-            });
-            const transcriptionData = await res.json();
-
-            if (!res.ok || transcriptionData?.error) {
-                setTranscriptionJobId(null);
-                setUploading(false);
-                setCurrentStep('idle');
-                console.log("transcription failed: ", transcriptionData?.error);
-                setError(`Transcription failed: ${transcriptionData?.error || 'Unknown error'}`);
-                setErrorType('transcribe');
-                return;
-            }
-
-            // Transcription is complete (API blocks until done)
-            setProgress(100);
-            setCurrentStep('completed');
-            setUploading(false);
-            setTranscriptionJobId(null); // Stop tracking
-            toast.success('Upload and transcription complete');
-            onUploadComplete(currentDriveUrl, transcriptionData, selectedBackgroundType as BackgroundType);
-        } catch (error) {
-            console.error('Transcription error:', error);
-            setError(`Transcription failed: ${error}`);
-            setErrorType('transcribe');
-        }
-    }
-
     const clearError = () => {
         setError(null);
         setErrorType(null);
         setCurrentStep('idle');
-        transcriptionStartedRef.current = false; // Reset transcription flag
     };
 
     const getProgressMessage = () => {
@@ -303,9 +190,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     const handleBackgroundTypeSelected = (type: BackgroundType) => {
         setSelectedBackgroundType(type);
         setShowBackgroundTypeDialog(false);
-
-        // Reset transcription started flag for new upload
-        transcriptionStartedRef.current = false;
 
         // Create a file input for chroma key upload
         const input = document.createElement('input');

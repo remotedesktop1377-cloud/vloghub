@@ -1544,8 +1544,6 @@ const ScriptProductionClient = () => {
                                 {(isScriptApproved && hasDownloadedScript) ? (
                                     <ChromaKeyUpload
                                         jobId={jobId || 'job-chroma-key'}
-                                        scriptData={scriptData as ScriptData}
-                                        setScriptData={setScriptData}
                                         videoDurationCaptured={(duration: number) => {
                                             setVideoDuration(duration);
                                             const updatedScriptData = {
