@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { secure } from '../utils/helperFunctions';
-import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
+import { HelperFunctions, secure } from '../utils/helperFunctions';
 
 interface CachedData<T> {
   data: T;
@@ -9,7 +8,7 @@ interface CachedData<T> {
 
 export const useTrendingTopicsCache = () => {
   const getCacheKey = useCallback((searchQuery: string, dateRange: string) => `trending_topics_${searchQuery}_${dateRange}`, []);
-
+  const BACKGROUNDS_CACHE_MAX_AGE = HelperFunctions.getBackgroundsCacheMaxAge();
   const getCachedData = useCallback(<T>(searchQuery: string, dateRange: string): T | null => {
     try {
       const cacheKey = getCacheKey(searchQuery, dateRange);
@@ -17,9 +16,9 @@ export const useTrendingTopicsCache = () => {
       const cached = secure.j[cacheKey].get();
       if (cached) {
         const { data, timestamp }: CachedData<T> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<T>;
-        // Check if cache is less than TRENDING_TOPICS_CACHE_MAX_AGE old
+        // Check if cache is less than BACKGROUNDS_CACHE_MAX_AGE old
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        if (cacheAge < TRENDING_TOPICS_CACHE_MAX_AGE) {
+        if (cacheAge < BACKGROUNDS_CACHE_MAX_AGE) {
           console.log('🟡 Cache is valid - returning data');
           return data;
         } else {

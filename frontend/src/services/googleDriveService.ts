@@ -1,9 +1,7 @@
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { SceneData } from '@/types/sceneData';
 import { HelperFunctions, secure } from '@/utils/helperFunctions';
-import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
-import { profileService, BackgroundItem, LibraryData } from './profileService';
-import { toast } from 'react-toastify';
+import { profileService, LibraryData } from './profileService';
 import { LogoOverlayInterface, SettingItemInterface, Settings } from '@/types/scriptData';
 
 interface CachedLibraryData {

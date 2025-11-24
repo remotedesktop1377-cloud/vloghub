@@ -2,8 +2,7 @@ import { SceneData } from '../types/sceneData';
 import { ScriptData } from '../types/scriptData';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
-import { now } from 'lodash';
-import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
+import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL } from '@/data/constants';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -183,6 +182,14 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 };
 
 export class HelperFunctions {
+
+  static getBackgroundsCacheMaxAge(): number {
+    if (process.env.BACKGROUNDS_CACHE_MAX_AGE) {
+      const parsed = parseInt(process.env.BACKGROUNDS_CACHE_MAX_AGE, 10);
+      return Number.isNaN(parsed) ? BACKGROUNDS_CACHE_MAX_AGE_LOCAL : parsed;
+    }
+    return BACKGROUNDS_CACHE_MAX_AGE_LOCAL;
+  }
 
   static getCacheKey(searchQuery: string, selectedDateRange: string): string {
     return `trending_topics_${searchQuery}_${selectedDateRange}`;
