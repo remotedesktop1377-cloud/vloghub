@@ -61,10 +61,12 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             // // 1) Upload to Drive first
             const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', file as File);
             if (!upload?.success || !upload?.fileId) {
+                const message = upload?.message || 'Failed to upload video to Drive';
                 setUploading(false);
                 setCurrentStep('idle');
-                setError('Failed to upload video to Drive');
+                setError(message);
                 setErrorType('upload');
+                toast.error(message);
                 return;
             }
             const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;

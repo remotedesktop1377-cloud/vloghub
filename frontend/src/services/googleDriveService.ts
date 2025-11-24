@@ -15,6 +15,9 @@ const BACKGROUNDS_CACHE_KEY = 'backgrounds_cache'; // Keep for backward compatib
 // Module-level variable to track background loading promise
 let loadingLibraryData: boolean = false;
 
+const DIRECT_UPLOAD_LIMIT_BYTES = 4 * 1024 * 1024; // 4MB to stay under Vercel body limits
+const RESUMABLE_CHUNK_BYTES = Math.floor(3.5 * 1024 * 1024); // ~3.5MB chunks
+
 /**
  * Get authenticated Google Drive JWT Client
  * @param scopes - Google Drive scopes (default: full drive access)
@@ -37,7 +40,7 @@ function dataUrlToFile(dataUrl: string, fileName: string): File {
 }
 
 export const GoogleDriveServiceFunctions = {
-    async uploadClipsInSceneFolder(jobId: string, sceneData: SceneData, scenesCount: number): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
+    async uploadClipsInSceneFolder(jobId: string, sceneData: SceneData, scenesCount: number): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; message?: string; }> {
         try {
             const folders = await this.generateSceneFoldersInDrive(jobId, scenesCount);
             if (!folders.success) {
@@ -110,8 +113,12 @@ export const GoogleDriveServiceFunctions = {
  * Upload a media file (e.g., chroma key or any video) to Google Drive under the given job folder and target subfolder.
  * Returns Drive identifiers on success.
  */
-    async uploadMediaToDrive(jobId: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; }> {
+    async uploadMediaToDrive(jobId: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; message?: string; }> {
         try {
+            if (file.size > DIRECT_UPLOAD_LIMIT_BYTES) {
+                return await performResumableDriveUpload(jobId, targetFolder, file);
+            }
+
             const form = new FormData();
             form.append('jobName', jobId);
             form.append('targetFolder', targetFolder || 'input');
@@ -125,8 +132,12 @@ export const GoogleDriveServiceFunctions = {
             return data;
         } catch (e: any) {
             console.error('uploadMediaToDrive error', e);
-            return { success: false };
+            return { success: false, message: e?.message || 'Unable to upload media' };
         }
+    },
+
+    async uploadMediaToDriveResumable(jobId: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; message?: string; }> {
+        return await performResumableDriveUpload(jobId, targetFolder, file);
     },
 
     async uploadContentToDrive(form: FormData): Promise<{ success: boolean; result: any }> {
@@ -336,5 +347,74 @@ export const GoogleDriveServiceFunctions = {
         }
     },
 };
+
+async function performResumableDriveUpload(jobId: string, targetFolder: string, file: File): Promise<{ success: boolean; projectFolderId?: string; targetFolderId?: string; fileId?: string; fileName?: string; webViewLink?: string; message?: string; }> {
+    try {
+        const initForm = new FormData();
+        initForm.append('action', 'init-resumable');
+        initForm.append('jobName', jobId);
+        initForm.append('targetFolder', targetFolder || 'input');
+        initForm.append('fileName', file.name);
+        initForm.append('mimeType', file.type || 'application/octet-stream');
+        initForm.append('fileSize', String(file.size));
+
+        const initResponse = await fetch(API_ENDPOINTS.API_API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: initForm });
+        const initData = await initResponse.json().catch(() => ({}));
+        if (!initResponse.ok || !initData?.sessionUrl) {
+            throw new Error(initData?.error || initData?.details || 'Failed to initiate upload session');
+        }
+
+        const sessionUrl: string = initData.sessionUrl;
+        const projectFolderId: string | undefined = initData.projectFolderId;
+        const targetFolderId: string | undefined = initData.targetFolderId;
+
+        let offset = 0;
+        while (offset < file.size) {
+            const chunk = file.slice(offset, offset + RESUMABLE_CHUNK_BYTES);
+            const chunkForm = new FormData();
+            chunkForm.append('action', 'upload-chunk');
+            chunkForm.append('jobName', jobId);
+            chunkForm.append('targetFolder', targetFolder || 'input');
+            if (projectFolderId) chunkForm.append('projectFolderId', projectFolderId);
+            if (targetFolderId) chunkForm.append('targetFolderId', targetFolderId);
+            chunkForm.append('sessionUrl', sessionUrl);
+            chunkForm.append('chunkStart', String(offset));
+            chunkForm.append('chunkEnd', String(offset + chunk.size));
+            chunkForm.append('fileSize', String(file.size));
+            chunkForm.append('fileName', file.name);
+            chunkForm.append('mimeType', file.type || 'application/octet-stream');
+            chunkForm.append('file', chunk, file.name);
+
+            const chunkResponse = await fetch(API_ENDPOINTS.API_API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: chunkForm });
+            const chunkData = await chunkResponse.json().catch(() => ({}));
+            if (!chunkResponse.ok) {
+                throw new Error(chunkData?.error || chunkData?.details || 'Chunk upload failed');
+            }
+
+            if (chunkData?.fileId) {
+                return {
+                    success: true,
+                    projectFolderId: chunkData.projectFolderId || projectFolderId,
+                    targetFolderId: chunkData.targetFolderId || targetFolderId,
+                    fileId: chunkData.fileId,
+                    fileName: chunkData.fileName,
+                    webViewLink: chunkData.webViewLink,
+                };
+            }
+
+            const nextByte = Number(chunkData?.nextByte);
+            if (Number.isFinite(nextByte) && nextByte > offset) {
+                offset = nextByte;
+            } else {
+                offset += chunk.size;
+            }
+        }
+
+        throw new Error('Upload session ended unexpectedly');
+    } catch (e: any) {
+        console.error('performResumableDriveUpload error', e);
+        return { success: false, message: e?.message || 'Unable to upload media' };
+    }
+}
 
 

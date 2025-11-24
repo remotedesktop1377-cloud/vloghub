@@ -435,7 +435,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                                 setSceneSettings({ ...sceneSettings, videoLogo: { name: logoFileName, url: logoUrl, position: sceneSettings?.videoLogo?.position || 'top-right' } as LogoOverlayInterface } as Settings);
                                             }
                                         } else {
-                                            throw new Error('Upload failed');
+                                            throw new Error(uploadResult?.message || 'Upload failed');
                                         }
                                     } catch (error) {
                                         console.error('Error uploading logo to Google Drive:', error);
@@ -458,8 +458,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         file
                                     );
                                     if (!uploadResult.success || !uploadResult.fileId) {
-                                        console.error('Failed to upload logo to Google Drive:');
-                                        toast.error('Failed to upload logo to Google Drive. Using local preview.');
+                                        console.error('Failed to upload logo to Google Drive:', uploadResult?.message);
+                                        toast.error(uploadResult?.message || 'Failed to upload logo to Google Drive. Using local preview.');
                                         return;
                                     }
                                     const logoUrl = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view?usp=drive_link`;
