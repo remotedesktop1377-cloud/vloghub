@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
 import { getDriveClient, getRootFolderId } from '@/services/googleDriveServer';
-
+import { HelperFunctions } from '@/utils/helperFunctions';
 // Lightweight in-memory cache to reduce Drive API calls
 type CacheEntry = { timestamp: number; data: any };
 const cache = new Map<string, CacheEntry>();
@@ -80,11 +79,12 @@ export async function GET(req: NextRequest) {
     const musicIdEnv = process.env.GOOGLE_DRIVE_MUSIC_FOLDER_ID || '';
     const transitionsIdEnv = process.env.GOOGLE_DRIVE_TRANSITIONS_FOLDER_ID || '';
     const transitionEffectsIdEnv = process.env.GOOGLE_DRIVE_TRANSITION_EFFECTS_FOLDER_ID || '';
+    const BACKGROUNDS_CACHE_MAX_AGE = HelperFunctions.getBackgroundsCacheMaxAge();
 
     // Cache key
     const cacheKey = `library:${requested}:${rootId}:${backgroundsIdEnv}:${musicIdEnv}:${transitionsIdEnv}`;
     const hit = cache.get(cacheKey);
-    if (hit && Date.now() - hit.timestamp < TRENDING_TOPICS_CACHE_MAX_AGE) {
+    if (hit && Date.now() - hit.timestamp < BACKGROUNDS_CACHE_MAX_AGE) {
       return NextResponse.json(hit.data);
     }
 

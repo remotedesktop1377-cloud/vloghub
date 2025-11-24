@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { secure } from '../utils/helperFunctions';
-import { TRENDING_TOPICS_CACHE_MAX_AGE } from '@/data/constants';
+import { HelperFunctions, secure } from '../utils/helperFunctions';
 import { BackgroundItem } from '@/services/profileService';
 
 interface CachedData<T> {
@@ -11,14 +10,16 @@ interface CachedData<T> {
 const BACKGROUNDS_CACHE_KEY = 'backgrounds_cache';
 
 export const useBackgroundsCache = () => {
+  const BACKGROUNDS_CACHE_MAX_AGE = HelperFunctions.getBackgroundsCacheMaxAge();
+
   const getCachedData = useCallback((): BackgroundItem[] | null => {
     try {
       const cached = secure.j[BACKGROUNDS_CACHE_KEY].get();
       if (cached) {
         const { data, timestamp }: CachedData<BackgroundItem[]> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<BackgroundItem[]>;
-        // Check if cache is less than TRENDING_TOPICS_CACHE_MAX_AGE old
+        // Check if cache is less than BACKGROUNDS_CACHE_MAX_AGE old
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        if (cacheAge < TRENDING_TOPICS_CACHE_MAX_AGE) {
+        if (cacheAge < BACKGROUNDS_CACHE_MAX_AGE) {
           console.log('🟡 Backgrounds cache is valid - returning cached data');
           return data;
         } else {
@@ -61,7 +62,7 @@ export const useBackgroundsCache = () => {
       if (cached) {
         const { timestamp }: CachedData<BackgroundItem[]> = typeof cached === 'string' ? JSON.parse(cached) : cached as CachedData<BackgroundItem[]>;
         const cacheAge = Date.now() - new Date(timestamp).getTime();
-        return cacheAge < TRENDING_TOPICS_CACHE_MAX_AGE;
+        return cacheAge < BACKGROUNDS_CACHE_MAX_AGE;
       }
     } catch (error) {
       console.warn('Error checking backgrounds cache validity:', error);

@@ -8,7 +8,7 @@ import { TrendingTopic } from '../../types/TrendingTopics';
 import { durationOptions } from '../../data/mockDurationOptions';
 import { languageOptions } from '../../data/mockLanguageOptions';
 import { apiService } from '../../utils/apiService';
-import { ROUTES_KEYS, SCRIPT_STATUS, TRENDING_TOPICS_CACHE_MAX_AGE } from '../../data/constants';
+import { ROUTES_KEYS, SCRIPT_STATUS } from '../../data/constants';
 import { useTrendingTopicsCache } from '../../hooks/useTrendingTopicsCache';
 import { secure } from '../../utils/helperFunctions';
 
