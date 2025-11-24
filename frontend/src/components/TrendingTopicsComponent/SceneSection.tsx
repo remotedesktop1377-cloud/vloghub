@@ -364,10 +364,10 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                         sx={{
                                           px: 1.5, py: 1.5, width: '100%', flex: 1, bgcolor: NEUTRAL.white, fontSize: '1.2rem',
                                           '& .MuiInputBase-input': {
-                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
-                                            lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
+                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(HelperFunctions.detectLanguage(sceneData.narration)),
+                                            lineHeight: HelperFunctions.isRTLLanguage(HelperFunctions.detectLanguage(sceneData.narration)) ? 2.5 : 1.8,
                                             fontSize: '1.2rem',
-                                            textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
+                                            textAlign: HelperFunctions.isRTLLanguage(HelperFunctions.detectLanguage(sceneData.narration)) ? 'right' : 'left',
                                           },
                                           ...HelperFunctions.getDirectionSx(HelperFunctions.detectLanguage(sceneData.narration)),
                                         }}
@@ -417,12 +417,12 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                       }}>
                                         <Box
                                           sx={{
-                                            lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.8,
                                             fontSize: '1.5rem',
                                             color: 'text.primary',
                                             px: 1.5,
                                             py: 1,
-                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(language),
+                                            fontFamily: HelperFunctions.getFontFamilyForLanguage(HelperFunctions.detectLanguage(sceneData.narration)),
+                                            lineHeight: HelperFunctions.isRTLLanguage(HelperFunctions.detectLanguage(sceneData.narration)) ? 2.5 : 1.8,
                                             userSelect: 'text',
                                             cursor: 'text',
                                             ...HelperFunctions.getDirectionSx(HelperFunctions.detectLanguage(sceneData.narration)),

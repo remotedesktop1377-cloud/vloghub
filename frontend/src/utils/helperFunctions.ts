@@ -645,12 +645,12 @@ export class HelperFunctions {
   static getFontFamilyForLanguage(language: string): string {
     const lang = (language || '').toLowerCase();
     if (lang.includes('urdu') || lang.includes('balochi') || lang.includes('punjabi')) {
-      return `'Noto Nastaliq Urdu', 'Arial Unicode MS', sans-serif`;
+      return `Noto Nastaliq Urdu`;
     }
     if (lang.includes('arabic')) {
-      return `'Noto Naskh Arabic', 'Arial Unicode MS', sans-serif`;
+      return `Noto Naskh Arabic`;
     }
-    return `var(--font-plus-jakarta-sans)`;
+    return `Plus Jakarta Sans`;
   }
 
   /**
