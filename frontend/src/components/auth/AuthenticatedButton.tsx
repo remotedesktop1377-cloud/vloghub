@@ -15,6 +15,8 @@ interface AuthenticatedButtonProps {
   className?: string;
   onClick?: () => void;
   requireAuth?: boolean;
+  authenticatedLabel?: React.ReactNode;
+  guestLabel?: React.ReactNode;
 }
 
 export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
@@ -25,6 +27,8 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
   className = '',
   onClick,
   requireAuth = true,
+  authenticatedLabel,
+  guestLabel,
 }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -66,12 +70,14 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
 
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
-    toast.success('Successfully signed in! Redirecting...');
-    
-    // Small delay to show success message before navigation
-    setTimeout(() => {
-      router.push(targetRoute);
-    }, 1000);
+  };
+
+  const renderLabel = () => {
+    if (loading) return 'Loading...';
+    if (user) {
+      return authenticatedLabel ?? children;
+    }
+    return guestLabel ?? children;
   };
 
   return (
@@ -83,7 +89,7 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
         onClick={handleClick}
         disabled={loading}
       >
-        {loading ? 'Loading...' : children}
+        {renderLabel()}
       </Button>
 
       <SigninDialog

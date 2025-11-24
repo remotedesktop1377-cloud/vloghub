@@ -7,6 +7,16 @@ import { toast } from 'react-toastify';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { ROUTES_KEYS } from '@/data/constants';
 
+const getPostAuthRedirect = (): string => {
+  if (typeof window === 'undefined') return ROUTES_KEYS.TRENDING_TOPICS;
+  const stored = sessionStorage.getItem('authRedirectTo');
+  if (stored) {
+    sessionStorage.removeItem('authRedirectTo');
+    return stored;
+  }
+  return ROUTES_KEYS.TRENDING_TOPICS;
+};
+
 export default function AuthCallback() {
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -30,8 +40,9 @@ export default function AuthCallback() {
           if (timeoutId) clearTimeout(timeoutId);
           
           // Wait a moment for AuthContext to update, then redirect
+          const redirectTarget = getPostAuthRedirect();
           setTimeout(() => {
-            router.push(ROUTES_KEYS.TRENDING_TOPICS);
+            router.push(redirectTarget);
           }, 1500);
         } else if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
           setStatus('error');
@@ -49,7 +60,6 @@ export default function AuthCallback() {
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
         if (error) {
           console.error('Error getting session:', error);
         }
@@ -63,8 +73,9 @@ export default function AuthCallback() {
             authStateSubscription.unsubscribe();
           }
           
+          const redirectTarget = getPostAuthRedirect();
           setTimeout(() => {
-            router.push(ROUTES_KEYS.TRENDING_TOPICS);
+            router.push(redirectTarget);
           }, 1500);
         } else {
           // Set a timeout to show error if no session after 10 seconds

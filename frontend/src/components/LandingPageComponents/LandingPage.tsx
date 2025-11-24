@@ -110,6 +110,8 @@ const LandingPage: React.FC = () => {
                                     }
                                 }}
                                 requireAuth={true}
+                                authenticatedLabel="✨ Generate AI Video"
+                                guestLabel="Login"
                             >
                                 ✨ Generate AI Video
                             </AuthenticatedButton>

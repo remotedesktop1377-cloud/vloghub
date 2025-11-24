@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, IconButton, Tooltip, Button } from '@mui/material';
+import React from 'react';
+import { Box, AppBar, Toolbar, Typography } from '@mui/material';
 import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../../styles/colors';
 import { ROUTES_KEYS } from '../../../data/constants';
 import { AuthenticatedButton } from '../../auth/AuthenticatedButton';
@@ -49,6 +49,8 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                       } 
                     }}
                     requireAuth={true}
+                    authenticatedLabel="✨ Generate Now"
+                    guestLabel="Login"
                   >
                     ✨ Generate Now
                   </AuthenticatedButton>
