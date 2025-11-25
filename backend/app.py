@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
-    sys.path.append(str(BASE_DIR))
+    sys.path.insert(0, str(BASE_DIR))
 
 from backend.lib.convert import convert_video_to_audio
 from backend.lib.cut_video import cut_video_segments
