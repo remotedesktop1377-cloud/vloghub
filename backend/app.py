@@ -2,24 +2,27 @@
 Vloghub - AI-powered video creation platform for YouTube creators - Main Application
 """
 import os
+import sys
 import logging
 import shutil
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-from .lib.convert import convert_video_to_audio
-from .lib.cut_video import cut_video_segments
-from .lib.download import zip_and_download_files
-from .lib.llm import process_transcription_with_llm
-from .lib.transcribe import transcribe_audio
+from backend.lib.convert import convert_video_to_audio
+from backend.lib.cut_video import cut_video_segments
+from backend.lib.download import zip_and_download_files
+from backend.lib.llm import process_transcription_with_llm
+from backend.lib.transcribe import transcribe_audio
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
