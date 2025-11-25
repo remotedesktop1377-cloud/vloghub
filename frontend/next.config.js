@@ -7,7 +7,7 @@ const nextConfig = {
       return [
         {
           source: '/backend/:path*',
-          destination: `${process.env.PYTHON_BACKEND_URL}/api/:path*`,
+          destination: `${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}/api/:path*`,
         },
       ];
     }
