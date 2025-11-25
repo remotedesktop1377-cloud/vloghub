@@ -18,11 +18,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
-from .api.convert import convert_video_to_audio
-from .api.cut_video import cut_video_segments
-from .api.download import zip_and_download_files
-from .api.llm import process_transcription_with_llm
-from .api.transcribe import transcribe_audio
+from api.convert import convert_video_to_audio
+from api.cut_video import cut_video_segments
+from api.download import zip_and_download_files
+from api.llm import process_transcription_with_llm
+from api.transcribe import transcribe_audio
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

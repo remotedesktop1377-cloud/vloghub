@@ -3,7 +3,7 @@ from moviepy import (
   concatenate_videoclips
 )
 
-from backend.lib.llm import VideoEdit
+from backend.api.llm import VideoEdit
 from pathlib import Path
 import json
 import os

@@ -1,5 +1,5 @@
 import numpy as np
-from moviepy import VideoFileClip, ImageClip, CompositeVideoClip
+from moviepy import VideoFileClip
 from rembg import remove, new_session
 from PIL import Image
 import io
