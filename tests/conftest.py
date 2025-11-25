@@ -15,16 +15,16 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 # Import app and dependencies
-from src.app import app
-from src.db.database import get_db, Base
-from src.models.metadata import (
+from backend.app import app
+from backend.db.database import get_db, Base
+from backend.models.metadata import (
     Tag, TagCategory, ClipMetadata, VideoMetadata, 
     GeoLocation, MetadataVersion
 )
-from src.services.metadata import TagService, MetadataService
-from src.services.youtube.client import YouTubeClient
-from src.ai.sentiment.sentiment_analyzer import SentimentAnalyzer
-from src.ai.entity_recognition.entity_recognizer import EntityRecognizer
+from backend.services.metadata import TagService, MetadataService
+from backend.services.youtube.client import YouTubeClient
+from backend.ai.sentiment.sentiment_analyzer import SentimentAnalyzer
+from backend.ai.entity_recognition.entity_recognizer import EntityRecognizer
 
 
 # Test Database Configuration

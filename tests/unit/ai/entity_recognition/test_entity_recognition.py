@@ -5,9 +5,9 @@ import pytest
 from unittest.mock import Mock, AsyncMock
 import os
 
-from src.ai.entity_recognition.models import Entity, EntityType, EntityResult
-from src.ai.entity_recognition.base import BaseEntityRecognizer
-from src.services.transcription.models import TranscriptSegment, Transcript
+from backend.ai.entity_recognition.models import Entity, EntityType, EntityResult
+from backend.ai.entity_recognition.base import BaseEntityRecognizer
+from backend.services.transcription.models import TranscriptSegment, Transcript
 
 
 class MockEntityRecognizer(BaseEntityRecognizer):
@@ -228,7 +228,7 @@ def test_merge_duplicate_entities(entity_recognizer):
 @pytest.mark.asyncio
 async def test_openai_entity_recognizer_integration():
     """Integration test for OpenAI entity recognizer (requires API key)."""
-    from src.ai.entity_recognition import OpenAIEntityRecognizer
+    from backend.ai.entity_recognition import OpenAIEntityRecognizer
     
     recognizer = OpenAIEntityRecognizer(api_key=os.getenv("OPENAI_API_KEY"))
     
@@ -246,7 +246,7 @@ async def test_openai_entity_recognizer_integration():
 @pytest.mark.asyncio 
 async def test_spacy_entity_recognizer():
     """Test spaCy entity recognizer (skipped by default due to model requirements)."""
-    from src.ai.entity_recognition import SpacyEntityRecognizer
+    from backend.ai.entity_recognition import SpacyEntityRecognizer
     
     recognizer = SpacyEntityRecognizer()
     

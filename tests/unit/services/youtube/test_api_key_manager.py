@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 import time
 
-from src.services.youtube.auth.api_key_manager import APIKeyManager
+from backend.services.youtube.auth.api_key_manager import APIKeyManager
 
 
 def test_init_with_api_keys():

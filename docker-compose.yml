@@ -137,7 +137,7 @@ services:
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
       - ENVIRONMENT=production
       - WORKER_MODE=true
-    command: ["python", "-m", "src.worker"]
+    command: ["python", "-m", "backend.worker"]
     volumes:
       - app_downloads:/app/downloads
       - app_cache:/app/cache

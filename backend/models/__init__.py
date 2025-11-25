@@ -1,5 +1,5 @@
 """
-Data models for the YouTube Clip Searcher application.
+Data models for the Vloghub application.
 """
 
 from .metadata import (

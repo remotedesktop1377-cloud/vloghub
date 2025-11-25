@@ -5,7 +5,7 @@ import pytest
 import json
 from fastapi.testclient import TestClient
 
-from src.models.metadata import TagType, ConfidenceLevel, MetadataSource
+from backend.models.metadata import TagType, ConfidenceLevel, MetadataSource
 
 
 @pytest.mark.integration
@@ -67,7 +67,7 @@ class TestMetadataAPI:
     def test_search_tags_api(self, client, test_session):
         """Test searching tags via API."""
         # Create test tags directly in database
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         tag1 = Tag(name="Nelson Mandela", tag_type="person", confidence=0.9, usage_count=10)
         tag2 = Tag(name="South Africa", tag_type="location", confidence=0.8, usage_count=5)
@@ -160,7 +160,7 @@ class TestMetadataAPI:
     
     def test_get_popular_tags_api(self, client, test_session):
         """Test getting popular tags via API."""
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         # Create tags with different usage counts
         tag1 = Tag(name="Popular Tag", tag_type="topic", usage_count=100)
@@ -182,7 +182,7 @@ class TestMetadataAPI:
     
     def test_get_related_tags_api(self, client, sample_tag, test_session):
         """Test getting related tags via API."""
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         # Create related tag
         related_tag = Tag(
@@ -204,7 +204,7 @@ class TestMetadataAPI:
     
     def test_get_tag_statistics_api(self, client, test_session):
         """Test getting tag statistics via API."""
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         # Create test tags
         tag1 = Tag(name="Tag 1", tag_type="person", source="ai_analysis", usage_count=10)
@@ -337,7 +337,7 @@ class TestMetadataAPI:
     
     def test_search_clips_api(self, client, test_session, sample_video_metadata, sample_geo_location):
         """Test searching clips via API."""
-        from src.models.metadata import ClipMetadata, Tag
+        from backend.models.metadata import ClipMetadata, Tag
         
         # Create test clips
         clip1 = ClipMetadata(
@@ -396,7 +396,7 @@ class TestMetadataAPI:
     
     def test_get_related_clips_api(self, client, sample_clip_metadata, test_session):
         """Test getting related clips via API."""
-        from src.models.metadata import ClipMetadata
+        from backend.models.metadata import ClipMetadata
         
         # Create related clip with same sentiment and speaker
         related_clip = ClipMetadata(
@@ -447,7 +447,7 @@ class TestMetadataAPI:
     
     def test_suggest_tags_for_text_api(self, client, test_session):
         """Test suggesting tags for text via API."""
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         # Create test tags
         mandela_tag = Tag(name="Nelson Mandela", tag_type="person", usage_count=10)
@@ -520,7 +520,7 @@ class TestMetadataAPI:
     
     def test_get_metadata_statistics_api(self, client, test_session):
         """Test getting metadata statistics via API."""
-        from src.models.metadata import ClipMetadata, Tag
+        from backend.models.metadata import ClipMetadata, Tag
         
         # Create test data
         clip = ClipMetadata(
@@ -602,7 +602,7 @@ class TestMetadataAPI:
     
     def test_api_pagination(self, client, test_session):
         """Test API pagination functionality."""
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         # Create multiple tags
         tags = [
@@ -628,7 +628,7 @@ class TestMetadataAPI:
     
     def test_api_performance(self, client, test_session, performance_monitor):
         """Test API performance under load."""
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         # Create test data
         tags = [
@@ -655,7 +655,7 @@ class TestMetadataAPI:
     @pytest.mark.slow
     def test_api_stress_test(self, client, test_session):
         """Stress test API endpoints."""
-        from src.models.metadata import Tag
+        from backend.models.metadata import Tag
         
         # Create large dataset
         tags = [

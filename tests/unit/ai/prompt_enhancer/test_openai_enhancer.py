@@ -5,14 +5,14 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.ai.prompt_enhancer.openai_enhancer import OpenAIPromptEnhancer
-from src.ai.prompt_enhancer.models import EnhancedPrompt
+from backend.ai.prompt_enhancer.openai_enhancer import OpenAIPromptEnhancer
+from backend.ai.prompt_enhancer.models import EnhancedPrompt
 
 
 @pytest.fixture
 def mock_openai_client():
     """Fixture for mocking the OpenAI client."""
-    with patch('src.ai.prompt_enhancer.openai_enhancer.AsyncOpenAI') as mock_client:
+    with patch('backend.ai.prompt_enhancer.openai_enhancer.AsyncOpenAI') as mock_client:
         # Create a mock response for the chat completions
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]

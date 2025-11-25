@@ -5,9 +5,9 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 import os
 
-from src.ai.sentiment.models import SentimentResult, SentimentLabel, EmotionResult, EmotionLabel
-from src.ai.sentiment.base import BaseSentimentAnalyzer
-from src.services.transcription.models import TranscriptSegment, Transcript
+from backend.ai.sentiment.models import SentimentResult, SentimentLabel, EmotionResult, EmotionLabel
+from backend.ai.sentiment.base import BaseSentimentAnalyzer
+from backend.services.transcription.models import TranscriptSegment, Transcript
 
 
 class MockSentimentAnalyzer(BaseSentimentAnalyzer):
@@ -179,7 +179,7 @@ async def test_get_overall_sentiment(sentiment_analyzer, sample_transcript):
 @pytest.mark.asyncio
 async def test_openai_sentiment_analyzer_integration():
     """Integration test for OpenAI sentiment analyzer (requires API key)."""
-    from src.ai.sentiment import OpenAISentimentAnalyzer
+    from backend.ai.sentiment import OpenAISentimentAnalyzer
     
     analyzer = OpenAISentimentAnalyzer(api_key=os.getenv("OPENAI_API_KEY"))
     
@@ -196,7 +196,7 @@ async def test_openai_sentiment_analyzer_integration():
 @pytest.mark.asyncio
 async def test_transformers_sentiment_analyzer():
     """Test transformers sentiment analyzer (skipped by default due to model size)."""
-    from src.ai.sentiment import TransformersSentimentAnalyzer
+    from backend.ai.sentiment import TransformersSentimentAnalyzer
     
     analyzer = TransformersSentimentAnalyzer()
     

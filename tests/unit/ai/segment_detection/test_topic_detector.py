@@ -5,9 +5,9 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 import numpy as np
 
-from src.ai.segment_detection.topic_detector import TopicChangeDetector
-from src.ai.segment_detection.models import SegmentationResult, TopicSegment, SegmentBoundary
-from src.services.transcription.models import Transcript, TranscriptSegment
+from backend.ai.segment_detection.topic_detector import TopicChangeDetector
+from backend.ai.segment_detection.models import SegmentationResult, TopicSegment, SegmentBoundary
+from backend.services.transcription.models import Transcript, TranscriptSegment
 
 
 @pytest.fixture

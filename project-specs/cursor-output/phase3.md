@@ -151,25 +151,25 @@ import sys
 sys.path.append('.')
 
 try:
-    from src.ai.sentiment import OpenAISentimentAnalyzer
+    from backend.ai.sentiment import OpenAISentimentAnalyzer
     print('✅ Sentiment module import successful')
 except Exception as e:
     print(f'❌ Sentiment module import failed: {e}')
 
 try:
-    from src.ai.entity_recognition import OpenAIEntityRecognizer
+    from backend.ai.entity_recognition import OpenAIEntityRecognizer
     print('✅ Entity recognition module import successful')
 except Exception as e:
     print(f'❌ Entity recognition module import failed: {e}')
 
 try:
-    from src.ai.segment_detection import TopicChangeDetector
+    from backend.ai.segment_detection import TopicChangeDetector
     print('✅ Segment detection module import successful')
 except Exception as e:
     print(f'❌ Segment detection module import failed: {e}')
 
 try:
-    from src.services.clip_detection import ClipDetectionService
+    from backend.services.clip_detection import ClipDetectionService
     print('✅ Clip detection service import successful')
 except Exception as e:
     print(f'❌ Clip detection service import failed: {e}')

@@ -8,8 +8,8 @@ import json
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from src.ai.prompt_enhancer.models import EnhancedPrompt
-from src.services.youtube import YouTubeAPIClient, YouTubeSearchService
+from backend.ai.prompt_enhancer.models import EnhancedPrompt
+from backend.services.youtube import YouTubeAPIClient, YouTubeSearchService
 
 
 @pytest.fixture
@@ -146,8 +146,8 @@ def mock_youtube_client():
 async def test_search_youtube_endpoint(test_client, mock_prompt_enhancer, mock_youtube_search_service):
     """Test the search YouTube endpoint."""
     # Mock the get_prompt_enhancer and get_youtube_search_service dependencies
-    with patch('src.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
-         patch('src.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
+    with patch('backend.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
+         patch('backend.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
         
         # Make the request
         response = test_client.post(
@@ -185,8 +185,8 @@ async def test_search_youtube_endpoint(test_client, mock_prompt_enhancer, mock_y
 async def test_search_youtube_with_alternative_queries(test_client, mock_prompt_enhancer, mock_youtube_search_service):
     """Test the search YouTube endpoint with alternative queries."""
     # Mock the get_prompt_enhancer and get_youtube_search_service dependencies
-    with patch('src.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
-         patch('src.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
+    with patch('backend.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
+         patch('backend.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
         
         # Make the request
         response = test_client.post(
@@ -217,8 +217,8 @@ async def test_search_youtube_with_alternative_queries(test_client, mock_prompt_
 async def test_search_youtube_with_filters(test_client, mock_prompt_enhancer, mock_youtube_search_service):
     """Test the search YouTube endpoint with filters."""
     # Mock the get_prompt_enhancer and get_youtube_search_service dependencies
-    with patch('src.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
-         patch('src.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
+    with patch('backend.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
+         patch('backend.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
         
         # Make the request
         response = test_client.post(
@@ -254,8 +254,8 @@ async def test_search_youtube_with_filters(test_client, mock_prompt_enhancer, mo
 async def test_search_youtube_with_sorting(test_client, mock_prompt_enhancer, mock_youtube_search_service):
     """Test the search YouTube endpoint with sorting."""
     # Mock the get_prompt_enhancer and get_youtube_search_service dependencies
-    with patch('src.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
-         patch('src.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
+    with patch('backend.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer), \
+         patch('backend.api.routes.youtube_search.get_youtube_search_service', return_value=mock_youtube_search_service):
         
         # Make the request
         response = test_client.post(
@@ -293,7 +293,7 @@ async def test_search_youtube_error(test_client, mock_prompt_enhancer):
     # Mock the get_prompt_enhancer dependency to raise an exception
     mock_prompt_enhancer.enhance.side_effect = Exception("Test error")
     
-    with patch('src.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer):
+    with patch('backend.api.routes.youtube_search.get_prompt_enhancer', return_value=mock_prompt_enhancer):
         
         # Make the request
         response = test_client.post(
@@ -315,7 +315,7 @@ async def test_search_youtube_error(test_client, mock_prompt_enhancer):
 async def test_get_video_details(test_client, mock_youtube_client):
     """Test the get video details endpoint."""
     # Mock the get_youtube_client dependency
-    with patch('src.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
+    with patch('backend.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
         
         # Make the request
         response = test_client.get("/api/youtube/video/test1")
@@ -343,7 +343,7 @@ async def test_get_video_details_not_found(test_client, mock_youtube_client):
     # Mock the get_youtube_client dependency
     mock_youtube_client.get_videos.return_value = {"items": []}
     
-    with patch('src.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
+    with patch('backend.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
         
         # Make the request
         response = test_client.get("/api/youtube/video/nonexistent")
@@ -359,7 +359,7 @@ async def test_get_video_details_not_found(test_client, mock_youtube_client):
 async def test_get_video_captions(test_client, mock_youtube_client):
     """Test the get video captions endpoint."""
     # Mock the get_youtube_client dependency
-    with patch('src.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
+    with patch('backend.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
         
         # Make the request
         response = test_client.get("/api/youtube/captions/test1")
@@ -382,7 +382,7 @@ async def test_get_video_captions(test_client, mock_youtube_client):
 async def test_download_caption(test_client, mock_youtube_client):
     """Test the download caption endpoint."""
     # Mock the get_youtube_client dependency
-    with patch('src.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
+    with patch('backend.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
         
         # Make the request
         response = test_client.get("/api/youtube/caption/caption1?format=srt")
@@ -407,7 +407,7 @@ async def test_download_caption_error(test_client, mock_youtube_client):
     # Mock the get_youtube_client dependency to raise an exception
     mock_youtube_client.download_caption.side_effect = Exception("Test error")
     
-    with patch('src.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
+    with patch('backend.api.routes.youtube_search.get_youtube_client', return_value=mock_youtube_client):
         
         # Make the request
         response = test_client.get("/api/youtube/caption/caption1")

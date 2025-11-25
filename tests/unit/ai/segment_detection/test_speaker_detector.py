@@ -4,9 +4,9 @@ Tests for speaker transition detector.
 import pytest
 from unittest.mock import Mock
 
-from src.ai.segment_detection.speaker_detector import SpeakerTransitionDetector
-from src.ai.segment_detection.models import SegmentationResult
-from src.services.transcription.models import Transcript, TranscriptSegment
+from backend.ai.segment_detection.speaker_detector import SpeakerTransitionDetector
+from backend.ai.segment_detection.models import SegmentationResult
+from backend.services.transcription.models import Transcript, TranscriptSegment
 
 
 @pytest.fixture

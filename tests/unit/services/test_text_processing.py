@@ -3,7 +3,7 @@ Tests for text processing utilities.
 """
 import pytest
 
-from src.services.transcription.text_processing import TextProcessor
+from backend.services.transcription.text_processing import TextProcessor
 
 
 @pytest.fixture

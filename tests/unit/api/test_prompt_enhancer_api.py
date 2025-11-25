@@ -6,14 +6,14 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
 from fastapi import HTTPException
-from src.ai.prompt_enhancer.models import EnhancedPrompt, Entity, TemporalReference, LocationReference, RelatedTerm
+from backend.ai.prompt_enhancer.models import EnhancedPrompt, Entity, TemporalReference, LocationReference, RelatedTerm
 
 
 @pytest.mark.asyncio
 async def test_enhance_prompt_endpoint(test_client, mock_env_vars):
     """Test the enhance prompt endpoint."""
     # Mock the OpenAIPromptEnhancer.enhance method
-    with patch('src.api.routes.prompt_enhancer.OpenAIPromptEnhancer') as mock_enhancer_class:
+    with patch('backend.api.routes.prompt_enhancer.OpenAIPromptEnhancer') as mock_enhancer_class:
         # Set up the mock enhancer instance
         mock_enhancer_instance = MagicMock()
         mock_enhancer_instance.enhance = AsyncMock()
@@ -96,7 +96,7 @@ async def test_enhance_prompt_endpoint(test_client, mock_env_vars):
 async def test_enhance_prompt_endpoint_error(test_client, mock_env_vars):
     """Test the enhance prompt endpoint with an error."""
     # Mock the OpenAIPromptEnhancer.enhance method to raise an exception
-    with patch('src.api.routes.prompt_enhancer.OpenAIPromptEnhancer') as mock_enhancer_class:
+    with patch('backend.api.routes.prompt_enhancer.OpenAIPromptEnhancer') as mock_enhancer_class:
         # Set up the mock enhancer instance
         mock_enhancer_instance = MagicMock()
         mock_enhancer_instance.enhance = AsyncMock(side_effect=Exception("Test error"))
@@ -119,10 +119,10 @@ async def test_enhance_prompt_endpoint_error(test_client, mock_env_vars):
 async def test_get_enhancer_no_api_key():
     """Test the get_enhancer dependency with no API key."""
     # Import the dependency
-    from src.api.routes.prompt_enhancer import get_enhancer
+    from backend.api.routes.prompt_enhancer import get_enhancer
     
     # Mock the os.getenv function to return None
-    with patch('src.api.routes.prompt_enhancer.os.getenv', return_value=None):
+    with patch('backend.api.routes.prompt_enhancer.os.getenv', return_value=None):
         # Call the dependency and expect an exception
         with pytest.raises(HTTPException) as excinfo:
             await get_enhancer()

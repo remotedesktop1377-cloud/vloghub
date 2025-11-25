@@ -62,7 +62,7 @@ def create_tables():
     """Create all database tables."""
     try:
         # Import models to register them
-        from src.models.metadata import Base as MetadataBase
+        from backend.models.metadata import Base as MetadataBase
         
         # Create tables
         MetadataBase.metadata.create_all(bind=engine)
@@ -76,7 +76,7 @@ def create_tables():
 def drop_tables():
     """Drop all database tables."""
     try:
-        from src.models.metadata import Base as MetadataBase
+        from backend.models.metadata import Base as MetadataBase
         
         MetadataBase.metadata.drop_all(bind=engine)
         logger.info("Database tables dropped successfully")
@@ -89,8 +89,8 @@ def drop_tables():
 def init_database():
     """Initialize database with default data."""
     try:
-        from src.services.metadata.tag_service import TagService
-        from src.models.metadata import TagType
+        from backend.services.metadata.tag_service import TagService
+        from backend.models.metadata import TagType
         
         with SessionLocal() as db:
             tag_service = TagService(db)

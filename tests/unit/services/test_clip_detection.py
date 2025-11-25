@@ -5,12 +5,12 @@ import pytest
 from unittest.mock import Mock, AsyncMock, patch
 import os
 
-from src.services.clip_detection import ClipDetectionService
-from src.services.clip_detection.models import (
+from backend.services.clip_detection import ClipDetectionService
+from backend.services.clip_detection.models import (
     ClipDetectionRequest, ClipDetectionResponse, ClipAnalysisResult
 )
-from src.services.transcription.models import Transcript, TranscriptSegment
-from src.ai.segment_detection.models import ClipCandidate
+from backend.services.transcription.models import Transcript, TranscriptSegment
+from backend.ai.segment_detection.models import ClipCandidate
 
 
 @pytest.fixture

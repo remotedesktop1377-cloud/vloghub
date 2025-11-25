@@ -1,5 +1,5 @@
 """
-YouTube Research Video Clip Finder - Main Application
+Vloghub - AI-powered video creation platform for YouTube creators - Main Application
 """
 import os
 import logging

@@ -15,7 +15,7 @@ export const CustomAudioPlayer: React.FC<Props> = ({ src, title, playerId }) => 
   const [isLoading, setIsLoading] = React.useState(true);
 
   // Normalize empty src to undefined
-  const safeSrc = (typeof src === 'string' && src.trim().length > 0) ? src : undefined;
+  const safeSrc = (typeof src === 'string' && backend.trim().length > 0) ? src : undefined;
 
   React.useEffect(() => {
     // registry for external pause by id

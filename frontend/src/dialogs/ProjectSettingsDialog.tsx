@@ -238,7 +238,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             const src = `${API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA}${id}`;
 
             // If clicking play/pause on the same music that's currently playing, toggle pause
-            if (isMusicPlaying && currentId === id && audioRef.current.src.includes(id)) {
+            if (isMusicPlaying && currentId === id && audioRef.current.backend.includes(id)) {
                 audioRef.current.pause();
                 setIsMusicPlaying(false);
                 return;
@@ -251,7 +251,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             }
 
             // Load new music if different from current
-            if (currentId !== id || !audioRef.current.src.includes(id)) {
+            if (currentId !== id || !audioRef.current.backend.includes(id)) {
                 setIsMusicLoading(true);
                 setCurrentMusicId(id);
                 audioRef.current.src = src;

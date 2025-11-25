@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.services.youtube.cache.request_cache import RequestCache
+from backend.services.youtube.cache.request_cache import RequestCache
 
 
 @pytest.fixture

@@ -4,9 +4,9 @@ Tests for hybrid segment detector.
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
-from src.ai.segment_detection.hybrid_detector import HybridSegmentDetector
-from src.ai.segment_detection.models import SegmentationResult, SegmentBoundary, BoundaryType, SegmentType
-from src.services.transcription.models import Transcript, TranscriptSegment
+from backend.ai.segment_detection.hybrid_detector import HybridSegmentDetector
+from backend.ai.segment_detection.models import SegmentationResult, SegmentBoundary, BoundaryType, SegmentType
+from backend.services.transcription.models import Transcript, TranscriptSegment
 
 
 @pytest.fixture
@@ -284,7 +284,7 @@ async def test_hybrid_detector_without_topic_detector():
     """Test hybrid detector when topic detector is not available."""
     config = {"topic_detection": {}}
     
-    with patch('src.ai.segment_detection.hybrid_detector.TopicChangeDetector') as mock_topic:
+    with patch('backend.ai.segment_detection.hybrid_detector.TopicChangeDetector') as mock_topic:
         mock_topic.side_effect = ImportError("NLP dependencies not available")
         
         detector = HybridSegmentDetector(config)

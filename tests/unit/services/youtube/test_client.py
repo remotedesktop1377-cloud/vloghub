@@ -8,9 +8,9 @@ import json
 from googleapiclient.errors import HttpError
 from google.auth.exceptions import GoogleAuthError
 
-from src.services.youtube.client import YouTubeAPIClient
-from src.services.youtube.auth import APIKeyManager
-from src.services.youtube.cache import RequestCache
+from backend.services.youtube.client import YouTubeAPIClient
+from backend.services.youtube.auth import APIKeyManager
+from backend.services.youtube.cache import RequestCache
 
 
 @pytest.fixture
@@ -74,7 +74,7 @@ def mock_youtube_service():
 @pytest.fixture
 def youtube_client(mock_api_key_manager, mock_cache, mock_youtube_service):
     """Fixture for a YouTube API client with mocked dependencies."""
-    with patch("src.services.youtube.client.build", return_value=mock_youtube_service):
+    with patch("backend.services.youtube.client.build", return_value=mock_youtube_service):
         client = YouTubeAPIClient(
             api_key_manager=mock_api_key_manager,
             cache=mock_cache
@@ -239,7 +239,7 @@ def test_get_captions(youtube_client):
     )
 
 
-@patch("src.services.youtube.client.httpx")
+@patch("backend.services.youtube.client.httpx")
 def test_download_caption(mock_httpx, youtube_client, mock_cache):
     """Test downloading a caption track."""
     # Mock httpx response
@@ -273,7 +273,7 @@ def test_download_caption(mock_httpx, youtube_client, mock_cache):
     mock_cache.set.assert_called_once()
 
 
-@patch("src.services.youtube.client.httpx")
+@patch("backend.services.youtube.client.httpx")
 def test_download_caption_with_cache_hit(mock_httpx, youtube_client, mock_cache):
     """Test downloading a caption track with a cache hit."""
     # Mock cache to return a cached result
@@ -295,7 +295,7 @@ def test_download_caption_with_cache_hit(mock_httpx, youtube_client, mock_cache)
     youtube_client.api_key_manager.record_usage.assert_not_called()
 
 
-@patch("src.services.youtube.client.time.sleep")
+@patch("backend.services.youtube.client.time.sleep")
 def test_execute_with_retry_http_error(mock_sleep, youtube_client):
     """Test retry logic with HTTP errors."""
     # Mock request function to raise HttpError
@@ -325,7 +325,7 @@ def test_execute_with_retry_http_error(mock_sleep, youtube_client):
     assert youtube_client.api_key_manager.record_error.call_count == 2
 
 
-@patch("src.services.youtube.client.time.sleep")
+@patch("backend.services.youtube.client.time.sleep")
 def test_execute_with_retry_quota_exceeded(mock_sleep, youtube_client):
     """Test retry logic with quota exceeded errors."""
     # Mock request function to raise HttpError with quota exceeded
@@ -355,7 +355,7 @@ def test_execute_with_retry_quota_exceeded(mock_sleep, youtube_client):
     assert youtube_client._service is None
 
 
-@patch("src.services.youtube.client.time.sleep")
+@patch("backend.services.youtube.client.time.sleep")
 def test_execute_with_retry_auth_error(mock_sleep, youtube_client):
     """Test retry logic with authentication errors."""
     # Mock request function to raise GoogleAuthError
@@ -383,7 +383,7 @@ def test_execute_with_retry_auth_error(mock_sleep, youtube_client):
     assert youtube_client._service is None
 
 
-@patch("src.services.youtube.client.time.sleep")
+@patch("backend.services.youtube.client.time.sleep")
 def test_execute_with_retry_max_retries(mock_sleep, youtube_client):
     """Test retry logic with maximum retries exceeded."""
     # Mock request function to always raise HttpError

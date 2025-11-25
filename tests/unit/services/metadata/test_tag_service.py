@@ -5,8 +5,8 @@ import pytest
 from unittest.mock import Mock, patch
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.services.metadata.tag_service import TagService
-from src.models.metadata import Tag, TagCategory, TagType, ConfidenceLevel, MetadataSource
+from backend.services.metadata.tag_service import TagService
+from backend.models.metadata import Tag, TagCategory, TagType, ConfidenceLevel, MetadataSource
 
 
 @pytest.mark.unit
@@ -461,7 +461,7 @@ class TestTagService:
         success = tag_service.merge_tags("non-existent-1", "non-existent-2")
         assert success is False
     
-    @patch('src.services.metadata.tag_service.logger')
+    @patch('backend.services.metadata.tag_service.logger')
     def test_database_error_handling(self, mock_logger, tag_service, test_session):
         """Test proper error handling for database errors."""
         # Mock database session to raise an error

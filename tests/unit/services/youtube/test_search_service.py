@@ -4,9 +4,9 @@ Tests for the YouTube search service.
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
-from src.services.youtube import YouTubeAPIClient
-from src.services.youtube.search import YouTubeSearchService
-from src.ai.prompt_enhancer.models import (
+from backend.services.youtube import YouTubeAPIClient
+from backend.services.youtube.search import YouTubeSearchService
+from backend.ai.prompt_enhancer.models import (
     EnhancedPrompt, Entity, TemporalReference, LocationReference, RelatedTerm
 )
 
@@ -520,8 +520,8 @@ def test_sort_results_by_duration(search_service):
 def test_parse_duration():
     """Test parsing ISO 8601 duration strings."""
     # Create a search service instance with a mocked YouTube client
-    with patch('src.services.youtube.client.YouTubeAPIClient') as mock_client, \
-         patch('src.services.youtube.auth.api_key_manager.APIKeyManager._load_api_keys_from_env', return_value=["test_key"]):
+    with patch('backend.services.youtube.client.YouTubeAPIClient') as mock_client, \
+         patch('backend.services.youtube.auth.api_key_manager.APIKeyManager._load_api_keys_from_env', return_value=["test_key"]):
         search_service = YouTubeSearchService()
         
         # Test various duration formats
