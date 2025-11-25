@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: vloghub-backend
+    name: YoutubeScriptDemo
     env: python
     rootDir: .
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
