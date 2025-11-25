@@ -2,6 +2,7 @@ services:
   - type: web
     name: vloghub-backend
     env: python
+    rootDir: .
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
     envVars:
