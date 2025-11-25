@@ -163,4 +163,4 @@ if __name__ == "__main__":
     debug = os.getenv("DEBUG", "False").lower() == "true"
     
     # For Railway, use the module path relative to project root
-    uvicorn.run("src.app:app", host=host, port=port, reload=debug) 
+    uvicorn.run("backend.app:app", host=host, port=port, reload=debug) 
