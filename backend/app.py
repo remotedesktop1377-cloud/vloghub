@@ -14,11 +14,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
-from .lib.convert import convert_video_to_audio
-from .lib.cut_video import cut_video_segments
-from .lib.download import zip_and_download_files
-from .lib.llm import process_transcription_with_llm
-from .lib.transcribe import transcribe_audio
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.append(str(BASE_DIR))
+
+from backend.lib.convert import convert_video_to_audio
+from backend.lib.cut_video import cut_video_segments
+from backend.lib.download import zip_and_download_files
+from backend.lib.llm import process_transcription_with_llm
+from backend.lib.transcribe import transcribe_audio
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -26,10 +30,6 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-if str(BASE_DIR) not in sys.path:
-    sys.path.append(str(BASE_DIR))
 TEMP_DIR = BASE_DIR / "temp"
 EXPORTS_DIR = BASE_DIR / "exports"
 TEMP_DIR.mkdir(exist_ok=True)
@@ -37,8 +37,8 @@ EXPORTS_DIR.mkdir(exist_ok=True)
 
 # Create FastAPI app
 app = FastAPI(
-    title="YouTube Research Video Clip Finder",
-    description="A system that searches YouTube for relevant video content, extracts specific clips, and organizes them for research.",
+    title="Vloghub - AI-powered video creation platform",
+    description="Vloghub is an AI-powered video creation platform that helps you create stunning videos with ease. It uses the latest AI technologies to generate videos from your ideas and content.",
     version="0.1.0",
 )
 
