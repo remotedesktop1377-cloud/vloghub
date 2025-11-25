@@ -4,6 +4,7 @@ YouTube Research Video Clip Finder - Main Application
 import os
 import logging
 import shutil
+import sys
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -27,6 +28,8 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.append(str(BASE_DIR))
 TEMP_DIR = BASE_DIR / "temp"
 EXPORTS_DIR = BASE_DIR / "exports"
 TEMP_DIR.mkdir(exist_ok=True)
