@@ -49,7 +49,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
     const [progress, setProgress] = useState(0);
 
-    const PY_BACKEND_URL = process.env.PYTHON_BACKEND_URL ?? 'http://127.0.0.1:8000';
+    const PY_BACKEND_URL = process.env.PYTHON_BACKEND_URL ?? 'http://127.0.0.1:10000';
 
     const startVideoUploadingAndTranscribtion = async (status: string, file: File) => {
         try {

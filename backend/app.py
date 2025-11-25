@@ -159,7 +159,7 @@ if __name__ == "__main__":
     
     # Railway uses PORT environment variable, fallback to PORT for local dev
     host = os.getenv("API_HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", os.getenv("PORT", "8000")))
+    port = int(os.getenv("PORT", os.getenv("PORT", "10000")))
     debug = os.getenv("DEBUG", "False").lower() == "true"
     
     # For Railway, use the module path relative to project root

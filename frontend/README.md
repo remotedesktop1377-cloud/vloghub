@@ -12,7 +12,7 @@ This is the frontend application for the YouTube Clip Searcher project, built wi
 
 2. **Configure environment variables**
    - Copy `.env.example` to `.env.local` if provided.
-   - Add API URLs for the Python backend (e.g., `NEXT_PUBLIC_API_BASE=http://127.0.0.1:8000`).
+   - Add API URLs for the Python backend (e.g., `NEXT_PUBLIC_API_BASE=http://127.0.0.1:10000`).
 
 3. **Run the development server**
    ```bash

@@ -76,7 +76,7 @@ Follow these steps to run the FastAPI backend locally:
    ```powershell
    py -3 -m uvicorn backend.app:app --reload
    ```
-   The API will be available at `http://127.0.0.1:8000` and docs at `/docs`.
+   The API will be available at `http://127.0.0.1:10000` and docs at `/docs`.
 
 5. **Stop the server**
    - Press `Ctrl + C` in the terminal when finished.

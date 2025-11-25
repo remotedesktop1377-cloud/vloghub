@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const safetyTimer = setTimeout(() => {
       setLoading(false);
       setIsInitialized(true);
-    }, 8000);
+    }, 10000);
 
     // Listen for auth changes
     const supabase = getSupabase();
