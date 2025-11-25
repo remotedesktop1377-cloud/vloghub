@@ -147,7 +147,7 @@ app.include_router(api_router, prefix="/api")
 async def root():
     """Root endpoint that returns a welcome message."""
     return {
-        "message": "Welcome to YouTube Research Video Clip Finder API",
+        "message": "Welcome to Vloghub API",
         "status": "online",
         "version": "0.1.0"
     }
