@@ -18,11 +18,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
-# from backend.lib.convert import convert_video_to_audio
-# from backend.lib.cut_video import cut_video_segments
-# from backend.lib.download import zip_and_download_files
-# from backend.lib.llm import process_transcription_with_llm
-# from backend.lib.transcribe import transcribe_audio
+from .api.convert import convert_video_to_audio
+from .api.cut_video import cut_video_segments
+from .api.download import zip_and_download_files
+from .api.llm import process_transcription_with_llm
+from .api.transcribe import transcribe_audio
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -160,9 +160,9 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     
-    # Railway uses PORT environment variable, fallback to PORT for local dev
+    # Railway uses PORT environment variable, fallback to 10000 for local dev
     host = os.getenv("API_HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", os.getenv("PORT", "10000")))
+    port = int(os.getenv("PORT", "10000"))
     debug = os.getenv("DEBUG", "False").lower() == "true"
     
     # For Railway, use the module path relative to project root
