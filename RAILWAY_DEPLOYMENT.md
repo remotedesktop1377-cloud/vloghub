@@ -80,7 +80,7 @@ Railway uses Nixpacks which will automatically install FFmpeg from the `nixpacks
 ### Port Configuration
 
 - Railway automatically sets the `PORT` environment variable
-- The app is configured to use `PORT` (with fallback to `API_PORT` for local dev)
+- The app is configured to use `PORT` (with fallback to `PORT` for local dev)
 - Don't manually set `PORT` in Railway
 
 ### CORS Configuration

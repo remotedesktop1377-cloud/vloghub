@@ -62,7 +62,7 @@ For AI-powered features like prompt enhancement and sentiment analysis:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `API_HOST` | `0.0.0.0` | API server host |
-| `API_PORT` | `8000` | API server port |
+| `PORT` | `8000` | API server port |
 | `FRONTEND_HOST` | `localhost` | Frontend server host |
 | `FRONTEND_PORT` | `3000` | Frontend server port |
 
