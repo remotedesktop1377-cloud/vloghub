@@ -45,6 +45,7 @@ import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
 import PdfService from '@/services/pdfService';
+import VideoRenderService from '@/services/videoRenderService';
 import { SceneData } from '@/types/sceneData';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
 import ChromaKeyUpload from '@/components/scriptProductionComponents/ChromaKeyUpload';
@@ -383,7 +384,6 @@ const ScriptProductionClient = () => {
             //         }
             //     } as SceneData;
             // });
-
             const scriptProductionJSON = {
                 project: {
                     jobId: jobId,
@@ -396,8 +396,8 @@ const ScriptProductionClient = () => {
                     language: scriptData?.language || null,
                     subtitle_language: scriptData?.subtitle_language || null,
                     narration_type: scriptData?.narration_type || null,
-                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link || null,
-                    transcription: scriptData?.transcription || null,
+                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link || '',                
+                    transcription: scriptData?.transcription || '',
                     // Project-level settings
                     projectSettings: {
                         videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
@@ -424,6 +424,7 @@ const ScriptProductionClient = () => {
                     gammaGenId: sceneData?.gammaGenId || '',
                     gammaUrl: sceneData?.gammaUrl || '',
                     previewImage: sceneData?.gammaPreviewImage || '',
+                    clip: sceneData?.clip || '',
                     sceneSettings: {
                         videoLogo: sceneData.sceneSettings?.videoLogo as LogoOverlayInterface,
                         videoTransitionEffect: sceneData.sceneSettings?.videoTransitionEffect as SettingItemInterface,
@@ -1565,19 +1566,11 @@ const ScriptProductionClient = () => {
                                                 scenesData: transcriptionData.scenes,
                                                 updated_at: new Date().toISOString(),
                                             } as ScriptData;
-                                            console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
+                                            // console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
                                             setScriptData(updatedScriptData);
-                                            SecureStorageHelpers.setScriptMetadata(updatedScriptData);                                           
+                                            SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                                             updateParagraphs(updatedScriptData);
-
-                                            // // generate scene folder in google drive by using googleDriveService function
-                                            // const sceneFolderResult = await GoogleDriveServiceFunctions.generateSceneFoldersInDrive(jobId, transcriptionData.scenes.length);
-                                            // if (!sceneFolderResult.success) {
-                                            //     toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
-                                            //     return;
-                                            // }
-                                            // console.log('Scene folder result:', sceneFolderResult.result);
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
                                             toast.error(errorMessage);

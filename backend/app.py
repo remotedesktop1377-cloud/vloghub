@@ -1,10 +1,8 @@
-"""
-Vloghub - AI-powered video creation platform for YouTube creators - Main Application
-"""
 import os
 import sys
 import logging
 import shutil
+import json
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -23,30 +21,26 @@ from backend.api.cut_video import cut_video_segments
 from backend.api.download import zip_and_download_files
 from backend.api.llm import process_transcription_with_llm
 from backend.api.transcribe import transcribe_audio
+from backend.api.project_processor import process_project_json
 
-
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load environment variables
 load_dotenv()
 TEMP_DIR = BASE_DIR / "temp"
 EXPORTS_DIR = BASE_DIR / "exports"
 TEMP_DIR.mkdir(exist_ok=True)
 EXPORTS_DIR.mkdir(exist_ok=True)
 
-# Create FastAPI app
 app = FastAPI(
     title="Vloghub - AI-powered video creation platform",
     description="Vloghub is an AI-powered video creation platform that helps you create stunning videos with ease. It uses the latest AI technologies to generate videos from your ideas and content.",
     version="0.1.0",
 )
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,13 +62,6 @@ async def process_video(
     file: UploadFile = File(...),
     jobId: str = Form(""),
 ):
-    """
-    Execute the four-step pipeline:
-    1. Convert video to audio
-    2. Transcribe audio
-    3. Plan scenes with LLM
-    4. Cut clips & package results
-    """
     job_id = jobId
 
     try:
@@ -102,9 +89,7 @@ async def process_video(
         return {
             "jobId": job_id,
             "text": transcription_text,
-            "scenes": scenes_with_clips,  # Use scenes with clip paths
-            # 'clips': clips,
-            # "zipPath": str(zip_path),
+            "scenes": scenes_with_clips,
         }
 
     except Exception as exc:
@@ -114,11 +99,34 @@ async def process_video(
         file.file.close()
 
 
+@api_router.post("/process-project-from-json")
+async def process_project_from_json(payload: dict):
+    try:
+        project = payload.get("project") or {}
+        job_id = str(project.get("jobId") or uuid4())
+
+        TEMP_DIR.mkdir(exist_ok=True)
+        EXPORTS_DIR.mkdir(exist_ok=True)
+
+        json_path = TEMP_DIR / f"project_{job_id}.json"
+        with json_path.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+
+        output_path = EXPORTS_DIR / f"final_video_{job_id}.mp4"
+        result = process_project_json(str(json_path), str(output_path))
+
+        return {
+            "jobId": job_id,
+            "finalVideo": result.get("final_video"),
+            "scenes": result.get("scenes", []),
+        }
+    except Exception as exc:
+        logger.exception("Project JSON processing failed")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @api_router.get("/download")
 async def download_processed_files():
-    """
-    Return the most recent processed ZIP bundle.
-    """
     zip_path = TEMP_DIR / "processed_files.zip"
     if not zip_path.exists():
         raise HTTPException(status_code=404, detail="No processed archive available yet.")
@@ -141,30 +149,28 @@ async def processing_status():
     }
 
 
-# Include API routes
 app.include_router(api_router, prefix="/api")
+
 
 @app.get("/")
 async def root():
-    """Root endpoint that returns a welcome message."""
     return {
         "message": "Welcome to Vloghub API",
         "status": "online",
-        "version": "0.1.0"
+        "version": "0.1.0",
     }
+
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
     return {"status": "healthy"}
+
 
 if __name__ == "__main__":
     import uvicorn
-    
-    # Railway uses PORT environment variable, fallback to 10000 for local dev
+
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "10000"))
     debug = os.getenv("DEBUG", "False").lower() == "true"
-    
-    # For Railway, use the module path relative to project root
-    uvicorn.run("backend.app:app", host=host, port=port, reload=debug) 
+
+    uvicorn.run("backend.app:app", host=host, port=port, reload=debug)

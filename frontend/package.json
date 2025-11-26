@@ -48,7 +48,6 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^14.4.0",
     "@types/busboy": "^1.5.4",
-    "@types/fluent-ffmpeg": "^2.1.27",
     "@types/lodash": "^4.14.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",

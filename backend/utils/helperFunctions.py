@@ -1,4 +1,3 @@
-import math
 import re
 from typing import List, Dict
 
@@ -138,6 +137,59 @@ class HelperFunctions:
 
         return scene_payload
 
+    @staticmethod
+    def find_keyword_timestamps(
+        transcription_text: str, 
+        keyword: str, 
+        video_duration: float
+    ) -> List[float]:
+        """
+        Find all occurrences of a keyword in transcription and estimate their timestamps.
+        
+        Args:
+            transcription_text: Full transcription text
+            keyword: Keyword to search for
+            video_duration: Total duration of the video in seconds
+            
+        Returns:
+            List of estimated timestamps (in seconds) where the keyword appears
+        """
+        if not transcription_text or not keyword:
+            return []
+        
+        # Normalize both text and keyword for case-insensitive search
+        normalized_text = transcription_text.lower()
+        normalized_keyword = keyword.lower()
+        
+        # Find all occurrences
+        timestamps = []
+        words = transcription_text.split()
+        total_words = len(words)
+        
+        if total_words == 0:
+            return []
+        
+        # Calculate average time per word
+        time_per_word = video_duration / total_words if total_words > 0 else 0
+        
+        # Find all positions of the keyword in the text
+        start_pos = 0
+        while True:
+            pos = normalized_text.find(normalized_keyword, start_pos)
+            if pos == -1:
+                break
+            
+            # Count words before this position
+            text_before = normalized_text[:pos]
+            words_before = len(text_before.split())
+            
+            # Estimate timestamp
+            estimated_time = words_before * time_per_word
+            timestamps.append(estimated_time)
+            
+            start_pos = pos + 1
+        
+        return timestamps
 
 __all__ = ["HelperFunctions"]
 
