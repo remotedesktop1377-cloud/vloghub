@@ -138,6 +138,21 @@ async function handleSingleUpload(
         fields: 'id, name, webViewLink',
     });
 
+    if (uploaded.data.id) {
+        try {
+            await drive.permissions.create({
+                fileId: uploaded.data.id,
+                requestBody: {
+                    role: 'reader',
+                    type: 'anyone',
+                },
+                supportsAllDrives: true,
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
     return NextResponse.json({
         success: true,
         projectFolderId,
@@ -211,6 +226,31 @@ async function handleChunkUpload(params: {
             { error: payloadJson?.error || payloadText || 'Chunk upload failed' },
             { status: response.status },
         );
+    }
+
+    if (payloadJson?.id) {
+        try {
+            const permResponse = await fetch(
+                `https://www.googleapis.com/drive/v3/files/${payloadJson.id}/permissions?supportsAllDrives=true`,
+                {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json; charset=UTF-8',
+                    },
+                    body: JSON.stringify({
+                        role: 'reader',
+                        type: 'anyone',
+                    }),
+                },
+            );
+            if (!permResponse.ok) {
+                const permText = await permResponse.text().catch(() => '');
+                console.error('Failed to set Drive permission', permText);
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     return NextResponse.json({
