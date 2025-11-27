@@ -360,8 +360,9 @@ const ScriptProductionClient = () => {
 
     // Function to upload JSON to Google Drive
     const uploadCompleteProjectToDrive = async () => {
-        setLoading(true);
         try {
+            setLoading(true);
+
             // Ensure each SceneData has assets.images populated with all selected sources
             // const SceneDataForUpload: SceneData[] = scenesData.map((ch) => {
             //     const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
@@ -438,25 +439,33 @@ const ScriptProductionClient = () => {
             form.append('jobName', jobId);
             form.append('fileName', `project-config.json`);
             form.append('jsonData', JSON.stringify(scriptProductionJSON));
-
-            console.log('scriptProductionJSON: ', JSON.stringify(scriptProductionJSON, null, 2));
-
+           
             const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
             if (!uploadResult.success) {
-                toast.error(uploadResult.result || 'Failed to upload to Google Drive');
-                return;
+                console.log('Failed to upload project JSON to Google Drive: ', uploadResult.result);
             }
-            // console.log('Drive result:', uploadResult.result);
 
-            setLoading(false);
-            setCompleteProjectUploaded(true);
-            setShowBackConfirmation(true);
+            VideoRenderService.processProjectJson(scriptProductionJSON)
+                .then((renderResult) => {
+                    if (!renderResult || !renderResult.finalVideo) {
+                        console.log('Final video generation failed or missing finalVideo');
+                        return;
+                    }
+                    if (!renderResult.driveUpload || renderResult.driveUpload.success === false) {
+                        console.log('Final video upload to Google Drive failed', renderResult.driveUpload);
+                    }
+                })
+                .catch((err) => {
+                    console.error('Background processProjectJson error', err);
+                });
 
         } catch (e: any) {
             console.error(e);
             toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
+            setCompleteProjectUploaded(true);
+            setShowBackConfirmation(true);
         }
     };
 
@@ -934,7 +943,7 @@ const ScriptProductionClient = () => {
             toast.error(sceneFolderResult.message || 'Failed to generate scene folder');
             return;
         }
-        
+
         // save the profile settings to the secure storage
         const profileSettings = await profileService.getProfileSettings(scriptData?.user_id || '');
         const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, projectSettings: profileSettings.projectSettings, updated_at: new Date().toISOString() } as any;

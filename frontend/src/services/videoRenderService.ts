@@ -8,10 +8,25 @@ const getBackendBaseUrl = () => {
   return url.replace(/\/+$/, '');
 };
 
+export interface ProcessProjectResponse {
+  jobId: string;
+  finalVideo: string;
+  scenes: string[];
+  driveUpload?: {
+    success?: boolean;
+    projectFolderId?: string;
+    targetFolderId?: string;
+    fileId?: string;
+    fileName?: string;
+    webViewLink?: string;
+    message?: string;
+  } | null;
+}
+
 export const VideoRenderService = {
-  async processProjectJson(scriptProductionJSON: any): Promise<{ jobId: string; finalVideo: string; scenes: string[] }> {
+  async processProjectJson(scriptProductionJSON: any): Promise<ProcessProjectResponse> {
     const baseUrl = getBackendBaseUrl();
-    return HttpService.post<{ jobId: string; finalVideo: string; scenes: string[] }>(
+    return HttpService.post<ProcessProjectResponse>(
       `${baseUrl}/api/process-project-from-json`,
       scriptProductionJSON,
     );
@@ -19,5 +34,3 @@ export const VideoRenderService = {
 };
 
 export default VideoRenderService;
-
-

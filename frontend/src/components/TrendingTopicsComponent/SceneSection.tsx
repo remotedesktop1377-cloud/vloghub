@@ -46,17 +46,14 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import { SceneData, SceneKeywordSelection } from '../../types/sceneData';
 import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { ImageViewModal } from '../ui/ImageViewer/ImageViewModal';
-import { MediaPlayer } from '../videoEffects/MediaPlayer';
 import { useImageViewer, formatSceneDataImages } from '../../hooks/useImageViewer';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL, TEXT, BORDER, HOVER, SPECIAL } from '../../styles/colors';
-import ImageSearch from './ImageSearch';
 import { SceneDataEditDialog } from './SceneDataEditDialog';
 import TextWithHighlights from '../scriptProductionComponents/TextWithHighlights';
 import MediaManagementDialog from '../../dialogs/MediaManagementDialog';
 import CustomAudioPlayer from '../scriptProductionComponents/CustomAudioPlayer';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
-import Image from 'next/image';
 import { Settings } from '@/types/scriptData';
 
 // Map effect ids to human-readable names for project-level effects display
@@ -1180,20 +1177,15 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                           sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
                                                           onClick={(e) => {
                                                             e.stopPropagation();
+                                                            const targetUrl = imageUrl;
                                                             const updatedSceneData: SceneData[] = scenesData.map((ch, chIndex) => {
                                                               if (chIndex === index) {
                                                                 const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
-                                                                const googleSetInner = new Set(ch.assets?.imagesGoogle || []);
-                                                                const envatoSetInner = new Set(ch.assets?.imagesEnvato || []);
-                                                                const hasAIAtFirstInner = currentImages.length > 0 && !googleSetInner.has(currentImages[0]) && !envatoSetInner.has(currentImages[0]);
-                                                                const absoluteIndex = (hasAIAtFirstInner ? 1 : 0) + imgIndex;
-                                                                const targetUrl = currentImages[absoluteIndex];
-                                                                const updatedImages = currentImages.filter((_, i) => i !== absoluteIndex);
+                                                                const updatedImages = currentImages.filter((url) => url !== targetUrl);
                                                                 const currentGoogle = ch.assets?.imagesGoogle || [];
                                                                 const currentEnvato = ch.assets?.imagesEnvato || [];
                                                                 const updatedGoogle = currentGoogle.filter((u) => u !== targetUrl);
                                                                 const updatedEnvato = currentEnvato.filter((u) => u !== targetUrl);
-                                                                // Update keywordsSelected
                                                                 let nextKeywordsSelected: any = ch.keywordsSelected;
                                                                 if (Array.isArray(ch.keywordsSelected)) {
                                                                   const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];

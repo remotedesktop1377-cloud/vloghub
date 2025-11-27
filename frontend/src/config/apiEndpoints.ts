@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
   API_GOOGLE_DRIVE_GENERATE_SCENE_FOLDERS: '/api/google-drive-generate-scene-folders', // to generate scene folders on drive
   API_GOOGLE_DRIVE_LIBRARY: '/api/google-drive-library?category=all', // to get all library files on drive
   API_GOOGLE_DRIVE_MEDIA: '/api/google-drive-media?id=', // to get a media file from drive
-  API_API_GOOGLE_DRIVE_MEDIA_UPLOAD: '/api/google-drive-media-upload', // to upload a media file to drive
+  API_GOOGLE_DRIVE_MEDIA_UPLOAD: '/api/google-drive-media-upload', // to upload a media file to drive
   API_GOOGLE_DRIVE_IMAGE_UPLOAD: '/api/google-drive-image-upload', // to upload an image to drive
   API_TRANSCRIBE_VIDEO: '/api/transcribe', // to transcribe a video file
   API_GOOGLE_DRIVE_GENERATE_FOLDER: '/api/google-drive-generate-folder', // to generate a folder on drive

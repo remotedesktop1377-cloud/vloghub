@@ -56,7 +56,16 @@ def download_media(url_or_path: str, output_path: Path, is_video: bool = False) 
     
     # Download from URL
     try:
-        response = requests.get(url_or_path, timeout=60, stream=True)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://www.google.com/',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        response = requests.get(url_or_path, headers=headers, timeout=60, stream=True)
         response.raise_for_status()
         
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +101,16 @@ def download_media(url_or_path: str, output_path: Path, is_video: bool = False) 
                 if output_path.exists():
                     output_path.unlink()  # Delete corrupted file
                 
-                response = requests.get(url_or_path, timeout=120, stream=True)
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Referer': 'https://www.google.com/',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+                response = requests.get(url_or_path, headers=headers, timeout=120, stream=True)
                 response.raise_for_status()
                 
                 with open(output_path, 'wb') as f:
