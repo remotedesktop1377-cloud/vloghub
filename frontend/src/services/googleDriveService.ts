@@ -124,7 +124,7 @@ export const GoogleDriveServiceFunctions = {
             form.append('targetFolder', targetFolder || 'input');
             form.append('file', file);
 
-            const res = await fetch(API_ENDPOINTS.API_API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: form });
+            const res = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: form });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 throw new Error(data?.error || data?.details || 'Media upload failed');
@@ -278,7 +278,7 @@ export const GoogleDriveServiceFunctions = {
             form.append('jobName', jobId);
             form.append('targetFolder', `${sceneId}/images/preview`);
             form.append('file', file);
-            const res = await fetch(API_ENDPOINTS.API_API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: form });
+            const res = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: form });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data?.error || data?.details || 'Failed to upload preview image');
             return { success: true, result: data };
@@ -358,7 +358,7 @@ async function performResumableDriveUpload(jobId: string, targetFolder: string, 
         initForm.append('mimeType', file.type || 'application/octet-stream');
         initForm.append('fileSize', String(file.size));
 
-        const initResponse = await fetch(API_ENDPOINTS.API_API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: initForm });
+        const initResponse = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: initForm });
         const initData = await initResponse.json().catch(() => ({}));
         if (!initResponse.ok || !initData?.sessionUrl) {
             throw new Error(initData?.error || initData?.details || 'Failed to initiate upload session');
@@ -385,7 +385,7 @@ async function performResumableDriveUpload(jobId: string, targetFolder: string, 
             chunkForm.append('mimeType', file.type || 'application/octet-stream');
             chunkForm.append('file', chunk, file.name);
 
-            const chunkResponse = await fetch(API_ENDPOINTS.API_API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: chunkForm });
+            const chunkResponse = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_MEDIA_UPLOAD, { method: 'POST', body: chunkForm });
             const chunkData = await chunkResponse.json().catch(() => ({}));
             if (!chunkResponse.ok) {
                 throw new Error(chunkData?.error || chunkData?.details || 'Chunk upload failed');

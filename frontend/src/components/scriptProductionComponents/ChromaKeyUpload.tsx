@@ -67,7 +67,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 toast.error(message);
                 return;
             }
-            const currentDriveUrl = `https://drive.google.com/uc?id=${upload.fileId}`;
+            const currentDriveUrl = upload?.webViewLink || '';
 
             setProgress(30);
             setCurrentStep('videoConversion');
@@ -113,7 +113,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     body: formData,
                 });
 
-                console.log('response: ', response);
+                // console.log('response: ', response);
                 if (!response.ok) {
                     const message = await response.text();
                     throw new Error(message || 'Python pipeline failed');
@@ -122,7 +122,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 const transcriptionData = await response.json();
                 setProgress(100);
                 setCurrentStep('completed');
-                console.log('transcriptionData: ', JSON.stringify(transcriptionData, null, 2));
+                // console.log('transcriptionData: ', JSON.stringify(transcriptionData, null, 2));
                 
                 onUploadComplete(currentDriveUrl, transcriptionData, selectedBackgroundType as BackgroundType);
             } catch (pipelineError) {

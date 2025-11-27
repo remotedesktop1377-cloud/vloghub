@@ -69,3 +69,5 @@ frontend/uploads/
 exports/
 
 temp/
+
+.numba_cache/

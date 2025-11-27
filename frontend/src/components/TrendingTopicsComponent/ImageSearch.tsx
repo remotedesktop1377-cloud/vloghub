@@ -34,7 +34,6 @@ import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../s
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
 import { HelperFunctions } from '../../utils/helperFunctions';
 import Image from 'next/image';
-import { predefinedTransitions } from '@/data/DefaultData';
 
 interface ImageResult {
     id: string;
@@ -116,9 +115,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
     const [uploadedFiles, setUploadedFiles] = useState<ImageResult[]>([]);
 
-    const [selectedTransitionsEffects, setSelectedTransitionsEffects] = useState<string[]>([]);
-
-
     // Ref to prevent duplicate API calls when useEffect runs multiple times
     const hasInitialSearch = useRef(false);
 
@@ -132,8 +128,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         setGoogleError(null);
 
         try {
-            // Step 1: Build base context (used only when no suggestions)
-            const suggestionQuery = query !== "" ? query : buildContextString();
+            const baseQuery = query && query.trim().length > 0 ? query.trim() : buildContextString();
+            const groupKeywords = keywords.map(k => `${k.trim()}`).join(", ");
 
             // Step 6: Call backend
             const response = await fetch(API_ENDPOINTS.GOOGLE_IMAGE_SEARCH, {
@@ -142,8 +138,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    query: suggestionQuery,
-                    location: location,
+                    query: baseQuery,
+                    // location: location,
+                    keywords: groupKeywords,
                 }),
             });
 
@@ -276,26 +273,37 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
     // Build compact and meaningful context string from props
     const buildContextString = (): string => {
-        const ctxParts: string[] = [];
-
-        // First: script title and location
-        if (scriptTitle?.trim()) ctxParts.push(`${scriptTitle.trim()}`);
-        console.log('scriptTitle', scriptTitle);
-        if (location?.trim()) ctxParts.push("at the location of " + location.replace(/[,]/g, ' ').trim());
-        console.log('location', location);
-
-        if (keywords && Array.isArray(keywords) && keywords.length > 0) {
-            // Join keywords with OR to allow broader search matching
-            const keywordQuery = keywords.map(k => `${k.trim()}`).join(', ');
-            ctxParts.push("and the keywords are: " + keywordQuery + " on the topic of");
+        const parts: string[] = [];
+    
+        // 1. Trending Topic (highest priority)
+        if (trendingTopic?.trim()) {
+            const topic = trendingTopic.trim();
+            parts.push(`Photos, News Or latest updates about ${topic}`);
         }
-
-        // Then: trending topic (optional)
-        if (trendingTopic?.trim()) ctxParts.push(trendingTopic.trim());
-        console.log('trendingTopic', trendingTopic);
-
-        const finalContext = ctxParts.filter(Boolean).join(' ');
-        return finalContext;
+    
+        // 2. Script Title
+        if (scriptTitle?.trim()) {
+            const shortTitle = scriptTitle.trim();
+            parts.push(`or about ${shortTitle}`);
+        }
+    
+        // // 3. Location (without sentences)
+        // if (location?.trim()) {
+        //     const cleanedLoc = location.replace(/[,]/g, ' ').trim();
+        //     parts.push(cleanedLoc);
+        // }
+    
+        // // 4. Keywords (OR group)
+        // if (Array.isArray(keywords) && keywords.length > 0) {
+        //     const group = keywords.map(k => `${k.trim()}`).join(", ");
+        //     parts.push(`relevant to ${group}`);
+        // }
+    
+        // 5. Quality & relevance boosters
+        // parts.push(`realistic, documentary, photojournalism`);
+    
+        // Final query
+        return parts.join(" ");
     };
 
     // Function to check if existing image URLs match API response images and auto-select them
@@ -425,12 +433,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         }
     }, [SceneDataNarration]);
 
-    useEffect(() => {
-        if (predefinedTransitions.length > 0) {
-            setSelectedTransitionsEffects([predefinedTransitions[0]]);
-        }
-    }, []);
-
     const handleSearch = () => {
         if (searchQuery.trim()) {
             if (activeTab === 'google') {
@@ -438,17 +440,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             } else {
                 searchEnvatoImages(searchQuery.trim());
             }
-        }
-    };
-
-    const handleSearchBoth = () => {
-        if (searchQuery.trim()) {
-            const query = searchQuery.trim();
-            const gSuggestions = generateGoogleQueries(query);
-            const eKeywords = generateEnvatoWords(query);
-            searchGoogleImages(query, gSuggestions);
-            searchEnvatoImages(eKeywords.join(' '));
-            HelperFunctions.showInfo('Searching both Google and Envato...');
         }
     };
 
@@ -469,7 +460,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         if (isSelected) {
             // Unselect if already selected
             setSelectedBySource({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
-            setSelectedTransitionsEffects([predefinedTransitions[0]]);
         } else {
             // Enforce single selection across all sources
             setSelectedBySource({
@@ -478,7 +468,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 envatoClips: new Set(sourceKey === 'envatoClips' ? [imageUrl] : []),
                 upload: new Set(sourceKey === 'upload' ? [imageUrl] : [])
             });
-            setSelectedTransitionsEffects([predefinedTransitions[0]]);
         }
     };
 
@@ -509,10 +498,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         // Single selection across tabs
         const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value || selectedBySource.envatoClips.values().next().value || selectedBySource.upload.values().next().value;
         if (selectedUrl) {
-            if (!selectedTransitionsEffects || selectedTransitionsEffects.length === 0) {
-                HelperFunctions.showError('Please select at least one transition effect');
-                return;
-            }
             const isGoogle = selectedBySource.google.size === 1 && selectedBySource.google.has(selectedUrl);
             const isEnvato = selectedBySource.envato.size === 1 && selectedBySource.envato.has(selectedUrl);
             const isEnvatoClip = selectedBySource.envatoClips.size === 1 && selectedBySource.envatoClips.has(selectedUrl);
@@ -557,7 +542,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                         lowResMedia,
                         highResMedia
                     },
-                    transitionsEffects: [...selectedTransitionsEffects]
                 };
 
                 updatedSceneData.keywordsSelected = [keywordEntry];
@@ -1390,38 +1374,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                 </Typography>
                             </Box>
                         )}
-                    </Grid>
-                    <Grid item xs={12} md={3} lg={3}>
-                        <Box sx={{ position: 'sticky', top: 0 }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'white', mb: 1 }}>
-                                Transitions Effects
-                            </Typography>
-                            <Grid container spacing={1}>
-                                {predefinedTransitions.map((transition) => (
-                                    <Grid item xs={6} sm={6} md={12} key={transition}>
-                                        <Button
-                                            fullWidth
-                                            variant={selectedTransitionsEffects.includes(transition) ? 'contained' : 'outlined'}
-                                            onClick={() => {
-                                                setSelectedTransitionsEffects(prev => prev.includes(transition) ? prev.filter(e => e !== transition) : [...prev, transition]);
-                                            }}
-                                            sx={{
-                                                textTransform: 'none',
-                                                py: 1.2,
-                                                borderRadius: 2
-                                            }}
-                                        >
-                                            {transition.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                                        </Button>
-                                    </Grid>
-                                ))}
-                            </Grid>
-                            {/* {selectedTransitionsEffects.length > 0 && (
-                                <Typography variant="caption" sx={{ display: 'block', color: 'gray.300', mt: 1 }}>
-                                    Selected: {selectedTransitionsEffects.join(', ')}
-                                </Typography>
-                            )} */}
-                        </Box>
                     </Grid>
                 </Grid>
             </Box>

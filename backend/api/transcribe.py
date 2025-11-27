@@ -27,7 +27,7 @@ def transcribe_audio(audio_file_path: str) -> str:
     
     try:
         # Use Gemini 2.5 Flash for audio transcription
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-pro')
         
         # Read audio file
         audio_file = genai.upload_file(path=audio_file_path)

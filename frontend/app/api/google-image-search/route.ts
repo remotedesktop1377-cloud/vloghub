@@ -2,18 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, page = 1, location } = await request.json();
+    const { query, page = 1, location, keywords } = await request.json();
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json(
         { error: 'Query parameter is required and must be a non-empty string' },
-        { status: 400 }
-      );
-    }
-
-    if (page < 1 || page > 10) { // Google API limit is 10 pages
-      return NextResponse.json(
-        { error: 'Page must be between 1 and 10' },
         { status: 400 }
       );
     }
@@ -28,24 +21,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Google API limit is 10 images per request
     const requestedImagesPerPage = parseInt(process.env.IMAGES_PER_PAGE || '10');
     const imagesPerPage = Math.min(requestedImagesPerPage, 10);
-    const startIndex = Math.max(1, Math.min(101, (page - 1) * imagesPerPage + 1)); // Must be between 1-101
+    const startIndex = Math.max(1, Math.min(101, (page - 1) * imagesPerPage + 1));
 
-    // Build the search URL with proper parameters
     const searchUrl = new URL('https://www.googleapis.com/customsearch/v1');
     searchUrl.searchParams.set('key', apiKey);
     searchUrl.searchParams.set('cx', searchEngineId);
     searchUrl.searchParams.set('q', query);
-    searchUrl.searchParams.set('searchType', 'image');
-    searchUrl.searchParams.set('gl', location); // country
-    searchUrl.searchParams.set('lr', 'lang_en'); // language
-    // searchUrl.searchParams.set('start', startIndex.toString());
-    // searchUrl.searchParams.set('num', imagesPerPage.toString());
-    searchUrl.searchParams.set('safe', 'off'); // 'active' or 'off'
 
-    console.log('Searching with URL:', searchUrl.toString());
+    searchUrl.searchParams.set('searchType', 'image');
+    // Hard-coded advanced parameters for testing
+    // searchUrl.searchParams.set('gl', location);
+    searchUrl.searchParams.set('lr', 'lang_en');
+    searchUrl.searchParams.set('imgSize', 'large');  // "huge" | "icon" | "large" | "medium" | "small" | "xlarge" | "xxlarge"
+
+    searchUrl.searchParams.set('imgType', 'photo');  // "lineart" | "face" | "clipart" | "stock" | "photo" | "animated"
+
+    searchUrl.searchParams.set('imgColorType', 'color'); // "color" | "gray" | "mono" | "trans"
+    searchUrl.searchParams.set('rights', 'cc_publicdomain,cc_attribute,cc_sharealike');
+    searchUrl.searchParams.set('safe', 'off');
+
+    searchUrl.searchParams.set('start', startIndex.toString());
+    searchUrl.searchParams.set('num', imagesPerPage.toString());
+    // searchUrl.searchParams.set('exactTerms', keywords);
+    searchUrl.searchParams.set('orTerms', keywords);
+    // searchUrl.searchParams.set('lowRange', '2000'); // Best Range to Use for AI Video Creation 2000...8000
+    // searchUrl.searchParams.set('highRange', '8000');
+
+    // console.log('Searching with URL:', searchUrl.toString());
     // console.log('Requested images per page:', requestedImagesPerPage, 'Actual images per page:', imagesPerPage);
 
     const response = await fetch(searchUrl.toString());
@@ -70,7 +74,6 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     // console.log('Google API response:', data);
 
-    // Check if we have items in the response
     if (!data.items || !Array.isArray(data.items)) {
       console.log('No items found in response, returning empty results');
       return NextResponse.json({

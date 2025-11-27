@@ -36,6 +36,21 @@ async function listCategory(drive: any, folderId: string): Promise<any[]> {
     pageSize: 1000,
   });
   const files = Array.isArray(res.data.files) ? res.data.files : [];
+  try {
+    await Promise.allSettled(
+      files.map((f: any) =>
+        drive.permissions.create({
+          fileId: f.id,
+          requestBody: {
+            role: 'reader',
+            type: 'anyone',
+          },
+          supportsAllDrives: true,
+        }),
+      ),
+    );
+  } catch (e) {
+  }
   return files.map((f: any) => {
     // For videos, we need to use a different URL format
     const isVideo = f.mimeType && f.mimeType.startsWith('video/');
