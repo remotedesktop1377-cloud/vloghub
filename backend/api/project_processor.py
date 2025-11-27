@@ -588,7 +588,7 @@ def process_scene(
     
     return str(scene_output_path)
 
-def process_project_json(json_path: str, output_path: str) -> Dict[str, str]:
+def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, output_path: str) -> Dict[str, str]:
     """
     Process a complete project from JSON file.
     
@@ -616,12 +616,8 @@ def process_project_json(json_path: str, output_path: str) -> Dict[str, str]:
         raise ValueError("No scenes found in project JSON")
     
     # Create temp directory
-    temp_dir = Path("temp") / "project_processing"
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Create exports directory for individual scenes
-    exports_dir = Path(output_path).parent
-    exports_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir  = temp_dir / "project_processing"
+    temp_dir.mkdir(exist_ok=True)
     
     # Download narrator video
     narrator_url = project.get("narrator_chroma_key_link", "")

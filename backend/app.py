@@ -36,10 +36,10 @@ logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
-TEMP_DIR = BASE_DIR / "temp"
 EXPORTS_DIR = BASE_DIR / "exports"
-TEMP_DIR.mkdir(exist_ok=True)
 EXPORTS_DIR.mkdir(exist_ok=True)
+TEMP_DIR = EXPORTS_DIR / "temp"
+TEMP_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(
     title="Vloghub - AI-powered video creation platform",
@@ -70,6 +70,32 @@ def upload_video_to_drive(final_video_path: str, job_id: str, target_folder: str
         }
         logger.exception("Failed to upload final video to Google Drive")
         return None, drive_upload_error
+
+
+def cleanup_job_files(job_id: str, result: Dict[str, Any]) -> None:
+    try:
+        final_video = result.get("final_video")
+        if final_video:
+            path_obj = Path(str(final_video))
+            if path_obj.exists():
+                path_obj.unlink()
+        scenes = result.get("scenes") or []
+        for scene_path in scenes:
+            path_obj = Path(str(scene_path))
+            if path_obj.exists():
+                path_obj.unlink()
+        project_json = TEMP_DIR / f"project_{job_id}.json"
+        if project_json.exists():
+            project_json.unlink()
+        project_processing_dir = TEMP_DIR / "project_processing"
+        if project_processing_dir.exists() and project_processing_dir.is_dir():
+            for item in project_processing_dir.iterdir():
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item, ignore_errors=True)
+    except Exception:
+        logger.exception("Failed to clean up job files")
 
 
 def _save_upload(file: UploadFile, job_id: str) -> Path:
@@ -145,13 +171,15 @@ async def process_project_from_json(payload: dict):
             json.dump(payload, f, ensure_ascii=False)
 
         output_path = EXPORTS_DIR / f"final_video_{job_id}.mp4"
-        result = process_project_json(str(json_path), str(output_path))
+        result = process_project_json(TEMP_DIR, EXPORTS_DIR, str(json_path), str(output_path))
 
         drive_upload = None
         drive_upload_error = None
         if result.get("final_video"):
             final_video_path = str(result["final_video"])
             drive_upload, drive_upload_error = upload_video_to_drive(final_video_path, job_id, "output")
+            if drive_upload and not drive_upload_error:
+                cleanup_job_files(job_id, result)
 
         return {
             "jobId": job_id,
