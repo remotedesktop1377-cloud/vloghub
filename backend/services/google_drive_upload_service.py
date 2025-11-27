@@ -74,7 +74,7 @@ def _find_or_create_folder(drive, name: str, parent_id: str) -> str:
 def upload_media_to_google_drive(
     file_path: str,
     job_name: str,
-    target_folder: str = "output",
+    target_folder: str,
 ) -> Dict[str, Any]:
     drive = _load_drive_service()
     root_id = os.getenv("GOOGLE_DRIVE_FOLDER_ID")
