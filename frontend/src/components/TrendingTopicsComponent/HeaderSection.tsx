@@ -36,6 +36,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
 }) => {
   const { user } = useAuth();
   const router = useRouter();
+  const [dashboardLoading, setDashboardLoading] = React.useState(false);
 
   return (
     <Box className={styles.headerContainer}>
@@ -51,9 +52,12 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
           <Box className={styles.dropdownGroup}>
             {/* Refresh and Dashboard Buttons */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
-              <Button
+            <Button
                 variant="outlined"
-                onClick={() => router.push(ROUTES_KEYS.DASHBOARD)}
+                onClick={() => {
+                  setDashboardLoading(true);
+                  router.push(ROUTES_KEYS.DASHBOARD);
+                }}
                 size="small"
                 sx={{
                   height: '40px',
@@ -62,9 +66,9 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
                   textTransform: 'none'
                 }}
               >
-                Dashboard
+                {dashboardLoading ? 'Opening...' : 'Dashboard'}
               </Button>
-              
+
               <Button
                 variant="outlined"
                 startIcon={<RefreshIcon />}
@@ -83,7 +87,6 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
               >
                 Refresh
               </Button>
-
             </Box>
 
             {/* Enhanced Location Selector */}

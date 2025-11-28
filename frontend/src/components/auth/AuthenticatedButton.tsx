@@ -17,6 +17,8 @@ interface AuthenticatedButtonProps {
   requireAuth?: boolean;
   authenticatedLabel?: React.ReactNode;
   guestLabel?: React.ReactNode;
+  showClickLoading?: boolean;
+  loadingText?: React.ReactNode;
 }
 
 export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
@@ -29,10 +31,13 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
   requireAuth = true,
   authenticatedLabel,
   guestLabel,
+  showClickLoading = false,
+  loadingText,
 }) => {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [buttonLoading, setButtonLoading] = useState(false);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -44,6 +49,9 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
 
     // If authentication is not required, navigate directly
     if (!requireAuth) {
+      if (showClickLoading) {
+        setButtonLoading(true);
+      }
       router.push(targetRoute);
       return;
     }
@@ -65,6 +73,9 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
     }
 
     // User is authenticated, navigate to target route
+    if (showClickLoading) {
+      setButtonLoading(true);
+    }
     router.push(targetRoute);
   };
 
@@ -74,6 +85,7 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
 
   const renderLabel = () => {
     if (loading) return 'Loading...';
+    if (buttonLoading) return loadingText ?? children;
     if (user) {
       return authenticatedLabel ?? children;
     }

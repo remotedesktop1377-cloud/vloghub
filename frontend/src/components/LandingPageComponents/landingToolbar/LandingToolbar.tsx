@@ -51,6 +51,8 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                     requireAuth={true}
                     authenticatedLabel="Dashboard"
                     guestLabel="Dashboard"
+                    showClickLoading={true}
+                    loadingText="Opening..."
                   >
                     Dashboard
                   </AuthenticatedButton>
