@@ -439,7 +439,7 @@ const ScriptProductionClient = () => {
             form.append('jobName', jobId);
             form.append('fileName', `project-config.json`);
             form.append('jsonData', JSON.stringify(scriptProductionJSON));
-           
+
             const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
             if (!uploadResult.success) {
                 console.log('Failed to upload project JSON to Google Drive: ', uploadResult.result);

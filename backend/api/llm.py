@@ -1,10 +1,15 @@
 import json
+from pathlib import Path
 from typing import List
 
 from pydantic import BaseModel
 
 from backend.services.scene_service import request_semantic_scenes
 from backend.utils.helperFunctions import HelperFunctions
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+EXPORTS_DIR = BASE_DIR / "exports"
+TEMP_DIR = EXPORTS_DIR / "temp"
 
 class VideoEdit(BaseModel):
     id: str
@@ -95,7 +100,9 @@ async def process_transcription_with_llm(
             for index, scene in enumerate(scene_payload)
         ]
 
-        with open("temp/processed_result.json", "w", encoding="utf-8") as f:
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        processed_result_path = TEMP_DIR / "processed_result.json"
+        with open(processed_result_path, "w", encoding="utf-8") as f:
             json.dump(scene_payload, f, ensure_ascii=False, indent=4)
 
         return video_edits

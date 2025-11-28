@@ -239,9 +239,10 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                             },
                             pointerEvents: uploading ? 'none' : 'auto',
                         }}
-                        onClick={() => {
-                            setShowBackgroundTypeDialog(true);
-                        }}
+                        onClick={() => handleBackgroundTypeSelected(BackgroundType.CHROMA)}
+                        // onClick={() => {
+                        //     setShowBackgroundTypeDialog(true);
+                        // }}
                     >
                         {progress > 0 ? (
                             <Box sx={{ textAlign: 'center' }}>

@@ -614,11 +614,7 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
     
     if not scenes:
         raise ValueError("No scenes found in project JSON")
-    
-    # Create temp directory
-    temp_dir  = temp_dir / "project_processing"
-    temp_dir.mkdir(exist_ok=True)
-    
+         
     # Download narrator video
     narrator_url = project.get("narrator_chroma_key_link", "")
     if not narrator_url:

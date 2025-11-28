@@ -10,6 +10,10 @@ import os
 import httpx
 from typing import Optional
 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+EXPORTS_DIR = BASE_DIR / "exports"
+TEMP_DIR = EXPORTS_DIR / "temp"
+
 async def generate_scene_folders(
     job_id: str,
     number_of_scenes: int,
@@ -207,7 +211,7 @@ async def cut_video_segments(video_path: str, edits: list[VideoEdit], job_id: Op
         print("⚠️ Warning: No job_id provided. Clips will not be uploaded to Google Drive.")
 
       # Create exports directory and clear previous segment files
-      exports_dir = Path("frontend/exports").resolve()
+      exports_dir = Path(EXPORTS_DIR).resolve()
       exports_dir.mkdir(exist_ok=True)
       for existing_segment in exports_dir.glob("segment_*.mp4"):
         try:
@@ -222,7 +226,7 @@ async def cut_video_segments(video_path: str, edits: list[VideoEdit], job_id: Op
       sorted_edits = sorted(actual_edits, key=lambda x: x.startTime)
 
       # Create a list to hold the clips to keep and export each segment
-      clips_to_keep = []
+      # clips_to_keep = []
       exported_files = []
       segment_transcriptions = []  # Store transcriptions for each segment
       
@@ -278,17 +282,19 @@ async def cut_video_segments(video_path: str, edits: list[VideoEdit], job_id: Op
             segment_path = exports_dir / segment_filename
             
             # Save individual clip
+            TEMP_DIR.mkdir(parents=True, exist_ok=True)
+            temp_audio_path = str(TEMP_DIR / "temp-audio.m4a")
             segment.write_videofile(
               str(segment_path), 
               codec="libx264",
               audio_codec="aac",
-              temp_audiofile='temp/temp-audio.m4a',
+              temp_audiofile=temp_audio_path,
               remove_temp=True
             )
             
             # Reload the saved segment for concatenation (to avoid memory issues)
-            saved_segment = VideoFileClip(str(segment_path))
-            clips_to_keep.append(saved_segment)
+            # saved_segment = VideoFileClip(str(segment_path))
+            # clips_to_keep.append(saved_segment)
             exported_files.append(str(segment_path))
             
             # Store segment information with transcription
@@ -332,58 +338,62 @@ async def cut_video_segments(video_path: str, edits: list[VideoEdit], job_id: Op
             # Update previous_end_time for next iteration
             previous_end_time = end_time
       
-      # Concatenate the clips to keep for the main output
-      if clips_to_keep:
-        final_clip = concatenate_videoclips(clips_to_keep)
-      else:
-        final_clip = video_clip
+      # # Concatenate the clips to keep for the main output
+      # if clips_to_keep:
+      #   final_clip = concatenate_videoclips(clips_to_keep)
+      # else:
+      #   final_clip = video_clip
           
       # Save the concatenated edited video
-      output_path = str(video_path).replace(".mp4", "_edited.mp4")
-      final_clip.write_videofile(
-        output_path, 
-        codec="libx264",
-        audio_codec="aac",
-        temp_audiofile='temp/temp-audio.m4a',
-        remove_temp=True
-      )
+      # output_path = str(video_path).replace(".mp4", "_edited.mp4")
+      # TEMP_DIR.mkdir(parents=True, exist_ok=True)
+      # temp_audio_path = str(TEMP_DIR / "temp-audio.m4a")
+      # final_clip.write_videofile(
+      #   output_path, 
+      #   codec="libx264",
+      #   audio_codec="aac",
+      #   temp_audiofile=temp_audio_path,
+      #   remove_temp=True
+      # )
       
       # Close all clips to free up resources
-      final_clip.close()
-      for clip in clips_to_keep:
-        clip.close()
-      video_clip.close()
+      # final_clip.close()
+      # for clip in clips_to_keep:
+      #   clip.close()
+      # video_clip.close()
       
-      # Save segment transcriptions to JSON file
-      transcriptions_file = Path("temp/segment_transcriptions.json")
-      with open(transcriptions_file, 'w', encoding='utf-8') as f:
-        json.dump(segment_transcriptions, f, ensure_ascii=False, indent=2)
+      # # Save segment transcriptions to JSON file
+      # TEMP_DIR.mkdir(parents=True, exist_ok=True)
+      # transcriptions_file = TEMP_DIR / "segment_transcriptions.json"
+      # with open(transcriptions_file, 'w', encoding='utf-8') as f:
+      #   json.dump(segment_transcriptions, f, ensure_ascii=False, indent=2)
       
-      print(f"Saved {len(segment_transcriptions)} segment transcriptions to {transcriptions_file}")
+      # print(f"Saved {len(segment_transcriptions)} segment transcriptions to {transcriptions_file}")
 
       # Update processed_result.json with clip paths
-      processed_result_path = Path("temp/processed_result.json")
-      if processed_result_path.exists():
-        with open(processed_result_path, 'r', encoding='utf-8') as f:
-          processed_result = json.load(f)
+      # TEMP_DIR.mkdir(parents=True, exist_ok=True)
+      # processed_result_path = TEMP_DIR / "processed_result.json"
+      # if processed_result_path.exists():
+      #   with open(processed_result_path, 'r', encoding='utf-8') as f:
+      #     processed_result = json.load(f)
         
-        # Create a mapping of id to clip path
-        clip_map = {seg["id"]: seg["clip"] for seg in segment_transcriptions}
+      #   # Create a mapping of id to clip path
+      #   clip_map = {seg["id"]: seg["clip"] for seg in segment_transcriptions}
         
-        # Update each scene with its clip path
-        if isinstance(processed_result, list):
-          for scene in processed_result:
-            scene_id = scene.get("id")
-            if scene_id in clip_map:
-              scene["clip"] = clip_map[scene_id]
+      #   # Update each scene with its clip path
+      #   if isinstance(processed_result, list):
+      #     for scene in processed_result:
+      #       scene_id = scene.get("id")
+      #       if scene_id in clip_map:
+      #         scene["clip"] = clip_map[scene_id]
         
-        # Write updated processed_result.json
-        with open(processed_result_path, 'w', encoding='utf-8') as f:
-          json.dump(processed_result, f, ensure_ascii=False, indent=4)
+      #   # Write updated processed_result.json
+      #   with open(processed_result_path, 'w', encoding='utf-8') as f:
+      #     json.dump(processed_result, f, ensure_ascii=False, indent=4)
         
-        print(f"Updated processed_result.json with clip paths")
+      #   print(f"Updated processed_result.json with clip paths")
 
-      return output_path, segment_transcriptions
+      return exported_files, segment_transcriptions
     
     except Exception as e:
       print(f"Error cutting video segments: {e}")

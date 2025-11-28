@@ -72,7 +72,6 @@ def upload_video_to_drive(final_video_path: str, job_id: str, target_folder: str
         logger.exception("Failed to upload final video to Google Drive")
         return None, drive_upload_error
 
-
 def cleanup_job_files(job_id: str, result: Dict[str, Any]) -> None:
     try:
         final_video = result.get("final_video")
@@ -97,7 +96,6 @@ def cleanup_job_files(job_id: str, result: Dict[str, Any]) -> None:
                     shutil.rmtree(item, ignore_errors=True)
     except Exception:
         logger.exception("Failed to clean up job files")
-
 
 def _save_upload(file: UploadFile, job_id: str) -> Path:
     safe_name = file.filename or "upload.mp4"
@@ -135,13 +133,30 @@ async def process_video(
         )
 
         clips, scenes_with_clips = await cut_video_segments(str(video_path), edits, job_id)
+        print(f"clips: {clips}")
+        print(f"scenes_with_clips: {scenes_with_clips}")
 
-        processed_json_path = TEMP_DIR / "processed_result.json"
-        zip_path = await zip_and_download_files(
-            exports_directory=str(EXPORTS_DIR),
-            temp_directory=str(TEMP_DIR),
-            scene_json_path=str(processed_json_path) if processed_json_path.exists() else None,
-        )
+        # processed_json_path = TEMP_DIR / "processed_result.json"
+        # zip_path = await zip_and_download_files(
+        #     exports_directory=str(EXPORTS_DIR),
+        #     temp_directory=str(TEMP_DIR),
+        #     scene_json_path=str(processed_json_path) if processed_json_path.exists() else None,
+        # )
+
+        try:
+            if EXPORTS_DIR.exists() and EXPORTS_DIR.is_dir():
+                for item in EXPORTS_DIR.iterdir():
+                    try:
+                        if item.is_file():
+                            item.unlink()
+                        elif item.is_dir():
+                            shutil.rmtree(item, ignore_errors=True)
+                    except PermissionError:
+                        pass
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
         return {
             "jobId": job_id,
@@ -171,6 +186,7 @@ async def process_project_from_json(payload: dict):
         with json_path.open("w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False)
 
+   
         output_path = EXPORTS_DIR / f"final_video_{job_id}.mp4"
         result = process_project_json(TEMP_DIR, EXPORTS_DIR, str(json_path), str(output_path))
 

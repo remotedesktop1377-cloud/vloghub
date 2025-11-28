@@ -7,6 +7,10 @@ from pathlib import Path
 import requests
 from urllib.parse import urlparse
 
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+EXPORTS_DIR = BASE_DIR / "exports"
+TEMP_DIR = EXPORTS_DIR / "temp"
+
 def add_background_image_to_video(video_file_path: str, background_image_path: str, output_video_path: str) -> str:
     """
     Add a background image to a video. 
@@ -101,11 +105,13 @@ def add_background_image_to_video(video_file_path: str, background_image_path: s
         
         # Write the composite video
         print(f"Saving video with background to: {output_video_path}")
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        temp_audio_path = str(TEMP_DIR / "temp-audio-bg-added.m4a")
         final_clip.write_videofile(
             str(output_video_path),
             codec="libx264",
             audio_codec="aac",
-            temp_audiofile='temp/temp-audio-bg-added.m4a',
+            temp_audiofile=temp_audio_path,
             remove_temp=True
         )
         
@@ -205,11 +211,13 @@ def remove_video_background(video_file_path: str, output_video_path: str, preser
         
         # Write the processed video
         print(f"Saving background-removed video to: {output_video_path}")
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        temp_audio_path = str(TEMP_DIR / "temp-audio-bg-removed.m4a")
         processed_clip.write_videofile(
             str(output_video_path),
             codec="libx264",
             audio_codec="aac",
-            temp_audiofile='temp/temp-audio-bg-removed.m4a',
+            temp_audiofile=temp_audio_path,
             remove_temp=True
         )
         
@@ -344,11 +352,13 @@ def add_multiple_background_images_to_video(video_file_path: str, background_ima
         
         # Write the composite video
         print(f"Saving video with multiple background images to: {output_video_path}")
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        temp_audio_path = str(TEMP_DIR / "temp-audio-bg-added.m4a")
         final_clip.write_videofile(
             str(output_video_path),
             codec="libx264",
             audio_codec="aac",
-            temp_audiofile='temp/temp-audio-bg-added.m4a',
+            temp_audiofile=temp_audio_path,
             remove_temp=True
         )
         
@@ -580,11 +590,13 @@ def add_background_images_at_timestamps(
         
         # Write the composite video
         print(f"Saving video with keyword-triggered background images to: {output_video_path}")
+        TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        temp_audio_path = str(TEMP_DIR / "temp-audio-bg-added.m4a")
         final_clip.write_videofile(
             str(output_video_path),
             codec="libx264",
             audio_codec="aac",
-            temp_audiofile='temp/temp-audio-bg-added.m4a',
+            temp_audiofile=temp_audio_path,
             remove_temp=True
         )
         

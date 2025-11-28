@@ -49,9 +49,9 @@ const TrendingTopics: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
   const [hypothesis, setHypothesis] = useState('');
   const [duration, setDuration] = useState('1');
-  const [language, setLanguage] = useState('english');
+  const [language, setLanguage] = useState('urdu');
   const [subtitle_language, setsubtitle_language] = useState('english');
-  const [narration_type, setnarration_type] = useState<'interview' | 'narration'>('narration');
+  const [narration_type, setnarration_type] = useState<'narration' | 'interview'>('narration');
   const [generatingSceneData, setGeneratingSceneData] = useState(false);
   const [scriptGeneratedOnce, setScriptGeneratedOnce] = useState(false);
   const [selectedPreviousLocation, setSelectedPreviousLocation] = useState('');
