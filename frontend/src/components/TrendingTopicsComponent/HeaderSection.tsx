@@ -6,6 +6,8 @@ import DateRangeSelector from './DateRangeSelector';
 import { ProfileDropdown } from '../auth/ProfileDropdown';
 import { useAuth } from '../../context/AuthContext';
 import styles from './css/TrendingTopics.module.css';
+import { useRouter } from 'next/navigation';
+import { ROUTES_KEYS } from '@/data/constants';
 
 interface HeaderSectionProps {
   selectedLocation: string;
@@ -33,6 +35,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
   onCountryChange,
 }) => {
   const { user } = useAuth();
+  const router = useRouter();
 
   return (
     <Box className={styles.headerContainer}>
@@ -46,26 +49,42 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
         <Box className={styles.headerRight}>
           {/* Dropdown Group */}
           <Box className={styles.dropdownGroup}>
-            {/* Refresh Button */}
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={onRefresh}
-              disabled={loading}
-              size="small"
-              sx={{
-                height: '40px',
-                minWidth: '160px',
-                mr: 1,
-                color: 'text.primary',
-                fontSize: '1.05rem',
-                fontWeight: '500',
-                textTransform: 'none'
-              }}
-              title="Click to fetch fresh trending topics from Gemini API"
-            >
-              Refresh
-            </Button>
+            {/* Refresh and Dashboard Buttons */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={() => router.push(ROUTES_KEYS.DASHBOARD)}
+                size="small"
+                sx={{
+                  height: '40px',
+                  minWidth: '120px',
+                  fontSize: '1.0rem',
+                  textTransform: 'none'
+                }}
+              >
+                Dashboard
+              </Button>
+              
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={onRefresh}
+                disabled={loading}
+                size="small"
+                sx={{
+                  height: '40px',
+                  minWidth: '140px',
+                  color: 'text.primary',
+                  fontSize: '1.05rem',
+                  fontWeight: '500',
+                  textTransform: 'none'
+                }}
+                title="Click to fetch fresh trending topics from Gemini API"
+              >
+                Refresh
+              </Button>
+
+            </Box>
 
             {/* Enhanced Location Selector */}
             <LocationSelector

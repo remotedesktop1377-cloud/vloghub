@@ -32,6 +32,29 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <AuthenticatedButton 
+                    targetRoute={ROUTES_KEYS.DASHBOARD}
+                    variant="outlined" 
+                    sx={{ 
+                      px: 2, 
+                      py: 1.2, 
+                      borderRadius: '999px', 
+                      fontSize: '13px', 
+                      textTransform: 'none',
+                      borderColor: TEXT.secondary,
+                      color: TEXT.secondary,
+                      '&:hover': { 
+                        borderColor: TEXT.primary,
+                        color: TEXT.primary,
+                        backgroundColor: 'rgba(148, 163, 184, 0.12)'
+                      } 
+                    }}
+                    requireAuth={true}
+                    authenticatedLabel="Dashboard"
+                    guestLabel="Dashboard"
+                  >
+                    Dashboard
+                  </AuthenticatedButton>
+                  <AuthenticatedButton 
                     targetRoute={ROUTES_KEYS.TRENDING_TOPICS}
                     variant="contained" 
                     sx={{ 

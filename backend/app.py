@@ -11,10 +11,10 @@ from typing import Optional, Tuple, Any, Dict
 from uuid import uuid4
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-# NUMBA_CACHE_DIR = BASE_DIR / ".numba_cache"
-# NUMBA_CACHE_DIR.mkdir(exist_ok=True)
-# os.environ.setdefault("NUMBA_CACHE_DIR", str(NUMBA_CACHE_DIR))
-# os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+NUMBA_CACHE_DIR = BASE_DIR / ".numba_cache"
+NUMBA_CACHE_DIR.mkdir(exist_ok=True)
+os.environ.setdefault("NUMBA_CACHE_DIR", str(NUMBA_CACHE_DIR))
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 

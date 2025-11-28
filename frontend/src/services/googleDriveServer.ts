@@ -95,8 +95,11 @@ export function getRootFolderId(): string {
 
 export async function resolveSubfolderId(drive: any, parentFolderId: string, name: string): Promise<string | null> {
     const response = await drive.files.list({
-        q: `name='${name}' and parents in '${parentFolderId}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        q: `'${parentFolderId}' in parents and name='${name.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        pageSize: 10,
     });
     const files = response.data.files;
     if (files && files.length > 0) {
