@@ -305,8 +305,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         alt={isProjectSettings ? projectSettings?.videoLogo?.name : sceneSettings?.videoLogo?.name}
                                         loading="lazy"
                                         style={{
-                                            width: '45%',
-                                            height: '45%',
+                                            width: '120px',
+                                            height: '120px',
                                             objectFit: 'contain',
                                             borderRadius: 2,
                                             border: '1px solid rgba(255,255,255,0.15)',
