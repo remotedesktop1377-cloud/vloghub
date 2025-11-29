@@ -211,7 +211,7 @@ export const GoogleDriveServiceFunctions = {
                 sceneSettings: sceneSettings,
                 clip: SceneDataWithAssets.clip || '',
             };
-            console.log('Updating scene on Drive:', scene);
+            // console.log('Updating scene on Drive:', scene);
 
             const form = new FormData();
             // Pass job folder and scene folder separately so backend can resolve path as jobs/<folderName>/<sceneFolderId>/

@@ -21,13 +21,23 @@ const BackConfirmationDialog: React.FC<BackConfirmationDialogProps> = ({
     onConfirm,
     isComplete
 }) => {
+    const handleClose = (event: {}, reason: 'backdropClick' | 'escapeKeyDown') => {
+        if (isComplete) {
+            return;
+        }
+        if (reason === 'backdropClick') {
+            return;
+        }
+    };
+
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={handleClose}
             aria-labelledby="back-confirmation-dialog-title"
             maxWidth="sm"
             fullWidth
+            disableEscapeKeyDown={true}
         >
             <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
                 {isComplete ? 'Uploading Completed' : '⚠️ Are you sure?'}
