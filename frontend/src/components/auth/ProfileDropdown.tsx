@@ -9,7 +9,7 @@ import { profileService, BackgroundItem, LibraryData } from '../../services/prof
 import { toast } from 'react-toastify';
 import { GoogleDriveServiceFunctions } from '../../services/googleDriveService';
 import ProjectSettingsDialog from '../../dialogs/ProjectSettingsDialog';
-import { Settings } from '../../types/scriptData';
+import { SettingItemInterface, Settings } from '../../types/scriptData';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { Button } from '@mui/material';
 import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
@@ -63,8 +63,10 @@ export const ProfileDropdown = () => {
 
   const loadProfileSettings = async () => {
     const profileSettings = await profileService.getProfileSettings(user.id);
-    if (profileSettings.projectSettings) {
+    if (profileSettings.projectSettings !== undefined && profileSettings.projectSettings !== null && profileSettings.projectSettings.videoBackgroundVideo && profileSettings.projectSettings.videoBackgroundMusic && profileSettings.projectSettings.videoTransitionEffect) {
       setProjectSettings(profileSettings.projectSettings);
+    } else {
+      await setDefaultProjectSettings();
     }
     if (profileSettings.socialKeys) {
       setSocialKeys(profileSettings.socialKeys);
@@ -78,6 +80,22 @@ export const ProfileDropdown = () => {
     if (profileSettings.gammaThemeName) {
       setGammaThemeName(profileSettings.gammaThemeName);
     }
+  }
+
+  const setDefaultProjectSettings = async () => {
+    const libraryData = await GoogleDriveServiceFunctions.loadLibraryData(false);
+    let updatedProjectSettings: Settings | null = projectSettings || {} as Settings;
+    if (!updatedProjectSettings.videoBackgroundVideo && libraryData.backgrounds && libraryData.backgrounds.length > 0) {
+      updatedProjectSettings.videoBackgroundVideo = libraryData.backgrounds[0] as SettingItemInterface;
+    }
+    if (!updatedProjectSettings.videoBackgroundMusic && libraryData.music && libraryData.music.length > 0) {
+      updatedProjectSettings.videoBackgroundMusic = libraryData.music[0] as SettingItemInterface;
+    }
+    if (!updatedProjectSettings.videoTransitionEffect && libraryData.transitionEffects && libraryData.transitionEffects.length > 0) {
+      updatedProjectSettings.videoTransitionEffect = libraryData.transitionEffects[0] as SettingItemInterface;
+    }
+    setProjectSettings(updatedProjectSettings);
+    saveProfileSettings(updatedProjectSettings, socialKeys, gammaTextMode, gammaFormat, gammaThemeName);
   }
 
   const handleSignOut = async () => {

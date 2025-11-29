@@ -155,7 +155,6 @@ const ScriptProductionClient = () => {
                     setIsNarratorVideoUploaded(true);
                     setVideoDuration(storedData.videoDuration || null);
                     setPageTitle('Final Step: Scene Composition & Video Generation');
-                    setProjectSettings(storedData.projectSettings || null);
 
                     if (storedData.transcription) {
                         updateParagraphs(storedData);
@@ -304,7 +303,19 @@ const ScriptProductionClient = () => {
         setProjectSettingsDialogOpen(false);
     };
 
-    const applyProjectSettingsDialog = async (mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => {
+    const hasSceneSettings = (scene: SceneData): boolean => {
+        const settings = scene.sceneSettings;
+        if (!settings) return false;
+
+        const hasLogo = !!(settings.videoLogo && settings.videoLogo.url && settings.videoLogo.url.trim() !== '');
+        const hasMusic = !!(settings.videoBackgroundMusic && (settings.videoBackgroundMusic.id || settings.videoBackgroundMusic.name));
+        const hasBackgroundVideo = !!(settings.videoBackgroundVideo && (settings.videoBackgroundVideo.id || settings.videoBackgroundVideo.name));
+        const hasTransition = !!(settings.videoTransitionEffect && (settings.videoTransitionEffect.id || settings.videoTransitionEffect.name));
+
+        return hasLogo || hasMusic || hasBackgroundVideo || hasTransition;
+    };
+
+    const applyProjectSettingsDialog = async (mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null, scenesData: SceneData[]) => {
 
         setProjectSettingsDialogOpen(false);
         // Apply to scenes according to context
@@ -317,24 +328,29 @@ const ScriptProductionClient = () => {
                 videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
             }
 
-            const updated: SceneData[] = scenesData.map((ch) => ({
-                ...(ch as any),
-                sceneSettings: {
-                    ...(ch as any).sceneSettings,
-                    ...updatedProjectSettings,
+            const updated: SceneData[] = scenesData.map((ch) => {
+                if (hasSceneSettings(ch)) {
+                    return ch;
                 }
-            }));
+                return {
+                    ...(ch as any),
+                    sceneSettings: {
+                        ...(ch as any).sceneSettings,
+                        ...updatedProjectSettings,
+                    }
+                };
+            });
             setScenesData(updated);
 
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, projectSettings: updatedProjectSettings, scenesData: updated });
 
             try {
                 for (let i = 0; i < updated.length; i++) {
-                    await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[i], 'Project settings applied to all scenes');
+                    await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[i], 'Project settings applied to scenes without existing settings');
                 }
             } catch { }
 
-        } else if (projectSettingsContext.mode === 'scene' && typeof projectSettingsContext.sceneIndex === 'number') {
+        } else if (mode === 'scene') {
 
             const updatedSceneSettings: Settings = {
                 videoLogo: sceneSettings?.videoLogo as LogoOverlayInterface,
@@ -352,7 +368,7 @@ const ScriptProductionClient = () => {
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updatedSceneData });
 
             try {
-                await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[idx], 'Project settings applied to scene');
+                await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[idx!], 'Project settings applied to scene');
             } catch { }
         }
 
@@ -363,28 +379,6 @@ const ScriptProductionClient = () => {
         try {
             setLoading(true);
 
-            // Ensure each SceneData has assets.images populated with all selected sources
-            // const SceneDataForUpload: SceneData[] = scenesData.map((ch) => {
-            //     const existingImages = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
-            //     const googleImages = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
-            //     const envatoImages = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
-            //     const keywordImages = HelperFunctions.extractImageUrlsFromKeywordsSelected(ch.keywordsSelected as any);
-            //     const combined = Array.from(new Set([
-            //         ...existingImages,
-            //         ...googleImages,
-            //         ...envatoImages,
-            //         ...keywordImages,
-            //     ].filter(Boolean)));
-            //     return {
-            //         ...ch,
-            //         assets: {
-            //             ...ch.assets,
-            //             images: combined,
-            //             imagesGoogle: googleImages,
-            //             imagesEnvato: envatoImages,
-            //         }
-            //     } as SceneData;
-            // });
             const scriptProductionJSON = {
                 project: {
                     jobId: jobId,
@@ -397,7 +391,7 @@ const ScriptProductionClient = () => {
                     language: scriptData?.language || null,
                     subtitle_language: scriptData?.subtitle_language || null,
                     narration_type: scriptData?.narration_type || null,
-                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link || '',                
+                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link || '',
                     transcription: scriptData?.transcription || '',
                     // Project-level settings
                     projectSettings: {
@@ -603,8 +597,10 @@ const ScriptProductionClient = () => {
                 const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
                 setScriptData(updatedScriptData);
                 SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-
                 setScenesData(scenesData);
+
+                applyProjectSettingsDialog('project', scriptData.projectSettings || null, null, scenesData);
+
                 // checkAndProcessGamma(updatedScriptData);
 
                 try {
@@ -1803,7 +1799,7 @@ const ScriptProductionClient = () => {
                 userId={scriptData?.user_id || ''}
                 open={projectSettingsDialogOpen}
                 onClose={closeProjectSettingsDialog}
-                onApply={(mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => applyProjectSettingsDialog(mode, projectSettings, sceneSettings)}
+                onApply={(mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => applyProjectSettingsDialog(mode, projectSettings, sceneSettings, scenesData)}
                 projectSettingsContext={projectSettingsContext}
                 pSettings={projectSettings}
                 sSettings={sceneSettings}
