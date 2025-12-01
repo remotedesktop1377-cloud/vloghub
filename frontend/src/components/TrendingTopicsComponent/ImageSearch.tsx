@@ -130,7 +130,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         try {
             const baseQuery = query && query.trim().length > 0 ? query.trim() : buildContextString();
             const groupKeywords = keywords.map(k => `${k.trim()}`).join(", ");
-
+            setSearchQuery(baseQuery);
+            
             // Step 6: Call backend
             const response = await fetch(API_ENDPOINTS.GOOGLE_IMAGE_SEARCH, {
                 method: "POST",
@@ -139,8 +140,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 },
                 body: JSON.stringify({
                     query: baseQuery,
-                    // location: location,
-                    keywords: groupKeywords,
                 }),
             });
 
@@ -181,7 +180,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const searchEnvatoImages = async (query: string) => {
         setEnvatoLoading(true);
         setEnvatoError(null);
-
+        setSearchQuery(query);
         try {
             const response = await fetch(API_ENDPOINTS.ENVATO_IMAGE_SEARCH, {
                 method: 'POST',
@@ -227,7 +226,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const searchEnvatoClips = async (query: string) => {
         setEnvatoLoading(true);
         setEnvatoError(null);
-
+        setSearchQuery(query);
         try {
             const response = await fetch(API_ENDPOINTS.ENVATO_CLIPS_SEARCH, {
                 method: 'POST',
@@ -274,34 +273,34 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     // Build compact and meaningful context string from props
     const buildContextString = (): string => {
         const parts: string[] = [];
-    
+
         // 1. Trending Topic (highest priority)
         if (trendingTopic?.trim()) {
             const topic = trendingTopic.trim();
             parts.push(`Photos, News Or latest updates about ${topic}`);
         }
-    
+
         // 2. Script Title
         if (scriptTitle?.trim()) {
             const shortTitle = scriptTitle.trim();
             parts.push(`or about ${shortTitle}`);
         }
-    
+
         // // 3. Location (without sentences)
         // if (location?.trim()) {
         //     const cleanedLoc = location.replace(/[,]/g, ' ').trim();
         //     parts.push(cleanedLoc);
         // }
-    
+
         // // 4. Keywords (OR group)
         // if (Array.isArray(keywords) && keywords.length > 0) {
         //     const group = keywords.map(k => `${k.trim()}`).join(", ");
         //     parts.push(`relevant to ${group}`);
         // }
-    
+
         // 5. Quality & relevance boosters
         // parts.push(`realistic, documentary, photojournalism`);
-    
+
         // Final query
         return parts.join(" ");
     };
@@ -409,28 +408,30 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             setGoogleSuggestions(suggestionKeywords);
             setEnvatoKeywords(suggestionKeywords);
             // Trigger both searches using provided suggestions
-            searchGoogleImages('', suggestionKeywords);
+            debugger;
+            setSearchQuery(scriptTitle || '');
+            searchGoogleImages(scriptTitle || '');
             const keywordsJoined = suggestionKeywords.join(' ');
             searchEnvatoImages(keywordsJoined);
             searchEnvatoClips(keywordsJoined);
             return;
         }
 
-        if (SceneDataNarration && !hasInitialSearch.current) {
-            const gSuggestions = generateGoogleQueries(SceneDataNarration);
-            const eKeywords = generateEnvatoWords(SceneDataNarration);
-            setGoogleSuggestions(gSuggestions);
-            setEnvatoKeywords(eKeywords);
+        // if (SceneDataNarration && !hasInitialSearch.current) {
+        //     const gSuggestions = generateGoogleQueries(SceneDataNarration);
+        //     const eKeywords = generateEnvatoWords(SceneDataNarration);
+        //     setGoogleSuggestions(gSuggestions);
+        //     setEnvatoKeywords(eKeywords);
 
-            if (gSuggestions.length > 0 || eKeywords.length > 0) {
-                hasInitialSearch.current = true;
-                // Search both APIs using their respective suggestions/keywords
-                searchGoogleImages('', gSuggestions);
-                const ek = eKeywords.join(' ');
-                searchEnvatoImages(ek);
-                searchEnvatoClips(ek);
-            }
-        }
+        //     if (gSuggestions.length > 0 || eKeywords.length > 0) {
+        //         hasInitialSearch.current = true;
+        //         // Search both APIs using their respective suggestions/keywords
+        //         searchGoogleImages(gSuggestions.join(' '));
+        //         const ek = eKeywords.join(' ');
+        //         searchEnvatoImages(ek);
+        //         searchEnvatoClips(ek);
+        //     }
+        // }
     }, [SceneDataNarration]);
 
     const handleSearch = () => {
@@ -518,7 +519,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                     updatedSceneData.modifiedKeywordForMapping = typed;
                 }
             }
-            
+
             // Also add to keywordsSelected array with media and selected transition effects
             try {
                 // Find the selected image object to pick a thumbnail for lowResMedia
@@ -910,7 +911,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             {/* Main Content with Transitions Sidebar */}
             <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
                 <Grid container spacing={2}>
-                    <Grid item xs={12} md={9} lg={9}>
+                    <Grid item xs={12} md={12} lg={12}>
                         {currentLoading ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
                                 <CircularProgress />

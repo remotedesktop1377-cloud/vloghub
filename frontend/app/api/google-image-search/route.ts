@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, page = 1, location, keywords } = await request.json();
+    const { query, page = 1 } = await request.json();
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json(
@@ -33,19 +33,17 @@ export async function POST(request: NextRequest) {
     searchUrl.searchParams.set('searchType', 'image');
     // Hard-coded advanced parameters for testing
     // searchUrl.searchParams.set('gl', location);
-    searchUrl.searchParams.set('lr', 'lang_en');
+    // searchUrl.searchParams.set('lr', 'lang_en');
     searchUrl.searchParams.set('imgSize', 'large');  // "huge" | "icon" | "large" | "medium" | "small" | "xlarge" | "xxlarge"
-
     searchUrl.searchParams.set('imgType', 'photo');  // "lineart" | "face" | "clipart" | "stock" | "photo" | "animated"
+    searchUrl.searchParams.set('fileType', 'jpg,png');
+    // searchUrl.searchParams.set('imgColorType', 'color'); // "color" | "gray" | "mono" | "trans"
+    // searchUrl.searchParams.set('safe', 'off');
 
-    searchUrl.searchParams.set('imgColorType', 'color'); // "color" | "gray" | "mono" | "trans"
-    searchUrl.searchParams.set('rights', 'cc_publicdomain,cc_attribute,cc_sharealike');
-    searchUrl.searchParams.set('safe', 'off');
-
-    searchUrl.searchParams.set('start', startIndex.toString());
-    searchUrl.searchParams.set('num', imagesPerPage.toString());
+    // searchUrl.searchParams.set('start', startIndex.toString());
+    // searchUrl.searchParams.set('num', imagesPerPage.toString());
     // searchUrl.searchParams.set('exactTerms', keywords);
-    searchUrl.searchParams.set('orTerms', keywords);
+    // searchUrl.searchParams.set('orTerms', keywords);
     // searchUrl.searchParams.set('lowRange', '2000'); // Best Range to Use for AI Video Creation 2000...8000
     // searchUrl.searchParams.set('highRange', '8000');
 
