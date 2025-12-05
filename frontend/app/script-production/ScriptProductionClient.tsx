@@ -117,6 +117,7 @@ const ScriptProductionClient = () => {
     const [pageTitle, setPageTitle] = useState('Script Review & Approval');
 
     const [jobId, setJobId] = useState<string>('');
+    const [isGammaProcessing, setIsGammaProcessing] = useState(false);
     // SceneData edit dialog states
     const [SceneDataEditDialogOpen, setScenesDataEditDialogOpen] = useState(false);
     const [SceneDataEditDialogSceneDataIndex, setScenesDataEditDialogSceneDataIndex] = useState<number | null>(null);
@@ -315,7 +316,7 @@ const ScriptProductionClient = () => {
         return hasLogo || hasMusic || hasBackgroundVideo || hasTransition;
     };
 
-    const applyProjectSettingsDialog = async (mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null, scenesData: SceneData[]) => {
+    const applyProjectSettingsDialog = async (mode: 'project' | 'scene', scriptData: ScriptData, projectSettings: Settings | null, sceneSettings: Settings | null, scenesData: SceneData[]) => {
 
         setProjectSettingsDialogOpen(false);
         // Apply to scenes according to context
@@ -341,14 +342,9 @@ const ScriptProductionClient = () => {
                 };
             });
             setScenesData(updated);
-
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, projectSettings: updatedProjectSettings, scenesData: updated });
 
-            try {
-                for (let i = 0; i < updated.length; i++) {
-                    await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[i], 'Project settings applied to scenes without existing settings');
-                }
-            } catch { }
+            applyHighlights(scriptData, updated);
 
         } else if (mode === 'scene') {
 
@@ -367,9 +363,7 @@ const ScriptProductionClient = () => {
             setScenesData(updatedSceneData);
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updatedSceneData });
 
-            try {
-                await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[idx!], 'Project settings applied to scene');
-            } catch { }
+            applyHighlights(scriptData, updatedSceneData);
         }
 
     };
@@ -415,6 +409,7 @@ const ScriptProductionClient = () => {
                     keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
                     assets: {
                         images: sceneData.assets?.images || [],
+                        clips: sceneData.assets?.clips || [],
                     },
                     gammaGenId: sceneData?.gammaGenId || '',
                     gammaUrl: sceneData?.gammaUrl || '',
@@ -467,6 +462,7 @@ const ScriptProductionClient = () => {
     const GenerateGammaId = async (scriptData: ScriptData) => {
         try {
             if (!scriptData || scriptData.gammaGenId || scriptData.gammaExportUrl || !scriptData.transcription || !scriptData.scenesData || scriptData.scenesData.length <= 0) return;
+            setIsGammaProcessing(true);
             const inputText = scriptData.transcription;
             const data = await GammaService.startGeneration(inputText, scriptData.scenesData!.length);
             if (data?.generationId) {
@@ -475,8 +471,12 @@ const ScriptProductionClient = () => {
                 SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                 checkGammaAPIStatus(updatedScriptData);
+            } else {
+                setIsGammaProcessing(false);
             }
-        } catch { }
+        } catch {
+            setIsGammaProcessing(false);
+        }
     };
 
     const checkGammaAPIStatus = async (scriptData: ScriptData) => {
@@ -491,15 +491,22 @@ const ScriptProductionClient = () => {
 
                         // PDF -> Images (one per scene) and populate preview images
                         convertGammaPdfToImages(updatedScriptData);
+                    } else if (data?.status === 'failed' || data?.status === 'error') {
+                        setIsGammaProcessing(false);
+                        console.error('Gamma generation failed:', data?.error || data?.message);
                     } else {
                         setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
                     }
-                } catch {
+                } catch (error) {
+                    console.error('Error checking Gamma status:', error);
                     setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
                 }
             };
             poll();
-        } catch { }
+        } catch (error) {
+            console.error('Failed to check Gamma status:', error);
+            setIsGammaProcessing(false);
+        }
     };
 
     const convertGammaPdfToImages = async (scriptData: ScriptData) => {
@@ -517,7 +524,7 @@ const ScriptProductionClient = () => {
                 ...ch,
                 gammaPreviewImage: images[idx] || '',
             }));
-            console.log('PDF pages:', totalPages, 'Rendered images:', mapped || []);
+            // console.log('PDF pages:', totalPages, 'Rendered images:', mapped || []);
             setScenesData(mapped || [] as SceneData[]);
 
             // Upload Gamma preview images to each scene folder using media upload API
@@ -539,8 +546,10 @@ const ScriptProductionClient = () => {
                 SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
             }
 
+            setIsGammaProcessing(false);
         } catch (e: any) {
             console.error('Failed to convert PDF to images:', e?.message || 'Unknown error');
+            setIsGammaProcessing(false);
         }
     };
 
@@ -567,6 +576,7 @@ const ScriptProductionClient = () => {
                         keywordsSelected: ch.keywordsSelected ?? {},
                         assets: {
                             images: ch.assets?.images || [],
+                            clips: ch.assets?.clips || [],
                         },
                         gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
                         sceneSettings: ch.sceneSettings || scriptData.scenesData![index]?.sceneSettings || {
@@ -579,7 +589,7 @@ const ScriptProductionClient = () => {
                     }));
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
 
-                    applyHighlights(scriptData, normalizedFromStorage);
+                    applyProjectSettingsDialog('project', scriptData, scriptData.projectSettings || null, null, normalizedFromStorage);
 
                 }
             } catch { }
@@ -591,29 +601,15 @@ const ScriptProductionClient = () => {
         if (needsHighlights) {
             setLoading(true);
             HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setScenesData, (scenesData) => {
-                // console.log('SceneData with highlights', SceneData);
                 setLoading(false);
-                // save updated SceneData
                 const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
-                setScriptData(updatedScriptData);
-                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-                setScenesData(scenesData);
-
-                applyProjectSettingsDialog('project', scriptData.projectSettings || null, null, scenesData);
-
-                // checkAndProcessGamma(updatedScriptData);
-
-                try {
-                    for (const scene of scenesData) {
-                        GoogleDriveServiceFunctions.persistSceneUpdate(jobId, scene, 'Highlighted keywords applied to scene');
-                    }
-                } catch { }
-
+                checkAndProcessGamma(updatedScriptData);
             });
         } else {
             setLoading(false);
             setScenesData(scenesData);
-            // checkAndProcessGamma(scriptData);
+            const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
+            checkAndProcessGamma(updatedScriptData);
         }
     };
 
@@ -622,6 +618,7 @@ const ScriptProductionClient = () => {
         if (!scriptData.gammaGenId) {
             GenerateGammaId(scriptData);
         } else if (scriptData.gammaGenId && !scriptData.gammaExportUrl) {
+            setIsGammaProcessing(true);
             checkGammaAPIStatus(scriptData);
         } else if (
             scriptData.gammaGenId &&
@@ -634,6 +631,7 @@ const ScriptProductionClient = () => {
                 (scene: any) => !scene.gammaPreviewImage
             );
             if (hasMissingPreviewImages) {
+                setIsGammaProcessing(true);
                 convertGammaPdfToImages(scriptData);
             } else {
                 console.log('All scenes have preview images');
@@ -1768,7 +1766,7 @@ const ScriptProductionClient = () => {
                                                 fullWidth
                                                 startIcon={<VideoIcon />}
                                                 onClick={() => uploadCompleteProjectToDrive()}
-                                                disabled={!scenesData.length}
+                                                disabled={!scenesData.length || isGammaProcessing}
                                                 sx={{ textTransform: 'none', fontSize: '1.25rem' }}
                                             >
                                                 Generate Video
@@ -1799,7 +1797,7 @@ const ScriptProductionClient = () => {
                 userId={scriptData?.user_id || ''}
                 open={projectSettingsDialogOpen}
                 onClose={closeProjectSettingsDialog}
-                onApply={(mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => applyProjectSettingsDialog(mode, projectSettings, sceneSettings, scenesData)}
+                onApply={(mode: 'project' | 'scene', projectSettings: Settings | null, sceneSettings: Settings | null) => applyProjectSettingsDialog(mode, scriptData as ScriptData, projectSettings, sceneSettings, scenesData)}
                 projectSettingsContext={projectSettingsContext}
                 pSettings={projectSettings}
                 sSettings={sceneSettings}

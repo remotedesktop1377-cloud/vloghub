@@ -30,7 +30,7 @@ export const GammaService = {
                 style: 'line art',
             },
             cardOptions: {
-                dimensions: 'fluid', // fluid, 16x9, 4x3
+                dimensions: '16x9', // fluid, 16x9, 4x3
             },
             sharingOptions: {
                 workspaceAccess: 'view',

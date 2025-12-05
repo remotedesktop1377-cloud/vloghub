@@ -261,7 +261,7 @@ def process_scene(
         bg_video_clip = ImageClip(np.zeros((video_size[1], video_size[0], 3), dtype=np.uint8), duration=scene_duration)
     
     # Process narrator video with transparency (same approach as manual processing)
-    print(f"Processing narrator video with transparency (frame-by-frame)...")
+    print("Processing narrator video with transparency (frame-by-frame)...")
     
     # Create rembg session for background removal
     session = new_session()
@@ -348,15 +348,17 @@ def process_scene(
     else:
         logo_info = None
     
-    # Process keyword images
+    # Process keyword images (and optional gammaPreviewImage fallback)
     narration_text = scene_data.get("narration", "")
+    gamma_preview_image = scene_data.get("previewImage", "")
     keywords_selected = scene_data.get("keywordsSelected", [])
-    
+
+    keyword_image_mappings = []
+
     if keywords_selected and narration_text:
         # Find keyword timestamps in narration
         # IMPORTANT: Use scene-relative timestamps (0 to scene_duration)
         # The narration text is for this scene only, so timestamps should be 0-based
-        keyword_image_mappings = []
         for keyword_data in keywords_selected:
             keyword = keyword_data.get("modifiedKeyword") or keyword_data.get("suggestedKeyword", "")
             media_url = keyword_data.get("media", {}).get("highResMedia", "")
@@ -386,125 +388,71 @@ def process_scene(
                             "timestamps": scene_relative_timestamps
                         })
                         print(f"Keyword '{keyword}' found at timestamps: {scene_relative_timestamps} (scene duration: {scene_duration}s)")
+
+    # Fallback: if no keyword images but gammaPreviewImage exists, use it for 3 seconds at scene start
+    if not keyword_image_mappings and gamma_preview_image:
+        keyword_image_mappings.append({
+            "keyword": "__gamma_default__",
+            "image": gamma_preview_image,
+            "timestamps": [0.0]
+        })
+        print(f"Using gammaPreviewImage for 3 seconds at start of scene {scene_index + 1}")
+
+    # Add keyword images at timestamps (using same approach as manual processing)
+    if keyword_image_mappings:
+        print(f"Adding {len(keyword_image_mappings)} keyword images...")
         
-        # Add keyword images at timestamps (using same approach as manual processing)
-        if keyword_image_mappings:
-            print(f"Adding {len(keyword_image_mappings)} keyword images...")
+        # Download keyword images
+        downloaded_images = {}
+        for mapping in keyword_image_mappings:
+            image_url = mapping["image"]
+            if image_url not in downloaded_images:
+                image_local = temp_dir / f"keyword_img_{len(downloaded_images)}_scene_{scene_index}.jpg"
+                image_path = download_media(image_url, image_local)
+                downloaded_images[image_url] = image_path
+            mapping["image_path"] = downloaded_images[image_url]
+        
+        # Create timeline for keyword images (same as manual processing)
+        # Structure: {start_time: (end_time, image_path)}
+        image_timeline = {}
+        base_image_duration = 3.0  # Default duration for keyword images (including Gamma preview)
+        
+        for mapping in keyword_image_mappings:
+            image_path = mapping["image_path"]
+            timestamps = mapping.get("timestamps", [])
             
-            # Download keyword images
-            downloaded_images = {}
-            for mapping in keyword_image_mappings:
-                image_url = mapping["image"]
-                if image_url not in downloaded_images:
-                    image_local = temp_dir / f"keyword_img_{len(downloaded_images)}_scene_{scene_index}.jpg"
-                    image_path = download_media(image_url, image_local)
-                    downloaded_images[image_url] = image_path
-                mapping["image_path"] = downloaded_images[image_url]
-            
-            # Create timeline for keyword images (same as manual processing)
-            # Structure: {start_time: (end_time, image_path)}
-            image_timeline = {}
-            image_duration = 3.0  # Show each image for 3 seconds
-            
-            for mapping in keyword_image_mappings:
-                image_path = mapping["image_path"]
-                timestamps = mapping.get("timestamps", [])
+            # Add to timeline for each timestamp
+            for timestamp in timestamps:
+                start_time = max(0.0, min(timestamp, scene_duration))
+                end_time = min(scene_duration, start_time + base_image_duration)
                 
-                # Add to timeline for each timestamp
-                for timestamp in timestamps:
-                    start_time = max(0.0, min(timestamp, scene_duration))
-                    end_time = min(scene_duration, start_time + image_duration)
-                    
-                    # If there's already an image at this time, keep the later one (or extend)
-                    if start_time in image_timeline:
-                        existing_end = image_timeline[start_time][0]
-                        if end_time > existing_end:
-                            image_timeline[start_time] = (end_time, image_path)
-                    else:
+                # If there's already an image at this time, keep the later one (or extend)
+                if start_time in image_timeline:
+                    existing_end = image_timeline[start_time][0]
+                    if end_time > existing_end:
                         image_timeline[start_time] = (end_time, image_path)
-            
-            # Sort timeline by start time (same as manual processing)
-            sorted_timeline = sorted(image_timeline.items())
-            
-            # Create segments for the video (same approach as manual processing)
-            segments = []
-            current_time = 0.0
-            
-            for start_time, (end_time, image_path) in sorted_timeline:
-                # Add segment before this image (if any)
-                if current_time < start_time:
-                    segment_duration = start_time - current_time
-                    video_segment = narrator_with_alpha.subclipped(current_time, start_time)
-                    # Composite with background video for this segment
-                    bg_segment = bg_video_clip.subclipped(current_time, start_time)
-                    segment_layers = [bg_segment, video_segment]
-                    
-                    # Add logo to segment if available
-                    if logo_info:
-                        logo_seg_clip = ImageClip(logo_info["path"], duration=segment_duration)
-                        def get_logo_pos(t):
-                            return logo_info["position"]
-                        logo_seg_clip = logo_seg_clip.with_position(get_logo_pos)
-                        segment_layers.append(logo_seg_clip)
-                    
-                    segment_clip = CompositeVideoClip(segment_layers, size=video_size)
-                    segments.append(segment_clip)
-                
-                # Add segment with keyword image background (same as manual processing)
-                if start_time < scene_duration:
-                    segment_duration = min(end_time, scene_duration) - start_time
-                    
-                    # Load and prepare keyword image
-                    img = Image.open(image_path)
-                    # Convert RGBA to RGB if necessary
-                    if img.mode == 'RGBA':
-                        rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-                        rgb_img.paste(img, mask=img.split()[3])
-                        img = rgb_img
-                    elif img.mode != 'RGB':
-                        img = img.convert('RGB')
-                    img = img.resize(video_size, Image.Resampling.LANCZOS)
-                    
-                    # Save resized image as temporary file
-                    img_path_temp = str(temp_dir / f"temp_keyword_bg_{start_time:.2f}_scene_{scene_index}.png")
-                    img.save(img_path_temp)
-                    
-                    # Create background image clip for this segment
-                    bg_img_clip = ImageClip(img_path_temp, duration=segment_duration)
-                    
-                    # Extract the corresponding video segment
-                    video_segment = narrator_with_alpha.subclipped(start_time, min(end_time, scene_duration))
-                    
-                    # Composite keyword image background and video segment (same as manual processing)
-                    segment_layers = [bg_img_clip, video_segment]
-                    
-                    # Add logo to segment if available
-                    if logo_info:
-                        logo_seg_clip = ImageClip(logo_info["path"], duration=segment_duration)
-                        def get_logo_pos(t):
-                            return logo_info["position"]
-                        logo_seg_clip = logo_seg_clip.with_position(get_logo_pos)
-                        segment_layers.append(logo_seg_clip)
-                    
-                    segment_clip = CompositeVideoClip(segment_layers, size=video_size)
-                    segments.append(segment_clip)
-                    
-                    # Clean up temp image
-                    if Path(img_path_temp).exists():
-                        Path(img_path_temp).unlink()
-                
-                current_time = end_time
-            
-            # Add remaining video segment (if any)
-            if current_time < scene_duration:
-                video_segment = narrator_with_alpha.subclipped(current_time, scene_duration)
-                bg_segment = bg_video_clip.subclipped(current_time, scene_duration)
+                else:
+                    image_timeline[start_time] = (end_time, image_path)
+        
+        # Sort timeline by start time (same as manual processing)
+        sorted_timeline = sorted(image_timeline.items())
+        
+        # Create segments for the video (same approach as manual processing)
+        segments = []
+        current_time = 0.0
+        
+        for start_time, (end_time, image_path) in sorted_timeline:
+            # Add segment before this image (if any)
+            if current_time < start_time:
+                segment_duration = start_time - current_time
+                video_segment = narrator_with_alpha.subclipped(current_time, start_time)
+                # Composite with background video for this segment
+                bg_segment = bg_video_clip.subclipped(current_time, start_time)
                 segment_layers = [bg_segment, video_segment]
                 
                 # Add logo to segment if available
                 if logo_info:
-                    remaining_duration = scene_duration - current_time
-                    logo_seg_clip = ImageClip(logo_info["path"], duration=remaining_duration)
+                    logo_seg_clip = ImageClip(logo_info["path"], duration=segment_duration)
                     def get_logo_pos(t):
                         return logo_info["position"]
                     logo_seg_clip = logo_seg_clip.with_position(get_logo_pos)
@@ -513,21 +461,84 @@ def process_scene(
                 segment_clip = CompositeVideoClip(segment_layers, size=video_size)
                 segments.append(segment_clip)
             
-            # If segments were created, use them (same as manual processing)
-            if segments:
-                # Concatenate all segments (same as manual processing)
-                print("Concatenating video segments with keyword images...")
-                final_scene = concatenate_videoclips(segments, method="compose")
-            else:
-                # No keyword images, use original composite_layers approach
-                # Add logo to composite_layers if not already added
-                if logo_info and logo_info["path"] not in [str(layer.filename) if hasattr(layer, 'filename') else None for layer in composite_layers]:
-                    logo_clip = ImageClip(logo_info["path"], duration=scene_duration)
+            # Add segment with keyword image background (same as manual processing)
+            if start_time < scene_duration:
+                segment_duration = min(end_time, scene_duration) - start_time
+                
+                # Load and prepare keyword image
+                img = Image.open(image_path)
+                # Convert RGBA to RGB if necessary
+                if img.mode == 'RGBA':
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    rgb_img.paste(img, mask=img.split()[3])
+                    img = rgb_img
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                img = img.resize(video_size, Image.Resampling.LANCZOS)
+                
+                # Save resized image as temporary file
+                img_path_temp = str(temp_dir / f"temp_keyword_bg_{start_time:.2f}_scene_{scene_index}.png")
+                img.save(img_path_temp)
+                
+                # Create background image clip for this segment
+                bg_img_clip = ImageClip(img_path_temp, duration=segment_duration)
+                
+                # Extract the corresponding video segment
+                video_segment = narrator_with_alpha.subclipped(start_time, min(end_time, scene_duration))
+                
+                # Composite keyword image background and video segment (same as manual processing)
+                segment_layers = [bg_img_clip, video_segment]
+                
+                # Add logo to segment if available
+                if logo_info:
+                    logo_seg_clip = ImageClip(logo_info["path"], duration=segment_duration)
                     def get_logo_pos(t):
                         return logo_info["position"]
-                    logo_clip = logo_clip.with_position(get_logo_pos)
-                    composite_layers.append(logo_clip)
-                final_scene = CompositeVideoClip(composite_layers, size=video_size)
+                    logo_seg_clip = logo_seg_clip.with_position(get_logo_pos)
+                    segment_layers.append(logo_seg_clip)
+                
+                segment_clip = CompositeVideoClip(segment_layers, size=video_size)
+                segments.append(segment_clip)
+                
+                # Clean up temp image
+                if Path(img_path_temp).exists():
+                    Path(img_path_temp).unlink()
+            
+            current_time = end_time
+        
+        # Add remaining video segment (if any)
+        if current_time < scene_duration:
+            video_segment = narrator_with_alpha.subclipped(current_time, scene_duration)
+            bg_segment = bg_video_clip.subclipped(current_time, scene_duration)
+            segment_layers = [bg_segment, video_segment]
+            
+            # Add logo to segment if available
+            if logo_info:
+                remaining_duration = scene_duration - current_time
+                logo_seg_clip = ImageClip(logo_info["path"], duration=remaining_duration)
+                def get_logo_pos(t):
+                    return logo_info["position"]
+                logo_seg_clip = logo_seg_clip.with_position(get_logo_pos)
+                segment_layers.append(logo_seg_clip)
+            
+            segment_clip = CompositeVideoClip(segment_layers, size=video_size)
+            segments.append(segment_clip)
+        
+        # If segments were created, use them (same as manual processing)
+        if segments:
+            # Concatenate all segments (same as manual processing)
+            print("Concatenating video segments with keyword images (and/or gamma preview)...")
+            final_scene = concatenate_videoclips(segments, method="compose")
+        else:
+            # No keyword images, use original composite_layers approach
+            # Add logo to composite_layers if not already added
+            if logo_info and logo_info["path"] not in [str(layer.filename) if hasattr(layer, 'filename') else None for layer in composite_layers]:
+                logo_clip = ImageClip(logo_info["path"], duration=scene_duration)
+                def get_logo_pos(t):
+                    return logo_info["position"]
+                logo_clip = logo_clip.with_position(get_logo_pos)
+                composite_layers.append(logo_clip)
+            final_scene = CompositeVideoClip(composite_layers, size=video_size)
     else:
         # No keyword images, create final composite from layers
         # Add logo to composite_layers if available
