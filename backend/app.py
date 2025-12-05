@@ -29,6 +29,7 @@ from backend.api.download import zip_and_download_files
 from backend.api.llm import process_transcription_with_llm
 from backend.api.transcribe import transcribe_audio
 from backend.api.project_processor import process_project_json
+from backend.api.compress_video import compress_video
 from backend.services.google_drive_upload_service import upload_media_to_google_drive
 
 # Setup logging
@@ -208,6 +209,44 @@ async def process_project_from_json(payload: dict):
     except Exception as exc:
         logger.exception("Project JSON processing failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@api_router.post("/compress-video")
+async def compress_video_endpoint(
+    file: UploadFile = File(...),
+    jobId: str = Form(""),
+    targetSizeMb: float = Form(50.0),
+):
+    """
+    Compress video file to reduce size before upload.
+    
+    Args:
+        file: Video file to compress
+        jobId: Job ID for temporary file naming
+        targetSizeMb: Target file size in MB (default: 50MB)
+        
+    Returns:
+        Compressed video file as FileResponse
+    """
+    job_id = jobId or str(uuid4())
+    
+    try:
+        input_path = _save_upload(file, job_id)
+        output_path = TEMP_DIR / f"{input_path.stem}_compressed.mp4"
+        
+        compressed_path = compress_video(str(input_path), str(output_path), targetSizeMb)
+        
+        return FileResponse(
+            compressed_path,
+            media_type="video/mp4",
+            filename=f"{input_path.stem}_compressed.mp4",
+            headers={"X-Original-Size": str(input_path.stat().st_size), "X-Compressed-Size": str(output_path.stat().st_size)}
+        )
+    except Exception as exc:
+        logger.exception("Video compression failed")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    finally:
+        file.file.close()
 
 
 @api_router.post("/upload-video")

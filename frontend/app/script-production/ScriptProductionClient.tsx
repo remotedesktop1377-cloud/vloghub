@@ -385,7 +385,7 @@ const ScriptProductionClient = () => {
                     language: scriptData?.language || null,
                     subtitle_language: scriptData?.subtitle_language || null,
                     narration_type: scriptData?.narration_type || null,
-                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link || '',
+                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link,
                     transcription: scriptData?.transcription || '',
                     // Project-level settings
                     projectSettings: {

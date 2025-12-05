@@ -40,7 +40,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     onUploadFailed,
 }) => {
     const [uploading, setUploading] = useState(false);
-    const [currentStep, setCurrentStep] = useState<'idle' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'completed'>('idle');
+    const [currentStep, setCurrentStep] = useState<'idle' | 'compressing' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'completed'>('idle');
     const [error, setError] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<'upload' | 'transcribe' | 'general' | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -49,15 +49,64 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
     const [progress, setProgress] = useState(0);
 
+    const compressVideo = async (file: File): Promise<File> => {
+        try {
+            setCurrentStep('compressing');
+            setProgress(10);
+            
+            const originalSizeMB = file.size / (1024 * 1024);
+            const targetSizeMB = 50.0;
+            
+            if (originalSizeMB <= targetSizeMB) {
+                console.log(`Video size (${originalSizeMB.toFixed(2)} MB) is already under target (${targetSizeMB} MB), skipping compression`);
+                return file;
+            }
+            
+            console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB to target ${targetSizeMB} MB...`);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('jobId', jobId);
+            formData.append('targetSizeMb', targetSizeMB.toString());
+            
+            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}/api/compress-video`, {
+                method: 'POST',
+                body: formData,
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Video compression failed');
+            }
+            
+            const originalSize = parseInt(response.headers.get('X-Original-Size') || '0');
+            const compressedSize = parseInt(response.headers.get('X-Compressed-Size') || '0');
+            const compressionRatio = originalSize > 0 ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : '0';
+            
+            console.log(`Video compressed: ${(compressedSize / (1024 * 1024)).toFixed(2)} MB (${compressionRatio}% reduction)`);
+            
+            const blob = await response.blob();
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '_compressed.mp4'), { type: 'video/mp4' });
+            
+            setProgress(25);
+            return compressedFile;
+        } catch (error) {
+            console.error('Video compression error:', error);
+            toast.error('Video compression failed, uploading original file');
+            return file;
+        }
+    };
+
     const startVideoUploadingAndTranscribtion = async (status: string, file: File) => {
         try {
             setUploading(true);
             setProgress(5);
             setCurrentStep('uploading');
 
-            // if (status === 'upload' && file !== null && driveUrl === '') {
-            // // 1) Upload to Drive first
-            const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', file as File);
+            const compressedFile = await compressVideo(file);
+            
+            setProgress(30);
+            const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', compressedFile);
             if (!upload?.success || !upload?.fileId) {
                 const message = upload?.message || 'Failed to upload video to Drive';
                 setUploading(false);
@@ -69,24 +118,24 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             }
             const currentDriveUrl = upload?.webViewLink || '';
 
-            setProgress(30);
+            setProgress(40);
             setCurrentStep('videoConversion');
 
             try {
                 const formData = new FormData();
-                formData.append('file', file as File);
+                formData.append('file', compressedFile);
                 formData.append('jobId', jobId);
 
                 // Progressively set progress over 60s to 70, then step, then again over 60s to 90 and step.
                 let firstInterval: NodeJS.Timeout | null = null;
                 let secondInterval: NodeJS.Timeout | null = null;
-                let progressValue = 30;
+                let progressValue = 40;
 
-                // Step 1: progress from 30 to 70 in 60s
+                // Step 1: progress from 40 to 70 in 60s
                 let step1 = 0;
                 firstInterval = setInterval(() => {
                     step1++;
-                    progressValue = 30 + Math.floor((step1 / 60) * 40); // 30 to 70 over 60s
+                    progressValue = 40 + Math.floor((step1 / 60) * 30); // 40 to 70 over 60s
                     setProgress(progressValue);
                     if (step1 >= 60) {
                         clearInterval(firstInterval!);
@@ -154,6 +203,8 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
     const getProgressMessage = () => {
         switch (currentStep) {
+            case 'compressing':
+                return 'Compressing video to reduce file size...';
             case 'uploading':
                 return 'Uploading video to Google Drive...';
             case 'videoConversion':
@@ -173,6 +224,8 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
     const getStepIcon = () => {
         switch (currentStep) {
+            case 'compressing':
+                return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'uploading':
                 return <UploadIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'videoConversion':

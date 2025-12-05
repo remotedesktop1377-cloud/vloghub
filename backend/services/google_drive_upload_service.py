@@ -113,11 +113,21 @@ def upload_media_to_google_drive(
                 body={
                     "role": "reader",
                     "type": "anyone",
+                    "allowFileDiscovery": False,
+                },
+                supportsAllDrives=True,
+            ).execute()
+            logger.info(f"✅ Set public permissions for file: {file_id}")
+            
+            drive.files().update(
+                fileId=file_id,
+                body={
+                    "copyRequiresWriterPermission": False,
                 },
                 supportsAllDrives=True,
             ).execute()
         except Exception as e:
-            logger.exception("Failed to set Drive permissions")
+            logger.exception("❌ Failed to set Drive permissions")
     return {
         "projectFolderId": project_folder_id,
         "targetFolderId": current_parent,

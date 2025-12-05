@@ -140,16 +140,27 @@ async function handleSingleUpload(
 
     if (uploaded.data.id) {
         try {
-            await drive.permissions.create({
+            const permissionResult = await drive.permissions.create({
                 fileId: uploaded.data.id,
                 requestBody: {
                     role: 'reader',
                     type: 'anyone',
+                    allowFileDiscovery: false,
                 },
                 supportsAllDrives: true,
             });
-        } catch (e) {
-            console.error(e);
+            console.log(`✅ Set public permissions for file: ${uploaded.data.id}`, permissionResult.data);
+            
+            await drive.files.update({
+                fileId: uploaded.data.id,
+                requestBody: {
+                    copyRequiresWriterPermission: false,
+                },
+                supportsAllDrives: true,
+            });
+        } catch (e: any) {
+            console.error('❌ Failed to set Drive permissions:', e?.message || e);
+            console.error('Permission error details:', JSON.stringify(e, null, 2));
         }
     }
 
@@ -241,15 +252,22 @@ async function handleChunkUpload(params: {
                     body: JSON.stringify({
                         role: 'reader',
                         type: 'anyone',
+                        allowFileDiscovery: false,
                     }),
                 },
             );
             if (!permResponse.ok) {
                 const permText = await permResponse.text().catch(() => '');
-                console.error('Failed to set Drive permission', permText);
+                const permJson = await permResponse.json().catch(() => ({}));
+                console.error('❌ Failed to set Drive permission:', permText);
+                console.error('Permission error details:', JSON.stringify(permJson, null, 2));
+            } else {
+                const permData = await permResponse.json().catch(() => ({}));
+                console.log(`✅ Set public permissions for file: ${payloadJson.id}`, permData);
             }
-        } catch (e) {
-            console.error(e);
+        } catch (e: any) {
+            console.error('❌ Error setting Drive permissions:', e?.message || e);
+            console.error('Permission error details:', JSON.stringify(e, null, 2));
         }
     }
 
