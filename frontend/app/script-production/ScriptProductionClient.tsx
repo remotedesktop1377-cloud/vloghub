@@ -1764,7 +1764,7 @@ const ScriptProductionClient = () => {
                                                 variant="contained"
                                                 size="medium"
                                                 fullWidth
-                                                startIcon={<VideoIcon />}
+                                                startIcon={ isGammaProcessing ? <CircularProgress size={20} /> : <VideoIcon />}
                                                 onClick={() => uploadCompleteProjectToDrive()}
                                                 disabled={!scenesData.length || isGammaProcessing}
                                                 sx={{ textTransform: 'none', fontSize: '1.25rem' }}
