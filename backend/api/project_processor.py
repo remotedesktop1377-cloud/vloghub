@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 from backend.utils.helperFunctions import HelperFunctions
 from rembg import remove, new_session
+from backend.api.compress_video import compress_video
 
 def download_media(url_or_path: str, output_path: Path, is_video: bool = False) -> str:
     """
@@ -237,6 +238,21 @@ def process_scene(
     if bg_video_url:
         bg_video_local = temp_dir / f"bg_video_scene_{scene_index}.mp4"
         bg_video_path = download_media(bg_video_url, bg_video_local, is_video=True)
+        
+        # Compress background video if it's too large
+        original_size_mb = Path(bg_video_path).stat().st_size / (1024 * 1024)
+        target_size_mb = 20.0
+        if original_size_mb > target_size_mb:
+            print(f"Compressing background video from {original_size_mb:.2f} MB to target {target_size_mb} MB...")
+            bg_video_compressed = temp_dir / f"bg_video_scene_{scene_index}_compressed.mp4"
+            try:
+                compressed_path = compress_video(str(bg_video_path), str(bg_video_compressed), target_size_mb)
+                bg_video_path = compressed_path
+                compressed_size_mb = Path(compressed_path).stat().st_size / (1024 * 1024)
+                print(f"Background video compressed: {compressed_size_mb:.2f} MB")
+            except Exception as e:
+                print(f"Warning: Failed to compress background video, using original: {e}")
+        
         bg_video_clip = VideoFileClip(bg_video_path)
         
         # Resize background video to match scene dimensions
