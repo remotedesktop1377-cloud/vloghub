@@ -6,6 +6,7 @@ import sys
 import logging
 import shutil
 import json
+import time
 from pathlib import Path
 from typing import Optional, Tuple, Any, Dict
 from uuid import uuid4
@@ -62,16 +63,36 @@ api_router = APIRouter(tags=["Video Processing"])
 
 
 def upload_video_to_drive(final_video_path: str, job_id: str, target_folder: str) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
-    try:
-        drive_upload = upload_media_to_google_drive(final_video_path, job_id, target_folder)
-        return drive_upload, None
-    except Exception as upload_exc:
-        drive_upload_error = {
-            "error": str(upload_exc),
-            "type": type(upload_exc).__name__,
-        }
-        logger.exception("Failed to upload final video to Google Drive")
-        return None, drive_upload_error
+    max_retries = 2
+    retry_delay = 5
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Uploading final video to Google Drive (attempt {attempt + 1}/{max_retries})...")
+            drive_upload = upload_media_to_google_drive(final_video_path, job_id, target_folder)
+            logger.info("✅ Successfully uploaded final video to Google Drive")
+            return drive_upload, None
+        except Exception as upload_exc:
+            error_msg = str(upload_exc)
+            error_type = type(upload_exc).__name__
+            
+            logger.warning(f"Upload attempt {attempt + 1} failed: {error_msg}")
+            
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying upload in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                drive_upload_error = {
+                    "error": error_msg,
+                    "type": error_type,
+                    "attempts": max_retries,
+                }
+                logger.exception("Failed to upload final video to Google Drive after all retries")
+                return None, drive_upload_error
+    
+    # Should not reach here, but just in case
+    return None, {"error": "Upload failed after all retries", "type": "UnknownError"}
 
 def cleanup_job_files(job_id: str, result: Dict[str, Any]) -> None:
     try:
