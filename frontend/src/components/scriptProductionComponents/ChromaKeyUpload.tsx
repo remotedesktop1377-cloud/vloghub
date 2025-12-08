@@ -49,7 +49,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
     const [progress, setProgress] = useState(0);
 
-    const compressVideo = async (file: File): Promise<File> => {
+    const compressVideo = async (file: File): Promise<{compressedFile: File, compressedFilePath: string}> => {
         try {
             setCurrentStep('compressing');
             setProgress(10);
@@ -59,7 +59,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             
             if (originalSizeMB <= targetSizeMB) {
                 console.log(`Video size (${originalSizeMB.toFixed(2)} MB) is already under target (${targetSizeMB} MB), skipping compression`);
-                return file;
+                return {compressedFile: file, compressedFilePath: URL.createObjectURL(file)};
             }
             
             console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB to target ${targetSizeMB} MB...`);
@@ -87,13 +87,14 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             
             const blob = await response.blob();
             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '_compressed.mp4'), { type: 'video/mp4' });
-            
+            const compressedFilePath = URL.createObjectURL(blob);
+
             setProgress(25);
-            return compressedFile;
+            return {compressedFile: compressedFile, compressedFilePath: compressedFilePath};
         } catch (error) {
             console.error('Video compression error:', error);
             toast.error('Video compression failed, uploading original file');
-            return file;
+            return {compressedFile: file, compressedFilePath: URL.createObjectURL(file)};
         }
     };
 
@@ -103,7 +104,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             setProgress(5);
             setCurrentStep('uploading');
 
-            const compressedFile = await compressVideo(file);
+            const {compressedFile, compressedFilePath} = await compressVideo(file);
             
             setProgress(30);
             const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', compressedFile);
@@ -117,13 +118,13 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 return;
             }
             const currentDriveUrl = upload?.webViewLink || '';
-
+            
             setProgress(40);
             setCurrentStep('videoConversion');
 
             try {
                 const formData = new FormData();
-                formData.append('file', compressedFile);
+                formData.append('videoPath', compressedFilePath);
                 formData.append('jobId', jobId);
 
                 // Progressively set progress over 60s to 70, then step, then again over 60s to 90 and step.

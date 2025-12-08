@@ -408,7 +408,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             setGoogleSuggestions(suggestionKeywords);
             setEnvatoKeywords(suggestionKeywords);
             // Trigger both searches using provided suggestions
-            debugger;
             setSearchQuery(scriptTitle || '');
             searchGoogleImages(scriptTitle || '');
             const keywordsJoined = suggestionKeywords.join(' ');
