@@ -55,19 +55,11 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             setProgress(10);
             
             const originalSizeMB = file.size / (1024 * 1024);
-            const targetSizeMB = 50.0;
-            
-            if (originalSizeMB <= targetSizeMB) {
-                console.log(`Video size (${originalSizeMB.toFixed(2)} MB) is already under target (${targetSizeMB} MB), skipping compression`);
-                return {compressedFile: file, compressedFilePath: URL.createObjectURL(file)};
-            }
-            
-            console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB to target ${targetSizeMB} MB...`);
+            console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB to target`);
             
             const formData = new FormData();
             formData.append('file', file);
             formData.append('jobId', jobId);
-            formData.append('targetSizeMb', targetSizeMB.toString());
             
             const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}/api/compress-video`, {
                 method: 'POST',
@@ -124,7 +116,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
             try {
                 const formData = new FormData();
-                formData.append('videoPath', compressedFilePath);
+                formData.append('file', compressedFile);  // Backend expects 'file' parameter
                 formData.append('jobId', jobId);
 
                 // Progressively set progress over 60s to 70, then step, then again over 60s to 90 and step.
@@ -353,7 +345,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                                 clearError();
                                                 startVideoUploadingAndTranscribtion(errorType || '', uploadedFile as File);
                                             }}
-                                            disabled={uploading}
+                                            // disabled={uploading}
                                             color="inherit"
                                         >
                                             <RefreshIcon />

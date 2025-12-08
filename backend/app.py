@@ -113,7 +113,7 @@ def _save_upload(file: UploadFile, job_id: str) -> Path:
 
 @api_router.post("/process")
 async def process_video(
-    videoPath: str = Form(...),
+    file: UploadFile = File(...),
     jobId: str = Form(""),
 ):
     """
@@ -126,9 +126,10 @@ async def process_video(
     job_id = jobId
 
     try:
-        audio_path = TEMP_DIR / f"{videoPath.split('/')[-1].stem}.wav"
+        video_path = _save_upload(file, job_id)
+        audio_path = TEMP_DIR / f"{video_path.stem}.wav"
 
-        video_duration_seconds = convert_video_to_audio(str(videoPath), str(audio_path))
+        video_duration_seconds = convert_video_to_audio(str(video_path), str(audio_path))
         transcription_text = transcribe_audio(str(audio_path))
         transcript_json_path = str(audio_path).replace(".wav", ".json")
 
@@ -138,7 +139,7 @@ async def process_video(
         )
 
         clips, scenes_with_clips = await cut_video_segments(
-            str(videoPath), edits, job_id
+            str(video_path), edits, job_id
         )
         print(f"clips: {clips}")
         print(f"scenes_with_clips: {scenes_with_clips}")

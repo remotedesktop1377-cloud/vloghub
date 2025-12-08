@@ -29,11 +29,11 @@ def compress_video(input_path: str, output_path: str, target_size_mb: float = 50
     
     print(f"Original video: {original_size_mb:.2f} MB, duration: {original_duration:.2f}s")
     
-    if original_size_mb <= target_size_mb:
-        print(f"Video is already under target size ({original_size_mb:.2f} MB <= {target_size_mb} MB), copying without compression")
-        video_clip.close()
-        shutil.copy2(input_path, output_path)
-        return output_path
+    # if original_size_mb <= target_size_mb:
+    #     print(f"Video is already under target size ({original_size_mb:.2f} MB <= {target_size_mb} MB), copying without compression")
+    #     video_clip.close()
+    #     shutil.copy2(input_path, output_path)
+    #     return output_path
     
     target_bitrate = (target_size_mb * 8 * 1024 * 1024) / original_duration
     target_bitrate = max(500, min(target_bitrate, 5000))
