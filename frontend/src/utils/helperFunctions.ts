@@ -820,7 +820,11 @@ export class HelperFunctions {
         body: JSON.stringify({ scenesData: payload })
       });
       if (!res.ok) {
-        HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setSceneData, SceneDataUpdated);
+        if (res.status === 429 || res.status === 500) {
+          HelperFunctions.showError(`${res.statusText}. Please try again later.`);
+        } else {
+          HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setSceneData, SceneDataUpdated);
+        }
         return;
       }
       const data = await res.json();

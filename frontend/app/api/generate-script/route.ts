@@ -4,7 +4,7 @@ import { AI_CONFIG } from '@/config/aiConfig';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
-  model: AI_CONFIG.GEMINI.MODEL_PRO,
+  model: AI_CONFIG.GEMINI.MODEL_FLASH,
   generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }
 });
 

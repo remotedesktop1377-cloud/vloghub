@@ -18,12 +18,14 @@ genai.configure(api_key=api_key)
 def request_semantic_scenes(
     transcription_text: str,
     desired_scene_count: int,
-    language: str = "en"
+    language: str = "ur"
 ) -> List[Dict[str, Any]]:
     """
     Call Gemini to create semantic scene descriptions from a transcription.
     """
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    from backend.config.aiConfig import AI_CONFIG
+
+    model = genai.GenerativeModel(AI_CONFIG.GEMINI.MODEL_FLASH)
 
     prompt = f"""
 You are an expert video editing assistant that segments narration into coherent scenes.

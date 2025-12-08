@@ -85,10 +85,10 @@ export const ProfileDropdown = () => {
   const setDefaultProjectSettings = async () => {
     const libraryData = await GoogleDriveServiceFunctions.loadLibraryData(false);
     let updatedProjectSettings: Settings | null = projectSettings || {} as Settings;
-    if (!updatedProjectSettings.videoBackgroundVideo && libraryData.backgrounds && libraryData.backgrounds.length > 0) {
+    if (!updatedProjectSettings.videoBackgroundVideo && libraryData.backgrounds !== undefined && libraryData.backgrounds !== null && libraryData.backgrounds.length > 0) {
       updatedProjectSettings.videoBackgroundVideo = libraryData.backgrounds[0] as SettingItemInterface;
     }
-    if (!updatedProjectSettings.videoBackgroundMusic && libraryData.music && libraryData.music.length > 0) {
+    if (!updatedProjectSettings.videoBackgroundMusic && libraryData.music !== undefined && libraryData.music !== null && libraryData.music.length > 0) {
       updatedProjectSettings.videoBackgroundMusic = libraryData.music[0] as SettingItemInterface;
     }
     if (!updatedProjectSettings.videoTransitionEffect && libraryData.transitionEffects && libraryData.transitionEffects.length > 0) {

@@ -178,6 +178,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 console.error('Python pipeline error:', pipelineError);
                 const message = pipelineError instanceof Error ? pipelineError.message : 'Pipeline failed';
                 setError(message);
+                setUploading(false);
                 onUploadFailed(message);
                 toast.error(message);
             } finally {
@@ -347,8 +348,11 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                     <Tooltip title="Retry">
                                         <IconButton
                                             size="small"
-                                            onClick={() => startVideoUploadingAndTranscribtion(errorType || '', uploadedFile as File)}
-                                            // disabled={uploading}
+                                            onClick={() => {
+                                                clearError();
+                                                startVideoUploadingAndTranscribtion(errorType || '', uploadedFile as File);
+                                            }}
+                                            disabled={uploading}
                                             color="inherit"
                                         >
                                             <RefreshIcon />

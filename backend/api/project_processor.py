@@ -763,7 +763,7 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
     for clip in scene_clips:
         clip.close()
     
-    print(f"Project processing complete!")
+    print("Project processing complete!")
     print(f"Final combined video: {output_path}")
     print(f"Individual scenes: {len(scene_output_paths)} scene(s) saved")
     
