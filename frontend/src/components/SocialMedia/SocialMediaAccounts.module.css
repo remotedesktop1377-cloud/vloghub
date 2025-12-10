@@ -1,0 +1,37 @@
+.accountCard {
+  background-color: var(--background-secondary);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.accountCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+}
+
+.platformIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statsContainer {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.statItem {
+  flex: 1;
+}
+
+.connectButton {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 12px;
+  font-weight: 600;
+}
+

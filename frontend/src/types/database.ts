@@ -16,10 +16,7 @@ export interface Database {
           bio: string | null;
           location: string | null;
           website_url: string | null;
-          tiktok_key: string | null;
-          instagram_key: string | null;
-          facebook_key: string | null;
-          youtube_key: string | null;
+          youtube_oauth_tokens: Record<string, any> | null;
           preferences: Record<string, any> | null;
           logo_url: string | null;
           logo_filename: string | null;
@@ -37,10 +34,7 @@ export interface Database {
           bio?: string | null;
           location?: string | null;
           website_url?: string | null;
-          tiktok_key?: string | null;
-          instagram_key?: string | null;
-          facebook_key?: string | null;
-          youtube_key?: string | null;
+          youtube_oauth_tokens?: Record<string, any> | null;
           preferences?: Record<string, any> | null;
           logo_url?: string | null;
           logo_filename?: string | null;
@@ -58,10 +52,7 @@ export interface Database {
           bio?: string | null;
           location?: string | null;
           website_url?: string | null;
-          tiktok_key?: string | null;
-          instagram_key?: string | null;
-          facebook_key?: string | null;
-          youtube_key?: string | null;
+          youtube_oauth_tokens?: Record<string, any> | null;
           preferences?: Record<string, any> | null;
           logo_url?: string | null;
           logo_filename?: string | null;
@@ -160,6 +151,40 @@ export interface Database {
           sentiment_score?: number | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+
+      // Social accounts table
+      social_accounts: {
+        Row: {
+          id: string;
+          user_id: string;
+          platform: string;
+          channel_id: string | null;
+          channel_name: string | null;
+          created_at: string;
+          updated_at: string;
+          connected: boolean;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          platform: string;
+          channel_id?: string | null;
+          channel_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          connected?: boolean;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          platform?: string;
+          channel_id?: string | null;
+          channel_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          connected?: boolean;
         };
       };
 

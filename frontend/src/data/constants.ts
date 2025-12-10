@@ -13,7 +13,8 @@ export const ROUTES_KEYS = {
   HOME: '/',
   TRENDING_TOPICS: '/trending-topics',
   SCRIPT_PRODUCTION: '/script-production',
-  DASHBOARD: '/dashboard'
+  DASHBOARD: '/dashboard',
+  SOCIAL_MEDIA: '/social-media'
 } as const; 
 
 export const SCRIPT_STATUS = {

@@ -26,9 +26,23 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                   <Typography variant="h6" sx={{ fontWeight: 600, color: TEXT.primary }}>VlogHub</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  {['Home', 'Features', 'Examples', 'Blog'].map((item) => (
+                  <Typography 
+                    component="a" 
+                    href={ROUTES_KEYS.HOME} 
+                    sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}
+                  >
+                    Home
+                  </Typography>
+                  <Typography 
+                    component="a" 
+                    href={ROUTES_KEYS.SOCIAL_MEDIA} 
+                    sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}
+                  >
+                    Social Media
+                  </Typography>
+                  {/* {['Features', 'Examples', 'Blog'].map((item) => (
                     <Typography key={item} component="a" href="#" sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}>{item}</Typography>
-                  ))}
+                  ))} */}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <AuthenticatedButton 
