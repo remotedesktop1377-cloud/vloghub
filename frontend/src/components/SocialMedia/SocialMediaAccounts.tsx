@@ -141,10 +141,13 @@ export default function SocialMediaAccounts() {
 
         try {
             const supabase = getSupabase();
-            const socialRes = await supabase
+            const supabaseAny: any = supabase;
+
+            // Load social accounts
+            const socialRes = await supabaseAny
                 .from('social_accounts')
-                .select('platform, channel_id, channel_name, created_at, connected')
-                .eq('user_id', user.id) as any;
+                .select('platform, channel_id, channel_name, created_at, connected, oauth_tokens')
+                .eq('user_id', user.id);
 
             if (socialRes.error && socialRes.error.code !== 'PGRST116') {
                 console.error('Error loading social accounts:', socialRes.error);
@@ -154,6 +157,13 @@ export default function SocialMediaAccounts() {
             let nextAccounts = accounts;
 
             socialAccounts.forEach((sa: any) => {
+                let avatarUrl: string | undefined;
+
+                // For YouTube, extract thumbnail from oauth_tokens.channel_info
+                if (sa.platform === 'youtube' && sa.oauth_tokens?.channel_info?.thumbnail) {
+                    avatarUrl = sa.oauth_tokens.channel_info.thumbnail;
+                }
+
                 nextAccounts = nextAccounts.map((acc) =>
                     acc.platform === sa.platform
                         ? {
@@ -162,9 +172,14 @@ export default function SocialMediaAccounts() {
                             displayName: sa.channel_name || acc.displayName,
                             username: sa.channel_id ? `@${sa.channel_id}` : acc.username,
                             connectedAt: sa.created_at || new Date().toISOString(),
-                            followers: sa.subscriber_count || undefined,
-                            postsCount: sa.video_count || undefined,
+                            followers: sa.oauth_tokens?.channel_info?.subscriberCount
+                                ? parseInt(sa.oauth_tokens.channel_info.subscriberCount)
+                                : undefined,
+                            postsCount: sa.oauth_tokens?.channel_info?.videoCount
+                                ? parseInt(sa.oauth_tokens.channel_info.videoCount)
+                                : undefined,
                             channelId: sa.channel_id || undefined,
+                            avatar: avatarUrl,
                         }
                         : acc,
                 );
@@ -276,13 +291,16 @@ export default function SocialMediaAccounts() {
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Avatar
+                                                src={account.platform === 'youtube' && account.connected && account.avatar ? account.avatar : undefined}
                                                 sx={{
                                                     bgcolor: config.color,
                                                     width: 56,
                                                     height: 56,
                                                 }}
                                             >
-                                                <IconComponent sx={{ fontSize: '32px' }} />
+                                                {(!account.avatar || account.platform !== 'youtube' || !account.connected) && (
+                                                    <IconComponent sx={{ fontSize: '32px' }} />
+                                                )}
                                             </Avatar>
                                             <Box>
                                                 <Typography variant="h6" sx={{ color: TEXT.primary, fontWeight: 600 }}>
@@ -296,17 +314,24 @@ export default function SocialMediaAccounts() {
                                             </Box>
                                         </Box>
                                         {account.connected && (
-                                            <Chip
-                                                icon={<CheckCircle sx={{ fontSize: 16 }} />}
-                                                label="Connected"
+                                            <Button
+                                                variant="outlined"
                                                 size="small"
+                                                startIcon={<Delete />}
+                                                onClick={() => handleDisconnect(account.platform)}
                                                 sx={{
-                                                    bgcolor: `${SUCCESS.main}20`,
-                                                    color: SUCCESS.main,
-                                                    border: `1px solid ${SUCCESS.main}`,
+                                                    borderColor: ERROR.main,
+                                                    color: ERROR.main,
+                                                    '&:hover': {
+                                                        borderColor: ERROR.light,
+                                                        bgcolor: `${ERROR.main}20`,
+                                                    },
                                                 }}
-                                            />
+                                            >
+                                                Disconnect
+                                            </Button>
                                         )}
+
                                     </Box>
 
                                     {account.connected ? (
@@ -340,24 +365,7 @@ export default function SocialMediaAccounts() {
                                                     </Box>
                                                 </Box> */}
                                             </Box>
-                                            <Box sx={{ display: 'flex', gap: 1 }}>
-                                                <Button
-                                                    variant="outlined"
-                                                    size="small"
-                                                    startIcon={<Delete />}
-                                                    onClick={() => handleDisconnect(account.platform)}
-                                                    sx={{
-                                                        borderColor: ERROR.main,
-                                                        color: ERROR.main,
-                                                        '&:hover': {
-                                                            borderColor: ERROR.light,
-                                                            bgcolor: `${ERROR.main}20`,
-                                                        },
-                                                    }}
-                                                >
-                                                    Disconnect
-                                                </Button>
-                                            </Box>
+
                                         </>
                                     ) : (
                                         <Button
