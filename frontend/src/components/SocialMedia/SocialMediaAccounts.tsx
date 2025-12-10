@@ -206,7 +206,6 @@ export default function SocialMediaAccounts() {
     };
 
     const handleDisconnect = async (platform: string) => {
-        debugger;
         if (!user) return;
 
         try {

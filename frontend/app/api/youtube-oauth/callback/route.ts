@@ -101,6 +101,14 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase: any = getSupabase();
+    
+    const tokenData = {
+      access_token,
+      refresh_token,
+      expires_at: expires_in ? Date.now() + expires_in * 1000 : null,
+      channel_info: channelInfo,
+      connected_at: new Date().toISOString(),
+    };
 
     if (channelInfo?.channelId) {
       const socialAccountData = {
@@ -108,8 +116,9 @@ export async function GET(request: NextRequest) {
         platform: 'youtube',
         channel_id: channelInfo.channelId,
         channel_name: channelInfo.title || null,
-        updated_at: new Date().toISOString(),
+        oauth_tokens: tokenData,
         connected: true,
+        updated_at: new Date().toISOString(),
       };
 
       const { error: socialAccountError } = await supabase
@@ -126,7 +135,6 @@ export async function GET(request: NextRequest) {
           new URL('/social-media?error=social_account_save_failed', request.url)
         );
       }
-    //   console.log('Social account saved successfully for YouTube:', socialAccountDataResult);
     } else {
       console.warn('No channel info available, skipping social_accounts insert');
     }

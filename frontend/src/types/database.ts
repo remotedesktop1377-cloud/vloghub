@@ -76,6 +76,7 @@ export interface Database {
           channel_title: string | null;
           view_count: number | null;
           like_count: number | null;
+          deleted: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -91,6 +92,7 @@ export interface Database {
           channel_title?: string | null;
           view_count?: number | null;
           like_count?: number | null;
+          deleted?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -106,6 +108,7 @@ export interface Database {
           channel_title?: string | null;
           view_count?: number | null;
           like_count?: number | null;
+          deleted?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -162,9 +165,10 @@ export interface Database {
           platform: string;
           channel_id: string | null;
           channel_name: string | null;
+          oauth_tokens: Record<string, any> | null;
+          connected: boolean;
           created_at: string;
           updated_at: string;
-          connected: boolean;
         };
         Insert: {
           id?: string;
@@ -172,9 +176,10 @@ export interface Database {
           platform: string;
           channel_id?: string | null;
           channel_name?: string | null;
+          oauth_tokens?: Record<string, any> | null;
+          connected?: boolean;
           created_at?: string;
           updated_at?: string;
-          connected?: boolean;
         };
         Update: {
           id?: string;
@@ -182,9 +187,10 @@ export interface Database {
           platform?: string;
           channel_id?: string | null;
           channel_name?: string | null;
+          oauth_tokens?: Record<string, any> | null;
+          connected?: boolean;
           created_at?: string;
           updated_at?: string;
-          connected?: boolean;
         };
       };
 
@@ -213,6 +219,52 @@ export interface Database {
           filters?: Record<string, any> | null;
           results_count?: number | null;
           created_at?: string;
+        };
+      };
+
+      // Published videos table (links Google Drive videos to YouTube videos)
+      published_videos: {
+        Row: {
+          id: string;
+          user_id: string;
+          google_drive_video_id: string;
+          youtube_video_id: string;
+          job_id: string | null;
+          video_name: string | null;
+          youtube_title: string;
+          youtube_url: string;
+          thumbnail_url: string | null;
+          published_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          google_drive_video_id: string;
+          youtube_video_id: string;
+          job_id?: string | null;
+          video_name?: string | null;
+          youtube_title: string;
+          youtube_url: string;
+          thumbnail_url?: string | null;
+          published_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          google_drive_video_id?: string;
+          youtube_video_id?: string;
+          job_id?: string | null;
+          video_name?: string | null;
+          youtube_title?: string;
+          youtube_url?: string;
+          thumbnail_url?: string | null;
+          published_at?: string;
+          created_at?: string;
+          updated_at?: string;
         };
       };
 

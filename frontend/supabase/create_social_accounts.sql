@@ -7,6 +7,8 @@ create table if not exists public.social_accounts (
     platform text not null,               -- e.g. youtube, instagram, tiktok, facebook
     channel_id text,                      -- platform-specific channel/page/profile id
     channel_name text,                    -- platform-specific display name
+    oauth_tokens jsonb,                   -- OAuth tokens (access_token, refresh_token, expires_at, etc.)
+    connected boolean default false,
     created_at timestamptz default now(),
     updated_at timestamptz default now()
 );
