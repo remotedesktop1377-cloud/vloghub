@@ -5,6 +5,42 @@ import io
 from pathlib import Path
 from typing import Dict
 from moviepy import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip, concatenate_videoclips, TextClip
+
+from moviepy.video.fx.AccelDecel import AccelDecel
+from moviepy.video.fx.BlackAndWhite import BlackAndWhite
+from moviepy.video.fx.Blink import Blink
+from moviepy.video.fx.Crop import Crop
+from moviepy.video.fx.CrossFadeIn import CrossFadeIn
+from moviepy.video.fx.CrossFadeOut import CrossFadeOut
+from moviepy.video.fx.EvenSize import EvenSize
+from moviepy.video.fx.FadeIn import FadeIn
+from moviepy.video.fx.FadeOut import FadeOut
+from moviepy.video.fx.Freeze import Freeze
+from moviepy.video.fx.FreezeRegion import FreezeRegion
+from moviepy.video.fx.GammaCorrection import GammaCorrection
+from moviepy.video.fx.HeadBlur import HeadBlur
+from moviepy.video.fx.InvertColors import InvertColors
+from moviepy.video.fx.Loop import Loop
+from moviepy.video.fx.LumContrast import LumContrast
+from moviepy.video.fx.MakeLoopable import MakeLoopable
+from moviepy.video.fx.Margin import Margin
+from moviepy.video.fx.MaskColor import MaskColor
+from moviepy.video.fx.MasksAnd import MasksAnd
+from moviepy.video.fx.MasksOr import MasksOr
+from moviepy.video.fx.MirrorX import MirrorX
+from moviepy.video.fx.MirrorY import MirrorY
+from moviepy.video.fx.MultiplyColor import MultiplyColor
+from moviepy.video.fx.MultiplySpeed import MultiplySpeed
+from moviepy.video.fx.Painting import Painting
+from moviepy.video.fx.Resize import Resize
+from moviepy.video.fx.Rotate import Rotate
+from moviepy.video.fx.Scroll import Scroll
+from moviepy.video.fx.SlideIn import SlideIn
+from moviepy.video.fx.SlideOut import SlideOut
+from moviepy.video.fx.SuperSample import SuperSample
+from moviepy.video.fx.TimeMirror import TimeMirror
+from moviepy.video.fx.TimeSymmetrize import TimeSymmetrize
+
 from PIL import Image
 import numpy as np
 from backend.utils.helperFunctions import HelperFunctions
@@ -603,7 +639,7 @@ def process_scene(
         # IMPORTANT: Use scene-relative timestamps (0 to scene_duration)
         # The narration text is for this scene only, so timestamps should be 0-based
         for keyword_data in keywords_selected:
-            keyword = keyword_data.get("modifiedKeyword") or keyword_data.get("suggestedKeyword", "")
+            keyword = keyword_data.get("suggestedKeyword", "")
             media_url = keyword_data.get("media", {}).get("highResMedia", "")
             text_overlay = keyword_data.get("textOverlay")
             
@@ -916,9 +952,66 @@ def process_scene(
         
         # If segments were created, use them (same as manual processing)
         if segments:
-            # Concatenate all segments (same as manual processing)
-            print("Concatenating video segments with keyword images (and/or gamma preview)...")
-            final_scene = concatenate_videoclips(segments, method="compose")
+            # Get transition settings from scene settings
+            transition_effect = scene_settings.get("videoTransitionEffect", {})
+            transition_type = transition_effect.get("id", "fade_dissolve") if isinstance(transition_effect, dict) else "fade_dissolve"
+            transition_duration = transition_effect.get("duration", 1.0) if isinstance(transition_effect, dict) else 1.0
+            
+            # Apply transitions between segments if there are multiple segments
+            if len(segments) > 1 and transition_type and transition_type != 'none':
+                print(f"Applying transitions between segments (type: {transition_type}, duration: {transition_duration}s)...")
+                transitioned_segments = []
+                
+                for i, segment in enumerate(segments):
+                    # Apply transition based on type
+                    if transition_type == 'fade_in':
+                        if i == 0:
+                            fade_in = FadeIn(duration=min(transition_duration, segment.duration * 0.5))
+                            segment = fade_in.apply(segment)
+                    elif transition_type == 'fade_out':
+                        if i == len(segments) - 1:
+                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
+                            segment = fade_out.apply(segment)
+                    elif transition_type in ['fade_dissolve', 'cross_dissolve']:
+                        # Apply fade-in to first segment
+                        if i == 0 and len(segments) > 1:
+                            fade_in = FadeIn(duration=min(transition_duration, segment.duration * 0.5))
+                            segment = fade_in.apply(segment)
+                        # Apply fade-out to last segment
+                        if i == len(segments) - 1 and len(segments) > 1:
+                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
+                            segment = fade_out.apply(segment)
+                        # Apply both fade-in and fade-out to middle segments
+                        elif i > 0 and i < len(segments) - 1:
+                            fade_in = FadeIn(duration=min(transition_duration, segment.duration * 0.5))
+                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
+                            segment = fade_in.apply(segment)
+                            segment = fade_out.apply(segment)
+                    elif transition_type == 'fade_to_black':
+                        if i == len(segments) - 1:
+                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
+                            segment = fade_out.apply(segment)
+                    elif transition_type.startswith('slide_in_'):
+                        side = transition_type.replace('slide_in_', '')
+                        if i == 0:
+                            slide_in = SlideIn(duration=min(transition_duration, segment.duration * 0.5), side=side)
+                            # SlideIn needs to be in a CompositeVideoClip
+                            segment = CompositeVideoClip([slide_in.apply(segment)], size=segment.size)
+                    elif transition_type.startswith('slide_out_'):
+                        side = transition_type.replace('slide_out_', '')
+                        if i == len(segments) - 1:
+                            slide_out = SlideOut(duration=min(transition_duration, segment.duration * 0.5), side=side)
+                            # SlideOut needs to be in a CompositeVideoClip
+                            segment = CompositeVideoClip([slide_out.apply(segment)], size=segment.size)
+                    
+                    transitioned_segments.append(segment)
+                
+                print("Concatenating video segments with transitions...")
+                final_scene = concatenate_videoclips(transitioned_segments, method="compose")
+            else:
+                # Concatenate all segments (same as manual processing)
+                print("Concatenating video segments with keyword images (and/or gamma preview)...")
+                final_scene = concatenate_videoclips(segments, method="compose")
         else:
             # No keyword images, use original composite_layers approach
             # Add logo to composite_layers if not already added
@@ -1145,10 +1238,73 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
         
         print(f"Scene {idx + 1} saved to: {scene_output_path}")
     
-    # Concatenate all scenes for final combined video
+    # Concatenate all scenes for final combined video with transitions
     print("Concatenating all scenes for final video...")
     scene_clips = [VideoFileClip(path) for path in scene_videos]
-    final_video = concatenate_videoclips(scene_clips, method="compose")
+    
+    # Get transition settings from project or first scene
+    project_settings = project_data.get("project", {}).get("projectSettings", {})
+    transition_effect = project_settings.get("videoTransitionEffect", {})
+    if not transition_effect and scenes:
+        first_scene_settings = scenes[0].get("sceneSettings", {})
+        transition_effect = first_scene_settings.get("videoTransitionEffect", {})
+    
+    transition_type = transition_effect.get("id", "fade_dissolve") if isinstance(transition_effect, dict) else "fade_dissolve"
+    transition_duration = transition_effect.get("duration", 1.5) if isinstance(transition_effect, dict) else 1.5
+    
+    # Apply transitions between scenes if there are multiple scenes
+    if len(scene_clips) > 1 and transition_type and transition_type != 'none':
+        print(f"Applying transitions between scenes (type: {transition_type}, duration: {transition_duration}s)...")
+        transitioned_scenes = []
+        
+        for i, clip in enumerate(scene_clips):
+            # Apply transition based on type
+            if transition_type == 'fade_in':
+                if i == 0:
+                    fade_in = FadeIn(duration=min(transition_duration, clip.duration * 0.5))
+                    clip = fade_in.apply(clip)
+            elif transition_type == 'fade_out':
+                if i == len(scene_clips) - 1:
+                    fade_out = FadeOut(duration=min(transition_duration, clip.duration * 0.5))
+                    clip = fade_out.apply(clip)
+            elif transition_type in ['fade_dissolve', 'cross_dissolve']:
+                # Apply fade-in to first scene
+                if i == 0 and len(scene_clips) > 1:
+                    fade_in = FadeIn(duration=min(transition_duration, clip.duration * 0.5))
+                    clip = fade_in.apply(clip)
+                # Apply fade-out to last scene
+                if i == len(scene_clips) - 1 and len(scene_clips) > 1:
+                    fade_out = FadeOut(duration=min(transition_duration, clip.duration * 0.5))
+                    clip = fade_out.apply(clip)
+                # Apply both fade-in and fade-out to middle scenes
+                elif i > 0 and i < len(scene_clips) - 1:
+                    fade_in = FadeIn(duration=min(transition_duration, clip.duration * 0.5))
+                    fade_out = FadeOut(duration=min(transition_duration, clip.duration * 0.5))
+                    clip = fade_in.apply(clip)
+                    clip = fade_out.apply(clip)
+            elif transition_type == 'fade_to_black':
+                if i == len(scene_clips) - 1:
+                    fade_out = FadeOut(duration=min(transition_duration, clip.duration * 0.5))
+                    clip = fade_out.apply(clip)
+            elif transition_type.startswith('slide_in_'):
+                side = transition_type.replace('slide_in_', '')
+                if i == 0:
+                    slide_in = SlideIn(duration=min(transition_duration, clip.duration * 0.5), side=side)
+                    # SlideIn needs to be in a CompositeVideoClip
+                    clip = CompositeVideoClip([slide_in.apply(clip)], size=(clip.w, clip.h))
+            elif transition_type.startswith('slide_out_'):
+                side = transition_type.replace('slide_out_', '')
+                if i == len(scene_clips) - 1:
+                    slide_out = SlideOut(duration=min(transition_duration, clip.duration * 0.5), side=side)
+                    # SlideOut needs to be in a CompositeVideoClip
+                    clip = CompositeVideoClip([slide_out.apply(clip)], size=(clip.w, clip.h))
+            
+            transitioned_scenes.append(clip)
+        
+        print("Concatenating scenes with transitions...")
+        final_video = concatenate_videoclips(transitioned_scenes, method="compose")
+    else:
+        final_video = concatenate_videoclips(scene_clips, method="compose")
     
     # Write final combined video
     print(f"Saving final combined video to: {output_path}")

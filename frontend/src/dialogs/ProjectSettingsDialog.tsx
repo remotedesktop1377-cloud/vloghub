@@ -18,6 +18,7 @@ import {
     Visibility as ViewIcon,
     Delete as DeleteIcon,
     Refresh as RefreshIcon,
+    Check as CheckIcon,
 } from '@mui/icons-material';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
@@ -30,6 +31,257 @@ interface ProjectSettingsContext {
     mode: 'project' | 'scene';
     sceneIndex?: number;
 }
+
+// Transition Effects Grid Component
+interface TransitionEffectsGridProps {
+    selectedTransitionId?: string;
+    onSelect: (transitionEffect: SettingItemInterface) => void;
+}
+
+const TransitionEffectsGrid: React.FC<TransitionEffectsGridProps> = ({ selectedTransitionId, onSelect }) => {
+    const transitions = [
+        { id: 'fade_dissolve', name: 'Fade Dissolve', type: 'fade', direction: 'in-out', duration: 1.5 },
+        { id: 'fade_in', name: 'Fade In', type: 'fade', direction: 'in', duration: 1.0 },
+        { id: 'fade_out', name: 'Fade Out', type: 'fade', direction: 'out', duration: 1.0 },
+        { id: 'fade_to_black', name: 'Fade to Black', type: 'fade', direction: 'to-black', duration: 2.0 },
+        { id: 'slide_in_left', name: 'Slide In Left', type: 'slide', direction: 'left', duration: 1.0 },
+        { id: 'slide_in_right', name: 'Slide In Right', type: 'slide', direction: 'right', duration: 1.0 },
+        { id: 'slide_in_top', name: 'Slide In Top', type: 'slide', direction: 'top', duration: 1.0 },
+        { id: 'slide_in_bottom', name: 'Slide In Bottom', type: 'slide', direction: 'bottom', duration: 1.0 },
+        { id: 'slide_out_left', name: 'Slide Out Left', type: 'slide', direction: 'out-left', duration: 1.0 },
+        { id: 'slide_out_right', name: 'Slide Out Right', type: 'slide', direction: 'out-right', duration: 1.0 },
+        { id: 'slide_out_top', name: 'Slide Out Top', type: 'slide', direction: 'out-top', duration: 1.0 },
+        { id: 'slide_out_bottom', name: 'Slide Out Bottom', type: 'slide', direction: 'out-bottom', duration: 1.0 },
+        { id: 'cross_dissolve', name: 'Cross Dissolve', type: 'fade', direction: 'cross', duration: 1.5 },
+        { id: 'none', name: 'None', type: 'none', direction: '', duration: 0 },
+        { id: '', name: '', type: 'empty', direction: '', duration: 0 },
+        { id: '', name: '', type: 'empty', direction: '', duration: 0 },
+    ];
+
+    const getAnimationClass = (transition: typeof transitions[0]) => {
+        if (transition.type === 'empty') return '';
+        if (transition.type === 'none') return 'transition-none';
+        if (transition.type === 'fade') {
+            if (transition.direction === 'in') return 'transition-fade-in';
+            if (transition.direction === 'out') return 'transition-fade-out';
+            if (transition.direction === 'in-out') return 'transition-fade-in-out';
+            if (transition.direction === 'to-black') return 'transition-fade-to-black';
+            if (transition.direction === 'cross') return 'transition-cross-dissolve';
+        }
+        if (transition.type === 'slide') {
+            if (transition.direction === 'left') return 'transition-slide-in-left';
+            if (transition.direction === 'right') return 'transition-slide-in-right';
+            if (transition.direction === 'top') return 'transition-slide-in-top';
+            if (transition.direction === 'bottom') return 'transition-slide-in-bottom';
+            if (transition.direction === 'out-left') return 'transition-slide-out-left';
+            if (transition.direction === 'out-right') return 'transition-slide-out-right';
+            if (transition.direction === 'out-top') return 'transition-slide-out-top';
+            if (transition.direction === 'out-bottom') return 'transition-slide-out-bottom';
+        }
+        return '';
+    };
+
+    return (
+        <>
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes fadeOut {
+                    from { opacity: 1; }
+                    to { opacity: 0; }
+                }
+                @keyframes fadeInOut {
+                    0%, 100% { opacity: 0; }
+                    50% { opacity: 1; }
+                }
+                @keyframes fadeToBlack {
+                    0% { opacity: 1; }
+                    50%, 100% { opacity: 0; background: #000; }
+                }
+                @keyframes crossDissolve {
+                    0% { opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { opacity: 0; }
+                }
+                @keyframes slideInLeft {
+                    from { transform: translateX(-100%); }
+                    to { transform: translateX(0); }
+                }
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(0); }
+                }
+                @keyframes slideInTop {
+                    from { transform: translateY(-100%); }
+                    to { transform: translateY(0); }
+                }
+                @keyframes slideInBottom {
+                    from { transform: translateY(100%); }
+                    to { transform: translateY(0); }
+                }
+                @keyframes slideOutLeft {
+                    from { transform: translateX(0); }
+                    to { transform: translateX(-100%); }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); }
+                    to { transform: translateX(100%); }
+                }
+                @keyframes slideOutTop {
+                    from { transform: translateY(0); }
+                    to { transform: translateY(-100%); }
+                }
+                @keyframes slideOutBottom {
+                    from { transform: translateY(0); }
+                    to { transform: translateY(100%); }
+                }
+                .transition-preview-box {
+                    width: 100%;
+                    height: 100%;
+                    position: relative;
+                    overflow: hidden;
+                    border-radius: 4px;
+                }
+                .transition-fade-in {
+                    animation: fadeIn 2s ease-in-out infinite;
+                }
+                .transition-fade-out {
+                    animation: fadeOut 2s ease-in-out infinite;
+                }
+                .transition-fade-in-out {
+                    animation: fadeInOut 3s ease-in-out infinite;
+                }
+                .transition-fade-to-black {
+                    animation: fadeToBlack 3s ease-in-out infinite;
+                }
+                .transition-cross-dissolve {
+                    animation: crossDissolve 3s ease-in-out infinite;
+                }
+                .transition-slide-in-left {
+                    animation: slideInLeft 2s ease-in-out infinite;
+                }
+                .transition-slide-in-right {
+                    animation: slideInRight 2s ease-in-out infinite;
+                }
+                .transition-slide-in-top {
+                    animation: slideInTop 2s ease-in-out infinite;
+                }
+                .transition-slide-in-bottom {
+                    animation: slideInBottom 2s ease-in-out infinite;
+                }
+                .transition-slide-out-left {
+                    animation: slideOutLeft 2s ease-in-out infinite;
+                }
+                .transition-slide-out-right {
+                    animation: slideOutRight 2s ease-in-out infinite;
+                }
+                .transition-slide-out-top {
+                    animation: slideOutTop 2s ease-in-out infinite;
+                }
+                .transition-slide-out-bottom {
+                    animation: slideOutBottom 2s ease-in-out infinite;
+                }
+                .transition-none {
+                    opacity: 1;
+                }
+            `}</style>
+            <Grid container spacing={1.5}>
+                {transitions.map((transition) => {
+                    if (transition.type === 'empty') {
+                        return <Grid item xs={3} key={`empty-${transitions.indexOf(transition)}`} />;
+                    }
+                    const isSelected = selectedTransitionId === transition.id;
+                    return (
+                        <Grid item xs={3} key={transition.id}>
+                            <Box
+                                onClick={() => {
+                                    if (transition.id) {
+                                        onSelect({
+                                            id: transition.id,
+                                            name: transition.name,
+                                            duration: transition.duration,
+                                        } as SettingItemInterface);
+                                    }
+                                }}
+                                sx={{
+                                    position: 'relative',
+                                    cursor: transition.id ? 'pointer' : 'default',
+                                    border: isSelected ? '2px solid' : '1px solid',
+                                    borderColor: isSelected ? 'primary.main' : 'divider',
+                                    borderRadius: 2,
+                                    overflow: 'hidden',
+                                    aspectRatio: '1',
+                                    bgcolor: 'background.default',
+                                    transition: 'all 0.2s',
+                                    '&:hover': transition.id ? {
+                                        borderColor: 'primary.main',
+                                        transform: 'scale(1.02)',
+                                    } : {},
+                                }}
+                            >
+                                {transition.id && (
+                                    <>
+                                        <Box
+                                            className={`transition-preview-box ${getAnimationClass(transition)}`}
+                                            sx={{
+                                                width: '100%',
+                                                height: '100%',
+                                                bgcolor: transition.direction === 'to-black' ? '#000' : 'primary.light',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        />
+                                        {isSelected && (
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 4,
+                                                    right: 4,
+                                                    bgcolor: 'primary.main',
+                                                    borderRadius: '50%',
+                                                    width: 24,
+                                                    height: 24,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    zIndex: 1,
+                                                }}
+                                            >
+                                                <CheckIcon sx={{ color: 'white', fontSize: 16 }} />
+                                            </Box>
+                                        )}
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                position: 'absolute',
+                                                bottom: 2,
+                                                left: 4,
+                                                right: 4,
+                                                textAlign: 'center',
+                                                fontSize: '0.7rem',
+                                                fontWeight: 500,
+                                                color: 'black',
+                                                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                                                px: 0.5,
+                                                py: 0.25,
+                                                borderRadius: 1,
+                                            }}
+                                        >
+                                            {transition.name}
+                                        </Typography>
+                                    </>
+                                )}
+                            </Box>
+                        </Grid>
+                    );
+                })}
+            </Grid>
+        </>
+    );
+};
 
 interface ProjectSettingsDialogProps {
     open: boolean;
@@ -621,124 +873,19 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             borderColor: 'divider',
                             borderRadius: 2,
                             p: 2,
-                            backgroundColor: 'background.paper',
+                            // backgroundColor: 'background.paper',
                             minHeight: 320,
-                            maxHeight: 320,
-
                         }}>
-                            {transitionEffects.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', py: 4 }}>
-                                    <Typography variant="body2" color="text.secondary">No transition effects available</Typography>
-                                </Box>
-                            ) : (
-                                <TextField
-                                    select
-                                    fullWidth
-                                    size="small"
-                                    value={isProjectSettings ? projectSettings?.videoTransitionEffect?.id : sceneSettings?.videoTransitionEffect?.id}
-                                    onChange={(e) => {
-                                        const transitionEffectObj = transitionEffects.find(te => te.id === e.target.value);
-                                        if (transitionEffectObj) {
-                                            if (isProjectSettings) {
-                                                setProjectSettings({ ...projectSettings, videoTransitionEffect: transitionEffectObj as SettingItemInterface } as Settings);
-                                            } else {
-                                                setSceneSettings({ ...sceneSettings, videoTransitionEffect: transitionEffectObj as SettingItemInterface } as Settings);
-                                            }
-                                        }
-                                    }}
-                                    SelectProps={{ native: true }}
-                                >
-                                    <option value="">Select a transition effect</option>
-                                    {transitionEffects.map((transitionEffect) => (
-                                        <option key={transitionEffect.id} value={transitionEffect.id}>
-                                            {transitionEffect.name}
-                                        </option>
-                                    ))}
-                                </TextField>
-                            )}
-                            {(isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect) && (
-                                <Box sx={{ mt: 2 }}>
-                                    <Box sx={{
-                                        position: 'relative',
-                                        width: '100%',
-                                        height: 180,
-                                        borderRadius: 2,
-                                        overflow: 'hidden',
-                                        border: '1px solid rgba(255,255,255,0.15)',
-                                        bgcolor: '#000'
-                                    }}>
-                                        {transitionVideoError ? (
-                                            // Show error message with external link option
-                                            <Box sx={{
-                                                width: '100%',
-                                                height: '100%',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 2,
-                                                p: 2,
-                                                bgcolor: 'rgba(0,0,0,0.8)'
-                                            }}>
-                                                <Typography variant="body2" color="error" sx={{ textAlign: 'center' }}>
-                                                    Video cannot be played in browser
-                                                </Typography>
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={() => window.open(isProjectSettings ? projectSettings?.videoTransitionEffect?.webViewLink : sceneSettings?.videoTransitionEffect?.webViewLink, '_blank')}
-                                                    startIcon={<PlayIcon />}
-                                                    sx={{ textTransform: 'none' }}
-                                                >
-                                                    Open in Google Drive
-                                                </Button>
-                                            </Box>
-                                        ) : (
-                                            <>
-                                                <video
-                                                    ref={transitionVideoRef}
-                                                    src={getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect)}
-                                                    muted
-                                                    autoPlay
-                                                    loop
-                                                    onError={handleTransitionVideoError}
-                                                    onLoadStart={handleTransitionVideoLoadStart}
-                                                    onLoadedData={handleTransitionVideoLoaded}
-                                                    onCanPlay={handleTransitionVideoLoaded}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
-                                                >
-                                                    Your browser does not support the video tag.
-                                                </video>
-                                                {transitionVideoLoading && (
-                                                    <Box sx={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        bgcolor: 'rgba(0,0,0,0.5)'
-                                                    }}>
-                                                        <CircularProgress size={24} sx={{ color: 'white' }} />
-                                                    </Box>
-                                                )}
-                                            </>
-                                        )}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                                        {(isProjectSettings ? projectSettings?.videoTransitionEffect?.webViewLink : sceneSettings?.videoTransitionEffect?.webViewLink) && (
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                onClick={() => window.open(isProjectSettings ? projectSettings?.videoTransitionEffect?.webViewLink : sceneSettings?.videoTransitionEffect?.webViewLink, '_blank')}
-                                                sx={{ textTransform: 'none', fontSize: '1.25rem', py: 0.25, px: 1 }}
-                                                startIcon={<PlayIcon fontSize="small" />}
-                                            >
-                                                Open in Drive
-                                            </Button>
-                                        )}
-                                    </Box>
-                                </Box>
-                            )}
+                            <TransitionEffectsGrid
+                                selectedTransitionId={isProjectSettings ? projectSettings?.videoTransitionEffect?.id : sceneSettings?.videoTransitionEffect?.id}
+                                onSelect={(transitionEffect) => {
+                                    if (isProjectSettings) {
+                                        setProjectSettings({ ...projectSettings, videoTransitionEffect: transitionEffect as SettingItemInterface } as Settings);
+                                    } else {
+                                        setSceneSettings({ ...sceneSettings, videoTransitionEffect: transitionEffect as SettingItemInterface } as Settings);
+                                    }
+                                }}
+                            />
                         </Box>
                     </Grid>
 
