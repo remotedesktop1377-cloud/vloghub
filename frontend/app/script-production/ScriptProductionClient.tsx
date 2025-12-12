@@ -414,7 +414,7 @@ const ScriptProductionClient = () => {
                     gammaGenId: sceneData?.gammaGenId || '',
                     gammaUrl: sceneData?.gammaUrl || '',
                     previewImage: sceneData?.gammaPreviewImage || '',
-                    clip: sceneData?.clip || '',
+                    previewClip: sceneData?.previewClip || '',
                     sceneSettings: {
                         videoLogo: sceneData.sceneSettings?.videoLogo as LogoOverlayInterface,
                         videoTransitionEffect: sceneData.sceneSettings?.videoTransitionEffect as SettingItemInterface,
@@ -571,21 +571,21 @@ const ScriptProductionClient = () => {
                         words: ch.words ?? scriptData.scenesData![index]?.words ?? 0,
                         startTime: ch.startTime ?? scriptData.scenesData![index]?.startTime ?? 0,
                         endTime: ch.endTime ?? scriptData.scenesData![index]?.endTime ?? 0,
-                        durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,
+                        durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,                        
+                        gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
+                        previewClip: ch.previewClip || scriptData.scenesData![index]?.previewClip || '',
                         highlightedKeywords: ch.highlightedKeywords ?? [],
                         keywordsSelected: ch.keywordsSelected ?? {},
                         assets: {
                             images: ch.assets?.images || [],
                             clips: ch.assets?.clips || [],
                         },
-                        gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
                         sceneSettings: ch.sceneSettings || scriptData.scenesData![index]?.sceneSettings || {
                             videoLogo: ch.sceneSettings?.videoLogo || scriptData.scenesData![index]?.sceneSettings?.videoLogo || '',
                             videoTransitionEffect: ch.sceneSettings?.videoTransitionEffect || scriptData.scenesData![index]?.sceneSettings?.videoTransitionEffect || '',
                             videoBackgroundMusic: ch.sceneSettings?.videoBackgroundMusic || scriptData.scenesData![index]?.sceneSettings?.videoBackgroundMusic || '',
                             videoBackgroundVideo: ch.sceneSettings?.videoBackgroundVideo || scriptData.scenesData![index]?.sceneSettings?.videoBackgroundVideo || '',
                         },
-                        clip: ch.clip || scriptData.scenesData![index]?.clip || '',
                     }));
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
 

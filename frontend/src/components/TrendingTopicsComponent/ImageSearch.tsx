@@ -245,7 +245,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
             const data = await response.json();
             const clipsWithSource = (data.clips || []).map((clip: any) => ({
-                id: clip.id || clip.url,
+                id: `${(data.clips || []).indexOf(clip) + 1}`,
                 url: clip.url,
                 thumbnail: clip.thumbnail || clip.url,
                 title: clip.title || 'Clip',
@@ -498,15 +498,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         // Single selection across tabs
         const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value || selectedBySource.envatoClips.values().next().value || selectedBySource.upload.values().next().value;
         if (selectedUrl) {
-            const isGoogle = selectedBySource.google.size === 1 && selectedBySource.google.has(selectedUrl);
-            const isEnvato = selectedBySource.envato.size === 1 && selectedBySource.envato.has(selectedUrl);
-            const isEnvatoClip = selectedBySource.envatoClips.size === 1 && selectedBySource.envatoClips.has(selectedUrl);
-            const isUpload = selectedBySource.upload.size === 1 && selectedBySource.upload.has(selectedUrl);
             const updatedSceneData: any = {
                 assets: {
-                    images: [selectedUrl],
-                    imagesGoogle: isGoogle ? [selectedUrl] : [],
-                    imagesEnvato: isEnvato ? [selectedUrl] : []
+                    images: HelperFunctions.isVideoUrl(selectedUrl) ? [] : [selectedUrl],
+                    clips: HelperFunctions.isVideoUrl(selectedUrl) ? [selectedUrl] : [],
                 }
             };
             if (currentKeywordForMapping) {
@@ -549,7 +544,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 // Non-fatal; continue
             }
             onSceneDataUpdate(SceneDataIndex, updatedSceneData);
-            HelperFunctions.showSuccess('1 image selected for SceneData');
+            HelperFunctions.showSuccess(HelperFunctions.isVideoUrl(selectedUrl) ? '1 video clip selected for SceneData' : '1 image selected for SceneData');
             if (onDoneWithSelected) {
                 const typed = (searchQuery || '').trim();
                 const mk = (currentKeywordForMapping && typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) ? typed : undefined;

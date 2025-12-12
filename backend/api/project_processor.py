@@ -11,7 +11,7 @@ from backend.utils.helperFunctions import HelperFunctions
 from rembg import remove, new_session
 from backend.api.compress_video import compress_video
 
-def download_media(url_or_path: str, output_path: Path, is_video: bool = False) -> str:
+def download_media(url_or_path: str, output_path: Path, is_video: bool) -> str:
     """
     Download media from URL or use local path.
     
@@ -77,13 +77,99 @@ def download_media(url_or_path: str, output_path: Path, is_video: bool = False) 
         
         print(f"Downloaded media from {url_or_path} to {output_path}")
         
+        # Check if it's an audio file (mp3, wav, etc.)
+        is_audio = str(output_path).lower().endswith(('.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.wma'))
+        content_type = response.headers.get('Content-Type', '').lower()
+        is_audio_by_type = 'audio' in content_type
+        
+        import time
+        time.sleep(0.2)
+        file_size = output_path.stat().st_size
+        if file_size == 0:
+            raise ValueError(f"Downloaded file is empty: {output_path}")
+        
+        # Handle audio files
+        if is_audio or is_audio_by_type:
+            print(f"✅ Audio file downloaded: {output_path} (size: {file_size} bytes, Content-Type: {content_type})")
+        
+        # Handle video files
+        elif is_video:
+            # Video validation happens below
+            pass
+        
+        # Handle image files - only validate if it's actually an image
+        else:
+            # Check if it's actually an image by file extension
+            is_image_file = str(output_path).lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff', '.tif'))
+            is_image_by_type = content_type.startswith('image/')
+            
+            if is_image_file or is_image_by_type:
+                try:
+                    print(f"✅ Image file found: {url_or_path}")
+                    test_img = Image.open(output_path)
+                    test_img.verify()
+                    img_format = test_img.format
+                    test_img.close()
+                    print(f"✅ Image file validated: {output_path} (size: {file_size} bytes, format: {img_format})")
+                except Exception as e:
+                    print(f"⚠️ Warning: Downloaded image file may be corrupted or invalid: {e}")
+                    print(f"File size: {file_size} bytes")
+                    print(f"Content-Type from response: {content_type}")
+                    
+                    if output_path.exists():
+                        try:
+                            with open(output_path, 'rb') as f:
+                                first_bytes = f.read(100)
+                                print(f"First 100 bytes (hex): {first_bytes.hex()}")
+                                print(f"First 100 bytes (text): {first_bytes[:50]}")
+                        except Exception:
+                            pass
+                    
+                    print("Attempting to re-download...")
+                    if output_path.exists():
+                        output_path.unlink()
+                    
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Referer': 'https://www.google.com/',
+                        'Connection': 'keep-alive',
+                        'Upgrade-Insecure-Requests': '1'
+                    }
+                    response = requests.get(url_or_path, headers=headers, timeout=120, stream=True)
+                    response.raise_for_status()
+                    
+                    content_type = response.headers.get('Content-Type', '').lower()
+                    if not content_type.startswith('image/'):
+                        print(f"⚠️ Warning: Content-Type is not an image: {content_type}")
+                    
+                    with open(output_path, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    
+                    time.sleep(0.2)
+                    file_size = output_path.stat().st_size
+                    if file_size == 0:
+                        raise ValueError(f"Re-downloaded image file is still empty: {output_path}")
+                    
+                    try:
+                        test_img = Image.open(output_path)
+                        test_img.verify()
+                        test_img.close()
+                        print(f"✅ Image file re-downloaded and validated: {output_path} (size: {file_size} bytes)")
+                    except Exception as e2:
+                        raise ValueError(f"Re-downloaded image file is still invalid: {e2}. Original error: {e}")
+            else:
+                print(f"✅ Non-image, non-video, non-audio file downloaded: {output_path} (size: {file_size} bytes, Content-Type: {content_type})")
+        
         # Validate video file if it's a video
         if is_video:
             # Wait a moment to ensure file is fully written
-            import time
             time.sleep(0.5)
             
-            # Check file size
+            # Re-check file size for video (in case it changed or wasn't set)
             file_size = output_path.stat().st_size
             if file_size == 0:
                 raise ValueError(f"Downloaded video file is empty: {output_path}")
@@ -480,7 +566,7 @@ def process_scene(
         logo_position = logo_settings.get("position", "top-right")
         
         logo_local = temp_dir / f"logo_scene_{scene_index}.png"
-        logo_path = download_media(logo_url, logo_local)
+        logo_path = download_media(logo_url, logo_local, is_video=False)
         
         # Load and resize logo
         logo_img = Image.open(logo_path)
@@ -577,7 +663,7 @@ def process_scene(
                         })
                         print(f"✓ Text overlay '{text_overlay.get('text', '')}' for keyword '{keyword}' found at timestamps: {scene_relative_timestamps}")
                     else:
-                        print(f"[DEBUG] All timestamps were out of bounds, using scene start")
+                        print("[DEBUG] All timestamps were out of bounds, using scene start")
                         text_overlay_mappings.append({
                             "textOverlay": text_overlay,
                             "timestamps": [0.0],
@@ -653,16 +739,23 @@ def process_scene(
     if keyword_image_mappings:
         print(f"Adding {len(keyword_image_mappings)} keyword images...")
         
-        # Download keyword images
+        # Download keyword images and videos
         downloaded_images = {}
         for mapping in keyword_image_mappings:
             image_url = mapping["image"]
+            is_video = HelperFunctions.is_video_url(image_url)
+            
             if image_url not in downloaded_images:
-                image_local = temp_dir / f"keyword_img_{len(downloaded_images)}_scene_{scene_index}.jpg"
-                image_path = download_media(image_url, image_local)
+                if is_video:
+                    image_local = temp_dir / f"keyword_vid_{len(downloaded_images)}_scene_{scene_index}.mp4"
+                else:
+                    image_local = temp_dir / f"keyword_img_{len(downloaded_images)}_scene_{scene_index}.jpg"
+                print(f"Downloading media. URL: {image_url} → Local path: {image_local} (is_video={is_video})")
+                image_path = download_media(image_url, image_local, is_video)
                 downloaded_images[image_url] = image_path
+            
             mapping["image_path"] = downloaded_images[image_url]
-        
+            mapping["is_video"] = is_video  
         # Create timeline for keyword images (same as manual processing)
         # Structure: {start_time: (end_time, image_path)}
         image_timeline = {}
@@ -670,6 +763,7 @@ def process_scene(
         
         for mapping in keyword_image_mappings:
             image_path = mapping["image_path"]
+            is_video = mapping.get("is_video", False)
             timestamps = mapping.get("timestamps", [])
             
             # Add to timeline for each timestamp
@@ -679,11 +773,11 @@ def process_scene(
                 
                 # If there's already an image at this time, keep the later one (or extend)
                 if start_time in image_timeline:
-                    existing_end = image_timeline[start_time][0]
+                    existing_end, existing_path, existing_is_video = image_timeline[start_time]
                     if end_time > existing_end:
-                        image_timeline[start_time] = (end_time, image_path)
+                        image_timeline[start_time] = (end_time, image_path, is_video)
                 else:
-                    image_timeline[start_time] = (end_time, image_path)
+                    image_timeline[start_time] = (end_time, image_path, is_video)
         
         # Sort timeline by start time (same as manual processing)
         sorted_timeline = sorted(image_timeline.items())
@@ -692,7 +786,7 @@ def process_scene(
         segments = []
         current_time = 0.0
         
-        for start_time, (end_time, image_path) in sorted_timeline:
+        for start_time, (end_time, image_path, is_video) in sorted_timeline:
             # Add segment before this image (if any)
             if current_time < start_time:
                 segment_duration = start_time - current_time
@@ -715,33 +809,67 @@ def process_scene(
                 segment_clip = CompositeVideoClip(segment_layers, size=video_size)
                 segments.append(segment_clip)
             
-            # Add segment with keyword image background (same as manual processing)
+            # Add segment with keyword image/video background (same as manual processing)
             if start_time < scene_duration:
                 segment_duration = min(end_time, scene_duration) - start_time
                 
-                # Load and prepare keyword image
-                img = Image.open(image_path)
-                # Convert RGBA to RGB if necessary
-                if img.mode == 'RGBA':
-                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-                    rgb_img.paste(img, mask=img.split()[3])
-                    img = rgb_img
-                elif img.mode != 'RGB':
-                    img = img.convert('RGB')
-                img = img.resize(video_size, Image.Resampling.LANCZOS)
+                # Double-check if it's a video by file extension (in case is_video flag wasn't set correctly)
+                is_video_file = str(image_path).lower().endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'))
+                print(f"[DEBUG] Processing media at {start_time:.2f}s: path={image_path}, is_video={is_video}, is_video_file={is_video_file}")
                 
-                # Save resized image as temporary file
-                img_path_temp = str(temp_dir / f"temp_keyword_bg_{start_time:.2f}_scene_{scene_index}.png")
-                img.save(img_path_temp)
+                if is_video or is_video_file:
+                    if not is_video:
+                        print(f"⚠️ Warning: is_video flag was False but file extension indicates video: {image_path}. Correcting...")
+                    is_video = True
                 
-                # Create background image clip for this segment
-                bg_img_clip = ImageClip(img_path_temp, duration=segment_duration)
+                if is_video:
+                    # Handle video background
+                    print(f"Using video background: {image_path} for segment {start_time:.2f}s - {end_time:.2f}s")
+                    bg_video_clip_keyword = VideoFileClip(image_path)
+                    bg_video_clip_keyword = bg_video_clip_keyword.resized(new_size=(video_size[0], video_size[1]))
+                    
+                    # Loop or trim video to match segment duration
+                    if bg_video_clip_keyword.duration < segment_duration:
+                        loops_needed = int(np.ceil(segment_duration / bg_video_clip_keyword.duration))
+                        bg_clips = [bg_video_clip_keyword] * loops_needed
+                        bg_video_clip_keyword = concatenate_videoclips(bg_clips, method="compose")
+                    
+                    # Trim to exact segment duration
+                    bg_video_clip_keyword = bg_video_clip_keyword.subclipped(0, segment_duration)
+                    bg_media_clip = bg_video_clip_keyword
+                else:
+                    # Handle image background
+                    try:
+                        img = Image.open(image_path)
+                        # Convert RGBA to RGB if necessary
+                        if img.mode == 'RGBA':
+                            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                            rgb_img.paste(img, mask=img.split()[3])
+                            img = rgb_img
+                        elif img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        img = img.resize(video_size, Image.Resampling.LANCZOS)
+                        
+                        # Save resized image as temporary file
+                        img_path_temp = str(temp_dir / f"temp_keyword_bg_{start_time:.2f}_scene_{scene_index}.png")
+                        img.save(img_path_temp)
+                        
+                        # Create background image clip for this segment
+                        bg_media_clip = ImageClip(img_path_temp, duration=segment_duration)
+                    except Exception as e:
+                        print(f"❌ Error opening image file: {image_path}")
+                        print(f"Error: {e}")
+                        print(f"File exists: {Path(image_path).exists()}")
+                        if Path(image_path).exists():
+                            file_size = Path(image_path).stat().st_size
+                            print(f"File size: {file_size} bytes")
+                        raise ValueError(f"Cannot open image file {image_path}: {e}")
                 
                 # Extract the corresponding video segment
                 video_segment = narrator_with_alpha.subclipped(start_time, min(end_time, scene_duration))
                 
-                # Composite keyword image background and video segment (same as manual processing)
-                segment_layers = [bg_img_clip, video_segment]
+                # Composite keyword image/video background and video segment (same as manual processing)
+                segment_layers = [bg_media_clip, video_segment]
                 
                 # Add logo to segment if available
                 if logo_info:
@@ -757,9 +885,11 @@ def process_scene(
                 segment_clip = CompositeVideoClip(segment_layers, size=video_size)
                 segments.append(segment_clip)
                 
-                # Clean up temp image
-                if Path(img_path_temp).exists():
-                    Path(img_path_temp).unlink()
+                # Clean up temp image if it was created
+                if not is_video:
+                    img_path_temp = str(temp_dir / f"temp_keyword_bg_{start_time:.2f}_scene_{scene_index}.png")
+                    if Path(img_path_temp).exists():
+                        Path(img_path_temp).unlink()
             
             current_time = end_time
         
@@ -844,7 +974,7 @@ def process_scene(
         music_url = bg_music_settings.get("webViewLink") or bg_music_settings.get("webContentLink", "")
         if music_url:
             music_local = temp_dir / f"bg_music_scene_{scene_index}.mp3"
-            music_path = download_media(music_url, music_local)
+            music_path = download_media(music_url, music_local, is_video=False)
             
             try:
                 audio_clip = AudioFileClip(music_path)

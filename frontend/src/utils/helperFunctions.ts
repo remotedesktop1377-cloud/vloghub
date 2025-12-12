@@ -554,7 +554,6 @@ export class HelperFunctions {
     const newSceneData: SceneData = {
       id: Date.now().toString(),
       narration: '',
-      clip: '',
       duration: '',
       words: 0,
       startTime: 0,
@@ -562,6 +561,7 @@ export class HelperFunctions {
       durationInSeconds: 0,
       assets: {
         images: null,
+        clips: null,
       }
     }
 
@@ -757,7 +757,7 @@ export class HelperFunctions {
     const seen = new Set<string>();
     const deduped: string[] = [];
     for (const u of urls) {
-      if (!seen.has(u)) {
+      if (!seen.has(u) && !HelperFunctions.isVideoUrl(u)) {
         seen.add(u);
         deduped.push(u);
       }
@@ -955,5 +955,32 @@ export class HelperFunctions {
       return inputUrl;
     }
   }
+
+  static isVideoUrl = (url: string): boolean => {
+    if (!url) return false;
+    const lowerUrl = url.toLowerCase();
+    const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'];
+    const hasVideoExtension = videoExtensions.some(ext => lowerUrl.includes(ext));
+    const isEnvatoVideo = lowerUrl.includes('envatousercontent.com') && lowerUrl.includes('watermarked_preview');
+    const isVideoPath = lowerUrl.includes('/video/') || lowerUrl.includes('video-previews');
+    return hasVideoExtension || isEnvatoVideo || isVideoPath;
+  };
+
+  // Determine if clip is a local path or Google Drive URL
+  static getClipUrl(previewClip: string): string | null {
+    if (!previewClip) return null;
+    
+    // Check if it's an absolute path (Windows: C:\ or Unix: /)
+    const isAbsolutePath = /^[A-Za-z]:[\\/]/.test(previewClip) || previewClip.startsWith('/');
+    
+    if (isAbsolutePath) {
+      // Local file path - use serve-clip endpoint
+      const encodedPath = encodeURIComponent(previewClip);
+      return `/api/serve-clip?path=${encodedPath}`;
+    } else {
+      // Assume it's a Google Drive URL or relative path
+      return HelperFunctions.normalizeGoogleDriveUrl(previewClip);
+    }
+  };
 }
 

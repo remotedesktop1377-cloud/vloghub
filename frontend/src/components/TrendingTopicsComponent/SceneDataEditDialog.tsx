@@ -95,12 +95,12 @@ export function SceneDataEditDialog({
 
     const addClip = () => {
         if (!editData) return;
-        const newClip: VideoClip = {
-            id: Date.now().toString(),
-            name: '',
-            url: '',
-            duration: 30
-        };
+        // const newClip: VideoClip = {
+        //     id: Date.now().toString(),
+        //     name: '',
+        //     url: '',
+        //     duration: 30
+        // };
         // setEditData(prev => ({
         //     ...prev!,
         //     sceneSettings: {

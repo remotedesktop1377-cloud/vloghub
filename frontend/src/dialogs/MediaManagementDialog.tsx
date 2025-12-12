@@ -7,11 +7,12 @@ import {
   Typography,
   IconButton
 } from '@mui/material';
-import { SceneData, SceneKeywordSelection } from '../types/sceneData';
+import { SceneData, SceneKeywordSelection, VideoClip } from '../types/sceneData';
 import { TEXT } from '../styles/colors';
 import ImageSearch from '../components/TrendingTopicsComponent/ImageSearch';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { useImageViewer } from '../hooks/useImageViewer';
+import { HelperFunctions } from '@/utils/helperFunctions';
 
 interface MediaManagementDialogProps {
   open: boolean;
@@ -115,120 +116,15 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
                 }
               }}
               SceneDataIndex={currentSceneDataIndex}
-              onSceneDataUpdate={async (SceneDataIndex, updatedSceneData: any) => {
-                // // Update the SceneData with new assets
-                // const modifiedScenesData: SceneData[] = scenesData.map((sceneData, index) => {
-                //   if (index === SceneDataIndex) {
-                //     // Transform any legacy merge payload (map) into array entries
-                //     let nextKeywordsSelected: SceneKeywordSelection[] = Array.isArray(sceneData.keywordsSelected) ? (sceneData.keywordsSelected as SceneKeywordSelection[]) : [];
-                //     if (updatedSceneData?.keywordsSelectedMerge && typeof updatedSceneData.keywordsSelectedMerge === 'object') {
-                //       const mergeMap = updatedSceneData?.keywordsSelectedMerge as Record<string, string[]>;
-                //       const entries = Object.entries(mergeMap);
-                //       if (entries.length > 0) {
-                //         const [kw, urls] = entries[0];
-                //         const low = urls?.[0] || undefined;
-                //         const high = urls?.[1] || urls?.[0] || undefined;
-                //         const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
-                //         const newEntry: import('@/types/sceneData').SceneKeywordSelection = {
-                //           suggestedKeyword: kw,
-                //           ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
-                //           media: {
-                //             ...(low ? { lowResMedia: low } : {}),
-                //             ...(high ? { highResMedia: high } : {})
-                //           },
-                //           // Add transitionsEffects to SceneData and log
-                //           ...(updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0 && updatedSceneData.keywordsSelected[0].transitionsEffects
-                //             ? { transitionsEffects: updatedSceneData.keywordsSelected[0].transitionsEffects }
-                //             : {}),
-                //         };
-                //         if (idx >= 0) {
-                //           const existing = nextKeywordsSelected[idx];
-                //           nextKeywordsSelected = nextKeywordsSelected.slice();
-                //           nextKeywordsSelected[idx] = {
-                //             ...existing,
-                //             ...(updatedSceneData.modifiedKeywordForMapping && typeof updatedSceneData.modifiedKeywordForMapping === 'string' ? { modifiedKeyword: updatedSceneData.modifiedKeywordForMapping } : {}),
-                //             media: {
-                //               ...(existing.media || {}),
-                //               ...(low ? { lowResMedia: low } : {}),
-                //               ...(high ? { highResMedia: high } : {})
-                //             }
-                //           };
-                //         } else {
-                //           nextKeywordsSelected = [...nextKeywordsSelected, newEntry];
-                //         }
-                //       }
-                //     }
-                //     // Merge direct keywordsSelected array payload (carry transitionsEffects)
-                //     if (updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected) && updatedSceneData.keywordsSelected.length > 0) {
-                //       const entry = updatedSceneData.keywordsSelected[0] as any;
-                //       const kw = String(entry?.suggestedKeyword || '').trim();
-                //       if (kw) {
-                //         const idx = nextKeywordsSelected.findIndex(e => e && e.suggestedKeyword === kw);
-                //         const low = entry?.media?.lowResMedia as string | undefined;
-                //         const high = entry?.media?.highResMedia as string | undefined;
-                //         const transitionsEffects = Array.isArray(entry?.transitionsEffects) ? entry.transitionsEffects as string[] : undefined;
-                //         if (idx >= 0) {
-                //           const existing = nextKeywordsSelected[idx];
-                //           nextKeywordsSelected = nextKeywordsSelected.slice();
-                //           nextKeywordsSelected[idx] = {
-                //             ...existing,
-                //             media: {
-                //               ...(existing.media || {}),
-                //               ...(low ? { lowResMedia: low } : {}),
-                //               ...(high ? { highResMedia: high } : {})
-                //             },
-                //             ...(transitionsEffects ? { transitionsEffects } : {})
-                //           } as any;
-                //         } else {
-                //           nextKeywordsSelected = [
-                //             ...nextKeywordsSelected,
-                //             {
-                //               suggestedKeyword: kw,
-                //               media: {
-                //                 ...(low ? { lowResMedia: low } : {}),
-                //                 ...(high ? { highResMedia: high } : {})
-                //               },
-                //               ...(transitionsEffects ? { transitionsEffects } : {})
-                //             } as any
-                //           ];
-                //         }
-                //       }
-                //     }
-                //     return {
-                //       ...sceneData,
-                //       ...(nextKeywordsSelected.length > 0 ? { keywordsSelected: nextKeywordsSelected } : {}),
-                //       assets: {
-                //         ...sceneData.assets,
-                //         ...updatedSceneData.assets
-                //       }
-                //     };
-                //   }
-                //   return sceneData;
-                // });
-                // try {
-                //   // console.log('SceneData modified (onSceneDataUpdate):', JSON.stringify(updatedSceneData[SceneDataIndex]));
-                //   const sceneId = modifiedScenesData[SceneDataIndex].id || '';
-                //   const sceneJobId = modifiedScenesData[SceneDataIndex].jobId || jobId;
-                //   if (sceneJobId && sceneId) {
-                //     await GoogleDriveServiceFunctions.persistSceneUpdate(sceneJobId, modifiedScenesData[SceneDataIndex], 'Project settings applied to scene');
-                //   }
-                // } catch { }
-                // onSceneDataUpdate(modifiedScenesData);
+              onSceneDataUpdate={async (SceneDataIndex, updatedSceneData: any) => {                
               }}
               onDone={() => {
                 onMediaManagementOpen(false);
                 onMediaManagementSceneDataIndex(null);
               }}
               existingImageUrls={[
-                ...(
-                  currentSceneData?.assets?.imagesGoogle || []
-                ),
-                ...(
-                  currentSceneData?.assets?.imagesEnvato || []
-                ),
-                ...(
-                  currentSceneData?.assets?.images || []
-                )
+                ...(currentSceneData?.assets?.images || []),
+                ...(currentSceneData?.assets?.clips?.map(clip => clip.url) || [])
               ]}
               suggestionKeywords={typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords || []}
               autoSearchOnMount={!!(typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords?.length)}
@@ -270,12 +166,33 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
                         }
                       ];
                     }
+                    const clipUrls: string[] = [];
+                    const imageUrls: string[] = [];
+                    
+                    selectedUrls.forEach(url => {
+                      if (HelperFunctions.isVideoUrl(url)) {
+                        clipUrls.push(url);
+                      } else {
+                        imageUrls.push(url);
+                      }
+                    });
+                    
+                    const existingClips: VideoClip[] = Array.isArray(ch.assets?.clips) ? (ch.assets.clips as VideoClip[]) : [];
+                    const newClips: VideoClip[] = clipUrls.map(url => ({
+                      id: `${clipUrls.indexOf(url) + 1}`,
+                      name: `Video Clip ${clipUrls.indexOf(url) + 1}`,
+                      url: url,
+                      duration: 0,
+                      thumbnail: ''
+                    }));
+                    
                     return {
                       ...ch,
                       keywordsSelected: nextArray,
                       assets: {
                         ...ch.assets,
-                        images: [...(ch.assets?.images || []), ...selectedUrls],
+                        images: [...(ch.assets?.images || []), ...imageUrls],
+                        clips: [...existingClips, ...newClips],
                       }
                     };
                   });

@@ -161,12 +161,19 @@ async def upload_clip_to_google_drive(
         if response.status_code in [200, 201]:
             result = response.json()
             print(f"Upload response: {result}")
-            if result.get('success') and result.get('webViewLink'):
-                print(f"✅ Successfully uploaded clip {scene_id} to Google Drive: {result['webViewLink']}")
-                return result['webViewLink']
+            web_view_link = result.get('webViewLink')
+            if result.get('success') and web_view_link:
+                print(f"✅ Successfully uploaded clip {scene_id} to Google Drive: {web_view_link}")
+                return web_view_link
             else:
                 print(f"⚠️ Upload succeeded but no webViewLink returned for {scene_id}")
                 print(f"Response: {result}")
+                # Try to construct webViewLink from fileId if available
+                file_id = result.get('fileId')
+                if file_id:
+                    constructed_url = f"https://drive.google.com/file/d/{file_id}/view?usp=drivesdk"
+                    print(f"⚠️ Constructing webViewLink from fileId: {constructed_url}")
+                    return constructed_url
                 return None
         else:
             error_text = response.text[:500] if len(response.text) > 500 else response.text
@@ -312,16 +319,21 @@ async def cut_video_segments(video_path: str, edits: list[VideoEdit], job_id: Op
                     len(sorted_edits)  # total_scenes (use original count for padding calculation)
                 )
                 if clip_url:
-                    print(f"✅ Clip uploaded successfully, using Google Drive URL")
+                    print(f"✅ Clip uploaded successfully, using Google Drive URL: {clip_url[:100]}...")
+                    preview_clip_url = clip_url
                 else:
                     print(f"⚠️ Clip upload failed, falling back to local path")
+                    preview_clip_url = str(segment_path.resolve())
             else:
                 print(f"⚠️ No job_id provided, skipping Google Drive upload for scene {edit.id}")
+                preview_clip_url = str(segment_path.resolve())
             
-            # Use Google Drive URL if available, otherwise fall back to local path
-            # In serverless environments (Vercel), local paths won't work, so we need the Drive URL
-            clip_path_to_save = clip_url if clip_url else str(segment_path.resolve())
-            print(f"💾 Saving clip path for scene {edit.id}: {clip_path_to_save[:100]}...")
+            # Ensure previewClip is always set
+            if not preview_clip_url:
+                print(f"⚠️ WARNING: previewClip is empty for scene {edit.id}, using segment path")
+                preview_clip_url = str(segment_path.resolve())
+            
+            print(f"💾 Final previewClip for scene {edit.id}: {preview_clip_url[:100] if preview_clip_url else 'EMPTY'}...")
             
             segment_info = {
               "id": edit.id,
@@ -331,7 +343,7 @@ async def cut_video_segments(video_path: str, edits: list[VideoEdit], job_id: Op
               "startTime": edit.startTime,
               "endTime": edit.endTime,
               "durationInSeconds": edit.durationInSeconds,
-              "clip": clip_path_to_save,
+              "previewClip": preview_clip_url,
             }
             segment_transcriptions.append(segment_info)
             

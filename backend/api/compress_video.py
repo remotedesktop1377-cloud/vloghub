@@ -27,7 +27,7 @@ def compress_video(input_path: str, output_path: str, target_size_mb: float = 50
     original_duration = video_clip.duration
     original_size_mb = input_file.stat().st_size / (1024 * 1024)
     
-    print(f"Original video: {original_size_mb:.2f} MB, duration: {original_duration:.2f}s")
+    print(f"Original video: {original_size_mb:.2f} MB")
     
     # if original_size_mb <= target_size_mb:
     #     print(f"Video is already under target size ({original_size_mb:.2f} MB <= {target_size_mb} MB), copying without compression")
@@ -38,7 +38,7 @@ def compress_video(input_path: str, output_path: str, target_size_mb: float = 50
     target_bitrate = (target_size_mb * 8 * 1024 * 1024) / original_duration
     target_bitrate = max(500, min(target_bitrate, 5000))
     
-    print(f"Target bitrate: {target_bitrate:.0f} kbps")
+    # print(f"Target bitrate: {target_bitrate:.0f} kbps")
     
     try:
         video_clip.write_videofile(
@@ -58,7 +58,7 @@ def compress_video(input_path: str, output_path: str, target_size_mb: float = 50
         compressed_size_mb = output_file.stat().st_size / (1024 * 1024)
         compression_ratio = (1 - compressed_size_mb / original_size_mb) * 100
         
-        print(f"Compressed video: {compressed_size_mb:.2f} MB ({compression_ratio:.1f}% reduction)")
+        print(f"Original video: {original_size_mb:.2f} MB", f"Compressed video: {compressed_size_mb:.2f} MB", f"({compression_ratio:.1f}% reduction)")
         
         return output_path
     finally:

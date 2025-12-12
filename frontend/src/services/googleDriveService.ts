@@ -1,5 +1,5 @@
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
-import { SceneData } from '@/types/sceneData';
+import { SceneData, VideoClip } from '@/types/sceneData';
 import { HelperFunctions, secure } from '@/utils/helperFunctions';
 import { profileService, LibraryData } from './profileService';
 import { LogoOverlayInterface, SettingItemInterface, Settings } from '@/types/scriptData';
@@ -54,12 +54,12 @@ export const GoogleDriveServiceFunctions = {
             }
             
             // Fetch the clip file from the server
-            if (!sceneData.clip) {
+            if (!sceneData.previewClip) {
                 console.error('No clip path provided in sceneData');
                 return { success: false };
             }
             
-            const clipFile = await this.fetchClipFile(sceneData.clip);
+            const clipFile = await this.fetchClipFile(sceneData.previewClip);
             if (!clipFile) {
                 console.error('Failed to fetch clip file from server');
                 return { success: false };
@@ -189,9 +189,9 @@ export const GoogleDriveServiceFunctions = {
 
             // Build assets with logo image and video clip included
             const existingImages: string[] = Array.isArray(SceneDataWithAssets.assets?.images) ? (SceneDataWithAssets.assets!.images as string[]) : [];
-            const existingVideos: string[] = Array.isArray((SceneDataWithAssets as any).assets?.videos) ? ((SceneDataWithAssets as any).assets.videos as string[]) : [];
+            const existingClips: VideoClip[] = Array.isArray((SceneDataWithAssets as any).assets?.clips) ? ((SceneDataWithAssets as any).assets.clips as VideoClip[]) : [];
 
-            const scene = {
+            const scene: SceneData = {
                 id: SceneDataWithAssets.id,
                 narration: SceneDataWithAssets.narration,
                 duration: SceneDataWithAssets.duration,
@@ -204,12 +204,12 @@ export const GoogleDriveServiceFunctions = {
                 gammaGenId: SceneDataWithAssets.gammaGenId || '',
                 gammaUrl: SceneDataWithAssets.gammaUrl || '',
                 gammaPreviewImage: SceneDataWithAssets.gammaPreviewImage || '',
+                previewClip: SceneDataWithAssets.previewClip || '',
                 assets: {
                     images: existingImages,
-                    ...(existingVideos.length > 0 ? { clips: existingVideos } : {}),
+                    clips: existingClips,
                 },
                 sceneSettings: sceneSettings,
-                clip: SceneDataWithAssets.clip || '',
             };
             // console.log('Updating scene on Drive:', scene);
 

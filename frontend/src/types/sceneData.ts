@@ -18,18 +18,16 @@ export interface SceneData {
     gammaGenId?: string;
     gammaUrl?: string;
     highlightedKeywords?: string[];
-    gammaPreviewImage?: string;
+    gammaPreviewImage?: string;    
+    previewClip?: string;
     // Selected media for keywords; supports new array format and legacy map
     keywordsSelected?: SceneKeywordSelection[] | Record<string, string[]>;
     assets?: {
         images?: string[] | null;
-        imagesGoogle?: string[] | null;
-        imagesEnvato?: string[] | null;
         clips?: VideoClip[] | null;
     };
     // Video effects and editing properties
     sceneSettings?: Settings,
-    clip: string;
 }
 
 export interface SceneKeywordSelection {

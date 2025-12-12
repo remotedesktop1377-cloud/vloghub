@@ -191,5 +191,9 @@ class HelperFunctions:
         
         return timestamps
 
+    @staticmethod
+    def is_video_url(url: str) -> bool:
+        return url.lower().endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'))
+        
 __all__ = ["HelperFunctions"]
 

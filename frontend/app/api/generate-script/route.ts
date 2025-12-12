@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AI_CONFIG } from '@/config/aiConfig';
+import { getGeminiActiveModel } from '@/utils/geminiService';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({
-  model: AI_CONFIG.GEMINI.MODEL_FLASH,
-  generationConfig: { temperature: AI_CONFIG.GEMINI.TEMPERATURE }
-});
+const model = getGeminiActiveModel();
 
 const LANGUAGE_ALIAS_MAP: Record<string, string> = {
   urdu: 'Urdu',

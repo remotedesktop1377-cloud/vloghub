@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { HelperFunctions } from '@/utils/helperFunctions';
-import { AI_CONFIG } from '@/config/aiConfig';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { getGeminiActiveModel } from '@/utils/geminiService';
 
 // Helper function to generate random trending topics
 const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const model = genAI.getGenerativeModel({ model: AI_CONFIG.GEMINI.MODEL_FLASH });
+    const model = getGeminiActiveModel();
 
     // Get time range description for the prompt
     const timeRangeDescription = HelperFunctions.getTimeRangeDescription(dateRange);

@@ -256,7 +256,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                   ref={provided.innerRef}
                   sx={{ display: 'flex', flexDirection: 'column', gap: 0.6, alignItems: 'stretch', width: '100%' }}
                 >
-                  {scenesData.map((sceneData, index) => (
+                  {scenesData.map((sceneData: SceneData, index: number) => (
                     <Box key={sceneData.id || index.toString()} sx={{ width: '100%' }}>
                       <Draggable key={(sceneData.id || index.toString()) + '-draggable'} draggableId={sceneData.id || index.toString()} index={index}>
                         {(provided, snapshot) => (
@@ -834,11 +834,9 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                           urlsToRemove = map[keyword] || [];
                                                         }
                                                         const images = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
-                                                        const imagesGoogle = Array.isArray(ch.assets?.imagesGoogle) ? ch.assets!.imagesGoogle! : [];
-                                                        const imagesEnvato = Array.isArray(ch.assets?.imagesEnvato) ? ch.assets!.imagesEnvato! : [];
+                                                        const clips = Array.isArray(ch.assets?.clips) ? ch.assets!.clips! : [];
                                                         const filteredImages = images.filter(u => !urlsToRemove.includes(u));
-                                                        const filteredGoogle = imagesGoogle.filter(u => !urlsToRemove.includes(u));
-                                                        const filteredEnvato = imagesEnvato.filter(u => !urlsToRemove.includes(u));
+                                                        const filteredClips = clips.filter(c => !urlsToRemove.includes(c.url));
                                                         // Remove keyword from keywordsSelected
                                                         let nextKeywordsSelected: import('@/types/sceneData').SceneKeywordSelection[] | Record<string, string[]> | undefined = ch.keywordsSelected;
                                                         if (Array.isArray(ch.keywordsSelected)) {
@@ -856,8 +854,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                           assets: {
                                                             ...ch.assets,
                                                             images: filteredImages.length > 0 ? filteredImages : null,
-                                                            imagesGoogle: filteredGoogle.length > 0 ? filteredGoogle : null,
-                                                            imagesEnvato: filteredEnvato.length > 0 ? filteredEnvato : null,
+                                                            clips: filteredClips.length > 0 ? filteredClips : null,
                                                           }
                                                         };
                                                       });
@@ -1080,32 +1077,15 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                             }}>
                                               {(() => {
                                                 const previewUrl = sceneData.gammaPreviewImage || '';
-                                                const clipPath = sceneData.clip || '';
-                                                
-                                                // Determine if clip is a local path or Google Drive URL
-                                                const getClipUrl = () => {
-                                                  if (!clipPath) return null;
-                                                  
-                                                  // Check if it's an absolute path (Windows: C:\ or Unix: /)
-                                                  const isAbsolutePath = /^[A-Za-z]:[\\/]/.test(clipPath) || clipPath.startsWith('/');
-                                                  
-                                                  if (isAbsolutePath) {
-                                                    // Local file path - use serve-clip endpoint
-                                                    const encodedPath = encodeURIComponent(clipPath);
-                                                    return `/api/serve-clip?path=${encodedPath}`;
-                                                  } else {
-                                                    // Assume it's a Google Drive URL or relative path
-                                                    return HelperFunctions.normalizeGoogleDriveUrl(clipPath);
-                                                  }
-                                                };
-                                                
-                                                const clipUrl = getClipUrl();
-                                                
+                                                const previewClip = sceneData.previewClip || '';
+
+                                                const clipUrl = HelperFunctions.getClipUrl(previewClip);
+
                                                 const handlePreviewClick = (e: any) => {
                                                   e.stopPropagation();
                                                   handleImageClick(index, 0, true);
                                                 };
-                                                
+
                                                 return (
                                                   <Box sx={{
                                                     position: 'relative',
@@ -1122,14 +1102,14 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                       <video
                                                         src={clipUrl}
                                                         controls
-                                                        style={{ 
-                                                          width: '100%', 
-                                                          height: '100%', 
+                                                        style={{
+                                                          width: '100%',
+                                                          height: '100%',
                                                           objectFit: 'contain',
                                                           cursor: 'pointer'
                                                         }}
                                                         onError={(e) => {
-                                                          console.error('Video load error for clip:', clipPath, e);
+                                                          console.error('Video load error for clip:', previewClip, e);
                                                         }}
                                                       />
                                                     ) : previewUrl ? (
@@ -1182,10 +1162,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                               if (chIndex === index) {
                                                                 const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
                                                                 const updatedImages = currentImages.filter((url) => url !== targetUrl);
-                                                                const currentGoogle = ch.assets?.imagesGoogle || [];
-                                                                const currentEnvato = ch.assets?.imagesEnvato || [];
-                                                                const updatedGoogle = currentGoogle.filter((u) => u !== targetUrl);
-                                                                const updatedEnvato = currentEnvato.filter((u) => u !== targetUrl);
+                                                                const currentClips = ch.assets?.clips || [];
+                                                                const updatedClips = currentClips.filter((c) => c.url !== targetUrl);
                                                                 let nextKeywordsSelected: any = ch.keywordsSelected;
                                                                 if (Array.isArray(ch.keywordsSelected)) {
                                                                   const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
@@ -1208,8 +1186,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                   assets: {
                                                                     ...ch.assets,
                                                                     images: updatedImages.length > 0 ? updatedImages : null,
-                                                                    imagesGoogle: updatedGoogle.length > 0 ? updatedGoogle : null,
-                                                                    imagesEnvato: updatedEnvato.length > 0 ? updatedEnvato : null
+                                                                    clips: updatedClips.length > 0 ? updatedClips : null,
                                                                   },
                                                                   ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
                                                                 };
@@ -1255,8 +1232,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                               if (chIndex !== index) return ch;
                                                               const imagesList = Array.isArray(ch.assets?.images) ? (ch.assets!.images as string[]) : [];
                                                               const newImagesList = imagesList.filter(u => u !== imageUrlToRemove);
-                                                              const newImagesGoogle = (ch.assets?.imagesGoogle || []).filter(u => u !== imageUrlToRemove) || null;
-                                                              const newImagesEnvato = (ch.assets?.imagesEnvato || []).filter(u => u !== imageUrlToRemove) || null;
+                                                              const newClips = (ch.assets?.clips || []).filter(c => c.url !== imageUrlToRemove) || null;
 
                                                               let nextKeywordsSelected: any = ch.keywordsSelected;
                                                               if (Array.isArray(ch.keywordsSelected)) {
@@ -1281,8 +1257,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                 assets: {
                                                                   ...ch.assets,
                                                                   images: newImagesList.length > 0 ? newImagesList : null,
-                                                                  imagesGoogle: newImagesGoogle,
-                                                                  imagesEnvato: newImagesEnvato
+                                                                  clips: newClips,
                                                                 },
                                                                 ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
                                                               };
