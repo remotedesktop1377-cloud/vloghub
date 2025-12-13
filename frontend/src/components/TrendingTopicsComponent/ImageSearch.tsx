@@ -958,7 +958,11 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                                 justifyContent: 'center'
                                                             }}>
                                                                 <Box
-                                                                    onClick={(e) => { e.stopPropagation(); setVideoPreviewUrl(file.url); setVideoPreviewOpen(true); }}
+                                                                    onClick={(e) => { 
+                                                                        e.stopPropagation(); 
+                                                                        setVideoPreviewUrl(file.url); 
+                                                                        setVideoPreviewOpen(true); 
+                                                                    }}
                                                                     sx={{
                                                                         width: 52,
                                                                         height: 52,
@@ -1194,9 +1198,14 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center'
-                                                        }}>
+                                                        }} onClick={() => handleImageSelect(image.url)}>
                                                             <Box
-                                                                onClick={(e) => { e.stopPropagation(); handleImageSelect(image.url); setVideoPreviewUrl(image.url); setVideoPreviewOpen(true); }}
+                                                                onClick={(e) => { 
+                                                                    e.stopPropagation(); 
+                                                                    handleImageSelect(image.url); 
+                                                                    setVideoPreviewUrl(image.url); 
+                                                                    setVideoPreviewOpen(true); 
+                                                                }}
                                                                 sx={{
                                                                     width: 52,
                                                                     height: 52,

@@ -38,6 +38,7 @@ export interface Settings {
     videoBackgroundMusic: SettingItemInterface;
     videoBackgroundVideo: SettingItemInterface;
     videoTransitionEffect: SettingItemInterface;
+    showPreviewImageAtStart?: boolean;
 }
 
 export interface SettingItemInterface {

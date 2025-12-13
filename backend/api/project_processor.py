@@ -438,7 +438,8 @@ def process_scene(
     scene_data: Dict,
     narrator_video_path: str,
     temp_dir: Path,
-    scene_index: int
+    scene_index: int,
+    project_settings: Dict = None
 ) -> str:
     """
     Process a single scene with all components.
@@ -762,14 +763,38 @@ def process_scene(
                         else:
                             print(f"Warning: Failed to create text overlay for '{text_overlay_info['data'].get('text', '')}'")
 
-    # Fallback: if no keyword images but gammaPreviewImage exists, use it for 3 seconds at scene start
-    if not keyword_image_mappings and gamma_preview_image:
+    # Check if media is scheduled in the first 3 seconds (0.0 to 3.0)
+    # This determines if we should show the preview image at the start
+    has_media_in_first_3_seconds = False
+    for mapping in keyword_image_mappings:
+        timestamps = mapping.get("timestamps", [])
+        # Check if any timestamp falls within the first 3 seconds
+        for timestamp in timestamps:
+            if 0.0 <= timestamp < 3.0:
+                has_media_in_first_3_seconds = True
+                break
+        if has_media_in_first_3_seconds:
+            break
+    
+    # If no media in first 3 seconds and preview image is enabled, show preview image
+    # Check showPreviewImageAtStart setting (scene settings first, then project settings, default to True)
+    show_preview_image = scene_settings.get("showPreviewImageAtStart")
+    if show_preview_image is None and project_settings:
+        show_preview_image = project_settings.get("showPreviewImageAtStart")
+    if show_preview_image is None:
+        show_preview_image = True  # Default to True to maintain current behavior
+    
+    if not has_media_in_first_3_seconds and gamma_preview_image and show_preview_image:
         keyword_image_mappings.append({
             "keyword": "__gamma_default__",
             "image": gamma_preview_image,
             "timestamps": [0.0]
         })
-        print(f"Using gammaPreviewImage for 3 seconds at start of scene {scene_index + 1}")
+        print(f"Using gammaPreviewImage for 3 seconds at start of scene {scene_index + 1} (no media in first 3 seconds)")
+    elif not has_media_in_first_3_seconds and gamma_preview_image and not show_preview_image:
+        print(f"Preview image available but showPreviewImageAtStart is disabled for scene {scene_index + 1}")
+    elif has_media_in_first_3_seconds and gamma_preview_image:
+        print(f"Media already scheduled in first 3 seconds for scene {scene_index + 1}, skipping preview image")
 
     # Add keyword images at timestamps (using same approach as manual processing)
     if keyword_image_mappings:
@@ -1222,9 +1247,12 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
     scene_videos = []
     scene_output_paths = []
     
+    # Get project settings for passing to process_scene
+    project_settings = project_data.get("project", {}).get("projectSettings", {})
+    
     for idx, scene in enumerate(scenes):
         # Process scene to temp location first
-        temp_scene_path = process_scene(scene, narrator_path, temp_dir, idx)
+        temp_scene_path = process_scene(scene, narrator_path, temp_dir, idx, project_settings)
         
         # Copy to exports directory with scene name
         scene_id = scene.get("id", f"scene_{idx + 1}")
@@ -1242,8 +1270,7 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
     print("Concatenating all scenes for final video...")
     scene_clips = [VideoFileClip(path) for path in scene_videos]
     
-    # Get transition settings from project or first scene
-    project_settings = project_data.get("project", {}).get("projectSettings", {})
+    # Get transition settings from project or first scene (project_settings already loaded above)
     transition_effect = project_settings.get("videoTransitionEffect", {})
     if not transition_effect and scenes:
         first_scene_settings = scenes[0].get("sceneSettings", {})

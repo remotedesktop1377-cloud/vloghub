@@ -1131,20 +1131,50 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                               })()}
                                             </Box>
 
-                                            {/* Horizontal selected images - Fixed at bottom */}
+                                            {/* Horizontal selected images and videos - Fixed at bottom */}
                                             <Box sx={{
                                               flexShrink: 0,
                                               mt: 'auto'
                                             }}>
                                               {(() => {
                                                 const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
-                                                // const googleSet = new Set(sceneData.assets?.imagesGoogle || []);
-                                                // const envatoSet = new Set(sceneData.assets?.imagesEnvato || []);
+                                                const allClips = (sceneData.assets && Array.isArray(sceneData.assets.clips)) ? sceneData.assets.clips : [];
+                                                
+                                                // Extract videos from keywordsSelected
+                                                const videosFromKeywords: string[] = [];
+                                                if (Array.isArray(sceneData.keywordsSelected)) {
+                                                  const arr = sceneData.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
+                                                  arr.forEach(entry => {
+                                                    if (entry.media?.lowResMedia && HelperFunctions.isVideoUrl(entry.media.lowResMedia)) {
+                                                      videosFromKeywords.push(entry.media.lowResMedia);
+                                                    }
+                                                    if (entry.media?.highResMedia && HelperFunctions.isVideoUrl(entry.media.highResMedia)) {
+                                                      videosFromKeywords.push(entry.media.highResMedia);
+                                                    }
+                                                  });
+                                                } else if (sceneData.keywordsSelected && typeof sceneData.keywordsSelected === 'object') {
+                                                  const map = sceneData.keywordsSelected as Record<string, string[]>;
+                                                  Object.values(map).forEach(list => {
+                                                    list.forEach(url => {
+                                                      if (HelperFunctions.isVideoUrl(url)) {
+                                                        videosFromKeywords.push(url);
+                                                      }
+                                                    });
+                                                  });
+                                                }
+                                                
+                                                // Get unique video URLs from clips
+                                                const clipVideoUrls = allClips.map(clip => clip.url);
+                                                
+                                                // Combine all videos (from clips and keywords) and remove duplicates
+                                                const allVideos = [...new Set([...clipVideoUrls, ...videosFromKeywords])];
+                                                
                                                 return (
                                                   <Box sx={{ display: 'flex', gap: 0.75, overflowX: 'auto', pb: 0.5 }}>
+                                                    {/* Images */}
                                                     {allImages.map((imageUrl, imgIndex) => (
                                                       <Box
-                                                        key={`selected-${imgIndex}`}
+                                                        key={`selected-img-${imgIndex}`}
                                                         sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `2px solid ${PRIMARY.main}`, cursor: 'pointer' }}
                                                         onClick={(e) => {
                                                           e.stopPropagation();
@@ -1203,6 +1233,86 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                         </IconButton>
                                                       </Box>
                                                     ))}
+
+                                                    {/* Videos from clips and keywords */}
+                                                    {allVideos.map((videoUrl, vidIndex) => {
+                                                      const clip = allClips.find(c => c.url === videoUrl);
+                                                      const thumbnail = clip?.thumbnail || videoUrl;
+                                                      return (
+                                                        <Box
+                                                          key={`selected-vid-${vidIndex}`}
+                                                          sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `2px solid ${PRIMARY.main}`, cursor: 'pointer' }}
+                                                          onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            // Handle video click - similar to image click
+                                                            handleImageClick(index, allImages.length + vidIndex, false);
+                                                          }}
+                                                        >
+                                                          <Box sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.3)' }}>
+                                                            {HelperFunctions.isVideoUrl(thumbnail) ? (
+                                                              <video
+                                                                src={thumbnail}
+                                                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                                                                muted
+                                                                playsInline
+                                                              />
+                                                            ) : (
+                                                              <img src={thumbnail} alt={`Video thumbnail ${vidIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            )}
+                                                            <PlayIcon sx={{ position: 'relative', zIndex: 1, color: 'white', fontSize: '24px' }} />
+                                                          </Box>
+                                                          <IconButton
+                                                            size="small"
+                                                            sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, zIndex: 2, '&:hover': { bgcolor: 'background.paper' } }}
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              const targetUrl = videoUrl;
+                                                              const updatedSceneData: SceneData[] = scenesData.map((ch, chIndex) => {
+                                                                if (chIndex === index) {
+                                                                  const currentImages = ch.assets && Array.isArray(ch.assets.images) ? ch.assets.images : [];
+                                                                  const updatedImages = currentImages.filter((url) => url !== targetUrl);
+                                                                  const currentClips = ch.assets?.clips || [];
+                                                                  const updatedClips = currentClips.filter((c) => c.url !== targetUrl);
+                                                                  let nextKeywordsSelected: any = ch.keywordsSelected;
+                                                                  if (Array.isArray(ch.keywordsSelected)) {
+                                                                    const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
+                                                                    nextKeywordsSelected = arr.filter(entry => {
+                                                                      const low = entry.media?.lowResMedia;
+                                                                      const high = entry.media?.highResMedia;
+                                                                      return low !== targetUrl && high !== targetUrl;
+                                                                    });
+                                                                  } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
+                                                                    const map = ch.keywordsSelected as Record<string, string[]>;
+                                                                    const newMap: Record<string, string[]> = {};
+                                                                    Object.entries(map).forEach(([k, list]) => {
+                                                                      const filtered = (list || []).filter(u => u !== targetUrl);
+                                                                      if (filtered.length > 0) newMap[k] = filtered;
+                                                                    });
+                                                                    nextKeywordsSelected = newMap;
+                                                                  }
+                                                                  return {
+                                                                    ...ch,
+                                                                    assets: {
+                                                                      ...ch.assets,
+                                                                      images: updatedImages.length > 0 ? updatedImages : null,
+                                                                      clips: updatedClips.length > 0 ? updatedClips : null,
+                                                                    },
+                                                                    ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
+                                                                  };
+                                                                }
+                                                                return ch;
+                                                              });
+                                                              onSceneDataUpdate(updatedSceneData);
+                                                              GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[index], 'Media deleted');
+                                                            }}
+                                                          >
+                                                            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                              <path d="M18 6L6 18M6 6l12 12" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                          </IconButton>
+                                                        </Box>
+                                                      );
+                                                    })}
 
                                                     {(SceneDataImagesMap[index] || []).map((imageUrl, imgIndex) => (
                                                       <Box

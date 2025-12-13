@@ -10,6 +10,8 @@ import {
     TextField,
     CircularProgress,
     IconButton,
+    FormControlLabel,
+    Checkbox,
 } from '@mui/material';
 import {
     PlayArrow as PlayIcon,
@@ -538,6 +540,51 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             </DialogTitle>
             <DialogContent>
                 <Grid container spacing={2}>
+                    {/* Preview Image Option */}
+                    <Grid item xs={12}>
+                        <Box sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 2,
+                            p: 2,
+                            backgroundColor: 'background.paper',
+                        }}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={isProjectSettings
+                                            ? (projectSettings?.showPreviewImageAtStart ?? true)
+                                            : (sceneSettings?.showPreviewImageAtStart ?? true)
+                                        }
+                                        onChange={(e) => {
+                                            if (isProjectSettings) {
+                                                setProjectSettings({
+                                                    ...projectSettings,
+                                                    showPreviewImageAtStart: e.target.checked
+                                                } as Settings);
+                                            } else {
+                                                setSceneSettings({
+                                                    ...sceneSettings,
+                                                    showPreviewImageAtStart: e.target.checked
+                                                } as Settings);
+                                            }
+                                        }}
+                                    />
+                                }
+                                label={
+                                    <Box>
+                                        <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600, mb: 0.5 }}>
+                                            Show Gamma Preview Image at Scene Start
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '1rem' }}>
+                                            When enabled, the preview image will be displayed at the start of each scene video if no media is attached within the first 3 seconds of the scene.
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
+                        </Box>
+                    </Grid>
+
                     {/* Logo Upload Section */}
                     <Grid item xs={12} md={6} sx={{ minHeight: 320, maxHeight: 320 }}>
                         <Typography variant="subtitle2" sx={{ mb: 2, fontSize: '1.25rem', fontWeight: 600 }}>Project Logo</Typography>
@@ -1027,6 +1074,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             )}
                         </Box>
                     </Grid>
+
                 </Grid>
             </DialogContent>
         </Dialog>
