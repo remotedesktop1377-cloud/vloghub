@@ -108,6 +108,9 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [envatoLoading, setEnvatoLoading] = useState(false);
     const [googleError, setGoogleError] = useState<string | null>(null);
     const [envatoError, setEnvatoError] = useState<string | null>(null);
+    const [googleCurrentPage, setGoogleCurrentPage] = useState(1);
+    const [googleHasMore, setGoogleHasMore] = useState(false);
+    const [googleLoadingMore, setGoogleLoadingMore] = useState(false);
     const [selectedBySource, setSelectedBySource] = useState<{ google: Set<string>; envato: Set<string>; envatoClips: Set<string>; upload: Set<string> }>({ google: new Set(), envato: new Set(), envatoClips: new Set(), upload: new Set() });
     const [googleSuggestions, setGoogleSuggestions] = useState<string[]>([]);
     const [envatoKeywords, setEnvatoKeywords] = useState<string[]>([]);
@@ -123,14 +126,30 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const currentError = activeTab === 'google' ? googleError : envatoError;
 
     // Search Google Images
-    const searchGoogleImages = async (query: string, suggestions: string[] = []) => {
-        setGoogleLoading(true);
-        setGoogleError(null);
+    const searchGoogleImages = async (query: string, suggestions: string[] = [], loadMore: boolean = false) => {
+        if (loadMore) {
+            setGoogleLoadingMore(true);
+        } else {
+            setGoogleLoading(true);
+            setGoogleError(null);
+            setGoogleCurrentPage(1);
+        }
 
         try {
-            const baseQuery = query && query.trim().length > 0 ? query.trim() : buildContextString();
-            const groupKeywords = keywords.map(k => `${k.trim()}`).join(", ");
-            setSearchQuery(baseQuery);
+            // Use the provided query, or fallback to currentKeywordForMapping, or SceneDataNarration, or buildContextString
+            let baseQuery = query && query.trim().length > 0 
+                ? query.trim() 
+                : (currentKeywordForMapping && currentKeywordForMapping.trim() 
+                    ? currentKeywordForMapping.trim() 
+                    : (SceneDataNarration && SceneDataNarration.trim() 
+                        ? SceneDataNarration.trim() 
+                        : buildContextString()));
+            
+            if (!loadMore) {
+                setSearchQuery(baseQuery);
+            }
+            
+            const currentPage = loadMore ? googleCurrentPage + 1 : 1;
             
             // Step 6: Call backend
             const response = await fetch(API_ENDPOINTS.GOOGLE_IMAGE_SEARCH, {
@@ -140,6 +159,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 },
                 body: JSON.stringify({
                     query: baseQuery,
+                    page: currentPage,
                 }),
             });
 
@@ -159,67 +179,86 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 suggestionIndex: suggestions.length > 0 ? index % suggestions.length : undefined,
             }));
 
-            setGoogleImages(imagesWithSource);
-            checkAndSelectExistingImages(imagesWithSource, "google");
+            if (loadMore) {
+                // Append new results to existing ones
+                setGoogleImages(prev => [...prev, ...imagesWithSource]);
+                HelperFunctions.showSuccess(`Loaded ${imagesWithSource.length} more images`);
+            } else {
+                // Replace existing results with new search
+                setGoogleImages(imagesWithSource);
+                checkAndSelectExistingImages(imagesWithSource, "google");
+                HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Google images`);
+            }
 
-            HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Google images`);
+            setGoogleCurrentPage(currentPage);
+            setGoogleHasMore(data.hasMore || false);
         } catch (err) {
             const errorMsg =
                 err instanceof Error
                     ? err.message
                     : "An error occurred searching Google images";
             setGoogleError(errorMsg);
-            setGoogleImages([]);
+            if (!loadMore) {
+                setGoogleImages([]);
+            }
             HelperFunctions.showError(errorMsg);
         } finally {
             setGoogleLoading(false);
+            setGoogleLoadingMore(false);
+        }
+    };
+
+    // Load more Google images
+    const loadMoreGoogleImages = async () => {
+        if (searchQuery.trim() && googleHasMore && !googleLoadingMore) {
+            await searchGoogleImages(searchQuery, googleSuggestions, true);
         }
     };
 
     // Search Envato Images
     const searchEnvatoImages = async (query: string) => {
-        setEnvatoLoading(true);
-        setEnvatoError(null);
-        setSearchQuery(query);
-        try {
-            const response = await fetch(API_ENDPOINTS.ENVATO_IMAGE_SEARCH, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    query: query,
-                    page: 1
-                }),
-            });
+        // setEnvatoLoading(true);
+        // setEnvatoError(null);
+        // setSearchQuery(query);
+        // try {
+        //     const response = await fetch(API_ENDPOINTS.ENVATO_IMAGE_SEARCH, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //         body: JSON.stringify({
+        //             query: query,
+        //             page: 1
+        //         }),
+        //     });
 
-            if (!response.ok) {
-                const data = await response.json();
-                const errorMessage = data.error || 'Failed to search Envato images';
-                const errorDetails = data.details ? ` (${data.details})` : '';
-                throw new Error(`${errorMessage}${errorDetails}`);
-            }
+        //     if (!response.ok) {
+        //         const data = await response.json();
+        //         const errorMessage = data.error || 'Failed to search Envato images';
+        //         const errorDetails = data.details ? ` (${data.details})` : '';
+        //         throw new Error(`${errorMessage}${errorDetails}`);
+        //     }
 
-            const data = await response.json();
+        //     const data = await response.json();
 
-            const imagesWithSource = (data.images || []).map((img: any) => ({
-                ...img,
-                source: 'envato' as const
-            }));
+        //     const imagesWithSource = (data.images || []).map((img: any) => ({
+        //         ...img,
+        //         source: 'envato' as const
+        //     }));
 
-            setEnvatoImages(imagesWithSource);
-            checkAndSelectExistingImages(imagesWithSource, 'envato');
+        //     setEnvatoImages(imagesWithSource);
+        //     checkAndSelectExistingImages(imagesWithSource, 'envato');
 
-            HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Envato images`);
+        //     HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Envato images`);
 
-        } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'An error occurred searching Envato images';
-            setEnvatoError(errorMsg);
-            setEnvatoImages([]);
-            HelperFunctions.showError(errorMsg);
-        } finally {
-            setEnvatoLoading(false);
-        }
+        // } catch (err) {
+        //     const errorMsg = err instanceof Error ? err.message : 'An error occurred searching Envato images';
+        //     setEnvatoError(errorMsg);
+        //     setEnvatoImages([]);
+        //     HelperFunctions.showError(errorMsg);
+        // } finally {
+        //     setEnvatoLoading(false);
+        // }
     };
 
     // Search Envato Clips (videos)
@@ -399,6 +438,18 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         return Array.from(new Set(tokens)).slice(0, 10);
     };
 
+    // Set initial query based on currentKeywordForMapping or SceneDataNarration
+    useEffect(() => {
+        if (currentKeywordForMapping && currentKeywordForMapping.trim()) {
+            // When a keyword is clicked, use the exact keyword as the query
+            const keywordQuery = currentKeywordForMapping.trim();
+            setSearchQuery(keywordQuery);
+        } else if (SceneDataNarration && SceneDataNarration.trim()) {
+            // When "Add media" is clicked (no keyword), use the narration as the query
+            setSearchQuery(SceneDataNarration.trim());
+        }
+    }, [currentKeywordForMapping, SceneDataNarration]);
+
     // Auto-generate suggestions from SceneData narration and auto-search
     useEffect(() => {
         // If explicit suggestion keywords provided, use them first
@@ -407,13 +458,27 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             // Apply suggestions to both Google and Envato
             setGoogleSuggestions(suggestionKeywords);
             setEnvatoKeywords(suggestionKeywords);
-            // Trigger both searches using provided suggestions
-            setSearchQuery(scriptTitle || '');
-            searchGoogleImages(scriptTitle || '');
+            
+            // Determine the query to use: keyword if available, otherwise narration
+            const queryToUse = currentKeywordForMapping && currentKeywordForMapping.trim() 
+                ? currentKeywordForMapping.trim() 
+                : (SceneDataNarration && SceneDataNarration.trim() ? SceneDataNarration.trim() : (scriptTitle || ''));
+            
+            setSearchQuery(queryToUse);
+            searchGoogleImages(queryToUse);
             const keywordsJoined = suggestionKeywords.join(' ');
             searchEnvatoImages(keywordsJoined);
             searchEnvatoClips(keywordsJoined);
             return;
+        }
+        
+        // If we have a keyword but no autoSearch, still set the query
+        if (currentKeywordForMapping && currentKeywordForMapping.trim() && !hasInitialSearch.current) {
+            const keywordQuery = currentKeywordForMapping.trim();
+            setSearchQuery(keywordQuery);
+        } else if (SceneDataNarration && SceneDataNarration.trim() && !hasInitialSearch.current && !currentKeywordForMapping) {
+            // If no keyword but we have narration, set it as query
+            setSearchQuery(SceneDataNarration.trim());
         }
 
         // if (SceneDataNarration && !hasInitialSearch.current) {
@@ -431,7 +496,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         //         searchEnvatoClips(ek);
         //     }
         // }
-    }, [SceneDataNarration]);
+    }, [SceneDataNarration, currentKeywordForMapping, autoSearchOnMount, suggestionKeywords]);
 
     const handleSearch = () => {
         if (searchQuery.trim()) {
@@ -494,19 +559,34 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         }
     };
 
-    const handleDone = () => {
+    const handleDone = async () => {
         // Single selection across tabs
         const selectedUrl = selectedBySource.google.values().next().value || selectedBySource.envato.values().next().value || selectedBySource.envatoClips.values().next().value || selectedBySource.upload.values().next().value;
         if (selectedUrl) {
+            // Find the selected image object to get downloadUrl and validate the URL
+            const allResults: ImageResult[] = [
+                ...googleImages,
+                ...envatoImages,
+                ...envatoClips,
+                ...uploadedFiles
+            ];
+            const selectedObj = allResults.find((it) => it.url === selectedUrl);
+            
+            // Validate and normalize the URL (especially for Envato preview URLs)
+            let validatedUrl = HelperFunctions.validateAndNormalizeImageUrl(
+                selectedUrl,
+                selectedObj?.downloadUrl
+            );
+            
             const updatedSceneData: any = {
                 assets: {
-                    images: HelperFunctions.isVideoUrl(selectedUrl) ? [] : [selectedUrl],
-                    clips: HelperFunctions.isVideoUrl(selectedUrl) ? [selectedUrl] : [],
+                    images: HelperFunctions.isVideoUrl(validatedUrl) ? [] : [validatedUrl],
+                    clips: HelperFunctions.isVideoUrl(validatedUrl) ? [validatedUrl] : [],
                 }
             };
             if (currentKeywordForMapping) {
                 updatedSceneData.keywordsSelectedMerge = {
-                    [currentKeywordForMapping]: [selectedUrl]
+                    [currentKeywordForMapping]: [validatedUrl]
                 };
                 const typed = (searchQuery || '').trim();
                 if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
@@ -516,16 +596,12 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
             // Also add to keywordsSelected array with media and selected transition effects
             try {
-                // Find the selected image object to pick a thumbnail for lowResMedia
-                const allResults: ImageResult[] = [
-                    ...googleImages,
-                    ...envatoImages,
-                    ...envatoClips,
-                    ...uploadedFiles
-                ];
-                const selectedObj = allResults.find((it) => it.url === selectedUrl);
-                const lowResMedia = selectedObj?.thumbnail || selectedUrl;
-                const highResMedia = selectedUrl;
+                // Use validated URL and validate thumbnail as well
+                const validatedThumbnail = selectedObj?.thumbnail 
+                    ? HelperFunctions.validateAndNormalizeImageUrl(selectedObj.thumbnail, selectedObj.downloadUrl)
+                    : validatedUrl;
+                const lowResMedia = validatedThumbnail;
+                const highResMedia = validatedUrl;
                 const typed = (searchQuery || '').trim();
                 const suggestedKeyword = (currentKeywordForMapping && currentKeywordForMapping.trim())
                     || (selectedObj?.sourceSuggestion && String(selectedObj.sourceSuggestion))
@@ -646,7 +722,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             justifyContent: 'center'
                         }}
                     />
-                    <Tab
+                    {/* Envato Images tab - disabled for now */}
+                    {/* <Tab
                         value="envato"
                         label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
@@ -660,7 +737,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                 >
                                     <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
                                 </Box>
-                                {/* <EnvatoIcon sx={{ fontSize: 18 }} /> */}
                                 <Badge badgeContent={envatoImages.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
                                     Envato Images
                                 </Badge>
@@ -674,7 +750,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             display: 'flex',
                             justifyContent: 'center'
                         }}
-                    />
+                    /> */}
+                    {/* Envato Clips tab - disabled for now */}
                     <Tab
                         value="envatoClips"
                         label={
@@ -703,7 +780,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             justifyContent: 'center'
                         }}
                     />
-                    <Tab
+                    {/* YouTube Clips tab - disabled for now */}
+                    {/* <Tab
                         value="youtube"
                         label={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
@@ -730,7 +808,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             display: 'flex',
                             justifyContent: 'center'
                         }}
-                    />
+                    /> */}
                     <Tab
                         value="upload"
                         label={
@@ -1138,6 +1216,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                 </Box>
                             )
                         ) : currentImages.length > 0 ? (
+                            <>
                             <Grid container spacing={2}>
                                 {currentImages.map((image, index) => (
                                     <Grid item xs={12} sm={4} md={4} key={image.id}>
@@ -1227,8 +1306,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                     <CardMedia
                                                         component="img"
                                                         height="140"
-                                                        image={image.thumbnail}
-                                                        alt={image.title}
+                                                    image={image.thumbnail}
+                                                    alt={image.title}
                                                         sx={{ objectFit: 'cover' }}
                                                         onClick={() => handleImageSelect(image.url)}
                                                     />
@@ -1273,13 +1352,13 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                     {image.source?.toUpperCase() || 'IMG'}
                                                 </Box>
 
-                                                {/* Action Buttons */}
-                                                <Box
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        bottom: 8,
-                                                        right: 8,
-                                                        display: 'flex',
+                                                    {/* Action Buttons */}
+                                                    <Box
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            bottom: 8,
+                                                            right: 8,
+                                                            display: 'flex',
                                                         gap: 0.5
                                                     }}
                                                 >
@@ -1339,6 +1418,33 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                     </Grid>
                                 ))}
                             </Grid>
+                            {/* Load More Button for Google Images */}
+                            {activeTab === 'google' && googleHasMore && (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+                                    <Button
+                                        variant="outlined"
+                                        size="large"
+                                        onClick={loadMoreGoogleImages}
+                                        disabled={googleLoadingMore}
+                                        startIcon={googleLoadingMore ? <CircularProgress size={20} /> : null}
+                                        sx={{
+                                            minWidth: 200,
+                                            fontSize: '1rem',
+                                            textTransform: 'none',
+                                            borderColor: PRIMARY.main,
+                                            color: PRIMARY.main,
+                                            '&:hover': {
+                                                borderColor: PRIMARY.dark,
+                                                backgroundColor: PRIMARY.light,
+                                                color: PRIMARY.dark
+                                            }
+                                        }}
+                                    >
+                                        {googleLoadingMore ? 'Loading...' : 'Load More'}
+                                    </Button>
+                                </Box>
+                            )}
+                        </>
                         ) : searchQuery && !currentLoading ? (
                             <Box sx={{ textAlign: 'center', py: 4 }}>
                                 <Typography variant="body1" color="text.secondary">

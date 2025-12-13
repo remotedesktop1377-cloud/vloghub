@@ -761,41 +761,62 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                               </Button>
                                             </Box>
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                              {sceneData.highlightedKeywords.map((keyword, keywordIndex) => (
-                                                <Box
-                                                  key={keywordIndex}
-                                                  data-keyword-badge="true"
-                                                  sx={{
-                                                    bgcolor: SUCCESS.light,
-                                                    color: 'text.white',
-                                                    px: 1,
-                                                    py: 0.25,
-                                                    borderRadius: 0.5,
-                                                    fontSize: '1.3rem',
-                                                    fontWeight: 500,
-                                                    border: `1px solid ${SUCCESS.main}`,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 0.5,
-                                                    cursor: 'pointer',
-                                                    '&:hover': {
-                                                      bgcolor: SUCCESS.main,
-                                                      color: SUCCESS.light,
-                                                    }
-                                                  }}
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (typeof window !== 'undefined') {
-                                                      (window as any).__keywordSuggestions = { keyword, keywords: [keyword] };
-                                                    }
-                                                    onMediaManagementSceneDataIndex(index);
-                                                    onMediaManagementOpen(true);
-                                                    // if (typeof onOpenMediaForKeyword === 'function') {
-                                                    //   onOpenMediaForKeyword(index, keyword);
-                                                    // }
-                                                  }}
-                                                >
-                                                  <Typography variant="body1" sx={{ fontSize: '1.3rem', fontWeight: 400 }}>{keyword}</Typography>
+                                              {sceneData.highlightedKeywords.map((keyword, keywordIndex) => {
+                                                // Check if this keyword has media attached
+                                                const hasMedia = (() => {
+                                                  if (Array.isArray(sceneData.keywordsSelected)) {
+                                                    const arr = sceneData.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
+                                                    const entry = arr.find(e => 
+                                                      (e.suggestedKeyword === keyword || e.modifiedKeyword === keyword)
+                                                    );
+                                                    return !!(entry?.media?.lowResMedia || entry?.media?.highResMedia);
+                                                  } else if (sceneData.keywordsSelected && typeof sceneData.keywordsSelected === 'object') {
+                                                    const map = sceneData.keywordsSelected as Record<string, string[]>;
+                                                    const mediaUrls = map[keyword] || [];
+                                                    return mediaUrls.length > 0;
+                                                  }
+                                                  return false;
+                                                })();
+
+                                                return (
+                                                  <Box
+                                                    key={keywordIndex}
+                                                    data-keyword-badge="true"
+                                                    sx={{
+                                                      bgcolor: hasMedia ? PRIMARY.main : SUCCESS.light,
+                                                      color: hasMedia ? 'white' : 'text.white',
+                                                      px: 1,
+                                                      py: 0.25,
+                                                      borderRadius: 0.5,
+                                                      fontSize: '1.3rem',
+                                                      fontWeight: 500,
+                                                      border: `2px solid ${hasMedia ? PRIMARY.dark : SUCCESS.main}`,
+                                                      display: 'flex',
+                                                      alignItems: 'center',
+                                                      gap: 0.5,
+                                                      cursor: 'pointer',
+                                                      position: 'relative',
+                                                      '&:hover': {
+                                                        bgcolor: hasMedia ? PRIMARY.dark : SUCCESS.main,
+                                                        color: hasMedia ? 'white' : SUCCESS.light,
+                                                      }
+                                                    }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      if (typeof window !== 'undefined') {
+                                                        (window as any).__keywordSuggestions = { keyword, keywords: [keyword] };
+                                                      }
+                                                      onMediaManagementSceneDataIndex(index);
+                                                      onMediaManagementOpen(true);
+                                                      // if (typeof onOpenMediaForKeyword === 'function') {
+                                                      //   onOpenMediaForKeyword(index, keyword);
+                                                      // }
+                                                    }}
+                                                  >
+                                                    {hasMedia && (
+                                                      <CheckIcon sx={{ fontSize: '1.2rem', color: 'white' }} />
+                                                    )}
+                                                    <Typography variant="body1" sx={{ fontSize: '1.3rem', fontWeight: 400 }}>{keyword}</Typography>
                                                   <Box
                                                     sx={{
                                                       width: 18,
@@ -868,7 +889,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     ×
                                                   </Box>
                                                 </Box>
-                                              ))}
+                                              );
+                                              })}
                                             </Box>
                                             {/* Media Selected (prefer scene-level videoEffects, fallback to project-level) */}
                                             {(sceneData.sceneSettings || projectSettings) && (() => {

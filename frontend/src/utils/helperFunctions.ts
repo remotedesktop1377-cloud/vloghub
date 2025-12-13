@@ -966,6 +966,76 @@ export class HelperFunctions {
     return hasVideoExtension || isEnvatoVideo || isVideoPath;
   };
 
+  /**
+   * Validate and normalize image URLs for all sources (Google, Envato, etc.)
+   * Removes problematic query parameters and validates the URL is downloadable
+   */
+  static validateAndNormalizeImageUrl = (url: string, downloadUrl?: string): string => {
+    if (!url || typeof url !== 'string') return url;
+
+    // For any image source, prefer downloadUrl if available and it's a direct image URL
+    if (downloadUrl && downloadUrl.trim() && downloadUrl !== url) {
+      try {
+        const downloadUrlObj = new URL(downloadUrl);
+        // If downloadUrl is a direct image URL (not an HTML page), use it
+        if (downloadUrlObj.pathname.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) {
+          return downloadUrl;
+        }
+        // If downloadUrl is a page URL, we can't use it directly
+        // Continue with cleaning the original URL
+      } catch {
+        // downloadUrl is not a valid URL, continue with url
+      }
+    }
+
+    try {
+      const urlObj = new URL(url);
+      
+      // Common problematic query parameters that might cause download issues
+      const paramsToRemove: string[] = [];
+      
+      // Envato-specific parameters
+      // Note: Envato preview URLs are protected - only remove watermark parameter
+      // Keep w, h, cf_fit, format, q, s as they may be required for the URL to work
+      if (url.includes('envatousercontent.com') && url.includes('market-resized')) {
+        // Only remove the watermark parameter, keep everything else
+        paramsToRemove.push('mark');
+        console.log('Cleaning Envato preview URL (removed watermark param only, keeping size params)');
+      }
+      
+      // Google Images - remove tracking and unnecessary parameters
+      if (url.includes('googleusercontent.com') || url.includes('gstatic.com') || url.includes('googleapis.com')) {
+        // Remove common Google tracking/redirect parameters
+        paramsToRemove.push('usg', 'sig', 'sa', 'source', 'cd', 'ved', 'ictx', 'ei');
+        console.log('Cleaning Google image URL (removed tracking params)');
+      }
+      
+      // General problematic parameters for any image URL
+      // Remove parameters that might cause redirects or authentication issues
+      const generalParamsToRemove = ['ref', 'referrer', 'utm_source', 'utm_medium', 'utm_campaign'];
+      paramsToRemove.push(...generalParamsToRemove);
+      
+      // Remove all problematic parameters
+      paramsToRemove.forEach(param => urlObj.searchParams.delete(param));
+      
+      const cleanedUrl = urlObj.toString();
+      if (cleanedUrl !== url) {
+        console.log('Cleaned image URL:', cleanedUrl);
+      }
+      return cleanedUrl;
+    } catch (e) {
+      console.warn('Failed to parse URL:', url, e);
+      // Validate it's at least a proper URL format
+      try {
+        new URL(url);
+        return url;
+      } catch {
+        console.warn('Invalid URL format:', url);
+        return url; // Return as-is, let backend handle validation
+      }
+    }
+  };
+
   // Determine if clip is a local path or Google Drive URL
   static getClipUrl(previewClip: string): string | null {
     if (!previewClip) return null;

@@ -89,7 +89,6 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
                 body: JSON.stringify({
                     query: combinedQuery,
                     page: 1,
-                    imagesPerPage: 15
                 }),
             });
 
