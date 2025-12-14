@@ -29,6 +29,7 @@ export interface ScriptData {
     gammaGenId?: string;
     gammaExportUrl?: string;
     videoDuration?: number;
+    videoThumbnailUrl?: string;
     projectSettings?: Settings,
     scenesData?: SceneData[];
 }

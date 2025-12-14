@@ -48,6 +48,7 @@ import PdfService from '@/services/pdfService';
 import VideoRenderService from '@/services/videoRenderService';
 import { SceneData } from '@/types/sceneData';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
+import ThumbnailCreationService from '@/services/thumbnailCreationService';
 import ChromaKeyUpload from '@/components/scriptProductionComponents/ChromaKeyUpload';
 import { DropResult } from 'react-beautiful-dnd';
 import { fallbackImages } from '@/data/mockImages';
@@ -571,7 +572,7 @@ const ScriptProductionClient = () => {
                         words: ch.words ?? scriptData.scenesData![index]?.words ?? 0,
                         startTime: ch.startTime ?? scriptData.scenesData![index]?.startTime ?? 0,
                         endTime: ch.endTime ?? scriptData.scenesData![index]?.endTime ?? 0,
-                        durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,                        
+                        durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,
                         gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
                         previewClip: ch.previewClip || scriptData.scenesData![index]?.previewClip || '',
                         highlightedKeywords: ch.highlightedKeywords ?? [],
@@ -590,7 +591,28 @@ const ScriptProductionClient = () => {
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
 
                     applyProjectSettingsDialog('project', scriptData, scriptData.projectSettings || null, null, normalizedFromStorage);
-
+                    if (!scriptData.videoThumbnailUrl) {
+                        const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
+                        console.log('Thumbnail URL:', thumbnailUrl);
+                        if (thumbnailUrl) {
+                            const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
+                            console.log('Upload result:', uploadResult);
+                            if (uploadResult) {
+                                const updatedScriptData = {
+                                    ...scriptData,
+                                    videoThumbnailUrl: uploadResult,
+                                    updated_at: new Date().toISOString(),
+                                } as ScriptData;
+                                setScriptData(updatedScriptData);
+                                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                            }
+                        }
+                        else {
+                            console.error('Failed to generate thumbnail');
+                        }
+                    } else {
+                        console.error('Thumbnail already exists');
+                    }
                 }
             } catch { }
         }
@@ -638,6 +660,7 @@ const ScriptProductionClient = () => {
             }
         }
     };
+
     // SceneData Management Functions
     const handleAddSceneDataAfter = (index: number) => {
         HelperFunctions.addSceneDataAfter(index, scenesData, setScenesData);
@@ -1764,7 +1787,7 @@ const ScriptProductionClient = () => {
                                                 variant="contained"
                                                 size="medium"
                                                 fullWidth
-                                                startIcon={ isGammaProcessing ? <CircularProgress size={20} /> : <VideoIcon />}
+                                                startIcon={isGammaProcessing ? <CircularProgress size={20} /> : <VideoIcon />}
                                                 onClick={() => uploadCompleteProjectToDrive()}
                                                 disabled={!scenesData.length || isGammaProcessing}
                                                 sx={{ textTransform: 'none', fontSize: '1.25rem' }}
