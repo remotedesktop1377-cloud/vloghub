@@ -33,7 +33,7 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<ThumbnailCreationResponse>(
-                API_ENDPOINTS.REFINE_TITLE,
+                API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL,
                 { title: title.trim() }
             );
             return response;
