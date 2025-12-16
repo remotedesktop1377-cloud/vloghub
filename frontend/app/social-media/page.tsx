@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import SocialMediaPageClient from '@/components/SocialMedia/SocialMediaPageClient';
 
 export const metadata = {
@@ -7,7 +8,9 @@ export const metadata = {
 
 export default function SocialMediaPage() {
   return (
-    <SocialMediaPageClient />
+    <Suspense fallback={null}>
+      <SocialMediaPageClient />
+    </Suspense>
   );
 }
 

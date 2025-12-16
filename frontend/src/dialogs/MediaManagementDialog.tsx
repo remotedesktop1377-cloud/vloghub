@@ -177,7 +177,7 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
                       }
                     });
                     
-                    const existingClips: VideoClip[] = Array.isArray(ch.assets?.clips) ? (ch.assets.clips as VideoClip[]) : [];
+                    const existingClips: VideoClip[] = Array.isArray(ch.assets?.clips) ? (ch.assets?.clips as VideoClip[]) : [];
                     const newClips: VideoClip[] = clipUrls.map(url => ({
                       id: `${clipUrls.indexOf(url) + 1}`,
                       name: `Video Clip ${clipUrls.indexOf(url) + 1}`,

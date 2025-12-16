@@ -190,7 +190,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         autoClose: 5000,
                     });
                     setTimeout(() => {
-                        router.push('/social-media');
+                        router.push(ROUTES_KEYS.SOCIAL_MEDIA);
                     }, 2000);
                 } else {
                     throw new Error(data.error || 'Failed to delete video from YouTube');
