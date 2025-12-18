@@ -12,6 +12,7 @@ export interface ProcessProjectResponse {
   jobId: string;
   finalVideo: string;
   scenes: string[];
+  videoThumbnailUrl?: string;
   driveUpload?: {
     success?: boolean;
     projectFolderId?: string;

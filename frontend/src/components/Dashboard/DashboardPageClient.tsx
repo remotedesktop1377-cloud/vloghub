@@ -360,7 +360,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                                             </Box>
                                         )}
                                     </div>
-                                    <div className={styles.videoName}>{video.jobId}</div>
+                                    <div className={styles.videoName}>{video.name}</div>
 
                                     <Button
                                         variant="contained"

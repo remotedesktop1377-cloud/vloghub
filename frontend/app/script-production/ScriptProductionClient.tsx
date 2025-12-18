@@ -388,7 +388,7 @@ const ScriptProductionClient = () => {
                     narration_type: scriptData?.narration_type || null,
                     narrator_chroma_key_link: scriptData?.narrator_chroma_key_link,
                     transcription: scriptData?.transcription || '',
-                    // Project-level settings
+                    videoThumbnailUrl: scriptData?.videoThumbnailUrl || null,
                     projectSettings: {
                         videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
                         videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
@@ -446,11 +446,11 @@ const ScriptProductionClient = () => {
                     }
                 })
                 .catch((err) => {
-                    console.error('Background processProjectJson error', err);
+                    console.log('Background processProjectJson error', err);
                 });
 
         } catch (e: any) {
-            console.error(e);
+            console.log(e);
             toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
@@ -494,18 +494,18 @@ const ScriptProductionClient = () => {
                         convertGammaPdfToImages(updatedScriptData);
                     } else if (data?.status === 'failed' || data?.status === 'error') {
                         setIsGammaProcessing(false);
-                        console.error('Gamma generation failed:', data?.error || data?.message);
+                        console.log('Gamma generation failed:', data?.error || data?.message);
                     } else {
                         setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
                     }
                 } catch (error) {
-                    console.error('Error checking Gamma status:', error);
+                    console.log('Error checking Gamma status:', error);
                     setTimeout(poll, PDF_TO_IMAGES_INTERVAL);
                 }
             };
             poll();
         } catch (error) {
-            console.error('Failed to check Gamma status:', error);
+            console.log('Failed to check Gamma status:', error);
             setIsGammaProcessing(false);
         }
     };
@@ -549,7 +549,7 @@ const ScriptProductionClient = () => {
 
             setIsGammaProcessing(false);
         } catch (e: any) {
-            console.error('Failed to convert PDF to images:', e?.message || 'Unknown error');
+            console.log('Failed to convert PDF to images:', e?.message || 'Unknown error');
             setIsGammaProcessing(false);
         }
     };
@@ -593,10 +593,10 @@ const ScriptProductionClient = () => {
                     applyProjectSettingsDialog('project', scriptData, scriptData.projectSettings || null, null, normalizedFromStorage);
                     if (!scriptData.videoThumbnailUrl) {
                         const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
-                        console.log('Thumbnail URL:', thumbnailUrl);
+                        // console.log('Thumbnail URL:', thumbnailUrl);
                         if (thumbnailUrl) {
                             const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
-                            console.log('Upload result:', uploadResult);
+                            // console.log('Upload result:', uploadResult);
                             if (uploadResult) {
                                 const updatedScriptData = {
                                     ...scriptData,
@@ -608,10 +608,10 @@ const ScriptProductionClient = () => {
                             }
                         }
                         else {
-                            console.error('Failed to generate thumbnail');
+                            console.log('Failed to generate thumbnail');
                         }
                     } else {
-                        console.error('Thumbnail already exists');
+                        console.log('Thumbnail already exists');
                     }
                 }
             } catch { }
@@ -769,7 +769,7 @@ const ScriptProductionClient = () => {
             setAiImagesEnabled(true);
             setRightTabIndex(0);
         } catch (e) {
-            console.error('AI generate failed', e);
+            console.log('AI generate failed', e);
             const first = fallbackImages[selectedSceneDataIndex % fallbackImages.length];
             setScenesDataImagesMap(prev => ({ ...prev, [selectedSceneDataIndex]: [first, ...(prev[selectedSceneDataIndex] || [])] }));
             setGeneratedImages([first]);
@@ -968,7 +968,7 @@ const ScriptProductionClient = () => {
         SecureStorageHelpers.setScriptMetadata(approvedData);
         // const { error } = await SupabaseHelpers.saveApprovedScript(data);
         // if (error) {
-        //     console.error('Error saving approved script:', error);
+        //     console.log('Error saving approved script:', error);
         // } else {
         setIsScriptApproved(true);
         // show an empty upload view to the user to ask him to upload the Narration to proceed with the video generation

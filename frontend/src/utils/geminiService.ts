@@ -22,67 +22,14 @@ export function getGeminiClient(apiKey?: string): GoogleGenerativeAI {
  * @param options.apiKey - Optional API key override
  * @returns Configured GenerativeModel instance
  */
-export function getGeminiModel(options?: {
-  model?: string;
-  temperature?: number;
-  apiKey?: string;
-}): GenerativeModel {
-  const {
-    model = AI_CONFIG.GEMINI.MODEL_PRO,
-    temperature = AI_CONFIG.GEMINI.TEMPERATURE,
-    apiKey,
-  } = options || {};
+export function getGeminiModel(): GenerativeModel {
+  const genAI = getGeminiClient(process.env.GEMINI_API_KEY);
+  const model = AI_CONFIG.GEMINI.MODEL_PRO;
+  const temperature = AI_CONFIG.GEMINI.TEMPERATURE;
 
-  const genAI = getGeminiClient(apiKey);
-  
   return genAI.getGenerativeModel({
-    model,
-    generationConfig: { temperature },
-  });
-}
-
-
-/**
- * Convenience function to get Gemini Active model with default settings
- */
-export function getGeminiActiveModel(apiKey?: string): GenerativeModel {
-    return getGeminiModel({
-      model: AI_CONFIG.GEMINI.MODEL_FLASH,
-      temperature: AI_CONFIG.GEMINI.TEMPERATURE,
-      apiKey,
-    });
-  }
-
-/**
- * Convenience function to get Gemini Pro model with default settings
- */
-export function getGeminiProModel(apiKey?: string): GenerativeModel {
-  return getGeminiModel({
-    model: AI_CONFIG.GEMINI.MODEL_PRO,
-    temperature: AI_CONFIG.GEMINI.TEMPERATURE,
-    apiKey,
-  });
-}
-
-/**
- * Convenience function to get Gemini Flash model with default settings
- */
-export function getGeminiFlashModel(apiKey?: string): GenerativeModel {
-  return getGeminiModel({
-    model: AI_CONFIG.GEMINI.MODEL_FLASH,
-    temperature: AI_CONFIG.GEMINI.TEMPERATURE,
-    apiKey,
-  });
-}
-
-/**
- * Convenience function to get Gemini Flash model with low temperature (for keyword extraction, etc.)
- */
-export function getGeminiFlashModelLowTemp(apiKey?: string): GenerativeModel {
-  return getGeminiModel({
-    model: AI_CONFIG.GEMINI.MODEL_FLASH,
-    temperature: 0.2,
-    apiKey,
+    model: model,
+    generationConfig: { temperature: temperature },
   });
 }
 

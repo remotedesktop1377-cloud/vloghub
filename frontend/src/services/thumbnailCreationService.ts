@@ -64,21 +64,21 @@ export const ThumbnailCreationService = {
             }
             return null;
         } catch (error) {
-            console.error('Error generating thumbnail:', error);
+            console.log('Error generating thumbnail:', error);
             return null;
         }
     },
 
     async uploadThumbnailToDrive(jobId: string, thumbnailDataUrl: string): Promise<string | null> {
         if (!jobId || !thumbnailDataUrl) {
-            console.error('JobId and thumbnail data URL are required');
+            console.log('JobId and thumbnail data URL are required');
             return null;
         }
 
         try {
             const matches = thumbnailDataUrl.match(/^data:(.*?);base64,(.*)$/);
             if (!matches) {
-                console.error('Invalid thumbnail data URL format');
+                console.log('Invalid thumbnail data URL format');
                 return null;
             }
 
@@ -103,11 +103,11 @@ export const ThumbnailCreationService = {
                 // console.log('===========================================');
                 return uploadResult.webViewLink;
             } else {
-                console.error('Failed to upload thumbnail to Google Drive:', uploadResult);
+                console.log('Failed to upload thumbnail to Google Drive:', uploadResult);
                 return null;
             }
         } catch (error) {
-            console.error('Error uploading thumbnail to Google Drive:', error);
+            console.log('Error uploading thumbnail to Google Drive:', error);
             return null;
         }
     },

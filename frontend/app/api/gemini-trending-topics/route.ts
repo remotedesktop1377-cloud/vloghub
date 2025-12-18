@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HelperFunctions } from '@/utils/helperFunctions';
-import { getGeminiActiveModel } from '@/utils/geminiService';
+import { getGeminiModel } from '@/utils/geminiService';
 
 // Helper function to generate random trending topics
 const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
   try {
-    const model = getGeminiActiveModel();
+    const model = getGeminiModel();
 
     // Get time range description for the prompt
     const timeRangeDescription = HelperFunctions.getTimeRangeDescription(dateRange);

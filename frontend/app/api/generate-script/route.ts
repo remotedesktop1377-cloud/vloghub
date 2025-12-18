@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getGeminiActiveModel } from '@/utils/geminiService';
-
-const model = getGeminiActiveModel();
+import { getGeminiModel } from '@/utils/geminiService';
 
 const LANGUAGE_ALIAS_MAP: Record<string, string> = {
   urdu: 'Urdu',
@@ -152,7 +150,7 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary). For
 - estimated_words should be the actual word count of the script`;
 
     try {
-      const result = await model.generateContent(prompt);
+      const result = await getGeminiModel().generateContent(prompt);
       const response = result.response;
       const rawText = response.text();
 

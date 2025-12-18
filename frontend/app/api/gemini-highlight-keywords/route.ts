@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getGeminiActiveModel } from '@/utils/geminiService';
+import { getGeminiModel } from '@/utils/geminiService';
 import { SceneData } from '@/types/sceneData';
 
-const model = getGeminiActiveModel();
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,7 +30,7 @@ Return ONLY valid JSON in this exact format:
 Paragraphs:
 ${scenesData.map((c: SceneData, i: number) => `ID: ${c.id}\n${c.narration}`).join('\n\n')}`;
 
-    const result = await model.generateContent(prompt);
+    const result = await getGeminiModel().generateContent(prompt);
     const response = result.response;
     const rawText = response.text();
     if (!rawText || rawText.trim().length === 0) {

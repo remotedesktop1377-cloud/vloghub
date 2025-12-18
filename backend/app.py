@@ -216,6 +216,7 @@ async def process_project_from_json(payload: dict):
             "scenes": result.get("scenes", []),
             "driveUpload": drive_upload,
             "driveUploadError": drive_upload_error,
+            "videoThumbnailUrl": project.get("videoThumbnailUrl"),
         }
     except Exception as exc:
         logger.exception("Project JSON processing failed")
