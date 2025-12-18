@@ -367,72 +367,72 @@ def create_text_overlay(text_overlay_data: dict, duration: float, video_size: tu
     
     print(f"[DEBUG] Creating text overlay: '{text[:50]}...' (font_size={font_size}, position={position}, duration={duration}s)")
     
-    try:
-        # Parse background color and opacity
-        bg_opacity = 1.0
-        bg_color_parsed = None
+    # try:
+    #     # Parse background color and opacity
+    #     bg_opacity = 1.0
+    #     bg_color_parsed = None
         
-        if bg_color:
-            if len(bg_color) > 7:  # Has alpha channel
-                try:
-                    bg_opacity = int(bg_color[-2:], 16) / 255.0
-                    bg_color_parsed = bg_color[:-2] if bg_opacity > 0 else None
-                except (ValueError, IndexError):
-                    bg_color_parsed = bg_color if len(bg_color) == 7 else bg_color[:7]
-            else:
-                bg_color_parsed = bg_color
+    #     if bg_color:
+    #         if len(bg_color) > 7:  # Has alpha channel
+    #             try:
+    #                 bg_opacity = int(bg_color[-2:], 16) / 255.0
+    #                 bg_color_parsed = bg_color[:-2] if bg_opacity > 0 else None
+    #             except (ValueError, IndexError):
+    #                 bg_color_parsed = bg_color if len(bg_color) == 7 else bg_color[:7]
+    #         else:
+    #             bg_color_parsed = bg_color
         
-        # Convert position string to MoviePy position format
-        if position == "top-left":
-            pos_str = ('left', 'top')
-        elif position == "top-center":
-            pos_str = ('center', 'top')
-        elif position == "top-right":
-            pos_str = ('right', 'top')
-        elif position == "center":
-            pos_str = 'center'
-        elif position == "bottom-left":
-            pos_str = ('left', 'bottom')
-        elif position == "bottom-center":
-            pos_str = ('center', 'bottom')
-        elif position == "bottom-right":
-            pos_str = ('right', 'bottom')
-        elif position == "custom" and custom_pos:
-            # Use custom position
-            if custom_pos.get("usePercentage", True):
-                x = int((custom_pos.get("x", 50) / 100) * video_size[0])
-                y = int((custom_pos.get("y", 50) / 100) * video_size[1])
-            else:
-                x = int(custom_pos.get("x", 0))
-                y = int(custom_pos.get("y", 0))
-            pos_str = (x, y)
-        else:
-            pos_str = ('center', 'bottom')  # Default
+    #     # Convert position string to MoviePy position format
+    #     if position == "top-left":
+    #         pos_str = ('left', 'top')
+    #     elif position == "top-center":
+    #         pos_str = ('center', 'top')
+    #     elif position == "top-right":
+    #         pos_str = ('right', 'top')
+    #     elif position == "center":
+    #         pos_str = 'center'
+    #     elif position == "bottom-left":
+    #         pos_str = ('left', 'bottom')
+    #     elif position == "bottom-center":
+    #         pos_str = ('center', 'bottom')
+    #     elif position == "bottom-right":
+    #         pos_str = ('right', 'bottom')
+    #     elif position == "custom" and custom_pos:
+    #         # Use custom position
+    #         if custom_pos.get("usePercentage", True):
+    #             x = int((custom_pos.get("x", 50) / 100) * video_size[0])
+    #             y = int((custom_pos.get("y", 50) / 100) * video_size[1])
+    #         else:
+    #             x = int(custom_pos.get("x", 0))
+    #             y = int(custom_pos.get("y", 0))
+    #         pos_str = (x, y)
+    #     else:
+    #         pos_str = ('center', 'bottom')  # Default
         
-        # Create TextClip - MoviePy TextClip signature: text, font_size (not fontsize), color, bg_color, size, method
-        print(f"[DEBUG] Creating TextClip with text: '{text}', font_size: {font_size}, color: {font_color}, bg_color: {bg_color_parsed}")
+    #     # Create TextClip - MoviePy TextClip signature: text, font_size (not fontsize), color, bg_color, size, method
+    #     print(f"[DEBUG] Creating TextClip with text: '{text}', font_size: {font_size}, color: {font_color}, bg_color: {bg_color_parsed}")
         
-        # Use correct parameter names: text= and font_size=
-        txt_clip = (TextClip("BREAKING NEWS: Gaza Conflict",
-                fontsize=80, color='white')
-       .set_position(("center","top"))
-       .set_duration(5))
+    #     # Use correct parameter names: text= and font_size=
+    #     txt_clip = (TextClip("BREAKING NEWS: Gaza Conflict",
+    #             fontsize=80, color='white')
+    #    .set_position(("center","top"))
+    #    .set_duration(5))
         
-        # Set duration and position
-        txt_clip = txt_clip.set_duration(duration).set_position(pos_str)
+    #     # Set duration and position
+    #     txt_clip = txt_clip.set_duration(duration).set_position(pos_str)
         
-        # Apply opacity if needed
-        if bg_opacity < 1.0:
-            txt_clip = txt_clip.set_opacity(bg_opacity)
+    #     # Apply opacity if needed
+    #     if bg_opacity < 1.0:
+    #         txt_clip = txt_clip.set_opacity(bg_opacity)
         
-        print(f"[DEBUG] ✓ Successfully created text overlay: '{text[:50]}...' at position {pos_str}, duration {duration}s")
-        return txt_clip
+    #     print(f"[DEBUG] ✓ Successfully created text overlay: '{text[:50]}...' at position {pos_str}, duration {duration}s")
+    #     return txt_clip
         
-    except Exception as e:
-        print(f"[ERROR] Could not create text overlay: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+    # except Exception as e:
+    #     print(f"[ERROR] Could not create text overlay: {e}")
+    #     import traceback
+    #     traceback.print_exc()
+    #     return None
 
 def process_scene(
     scene_data: Dict,
@@ -820,17 +820,21 @@ def process_scene(
         # Create timeline for keyword images (same as manual processing)
         # Structure: {start_time: (end_time, image_path)}
         image_timeline = {}
-        base_image_duration = 3.0  # Default duration for keyword images (including Gamma preview)
+        base_image_duration = 3.0  # Default duration for keyword images - 3 seconds
+        base_video_duration = 10.0  # Default duration for keyword videos - 10 seconds
         
         for mapping in keyword_image_mappings:
             image_path = mapping["image_path"]
             is_video = mapping.get("is_video", False)
             timestamps = mapping.get("timestamps", [])
             
+            # Use different duration based on media type
+            media_duration = base_video_duration if is_video else base_image_duration
+            
             # Add to timeline for each timestamp
             for timestamp in timestamps:
                 start_time = max(0.0, min(timestamp, scene_duration))
-                end_time = min(scene_duration, start_time + base_image_duration)
+                end_time = min(scene_duration, start_time + media_duration)
                 
                 # If there's already an image at this time, keep the later one (or extend)
                 if start_time in image_timeline:
@@ -975,68 +979,11 @@ def process_scene(
             segment_clip = CompositeVideoClip(segment_layers, size=video_size)
             segments.append(segment_clip)
         
-        # If segments were created, use them (same as manual processing)
+        # If segments were created, use them without transitions
+        # Transitions are only applied at scene level (first scene start, last scene end)
         if segments:
-            # Get transition settings from scene settings
-            transition_effect = scene_settings.get("videoTransitionEffect", {})
-            transition_type = transition_effect.get("id", "fade_dissolve") if isinstance(transition_effect, dict) else "fade_dissolve"
-            transition_duration = transition_effect.get("duration", 1.0) if isinstance(transition_effect, dict) else 1.0
-            
-            # Apply transitions between segments if there are multiple segments
-            if len(segments) > 1 and transition_type and transition_type != 'none':
-                print(f"Applying transitions between segments (type: {transition_type}, duration: {transition_duration}s)...")
-                transitioned_segments = []
-                
-                for i, segment in enumerate(segments):
-                    # Apply transition based on type
-                    if transition_type == 'fade_in':
-                        if i == 0:
-                            fade_in = FadeIn(duration=min(transition_duration, segment.duration * 0.5))
-                            segment = fade_in.apply(segment)
-                    elif transition_type == 'fade_out':
-                        if i == len(segments) - 1:
-                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
-                            segment = fade_out.apply(segment)
-                    elif transition_type in ['fade_dissolve', 'cross_dissolve']:
-                        # Apply fade-in to first segment
-                        if i == 0 and len(segments) > 1:
-                            fade_in = FadeIn(duration=min(transition_duration, segment.duration * 0.5))
-                            segment = fade_in.apply(segment)
-                        # Apply fade-out to last segment
-                        if i == len(segments) - 1 and len(segments) > 1:
-                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
-                            segment = fade_out.apply(segment)
-                        # Apply both fade-in and fade-out to middle segments
-                        elif i > 0 and i < len(segments) - 1:
-                            fade_in = FadeIn(duration=min(transition_duration, segment.duration * 0.5))
-                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
-                            segment = fade_in.apply(segment)
-                            segment = fade_out.apply(segment)
-                    elif transition_type == 'fade_to_black':
-                        if i == len(segments) - 1:
-                            fade_out = FadeOut(duration=min(transition_duration, segment.duration * 0.5))
-                            segment = fade_out.apply(segment)
-                    elif transition_type.startswith('slide_in_'):
-                        side = transition_type.replace('slide_in_', '')
-                        if i == 0:
-                            slide_in = SlideIn(duration=min(transition_duration, segment.duration * 0.5), side=side)
-                            # SlideIn needs to be in a CompositeVideoClip
-                            segment = CompositeVideoClip([slide_in.apply(segment)], size=segment.size)
-                    elif transition_type.startswith('slide_out_'):
-                        side = transition_type.replace('slide_out_', '')
-                        if i == len(segments) - 1:
-                            slide_out = SlideOut(duration=min(transition_duration, segment.duration * 0.5), side=side)
-                            # SlideOut needs to be in a CompositeVideoClip
-                            segment = CompositeVideoClip([slide_out.apply(segment)], size=segment.size)
-                    
-                    transitioned_segments.append(segment)
-                
-                print("Concatenating video segments with transitions...")
-                final_scene = concatenate_videoclips(transitioned_segments, method="compose")
-            else:
-                # Concatenate all segments (same as manual processing)
-                print("Concatenating video segments with keyword images (and/or gamma preview)...")
-                final_scene = concatenate_videoclips(segments, method="compose")
+            print("Concatenating video segments with keyword images (no transitions on keyword media)...")
+            final_scene = concatenate_videoclips(segments, method="compose")
         else:
             # No keyword images, use original composite_layers approach
             # Add logo to composite_layers if not already added
@@ -1279,13 +1226,14 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
     transition_type = transition_effect.get("id", "fade_dissolve") if isinstance(transition_effect, dict) else "fade_dissolve"
     transition_duration = transition_effect.get("duration", 1.5) if isinstance(transition_effect, dict) else 1.5
     
-    # Apply transitions between scenes if there are multiple scenes
-    if len(scene_clips) > 1 and transition_type and transition_type != 'none':
-        print(f"Applying transitions between scenes (type: {transition_type}, duration: {transition_duration}s)...")
+    # Apply transitions only on first scene (start) and last scene (end)
+    # No transitions on keyword media segments or between middle scenes
+    if transition_type and transition_type != 'none':
+        print(f"Applying transitions only on video start and end (type: {transition_type}, duration: {transition_duration}s)...")
         transitioned_scenes = []
         
         for i, clip in enumerate(scene_clips):
-            # Apply transition based on type
+            # Only apply transitions to first scene (start) and last scene (end)
             if transition_type == 'fade_in':
                 if i == 0:
                     fade_in = FadeIn(duration=min(transition_duration, clip.duration * 0.5))
@@ -1295,19 +1243,13 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
                     fade_out = FadeOut(duration=min(transition_duration, clip.duration * 0.5))
                     clip = fade_out.apply(clip)
             elif transition_type in ['fade_dissolve', 'cross_dissolve']:
-                # Apply fade-in to first scene
-                if i == 0 and len(scene_clips) > 1:
+                # Apply fade-in only to first scene
+                if i == 0:
                     fade_in = FadeIn(duration=min(transition_duration, clip.duration * 0.5))
                     clip = fade_in.apply(clip)
-                # Apply fade-out to last scene
-                if i == len(scene_clips) - 1 and len(scene_clips) > 1:
+                # Apply fade-out only to last scene
+                if i == len(scene_clips) - 1:
                     fade_out = FadeOut(duration=min(transition_duration, clip.duration * 0.5))
-                    clip = fade_out.apply(clip)
-                # Apply both fade-in and fade-out to middle scenes
-                elif i > 0 and i < len(scene_clips) - 1:
-                    fade_in = FadeIn(duration=min(transition_duration, clip.duration * 0.5))
-                    fade_out = FadeOut(duration=min(transition_duration, clip.duration * 0.5))
-                    clip = fade_in.apply(clip)
                     clip = fade_out.apply(clip)
             elif transition_type == 'fade_to_black':
                 if i == len(scene_clips) - 1:
@@ -1317,18 +1259,16 @@ def process_project_json(temp_dir: Path, exports_dir: Path, json_path: str, outp
                 side = transition_type.replace('slide_in_', '')
                 if i == 0:
                     slide_in = SlideIn(duration=min(transition_duration, clip.duration * 0.5), side=side)
-                    # SlideIn needs to be in a CompositeVideoClip
                     clip = CompositeVideoClip([slide_in.apply(clip)], size=(clip.w, clip.h))
             elif transition_type.startswith('slide_out_'):
                 side = transition_type.replace('slide_out_', '')
                 if i == len(scene_clips) - 1:
                     slide_out = SlideOut(duration=min(transition_duration, clip.duration * 0.5), side=side)
-                    # SlideOut needs to be in a CompositeVideoClip
                     clip = CompositeVideoClip([slide_out.apply(clip)], size=(clip.w, clip.h))
             
             transitioned_scenes.append(clip)
         
-        print("Concatenating scenes with transitions...")
+        print("Concatenating scenes with start/end transitions only...")
         final_video = concatenate_videoclips(transitioned_scenes, method="compose")
     else:
         final_video = concatenate_videoclips(scene_clips, method="compose")
