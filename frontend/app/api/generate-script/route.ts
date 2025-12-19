@@ -245,7 +245,7 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary). For
       });
 
     } catch (error) {
-      console.error('Error generating script:', error);
+      console.log('Error generating script:', error);
       return NextResponse.json(
         {
           status: 400,
@@ -255,7 +255,7 @@ Return ONLY valid JSON in this exact structure (no markdown, no commentary). For
     }
 
   } catch (error) {
-    console.error('Error generating script:', error);
+    console.log('Error generating script:', error);
     return NextResponse.json(
       {
         status: 500,

@@ -48,7 +48,7 @@ export class SupabaseHelpers {
       // console.log('🟢 Profile saved successfully:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -91,7 +91,7 @@ export class SupabaseHelpers {
       toast.success('Social auth keys saved successfully');
       return { data, error: null };
     } catch (error) {
-      console.error('SupabaseHelpers: Unexpected error saving social keys:', error);
+      console.log('SupabaseHelpers: Unexpected error saving social keys:', error);
       toast.error('An unexpected error occurred while saving social keys');
       return { data: null, error };
     }
@@ -108,12 +108,12 @@ export class SupabaseHelpers {
         .eq('id', userId)
         .single();
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching social keys:', error);
+        console.log('Error fetching social keys:', error);
         return { data: null, error };
       }
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       return { data: null, error };
     }
   }
@@ -131,14 +131,14 @@ export class SupabaseHelpers {
         .list('', { limit: 1 });
 
       if (error) {
-        console.error('Bucket test error:', error);
+        console.log('Bucket test error:', error);
         return { success: false, error: error.message };
       }
 
       console.log('Bucket test successful:', data);
       return { success: true };
     } catch (error) {
-      console.error('Bucket test exception:', error);
+      console.log('Bucket test exception:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -154,7 +154,7 @@ export class SupabaseHelpers {
       console.log('SupabaseHelpers: Testing bucket access...');
       const bucketTest = await SupabaseHelpers.testLogosBucket();
       if (!bucketTest.success) {
-        console.error('SupabaseHelpers: Bucket test failed:', bucketTest.error);
+        console.log('SupabaseHelpers: Bucket test failed:', bucketTest.error);
         toast.error(`Storage bucket not accessible: ${bucketTest.error}`);
         return { success: false };
       }
@@ -184,8 +184,8 @@ export class SupabaseHelpers {
       ]) as any;
 
       if (uploadError) {
-        console.error('SupabaseHelpers: Upload error:', uploadError);
-        console.error('SupabaseHelpers: Error details:', {
+        console.log('SupabaseHelpers: Upload error:', uploadError);
+        console.log('SupabaseHelpers: Error details:', {
           message: uploadError.message
         });
 
@@ -220,7 +220,7 @@ export class SupabaseHelpers {
         .eq('id', userId);
 
       if (updateError) {
-        console.error('SupabaseHelpers: Profile update error:', updateError);
+        console.log('SupabaseHelpers: Profile update error:', updateError);
         toast.error('Failed to save logo to profile');
         return { success: false };
       }
@@ -233,7 +233,7 @@ export class SupabaseHelpers {
         fileName: file.name
       };
     } catch (error) {
-      console.error('SupabaseHelpers: Unexpected error uploading logo:', error);
+      console.log('SupabaseHelpers: Unexpected error uploading logo:', error);
       if (error instanceof Error && error.message === 'Upload timeout') {
         toast.error('Logo upload timed out. Please check your connection and try again.');
       } else {
@@ -261,7 +261,7 @@ export class SupabaseHelpers {
           .remove([filePath]);
 
         if (deleteError) {
-          console.error('Error deleting logo from storage:', deleteError);
+          console.log('Error deleting logo from storage:', deleteError);
           // Continue with profile update even if storage deletion fails
           // Don't show error to user if it's just a bucket not found issue
           if (!deleteError.message?.includes('Bucket not found')) {
@@ -280,7 +280,7 @@ export class SupabaseHelpers {
         .eq('id', userId);
 
       if (updateError) {
-        console.error('Error updating profile:', updateError);
+        console.log('Error updating profile:', updateError);
         toast.error('Failed to remove logo from profile');
         return { success: false };
       }
@@ -288,7 +288,7 @@ export class SupabaseHelpers {
       toast.success('Logo removed successfully');
       return { success: true };
     } catch (error) {
-      console.error('Unexpected error removing logo:', error);
+      console.log('Unexpected error removing logo:', error);
       toast.error('An unexpected error occurred');
       return { success: false };
     }
@@ -307,7 +307,7 @@ export class SupabaseHelpers {
         .eq('id', userId);
 
       if (error) {
-        console.error('Error updating background:', error);
+        console.log('Error updating background:', error);
         toast.error('Failed to save background selection');
         return { success: false };
       }
@@ -315,7 +315,7 @@ export class SupabaseHelpers {
       toast.success('Background selected successfully');
       return { success: true };
     } catch (error) {
-      console.error('Unexpected error updating background:', error);
+      console.log('Unexpected error updating background:', error);
       toast.error('An unexpected error occurred');
       return { success: false };
     }
@@ -333,13 +333,13 @@ export class SupabaseHelpers {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile with assets:', error);
+        console.log('Error fetching profile with assets:', error);
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       return { data: null, error };
     }
   }
@@ -354,14 +354,14 @@ export class SupabaseHelpers {
         .select();
 
       if (error) {
-        console.error('Error saving video:', error);
+        console.log('Error saving video:', error);
         toast.error('Failed to save video metadata');
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -377,7 +377,7 @@ export class SupabaseHelpers {
         .select();
 
       if (error) {
-        console.error('Error saving clip:', error);
+        console.log('Error saving clip:', error);
         toast.error('Failed to save video clip');
         return { data: null, error };
       }
@@ -385,7 +385,7 @@ export class SupabaseHelpers {
       toast.success('Video clip saved successfully');
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -411,14 +411,14 @@ export class SupabaseHelpers {
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching clips:', error);
+        console.log('Error fetching clips:', error);
         toast.error('Failed to fetch video clips');
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -433,13 +433,13 @@ export class SupabaseHelpers {
         .insert(searchData as any);
 
       if (error) {
-        console.error('Error saving search history:', error);
+        console.log('Error saving search history:', error);
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       return { data: null, error };
     }
   }
@@ -509,7 +509,7 @@ export class SupabaseHelpers {
         .select()
 
       if (error) {
-        console.error('Error saving trending topics:', error);
+        console.log('Error saving trending topics:', error);
         toast.error('Failed to save trending topics');
         return { data: null, error };
       }
@@ -518,7 +518,7 @@ export class SupabaseHelpers {
       // console.log('🟢 Trending topics saved successfully:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -546,7 +546,7 @@ export class SupabaseHelpers {
         .insert(payload as any)
 
       if (error) {
-        console.error('Error saving Approved Script:', error);
+        console.log('Error saving Approved Script:', error);
         toast.error('Failed to save Approved Script');
         return { data: null, error };
       }
@@ -555,7 +555,7 @@ export class SupabaseHelpers {
       // console.log('🟢 Approved Script saved successfully:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -592,14 +592,14 @@ export class SupabaseHelpers {
         .limit(filters.limit || 50);
 
       if (error) {
-        console.error('Error fetching trending topics:', error);
+        console.log('Error fetching trending topics:', error);
         toast.error('Failed to fetch trending topics');
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -632,14 +632,14 @@ export class SupabaseHelpers {
         .limit(limit);
 
       if (error) {
-        console.error('Error searching clips:', error);
+        console.log('Error searching clips:', error);
         toast.error('Failed to search video clips');
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -657,7 +657,7 @@ export class SupabaseHelpers {
         .eq('user_id', userId); // Ensure user can only delete their own clips
 
       if (error) {
-        console.error('Error deleting clip:', error);
+        console.log('Error deleting clip:', error);
         toast.error('Failed to delete video clip');
         return { error };
       }
@@ -665,7 +665,7 @@ export class SupabaseHelpers {
       toast.success('Video clip deleted successfully');
       return { error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { error };
     }
@@ -687,7 +687,7 @@ export class SupabaseHelpers {
         .select();
 
       if (error) {
-        console.error('Error updating clip:', error);
+        console.log('Error updating clip:', error);
         toast.error('Failed to update video clip');
         return { data: null, error };
       }
@@ -695,7 +695,7 @@ export class SupabaseHelpers {
       toast.success('Video clip updated successfully');
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
     }
@@ -727,14 +727,14 @@ export class SupabaseHelpers {
         .select();
 
       if (error) {
-        console.error('Error saving transcription job:', error);
+        console.log('Error saving transcription job:', error);
         return { data: null, error };
       }
 
       console.log('Transcription job saved:', data);
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       return { data: null, error };
     }
   }
@@ -764,13 +764,13 @@ export class SupabaseHelpers {
         .select();
 
       if (error) {
-        console.error('Error updating transcription job:', error);
+        console.log('Error updating transcription job:', error);
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       return { data: null, error };
     }
   }
@@ -788,13 +788,13 @@ export class SupabaseHelpers {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching transcription job:', error);
+        console.log('Error fetching transcription job:', error);
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       return { data: null, error };
     }
   }
@@ -812,13 +812,13 @@ export class SupabaseHelpers {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching failed jobs:', error);
+        console.log('Error fetching failed jobs:', error);
         return { data: null, error };
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.log('Unexpected error:', error);
       return { data: null, error };
     }
   }

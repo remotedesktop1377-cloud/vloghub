@@ -104,7 +104,7 @@ const TrendingTopics: React.FC = () => {
       }
 
     } catch (err) {
-      console.error('Error fetching trending topics, using mock data:', err);
+      console.log('Error fetching trending topics, using mock data:', err);
       setError(null);
       setLoading(false);
       HelperFunctions.showError('Error loading trending topics');
@@ -221,7 +221,7 @@ const TrendingTopics: React.FC = () => {
         setGeneratingSceneData(false);
       }
     } catch (err) {
-      // console.error('Error generating script:', err);
+      // console.log('Error generating script:', err);
       setError('Failed to generate script. Please try again.');
       setGeneratingSceneData(false);
     } finally {
@@ -277,7 +277,7 @@ const TrendingTopics: React.FC = () => {
       try {
         await handleTopicSelect(foundTopic);
       } catch (error) {
-        console.error('❌ Error in handleTopicSelect:', error);
+        console.log('❌ Error in handleTopicSelect:', error);
       }
     } else {
       console.log('❌ No matching topic found for:', w.text);

@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Google Custom Search API error:', {
+      console.log('Google Custom Search API error:', {
         status: response.status,
         statusText: response.statusText,
         data: errorData
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
               return [];
             })
             .catch(err => {
-              console.error(`Error fetching additional page ${i + 1}:`, err);
+              console.log(`Error fetching additional page ${i + 1}:`, err);
               return [];
             })
         );
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Google image search error:', error);
+    console.log('Google image search error:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',

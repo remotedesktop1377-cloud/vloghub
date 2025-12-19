@@ -61,7 +61,7 @@ export default function AuthCallback() {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Error getting session:', error);
+          console.log('Error getting session:', error);
         }
         
         if (session) {
@@ -88,7 +88,7 @@ export default function AuthCallback() {
           }, 10000);
         }
       } catch (error) {
-        console.error('Unexpected auth error:', error);
+        console.log('Unexpected auth error:', error);
         setStatus('error');
         toast.error('An unexpected error occurred');
         setTimeout(() => {

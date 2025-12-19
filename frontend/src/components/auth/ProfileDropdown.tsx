@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import styles from './ProfileDropdown.module.css';
 import { HelperFunctions, secure } from '../../utils/helperFunctions';
@@ -16,6 +16,7 @@ import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 import { SocialKeys } from '@/types/backgroundType';
 import { getSupabase } from '@/utils/supabase';
 import { ROUTES_KEYS } from '@/data/constants';
+import SocialMediaPageClient from '../SocialMedia/SocialMediaPageClient';
 
 export const ProfileDropdown = () => {
   const { user, signOut } = useAuth();
@@ -68,9 +69,6 @@ export const ProfileDropdown = () => {
     } else {
       await setDefaultProjectSettings();
     }
-    if (profileSettings.socialKeys) {
-      setSocialKeys(profileSettings.socialKeys);
-    }
     if (profileSettings.gammaTextMode) {
       setGammaTextMode(profileSettings.gammaTextMode);
     }
@@ -102,20 +100,20 @@ export const ProfileDropdown = () => {
     try {
       setMenuOpen(false);
       HelperFunctions.clearSecureStorage();
-      
+
       // Use window.location since router might not be mounted in all contexts
       // This is a client component, so window is always available
       window.location.href = ROUTES_KEYS.HOME;
       const supabase = getSupabase();
       const { error } = await supabase.auth.signOut({ scope: 'local' })
       if (error) {
-        console.error(error);
+        console.log(error);
         toast.error("Failed to logout");
         return;
       }
-     
+
     } catch (error) {
-      console.error('Error during sign out:', error);
+      console.log('Error during sign out:', error);
       toast.error('An error occurred during sign out');
     } finally {
       setMenuOpen(false);
@@ -318,22 +316,9 @@ export const ProfileDropdown = () => {
                 {/* Social Keys Section */}
                 <div className={styles.socialForm}>
                   <h3 className={styles.sectionTitle}>Social Media Keys</h3>
-                  <div className={styles.socialGroup}>
-                    <label className={styles.socialLabel} htmlFor="tiktokKey">TikTok profile key</label>
-                    <input id="tiktokKey" className={styles.socialInput} value={socialKeys.tiktok} onChange={(e) => setSocialKeys(k => ({ ...k, tiktok: e.target.value }))} placeholder="Enter TikTok key" />
-                  </div>
-                  <div className={styles.socialGroup}>
-                    <label className={styles.socialLabel} htmlFor="instagramKey">Instagram profile key</label>
-                    <input id="instagramKey" className={styles.socialInput} value={socialKeys.instagram} onChange={(e) => setSocialKeys(k => ({ ...k, instagram: e.target.value }))} placeholder="Enter Instagram key" />
-                  </div>
-                  <div className={styles.socialGroup}>
-                    <label className={styles.socialLabel} htmlFor="facebookKey">Facebook profile key</label>
-                    <input id="facebookKey" className={styles.socialInput} value={socialKeys.facebook} onChange={(e) => setSocialKeys(k => ({ ...k, facebook: e.target.value }))} placeholder="Enter Facebook key" />
-                  </div>
-                  <div className={styles.socialGroup}>
-                    <label className={styles.socialLabel} htmlFor="youtubeKey">YouTube API key</label>
-                    <input id="youtubeKey" className={styles.socialInput} value={socialKeys.youtube} onChange={(e) => setSocialKeys(k => ({ ...k, youtube: e.target.value }))} placeholder="Enter YouTube key" />
-                  </div>
+                  <Suspense fallback={null}>
+                    <SocialMediaPageClient />
+                  </Suspense>
                 </div>
               </div>
             </div>

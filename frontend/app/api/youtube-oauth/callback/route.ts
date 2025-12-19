@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json().catch(() => ({}));
-      console.error('Token exchange error:', errorData);
+      console.log('Token exchange error:', errorData);
       return NextResponse.redirect(
         new URL(`/social-media?error=${encodeURIComponent(errorData.error || 'token_exchange_failed')}`, request.url)
       );
@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
         .select();
 
       if (socialAccountError) {
-        console.error('Error saving social account:', socialAccountError);
-        console.error('Social account data:', socialAccountData);
+        console.log('Error saving social account:', socialAccountError);
+        console.log('Social account data:', socialAccountData);
         return NextResponse.redirect(
           new URL('/social-media?error=social_account_save_failed', request.url)
         );
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
       new URL('/social-media?success=youtube_connected', request.url)
     );
   } catch (error: any) {
-    console.error('YouTube OAuth callback error:', error);
+    console.log('YouTube OAuth callback error:', error);
     return NextResponse.redirect(
       new URL(`/social-media?error=${encodeURIComponent(error?.message || 'oauth_callback_failed')}`, request.url)
     );

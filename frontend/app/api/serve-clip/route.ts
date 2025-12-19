@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         const isExportsOrTemp = /[\/\\]exports[\/\\]/i.test(resolvedPath) || /[\/\\]temp[\/\\]/i.test(resolvedPath);
         
         if (!isInProjectRoot && !isInFrontend && !isExportsOrTemp) {
-            console.error('Path security check failed:', {
+            console.log('Path security check failed:', {
                 resolvedPath,
                 normalizedResolved,
                 projectRoot,
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error: any) {
-        console.error('Error serving clip:', error);
+        console.log('Error serving clip:', error);
         return NextResponse.json(
             { error: error?.message || 'Failed to serve clip file' },
             { status: 500 }

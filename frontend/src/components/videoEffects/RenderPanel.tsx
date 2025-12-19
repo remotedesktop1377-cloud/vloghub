@@ -67,7 +67,7 @@ export function RenderPanel({ totalScenes, modifiedScenes, onStartRender }: Rend
     } catch (error) {
       setRenderStatus('error');
       setIsRendering(false);
-      console.error('Render failed:', error);
+      console.log('Render failed:', error);
     }
   };
 

@@ -70,7 +70,7 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
         }
       }
     } catch (error) {
-      console.error('Error loading trending topics:', error);
+      console.log('Error loading trending topics:', error);
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
 
       await SupabaseHelpers.saveSearchHistory(searchData);
     } catch (error) {
-      console.error('Error saving search history:', error);
+      console.log('Error saving search history:', error);
     }
   };
 

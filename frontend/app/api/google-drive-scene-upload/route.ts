@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
                 //                 imagesOut.push(url);
                 //             }
                 //         } catch (e) {
-                //             console.error('Image upload failed', { sceneId, url, error: (e as any)?.message });
+                //             console.log('Image upload failed', { sceneId, url, error: (e as any)?.message });
                 //             imagesOut.push(url);
                 //         }
                 //     }
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
                             });
                             if (created.data.id) uploadedLow += 1;
                         } catch (e) {
-                            console.error('LowRes upload failed', { sceneId, url, error: (e as any)?.message });
+                            console.log('LowRes upload failed', { sceneId, url, error: (e as any)?.message });
                         }
                     }
                 }
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
                             });
                             if (created.data.id) uploadedHigh += 1;
                         } catch (e) {
-                            console.error('HighRes upload failed', { sceneId, url, error: (e as any)?.message });
+                            console.log('HighRes upload failed', { sceneId, url, error: (e as any)?.message });
                         }
                     }
                 }
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
                             }
                         }
                     } catch (e) {
-                        console.error('Logo upload failed', { sceneId, url: logoUrl, error: (e as any)?.message });
+                        console.log('Logo upload failed', { sceneId, url: logoUrl, error: (e as any)?.message });
                     }
                 }
 
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
                                 videosOut.push(url);
                             }
                         } catch (e) {
-                            console.error('Video upload failed', { sceneId, url, error: (e as any)?.message });
+                            console.log('Video upload failed', { sceneId, url, error: (e as any)?.message });
                             videosOut.push(url);
                         }
                     }
@@ -355,7 +355,7 @@ export async function POST(request: NextRequest) {
                             });
                             if (created.data.id) uploadedCount += 1;
                         } catch (e) {
-                            console.error('Image upload failed', { sceneId, url, error: (e as any)?.message });
+                            console.log('Image upload failed', { sceneId, url, error: (e as any)?.message });
                         }
                     }
                 };
@@ -391,7 +391,7 @@ export async function POST(request: NextRequest) {
                             });
                             if (created.data.id) uploadedVideos += 1;
                         } catch (e) {
-                            console.error('Video upload failed', { sceneId, url, error: (e as any)?.message });
+                            console.log('Video upload failed', { sceneId, url, error: (e as any)?.message });
                         }
                     }
                 }
@@ -460,7 +460,7 @@ export async function POST(request: NextRequest) {
             });
         }
     } catch (err: any) {
-        console.error(err);
+        console.log(err);
         return NextResponse.json(
             { error: 'Upload failed', details: err.message || 'Unknown error' },
             { status: 500 }

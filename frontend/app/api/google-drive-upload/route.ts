@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
                             });
                             if (created.data.id) uploadedCount += 1;
                         } catch (e) {
-                            console.error('Image upload failed', { sceneId, url, error: (e as any)?.message });
+                            console.log('Image upload failed', { sceneId, url, error: (e as any)?.message });
                         }
                     }
                 };
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
             });
         }
     } catch (err: any) {
-        console.error(err);
+        console.log(err);
         return NextResponse.json(
             { error: 'Upload failed', details: err.message || 'Unknown error' },
             { status: 500 }

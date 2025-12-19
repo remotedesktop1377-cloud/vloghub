@@ -372,7 +372,7 @@ const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Failed to download image:', error);
+            console.log('Failed to download image:', error);
         }
     };
 

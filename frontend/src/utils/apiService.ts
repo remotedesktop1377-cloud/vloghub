@@ -102,7 +102,7 @@ export class ApiService {
       const data = await response.json();
       return { success: true, data };
     } catch (error) {
-      console.error(`GET request failed for ${endpoint}:`, error);
+      console.log(`GET request failed for ${endpoint}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -147,7 +147,7 @@ export class ApiService {
       const data = await response.json();
       return { success: true, data };
     } catch (error) {
-      console.error(`POST request failed for ${endpoint}:`, error);
+      console.log(`POST request failed for ${endpoint}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -192,7 +192,7 @@ export class ApiService {
       const data = await response.json();
       return { success: true, data };
     } catch (error) {
-      console.error(`PUT request failed for ${endpoint}:`, error);
+      console.log(`PUT request failed for ${endpoint}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -233,7 +233,7 @@ export class ApiService {
       const data = await response.json();
       return { success: true, data };
     } catch (error) {
-      console.error(`DELETE request failed for ${endpoint}:`, error);
+      console.log(`DELETE request failed for ${endpoint}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -278,7 +278,7 @@ export class ApiService {
       const data = await response.json();
       return { success: true, data };
     } catch (error) {
-      console.error(`PATCH request failed for ${endpoint}:`, error);
+      console.log(`PATCH request failed for ${endpoint}:`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

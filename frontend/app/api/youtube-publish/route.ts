@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking published videos:', checkError);
+      console.log('Error checking published videos:', checkError);
     }
 
     if (existingPublished) {
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
           tokens.access_token = newAccessToken;
         }
       } catch (refreshError) {
-        console.error('Error refreshing token:', refreshError);
+        console.log('Error refreshing token:', refreshError);
         return NextResponse.json(
           { error: 'Failed to refresh YouTube access token. Please reconnect your YouTube account.' },
           { status: 400 }
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
 
     if (!uploadResponse.ok) {
       const errorData = await uploadResponse.json().catch(() => ({}));
-      console.error('YouTube upload error:', errorData);
+      console.log('YouTube upload error:', errorData);
       return NextResponse.json(
         { error: errorData.error?.message || 'Failed to upload video to YouTube' },
         { status: uploadResponse.status }
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (saveVideoError) {
-      console.error('Error saving YouTube video to database:', saveVideoError);
+      console.log('Error saving YouTube video to database:', saveVideoError);
     }
 
     // Save to published_videos table (links Google Drive video to YouTube video)
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (savePublishedError) {
-      console.error('Error saving published video to database:', savePublishedError);
+      console.log('Error saving published video to database:', savePublishedError);
     }
 
     return NextResponse.json({
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
       message: 'Video published successfully to YouTube',
     });
   } catch (error: any) {
-    console.error('YouTube publish error:', error);
+    console.log('YouTube publish error:', error);
     return NextResponse.json(
       { error: error?.message || 'Internal server error' },
       { status: 500 }

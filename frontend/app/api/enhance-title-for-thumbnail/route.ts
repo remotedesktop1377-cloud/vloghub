@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error refining title:', error);
+    console.log('Error refining title:', error);
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Failed to refine title',

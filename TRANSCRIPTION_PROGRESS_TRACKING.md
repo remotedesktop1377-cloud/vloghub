@@ -57,7 +57,7 @@ function TranscriptionComponent() {
       setResult(data);
     },
     onError: (error) => {
-      console.error('Transcription failed:', error);
+      console.log('Transcription failed:', error);
       // Handle error - user can retry from here
     },
   });
@@ -81,7 +81,7 @@ function TranscriptionComponent() {
       const data = await response.json();
       setJobId(data.jobId); // Start tracking progress
     } catch (error) {
-      console.error('Failed to start transcription:', error);
+      console.log('Failed to start transcription:', error);
     }
   };
 

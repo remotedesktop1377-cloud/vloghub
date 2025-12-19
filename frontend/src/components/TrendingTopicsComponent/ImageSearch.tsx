@@ -554,7 +554,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             window.URL.revokeObjectURL(url);
             HelperFunctions.showSuccess('Image downloaded successfully');
         } catch (error) {
-            console.error('Failed to download image:', error);
+            console.log('Failed to download image:', error);
             HelperFunctions.showError('Failed to download image');
         }
     };

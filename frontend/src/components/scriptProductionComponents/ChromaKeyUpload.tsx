@@ -84,7 +84,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             setProgress(25);
             return {compressedFile: compressedFile, compressedFilePath: compressedFilePath};
         } catch (error) {
-            console.error('Video compression error:', error);
+            console.log('Video compression error:', error);
             toast.error('Video compression failed, uploading original file');
             return {compressedFile: file, compressedFilePath: URL.createObjectURL(file)};
         }
@@ -168,7 +168,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 
                 onUploadComplete(currentDriveUrl, transcriptionData, selectedBackgroundType as BackgroundType);
             } catch (pipelineError) {
-                console.error('Python pipeline error:', pipelineError);
+                console.log('Python pipeline error:', pipelineError);
                 const message = pipelineError instanceof Error ? pipelineError.message : 'Pipeline failed';
                 setError(message);
                 setUploading(false);
@@ -255,7 +255,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     const duration = await HelperFunctions.extractVideoDuration(file);
                     videoDurationCaptured(duration);
                 } catch (error) {
-                    console.error('Failed to extract video duration:', error);
+                    console.log('Failed to extract video duration:', error);
                 }
 
                 startVideoUploadingAndTranscribtion('upload', file);

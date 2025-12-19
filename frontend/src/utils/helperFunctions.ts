@@ -28,7 +28,7 @@ class SecureStorage {
       // Simple base64 encoding for demonstration (in production, use proper encryption)
       return btoa(unescape(encodeURIComponent(jsonString)));
     } catch (error) {
-      console.error('Encryption failed:', error);
+      console.log('Encryption failed:', error);
       return '';
     }
   }
@@ -39,7 +39,7 @@ class SecureStorage {
       const jsonString = decodeURIComponent(escape(atob(encryptedData)));
       return JSON.parse(jsonString);
     } catch (error) {
-      console.error('Decryption failed:', error);
+      console.log('Decryption failed:', error);
       return null;
     }
   }
@@ -60,7 +60,7 @@ class SecureStorage {
         }
       });
     } catch (error) {
-      console.error('Failed to load from localStorage:', error);
+      console.log('Failed to load from localStorage:', error);
     }
   }
 
@@ -71,7 +71,7 @@ class SecureStorage {
         localStorage.setItem(`secure_${key}`, encryptedValue);
       });
     } catch (error) {
-      console.error('Failed to save to localStorage:', error);
+      console.log('Failed to save to localStorage:', error);
     }
   }
 
@@ -89,7 +89,7 @@ class SecureStorage {
     try {
       localStorage.removeItem(`secure_${key}`);
     } catch (error) {
-      console.error('Failed to remove from localStorage:', error);
+      console.log('Failed to remove from localStorage:', error);
     }
   }
 
@@ -103,7 +103,7 @@ class SecureStorage {
         }
       });
     } catch (error) {
-      console.error('Failed to clear localStorage:', error);
+      console.log('Failed to clear localStorage:', error);
     }
   }
 }
@@ -320,7 +320,7 @@ export class HelperFunctions {
 
       return { title, hook, main_content, conclusion, call_to_action, script } as Partial<ScriptData>;
     } catch (e) {
-      console.error('parseNarrationFile failed', e);
+      console.log('parseNarrationFile failed', e);
       HelperFunctions.showError('Failed to parse narration file');
       return {} as Partial<ScriptData>;
     }
@@ -843,7 +843,7 @@ export class HelperFunctions {
       setSceneData(updated);
       bestSceneData = updated;
     } catch (e) {
-      console.error('highlight extraction failed', e);
+      console.log('highlight extraction failed', e);
       HelperFunctions.showError(e instanceof Error ? e.message : 'Failed to extract highlighted keywords');
     } finally {
       // Ensure callback is invoked even on failure, with best available SceneData

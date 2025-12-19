@@ -68,7 +68,7 @@ export function useTranscriptionProgress({ jobId, onComplete, onError }: UseTran
                 }
 
                 if (data.type === 'timeout') {
-                    console.error('Progress tracking timed out');
+                    console.log('Progress tracking timed out');
                     setProgress({
                         stage: 'error',
                         progress: 0,
@@ -110,12 +110,12 @@ export function useTranscriptionProgress({ jobId, onComplete, onError }: UseTran
                     }
                 }
             } catch (error) {
-                console.error('Error parsing progress data:', error);
+                console.log('Error parsing progress data:', error);
             }
         };
 
     eventSource.onerror = (event) => {
-      console.error('EventSource error:', event);
+      console.log('EventSource error:', event);
       // Only update if we haven't already marked as complete
       setProgress(prev => {
         if (prev.stage === 'completed' || prev.stage === 'error') {

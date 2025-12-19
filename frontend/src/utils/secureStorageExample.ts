@@ -24,7 +24,7 @@ export const loadApprovedScriptDirect = () => {
       return null;
     }
   } catch (error) {
-    console.error('❌ Error loading approved script:', error);
+    console.log('❌ Error loading approved script:', error);
     return null;
   }
 };
@@ -42,7 +42,7 @@ export const loadApprovedScriptHelper = () => {
       return null;
     }
   } catch (error) {
-    console.error('❌ Error loading approved script:', error);
+    console.log('❌ Error loading approved script:', error);
     return null;
   }
 };
@@ -59,7 +59,7 @@ export const saveApprovedScript = (scriptData: any) => {
     console.log('✅ Approved script saved successfully');
     return true;
   } catch (error) {
-    console.error('❌ Error saving approved script:', error);
+    console.log('❌ Error saving approved script:', error);
     return false;
   }
 };
@@ -76,7 +76,7 @@ export const removeApprovedScript = () => {
     console.log('✅ Approved script removed successfully');
     return true;
   } catch (error) {
-    console.error('❌ Error removing approved script:', error);
+    console.log('❌ Error removing approved script:', error);
     return false;
   }
 };
@@ -101,7 +101,7 @@ export const manageScriptMetadata = () => {
     
     return loadedMetadata;
   } catch (error) {
-    console.error('❌ Error managing script metadata:', error);
+    console.log('❌ Error managing script metadata:', error);
     return null;
   }
 };
@@ -114,7 +114,7 @@ export const accessDynamicKey = (key: string) => {
     console.log(`📦 Value for key "${key}":`, value);
     return value;
   } catch (error) {
-    console.error(`❌ Error accessing key "${key}":`, error);
+    console.log(`❌ Error accessing key "${key}":`, error);
     return null;
   }
 };
@@ -138,7 +138,7 @@ export const batchOperations = () => {
     
     return { preferences, lastVisit, settings };
   } catch (error) {
-    console.error('❌ Error in batch operations:', error);
+    console.log('❌ Error in batch operations:', error);
     return null;
   }
 };

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       .order('published_at', { ascending: false });
 
     if (publishedError) {
-      console.error('Error fetching published videos:', publishedError);
+      console.log('Error fetching published videos:', publishedError);
       return NextResponse.json(
         { error: 'Failed to fetch published videos' },
         { status: 500 }
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       .in('video_id', youtubeVideoIds);
 
     if (youtubeError) {
-      console.error('Error fetching YouTube videos:', youtubeError);
+      console.log('Error fetching YouTube videos:', youtubeError);
       return NextResponse.json(
         { error: 'Failed to fetch YouTube videos' },
         { status: 500 }
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       videos: data || [],
     });
   } catch (error: any) {
-    console.error('Published videos fetch error:', error);
+    console.log('Published videos fetch error:', error);
     return NextResponse.json(
       { error: error?.message || 'Internal server error' },
       { status: 500 }

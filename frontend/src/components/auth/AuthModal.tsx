@@ -51,7 +51,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           break;
       }
     } catch (error) {
-      console.error('Auth error:', error);
+      console.log('Auth error:', error);
     } finally {
       setLoading(false);
     }

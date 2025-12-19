@@ -33,7 +33,7 @@ async function getStaticData() {
 
     return staticData
   } catch (error) {
-    console.error('Error loading static data:', error)
+    console.log('Error loading static data:', error)
     return {
       script: 'Script goes here',
       topic: 'Social affairs',

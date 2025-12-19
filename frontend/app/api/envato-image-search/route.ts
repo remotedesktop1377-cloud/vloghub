@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error('Envato API error:', {
+            console.log('Envato API error:', {
                 status: response.status,
                 statusText: response.statusText,
                 data: errorData
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Envato image search error:', error);
+        console.log('Envato image search error:', error);
         return NextResponse.json(
             {
                 error: 'Internal server error',

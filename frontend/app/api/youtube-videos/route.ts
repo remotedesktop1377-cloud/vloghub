@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       .order('published_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching YouTube videos:', error);
+      console.log('Error fetching YouTube videos:', error);
       return NextResponse.json(
         { error: 'Failed to fetch YouTube videos' },
         { status: 500 }
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       videos: data || [],
     });
   } catch (error: any) {
-    console.error('YouTube videos fetch error:', error);
+    console.log('YouTube videos fetch error:', error);
     return NextResponse.json(
       { error: error?.message || 'Internal server error' },
       { status: 500 }

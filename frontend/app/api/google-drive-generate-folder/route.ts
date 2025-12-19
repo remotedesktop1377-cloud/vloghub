@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
                 const jobName = formData.get('jobName') as string;
                 requestBody = { jobName: jobName || '' };
             } catch (formError) {
-                console.error('Form data parse error:', formError);
+                console.log('Form data parse error:', formError);
                 return NextResponse.json({ 
                     success: false, 
                     result: null, 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
                 }
                 requestBody = JSON.parse(bodyText) as { jobName: string };
             } catch (jsonError) {
-                console.error('JSON parse error:', jsonError);
+                console.log('JSON parse error:', jsonError);
                 return NextResponse.json({ 
                     success: false, 
                     result: null, 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
                 const params = new URLSearchParams(bodyText);
                 requestBody = { jobName: params.get('jobName') || '' };
             } catch (urlError) {
-                console.error('URL-encoded parse error:', urlError);
+                console.log('URL-encoded parse error:', urlError);
                 return NextResponse.json({ 
                     success: false, 
                     result: null, 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
                     requestBody = { jobName: bodyText.trim() };
                 }
             } catch (parseError) {
-                console.error('Request body parse error:', parseError);
+                console.log('Request body parse error:', parseError);
                 return NextResponse.json({ 
                     success: false, 
                     result: null, 
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         const folder = await findOrCreateFolder(drive, jobName, ROOT_ID);
         return NextResponse.json({ success: true, result: { folderId: folder.id, webViewLink: `https://drive.google.com/drive/folders/${folder.id}` }, message: 'Folder generated successfully' });
     } catch (err: any) {
-        console.error('generateAFolderOnDrive error', err);
+        console.log('generateAFolderOnDrive error', err);
         return NextResponse.json({ success: false, result: null, message: err.message || 'Unknown error' }, { status: 500 });
     }
 }

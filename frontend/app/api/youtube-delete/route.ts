@@ -94,7 +94,7 @@ export async function DELETE(request: NextRequest) {
           accessToken = newAccessToken;
         }
       } catch (refreshError) {
-        console.error('Error refreshing token:', refreshError);
+        console.log('Error refreshing token:', refreshError);
         return NextResponse.json(
           { error: 'Failed to refresh YouTube access token. Please reconnect your YouTube account.' },
           { status: 400 }
@@ -115,7 +115,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!deleteResponse.ok) {
       const errorData = await deleteResponse.json().catch(() => ({}));
-      console.error('YouTube delete error:', errorData);
+      console.log('YouTube delete error:', errorData);
       
       if (deleteResponse.status === 403) {
         return NextResponse.json(
@@ -142,7 +142,7 @@ export async function DELETE(request: NextRequest) {
       .eq('video_id', videoId);
 
     if (updateVideoError) {
-      console.error('Error updating youtube_videos table:', updateVideoError);
+      console.log('Error updating youtube_videos table:', updateVideoError);
     }
 
     // Remove entry from published_videos table (hard delete)
@@ -153,7 +153,7 @@ export async function DELETE(request: NextRequest) {
       .eq('youtube_video_id', videoId);
 
     if (deletePublishedError) {
-      console.error('Error deleting from published_videos table:', deletePublishedError);
+      console.log('Error deleting from published_videos table:', deletePublishedError);
     }
 
     return NextResponse.json({
@@ -161,7 +161,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Video deleted successfully from YouTube',
     });
   } catch (error: any) {
-    console.error('YouTube delete error:', error);
+    console.log('YouTube delete error:', error);
     return NextResponse.json(
       { error: error?.message || 'Internal server error' },
       { status: 500 }

@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error generating thumbnail:', error);
+    console.log('Error generating thumbnail:', error);
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Failed to generate thumbnail',

@@ -150,7 +150,7 @@ export default function SocialMediaAccounts() {
                 .eq('user_id', user.id);
 
             if (socialRes.error && socialRes.error.code !== 'PGRST116') {
-                console.error('Error loading social accounts:', socialRes.error);
+                console.log('Error loading social accounts:', socialRes.error);
             }
 
             const socialAccounts = Array.isArray(socialRes.data) ? socialRes.data : [];
@@ -187,7 +187,7 @@ export default function SocialMediaAccounts() {
 
             setAccounts(nextAccounts);
         } catch (error) {
-            console.error('Error loading accounts:', error);
+            console.log('Error loading accounts:', error);
         }
     };
 

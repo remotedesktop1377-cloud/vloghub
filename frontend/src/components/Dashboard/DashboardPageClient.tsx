@@ -146,15 +146,16 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     // User confirmed, continue with publish
                     // Note: The API will still prevent duplicate, but we'll let it handle it
                 } else {
-                    throw new Error(data.error || 'Failed to publish video to YouTube');
+                    alert(data.error || 'Failed to publish video to YouTube');
+                    console.log('Failed to publish video to YouTube', data.error);
                 }
             }
 
             toast.success(`Video published successfully! ${data.videoUrl ? `Watch it here: ${data.videoUrl}` : ''}`);
             loadPublishedVideos();
         } catch (error: any) {
-            console.error('Error publishing video:', error);
-            toast.error(error.message || 'Failed to publish video to YouTube');
+            alert(error.message || 'Failed to publish video to YouTube');
+            console.log('Error publishing video:', error.message);
         } finally {
             setPublishingVideoId(null);
         }

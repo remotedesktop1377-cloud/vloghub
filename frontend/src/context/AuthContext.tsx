@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!u) return;
         await SupabaseHelpers.saveUserProfile(u);
       } catch (error) {
-        console.error('Error ensuring profile:', error);
+        console.log('Error ensuring profile:', error);
       }
     };
 
@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Error getting session:', error);
+          console.log('Error getting session:', error);
         }
         
         setSession(initialSession);
@@ -64,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await ensureProfile(initialSession.user);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.log('Error initializing auth:', error);
       } finally {
         setLoading(false);
         setIsInitialized(true);
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 try { 
                   router.push(ROUTES_KEYS.TRENDING_TOPICS); 
                 } catch (error) {
-                  console.error('Error redirecting:', error);
+                  console.log('Error redirecting:', error);
                 }
               }
             }
@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               try { 
                 router.push(ROUTES_KEYS.HOME); 
               } catch (error) {
-                console.error('Error redirecting:', error);
+                console.log('Error redirecting:', error);
               }
             }
             break;

@@ -26,16 +26,28 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                   <Typography variant="h6" sx={{ fontWeight: 600, color: TEXT.primary }}>VlogHub</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Typography 
-                    component="a" 
-                    href={ROUTES_KEYS.HOME} 
+                  <Typography
+                    component="a"
+                    href={ROUTES_KEYS.HOME}
                     sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}
                   >
                     Home
                   </Typography>
-                  <Typography 
-                    component="a" 
-                    href={ROUTES_KEYS.SOCIAL_MEDIA} 
+                  <AuthenticatedButton
+                    targetRoute={ROUTES_KEYS.DASHBOARD}
+                    variant="text"
+                    sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}
+                    requireAuth={true}
+                    authenticatedLabel="Dashboard"
+                    guestLabel="Dashboard"
+                    showClickLoading={true}
+                    loadingText="Opening..."
+                  >
+                    Dashboard
+                  </AuthenticatedButton>
+                  <Typography
+                    component="a"
+                    href={ROUTES_KEYS.SOCIAL_MEDIA}
                     sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}
                   >
                     Social Media
@@ -45,47 +57,22 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                   ))} */}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <AuthenticatedButton 
-                    targetRoute={ROUTES_KEYS.DASHBOARD}
-                    variant="outlined" 
-                    sx={{ 
-                      px: 2, 
-                      py: 1.2, 
-                      borderRadius: '999px', 
-                      fontSize: '13px', 
-                      textTransform: 'none',
-                      borderColor: TEXT.secondary,
-                      color: TEXT.secondary,
-                      '&:hover': { 
-                        borderColor: TEXT.primary,
-                        color: TEXT.primary,
-                        backgroundColor: 'rgba(148, 163, 184, 0.12)'
-                      } 
-                    }}
-                    requireAuth={true}
-                    authenticatedLabel="Dashboard"
-                    guestLabel="Dashboard"
-                    showClickLoading={true}
-                    loadingText="Opening..."
-                  >
-                    Dashboard
-                  </AuthenticatedButton>
-                  <AuthenticatedButton 
+                  <AuthenticatedButton
                     targetRoute={ROUTES_KEYS.TRENDING_TOPICS}
-                    variant="contained" 
-                    sx={{ 
-                      px: 2.5, 
-                      py: 1.5, 
-                      borderRadius: '50px', 
-                      fontSize: '14px', 
-                      textTransform: 'none', 
-                      background: PURPLE.gradient.primary, 
-                      color: TEXT.primary, 
-                      boxShadow: `0 0 30px ${SHADOW.primary}`, 
-                      '&:hover': { 
-                        background: PURPLE.gradient.secondary, 
-                        color: TEXT.primary 
-                      } 
+                    variant="contained"
+                    sx={{
+                      px: 2.5,
+                      py: 1.5,
+                      borderRadius: '50px',
+                      fontSize: '14px',
+                      textTransform: 'none',
+                      background: PURPLE.gradient.primary,
+                      color: TEXT.primary,
+                      boxShadow: `0 0 30px ${SHADOW.primary}`,
+                      '&:hover': {
+                        background: PURPLE.gradient.secondary,
+                        color: TEXT.primary
+                      }
                     }}
                     requireAuth={true}
                     authenticatedLabel="✨ Generate Now"
@@ -108,7 +95,7 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
         {children}
       </Box>
 
-     
+
     </Box>
   );
 };

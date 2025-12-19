@@ -44,36 +44,36 @@ export const GoogleDriveServiceFunctions = {
         try {
             const folders = await this.generateSceneFoldersInDrive(jobId, scenesCount);
             if (!folders.success) {
-                console.error('generateSceneFoldersInDrive error', folders);
+                console.log('generateSceneFoldersInDrive error', folders);
                 return { success: false };
             }
             const sceneFolderId = folders.result?.folderId;
             if (!sceneFolderId) {
-                console.error('sceneFolderId not found');
+                console.log('sceneFolderId not found');
                 return { success: false };
             }
             
             // Fetch the clip file from the server
             if (!sceneData.previewClip) {
-                console.error('No clip path provided in sceneData');
+                console.log('No clip path provided in sceneData');
                 return { success: false };
             }
             
             const clipFile = await this.fetchClipFile(sceneData.previewClip);
             if (!clipFile) {
-                console.error('Failed to fetch clip file from server');
+                console.log('Failed to fetch clip file from server');
                 return { success: false };
             }
             
             // Upload the clip to the scene folder
             const data = await this.uploadMediaToDrive(jobId, sceneData.id, clipFile);
             if (!data.success) {
-                console.error('uploadMediaToDrive error', data);
+                console.log('uploadMediaToDrive error', data);
                 return { success: false };
             }
             return data;
         } catch (e) {
-            console.error('generateSceneFolderInDrive error', e);
+            console.log('generateSceneFolderInDrive error', e);
             return { success: false };
         }
     },
@@ -90,7 +90,7 @@ export const GoogleDriveServiceFunctions = {
             const response = await fetch(`/api/serve-clip?path=${encodedPath}`);
             
             if (!response.ok) {
-                console.error('Failed to fetch clip:', response.statusText);
+                console.log('Failed to fetch clip:', response.statusText);
                 return null;
             }
             
@@ -105,7 +105,7 @@ export const GoogleDriveServiceFunctions = {
             
             return file;
         } catch (error) {
-            console.error('Error fetching clip file:', error);
+            console.log('Error fetching clip file:', error);
             return null;
         }
     },
@@ -131,7 +131,7 @@ export const GoogleDriveServiceFunctions = {
             }
             return data;
         } catch (e: any) {
-            console.error('uploadMediaToDrive error', e);
+            console.log('uploadMediaToDrive error', e);
             return { success: false, message: e?.message || 'Unable to upload media' };
         }
     },
@@ -171,7 +171,7 @@ export const GoogleDriveServiceFunctions = {
                 HelperFunctions.showError('Failed to update scene on Drive');
             }
         } catch (e) {
-            console.error('persistSceneUpdate error', e);
+            console.log('persistSceneUpdate error', e);
             HelperFunctions.showError('Failed to update scene on Drive');
         }
     },
@@ -231,7 +231,7 @@ export const GoogleDriveServiceFunctions = {
             }
             return true;
         } catch (e) {
-            console.error('updateSceneDataceneOnDrive error', e);
+            console.log('updateSceneDataceneOnDrive error', e);
             return false;
         }
     },
@@ -412,7 +412,7 @@ async function performResumableDriveUpload(jobId: string, targetFolder: string, 
 
         throw new Error('Upload session ended unexpectedly');
     } catch (e: any) {
-        console.error('performResumableDriveUpload error', e);
+        console.log('performResumableDriveUpload error', e);
         return { success: false, message: e?.message || 'Unable to upload media' };
     }
 }

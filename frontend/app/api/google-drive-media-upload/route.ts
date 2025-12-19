@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
             mimeType,
         });
     } catch (err: any) {
-        console.error(err);
+        console.log(err);
         return NextResponse.json({ error: 'Upload failed', details: err.message || 'Unknown error' }, { status: 500 });
     }
 }
@@ -159,8 +159,8 @@ async function handleSingleUpload(
                 supportsAllDrives: true,
             });
         } catch (e: any) {
-            console.error('❌ Failed to set Drive permissions:', e?.message || e);
-            console.error('Permission error details:', JSON.stringify(e, null, 2));
+            console.log('❌ Failed to set Drive permissions:', e?.message || e);
+            console.log('Permission error details:', JSON.stringify(e, null, 2));
         }
     }
 
@@ -259,15 +259,15 @@ async function handleChunkUpload(params: {
             if (!permResponse.ok) {
                 const permText = await permResponse.text().catch(() => '');
                 const permJson = await permResponse.json().catch(() => ({}));
-                console.error('❌ Failed to set Drive permission:', permText);
-                console.error('Permission error details:', JSON.stringify(permJson, null, 2));
+                console.log('❌ Failed to set Drive permission:', permText);
+                console.log('Permission error details:', JSON.stringify(permJson, null, 2));
             } else {
                 const permData = await permResponse.json().catch(() => ({}));
                 console.log(`✅ Set public permissions for file: ${payloadJson.id}`, permData);
             }
         } catch (e: any) {
-            console.error('❌ Error setting Drive permissions:', e?.message || e);
-            console.error('Permission error details:', JSON.stringify(e, null, 2));
+            console.log('❌ Error setting Drive permissions:', e?.message || e);
+            console.log('Permission error details:', JSON.stringify(e, null, 2));
         }
     }
 

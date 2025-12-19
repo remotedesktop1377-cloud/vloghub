@@ -1131,7 +1131,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                           cursor: 'pointer'
                                                         }}
                                                         onError={(e) => {
-                                                          console.error('Video load error for clip:', previewClip, e);
+                                                          console.log('Video load error for clip:', previewClip, e);
                                                         }}
                                                       />
                                                     ) : previewUrl ? (
@@ -1484,7 +1484,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                             const vars: string[] = Array.isArray(data?.variations) ? data.variations : [];
                                             onPickerNarrations(vars);
                                           } catch (e) {
-                                            console.error('picker fetch failed', e);
+                                            console.log('picker fetch failed', e);
                                             onPickerNarrations([scenesData[index].narration]);
                                           } finally {
                                             onPickerLoading(false);

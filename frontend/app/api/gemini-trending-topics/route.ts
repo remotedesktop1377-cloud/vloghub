@@ -54,7 +54,7 @@ const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
     // Sort by value (higher = first)
     return transformedData.sort((a: any, b: any) => b.value - a.value);
   } catch (error) {
-    console.error('Error fetching Gemini trending topics:', error);
+    console.log('Error fetching Gemini trending topics:', error);
     return [];
   }
 }
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(trendingTopics);
 
   } catch (error) {
-    console.error('Error fetching trending topics:', error);
+    console.log('Error fetching trending topics:', error);
     return NextResponse.json(
       { error: 'Failed to fetch trending topics' },
       { status: 500 }

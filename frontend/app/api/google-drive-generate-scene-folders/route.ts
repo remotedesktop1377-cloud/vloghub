@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
             message: 'Scene folders generated successfully'
         });
     } catch (err: any) {
-        console.error('generateSceneFolders error', err);
+        console.log('generateSceneFolders error', err);
         return NextResponse.json({ success: false, result: null, message: err?.message || 'Unknown error' }, { status: 500 });
     }
 }

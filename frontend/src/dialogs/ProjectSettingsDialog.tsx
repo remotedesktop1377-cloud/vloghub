@@ -42,6 +42,8 @@ interface TransitionEffectsGridProps {
 
 const TransitionEffectsGrid: React.FC<TransitionEffectsGridProps> = ({ selectedTransitionId, onSelect }) => {
     const transitions = [
+        { id: 'none', name: 'None', type: 'none', direction: '', duration: 0 },
+        { id: 'cross_dissolve', name: 'Cross Dissolve', type: 'fade', direction: 'cross', duration: 1.5 },
         { id: 'fade_dissolve', name: 'Fade Dissolve', type: 'fade', direction: 'in-out', duration: 1.5 },
         { id: 'fade_in', name: 'Fade In', type: 'fade', direction: 'in', duration: 1.0 },
         { id: 'fade_out', name: 'Fade Out', type: 'fade', direction: 'out', duration: 1.0 },
@@ -54,14 +56,9 @@ const TransitionEffectsGrid: React.FC<TransitionEffectsGridProps> = ({ selectedT
         { id: 'slide_out_right', name: 'Slide Out Right', type: 'slide', direction: 'out-right', duration: 1.0 },
         { id: 'slide_out_top', name: 'Slide Out Top', type: 'slide', direction: 'out-top', duration: 1.0 },
         { id: 'slide_out_bottom', name: 'Slide Out Bottom', type: 'slide', direction: 'out-bottom', duration: 1.0 },
-        { id: 'cross_dissolve', name: 'Cross Dissolve', type: 'fade', direction: 'cross', duration: 1.5 },
-        { id: 'none', name: 'None', type: 'none', direction: '', duration: 0 },
-        { id: '', name: '', type: 'empty', direction: '', duration: 0 },
-        { id: '', name: '', type: 'empty', direction: '', duration: 0 },
     ];
 
     const getAnimationClass = (transition: typeof transitions[0]) => {
-        if (transition.type === 'empty') return '';
         if (transition.type === 'none') return 'transition-none';
         if (transition.type === 'fade') {
             if (transition.direction === 'in') return 'transition-fade-in';
@@ -309,18 +306,14 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
-    const transitionVideoRef = useRef<HTMLVideoElement | null>(null);
 
     const [music, setMusic] = useState<any[]>([]);
     const [backgrounds, setBackgrounds] = useState<any[]>([]);
-    const [transitionEffects, setTransitionEffects] = useState<any[]>([]);
     const [currentMusicId, setCurrentMusicId] = useState<string | null>(null);
 
     const [loading, setLoading] = useState(false);
     const [logoUploading, setLogoUploading] = useState(false);
     const [videoError, setVideoError] = useState(false);
-    const [transitionVideoError, setTransitionVideoError] = useState(false);
-    const [transitionVideoLoading, setTransitionVideoLoading] = useState(false);
 
     const [projectSettings, setProjectSettings] = useState<Settings | null>(pSettings || null);
     const [sceneSettings, setSceneSettings] = useState<Settings | null>(sSettings || null);
@@ -350,7 +343,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                     audioRef.current.pause();
                     audioRef.current.src = '';
                 } catch (error) {
-                    console.error('Error cleaning up audio:', error);
+                    console.log('Error cleaning up audio:', error);
                 }
             }
             setCurrentMusicId(null);
@@ -368,7 +361,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
         const libraryData: LibraryData = await GoogleDriveServiceFunctions.loadLibraryData(isRefreshingData);
         setBackgrounds(libraryData.backgrounds);
         setMusic(libraryData.music);
-        setTransitionEffects(libraryData.transitionEffects);
 
         setLoading(false);
     }
@@ -408,54 +400,6 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             }
         }
     }, [isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo]);
-
-    // Update transition video source when selectedTransitionEffect changes
-    useEffect(() => {
-        if (isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect && transitionVideoRef.current) {
-            const videoUrl = getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect);
-            if (videoUrl) {
-                if (transitionVideoRef.current) {
-                    transitionVideoRef.current.src = videoUrl;
-                    transitionVideoRef.current.load(); // Force reload the video
-                }
-            }
-        } else if (!isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect && transitionVideoRef.current) {
-            // Clear video source when no transition is selected
-            if (transitionVideoRef.current) {
-                transitionVideoRef.current.src = '';
-            }
-        }
-    }, [isProjectSettings ? projectSettings?.videoTransitionEffect : sceneSettings?.videoTransitionEffect]);
-
-    const handleVideoError = () => {
-        setVideoError(true);
-        setLoading(false);
-    };
-
-    const handleVideoLoadStart = () => {
-        setLoading(true);
-        setVideoError(false);
-    };
-
-    const handleVideoLoaded = () => {
-        setLoading(false);
-        setVideoError(false);
-    };
-
-    const handleTransitionVideoError = () => {
-        setTransitionVideoError(true);
-        setTransitionVideoLoading(false);
-    };
-
-    const handleTransitionVideoLoadStart = () => {
-        setTransitionVideoLoading(true);
-        setTransitionVideoError(false);
-    };
-
-    const handleTransitionVideoLoaded = () => {
-        setTransitionVideoLoading(false);
-        setTransitionVideoError(false);
-    };
 
     const handleToggleBackgroundMusic = async () => {
         try {
@@ -516,10 +460,25 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             // Play the music
             await audioRef.current.play();
         } catch (error) {
-            console.error('Error playing music:', error);
+            console.log('Error playing music:', error);
             setIsMusicPlaying(false);
             setIsMusicLoading(false);
         }
+    };
+
+    const handleVideoError = () => {
+        setVideoError(true);
+        setLoading(false);
+    };
+
+    const handleVideoLoadStart = () => {
+        setLoading(true);
+        setVideoError(false);
+    };
+
+    const handleVideoLoaded = () => {
+        setLoading(false);
+        setVideoError(false);
     };
 
     return (
@@ -737,7 +696,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             throw new Error(uploadResult?.message || 'Upload failed');
                                         }
                                     } catch (error) {
-                                        console.error('Error uploading logo to Google Drive:', error);
+                                        console.log('Error uploading logo to Google Drive:', error);
                                         toast.error('Failed to upload logo to Google Drive. Using local preview.');
                                         // Fallback to blob URL if upload fails
                                         const objectUrl = URL.createObjectURL(file);
@@ -757,7 +716,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                         file
                                     );
                                     if (!uploadResult.success || !uploadResult.fileId) {
-                                        console.error('Failed to upload logo to Google Drive:', uploadResult?.message);
+                                        console.log('Failed to upload logo to Google Drive:', uploadResult?.message);
                                         toast.error(uploadResult?.message || 'Failed to upload logo to Google Drive. Using local preview.');
                                         return;
                                     }
@@ -818,7 +777,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                                             try {
                                                 audioRef.current.pause();
                                             } catch (error) {
-                                                console.error('Error stopping music:', error);
+                                                console.log('Error stopping music:', error);
                                             }
                                         }
 

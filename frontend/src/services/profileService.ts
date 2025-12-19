@@ -41,7 +41,7 @@ class ProfileServiceImpl implements ProfileService {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('API Error:', response.status, errorText);
+                console.log('API Error:', response.status, errorText);
                 throw new Error(`Failed to fetch library data: ${response.status} ${errorText}`);
             }
 
@@ -74,7 +74,7 @@ class ProfileServiceImpl implements ProfileService {
                 transitionEffects: data?.data?.transitionEffects || []
             };
         } catch (error) {
-            console.error('Error fetching library data:', error);
+            console.log('Error fetching library data:', error);
             HelperFunctions.showError(`Failed to load library data: ${error instanceof Error ? error.message : 'Unknown error'}`);
             return {
                 backgrounds: [],
@@ -110,7 +110,7 @@ class ProfileServiceImpl implements ProfileService {
 
             return result;
         } catch (error) {
-            console.error('Error uploading logo:', error);
+            console.log('Error uploading logo:', error);
             HelperFunctions.showError('Failed to upload logo');
             return { success: false };
         }
@@ -135,7 +135,7 @@ class ProfileServiceImpl implements ProfileService {
 
             return result;
         } catch (error) {
-            console.error('Error removing logo:', error);
+            console.log('Error removing logo:', error);
             HelperFunctions.showError('Failed to remove logo');
             return { success: false };
         }
@@ -174,7 +174,7 @@ class ProfileServiceImpl implements ProfileService {
             HelperFunctions.showSuccess('Profile settings saved');
             return true;
         } catch (error) {
-            console.error('Error saving profile settings:', error);
+            console.log('Error saving profile settings:', error);
             HelperFunctions.showError('Failed to save profile settings');
             return false;
         }
@@ -226,7 +226,7 @@ class ProfileServiceImpl implements ProfileService {
                 gammaThemeName: localSettings.gammaThemeName || null
             };
         } catch (error) {
-            console.error('Error getting profile settings:', error);
+            console.log('Error getting profile settings:', error);
             // Fallback to local storage
             const key = `profileSettings_${userId}`;
             return secure.j[key as any].get() || {};
