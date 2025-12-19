@@ -24,7 +24,7 @@ export function getGeminiClient(apiKey?: string): GoogleGenerativeAI {
  */
 export function getGeminiModel(): GenerativeModel {
   const genAI = getGeminiClient(process.env.GEMINI_API_KEY);
-  const model = AI_CONFIG.GEMINI.MODEL_PRO;
+  const model = AI_CONFIG.GEMINI.MODEL_FLASH;
   const temperature = AI_CONFIG.GEMINI.TEMPERATURE;
 
   return genAI.getGenerativeModel({

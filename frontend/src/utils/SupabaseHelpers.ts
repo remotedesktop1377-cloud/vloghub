@@ -11,6 +11,7 @@ import { Database } from '../types/database';
 import { toast, ToastOptions } from 'react-toastify';
 import { User } from '@supabase/supabase-js';
 import { ScriptData } from '@/types/scriptData';
+import { SceneData } from '@/types/sceneData';
 // import removed: TrendingTopic no longer used in helper insert signature
 
 export class SupabaseHelpers {
@@ -558,6 +559,167 @@ export class SupabaseHelpers {
       console.log('Unexpected error:', error);
       toast.error('An unexpected error occurred');
       return { data: null, error };
+    }
+  }
+
+  static async saveProjectAndScenes(scriptData: ScriptData, scriptProductionJSON: any): Promise<{ success: boolean; error?: any }> {
+    try {
+      if (!scriptData.projectId) {
+        const projectResult = await SupabaseHelpers.saveProjectRecord(scriptProductionJSON);
+        if (!projectResult.success || !projectResult.projectId) {
+          return { success: false, error: projectResult.error };
+        }
+        scriptData.projectId = projectResult.projectId;
+      }
+
+      const scenesResult = await SupabaseHelpers.saveProjectScenes(scriptData.projectId, scriptProductionJSON);
+      if (!scenesResult.success) {
+        return { success: false, error: scenesResult.error };
+      }
+
+      return { success: true, error: null };
+    } catch (error) {
+      console.log('Unexpected error in saveProjectAndScenes:', error);
+      return { success: false, error };
+    }
+  }
+
+  static async saveProjectRecord(scriptProductionJSON: any): Promise<{ success: boolean; projectId?: string; error?: any }> {
+    try {
+      const payload: any = {
+        user_id: scriptProductionJSON.project.userId,
+        job_id: scriptProductionJSON.project.jobId,
+        title: scriptProductionJSON.project.title,
+        topic: scriptProductionJSON.project.topic,
+        description: scriptProductionJSON.project.description,
+        language: scriptProductionJSON.project.language,
+        subtitle_language: scriptProductionJSON.project.subtitle_language,
+        narration_type: scriptProductionJSON.project.narration_type,
+        narrator_chroma_key_link: scriptProductionJSON.project.narrator_chroma_key_link,
+        video_thumbnail_url: scriptProductionJSON.project.videoThumbnailUrl || '',
+        project_settings: scriptProductionJSON.project.projectSettings || null,
+        raw_project_json: JSON.stringify(scriptProductionJSON),
+        status: 'rendering',
+        updated_at: new Date().toISOString(),
+      };
+      const { data: projectRow, error: upsertError } = await SupabaseHelpers.supabase
+        .from('projects')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (upsertError || !projectRow) {
+        console.log('Error saving project to Supabase:', upsertError);
+        return { success: false, error: upsertError };
+      }
+
+      const projectId = (projectRow as any).id as string;
+      return { success: true, projectId };
+    } catch (error) {
+      console.log('Unexpected error in saveProjectRecord:', error);
+      return { success: false, error };
+    }
+  }
+
+  static async saveProjectScenes(projectId: string, scriptProductionJSON: any): Promise<{ success: boolean; error?: any }> {
+    try {
+      await SupabaseHelpers.supabase
+        .from('project_scenes')
+        .delete()
+        .eq('project_id', projectId);
+
+      const sceneRows = scriptProductionJSON.script.map((scene: any, idx: number) => ({
+        project_id: projectId,
+        scene_index: idx,
+        narration: scene.narration,
+        duration_seconds: scene.durationInSeconds,
+        start_time: scene.startTime,
+        end_time: scene.endTime,
+        assets: scene.assets || {},
+        scene_settings: scene.sceneSettings || {},
+        gamma_preview_image: scene.gammaPreviewImage || null,
+        preview_clip: scene.previewClip || null,
+        highlighted_keywords: scene.highlightedKeywords || [],
+        keywords_selected: Array.isArray(scene.keywordsSelected) ? scene.keywordsSelected : [],
+      }));
+
+      console.log('sceneRows: ', sceneRows.length);
+
+      if (sceneRows.length > 0) {
+        const { error: insertScenesError } = await SupabaseHelpers.supabase
+          .from('project_scenes')
+          .insert(sceneRows as any);
+
+        if (insertScenesError) {
+          console.log('Error saving project scenes:', insertScenesError);
+          return { success: false, error: insertScenesError };
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.log('Unexpected error in saveProjectScenes:', error);
+      return { success: false, error };
+    }
+  }
+
+  static async saveFinalVideoRecord(args: {
+    jobId: string;
+    googleDriveVideoId?: string | null;
+    googleDriveVideoName?: string | null;
+    googleDriveVideoUrl?: string | null;
+    googleDriveThumbnailUrl?: string | null;
+  }): Promise<{ success: boolean; error?: any }> {
+    try {
+      if (!args.jobId) {
+        return { success: false, error: 'Missing jobId' };
+      }
+
+      const { data: project, error: projError } = await SupabaseHelpers.supabase
+        .from('projects')
+        .select('id')
+        .eq('job_id', args.jobId)
+        .single();
+
+      if (projError || !project) {
+        console.log('Project not found for jobId when saving final video:', args.jobId, projError);
+        return { success: false, error: projError };
+      }
+
+      const projectId = (project as any).id;
+
+      const upsertPayload: any = {
+        project_id: projectId,
+        google_drive_video_id: args.googleDriveVideoId || '',
+        google_drive_video_name: args.googleDriveVideoName || null,
+        google_drive_video_url: args.googleDriveVideoUrl || null,
+        google_drive_thumbnail_url: args.googleDriveThumbnailUrl || null,
+        render_status: 'success',
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('saveFinalVideoRecord upsertPayload:', upsertPayload);
+
+      const { data: finalData, error: upsertError } = await SupabaseHelpers.supabase
+        .from('final_videos')
+        .upsert(upsertPayload as any)
+        .select('id');
+
+      console.log('saveFinalVideoRecord upsert result:', { finalData, upsertError });
+
+      if (upsertError) {
+        console.log('Error saving final video record:', upsertError);
+        return { success: false, error: upsertError };
+      }
+
+      await SupabaseHelpers.supabase
+        .from('projects')
+        .update({ status: 'rendered', updated_at: new Date().toISOString() } as unknown as never)
+        .eq('id', projectId);
+
+      return { success: true };
+    } catch (error) {
+      console.log('Unexpected error in saveFinalVideoRecord:', error);
+      return { success: false, error };
     }
   }
 

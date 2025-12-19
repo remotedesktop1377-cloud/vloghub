@@ -60,6 +60,7 @@ import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
 import ProjectSettingsDialog from '@/dialogs/ProjectSettingsDialog';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { predefinedTransitions } from '@/data/DefaultData';
+import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 
 const ScriptProductionClient = () => {
 
@@ -372,71 +373,32 @@ const ScriptProductionClient = () => {
     // Function to upload JSON to Google Drive
     const uploadCompleteProjectToDrive = async () => {
         try {
-            setLoading(true);
 
-            const scriptProductionJSON = {
-                project: {
-                    jobId: jobId,
-                    topic: scriptData?.topic || null,
-                    title: scriptData?.title || null,
-                    description: scriptData?.description || null,
-                    duration: parseInt(scriptData?.duration || '1') || null,
-                    resolution: '1920x1080',
-                    region: scriptData?.region || null,
-                    language: scriptData?.language || null,
-                    subtitle_language: scriptData?.subtitle_language || null,
-                    narration_type: scriptData?.narration_type || null,
-                    narrator_chroma_key_link: scriptData?.narrator_chroma_key_link,
-                    transcription: scriptData?.transcription || '',
-                    videoThumbnailUrl: scriptData?.videoThumbnailUrl || null,
-                    projectSettings: {
-                        videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
-                        videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
-                        videoBackgroundVideo: projectSettings?.videoBackgroundVideo as SettingItemInterface,
-                        videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
-                    },
-                },
-                // Use SceneDataForUpload to ensure merged images are included
-                script: scenesData.map(sceneData => ({
-                    jobId: jobId,
-                    id: sceneData.id,
-                    narration: sceneData.narration,
-                    duration: sceneData.duration,
-                    durationInSeconds: sceneData.durationInSeconds,
-                    words: sceneData.words,
-                    startTime: sceneData.startTime,
-                    endTime: sceneData.endTime,
-                    highlightedKeywords: sceneData.highlightedKeywords || [],
-                    keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
-                    assets: {
-                        images: sceneData.assets?.images || [],
-                        clips: sceneData.assets?.clips || [],
-                    },
-                    gammaGenId: sceneData?.gammaGenId || '',
-                    gammaUrl: sceneData?.gammaUrl || '',
-                    previewImage: sceneData?.gammaPreviewImage || '',
-                    previewClip: sceneData?.previewClip || '',
-                    sceneSettings: {
-                        videoLogo: sceneData.sceneSettings?.videoLogo as LogoOverlayInterface,
-                        videoTransitionEffect: sceneData.sceneSettings?.videoTransitionEffect as SettingItemInterface,
-                        videoBackgroundMusic: sceneData.sceneSettings?.videoBackgroundMusic as SettingItemInterface,
-                        videoBackgroundVideo: sceneData.sceneSettings?.videoBackgroundVideo as SettingItemInterface,
-                    },
-                })),
-            };
+            const projectJSON = HelperFunctions.getProjectJSON(jobId, scriptData!, projectSettings! as Settings, scenesData);
+
+            try {
+                const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
+                if (!result.success) {
+                    console.log('Failed to save project and scenes to Supabase: ', result.error);
+                }
+            } catch (e: any) {
+                console.log('Failed to save project and scenes to Supabase: ', e);
+            }
+
+            setLoading(true);
 
             const form = new FormData();
             form.append('jobName', jobId);
             form.append('fileName', `project-config.json`);
-            form.append('jsonData', JSON.stringify(scriptProductionJSON));
+            form.append('jsonData', JSON.stringify(projectJSON));
 
             const uploadResult = await GoogleDriveServiceFunctions.uploadContentToDrive(form);
             if (!uploadResult.success) {
                 console.log('Failed to upload project JSON to Google Drive: ', uploadResult.result);
             }
 
-            VideoRenderService.processProjectJson(scriptProductionJSON)
-                .then((renderResult) => {
+            VideoRenderService.processProjectJson(projectJSON)
+                .then(async (renderResult) => {
                     if (!renderResult || !renderResult.finalVideo) {
                         console.log('Final video generation failed or missing finalVideo');
                         return;
@@ -444,6 +406,15 @@ const ScriptProductionClient = () => {
                     if (!renderResult.driveUpload || renderResult.driveUpload.success === false) {
                         console.log('Final video upload to Google Drive failed', renderResult.driveUpload);
                     }
+
+                    const driveUpload = renderResult.driveUpload || {};
+                    await SupabaseHelpers.saveFinalVideoRecord({
+                        jobId,
+                        googleDriveVideoId: driveUpload.fileId || null,
+                        googleDriveVideoName: projectJSON.project?.title || '',
+                        googleDriveVideoUrl: driveUpload.webViewLink || renderResult.finalVideo || null,
+                        googleDriveThumbnailUrl: scriptData?.videoThumbnailUrl || null,
+                    });
                 })
                 .catch((err) => {
                     console.log('Background processProjectJson error', err);
@@ -548,6 +519,7 @@ const ScriptProductionClient = () => {
             }
 
             setIsGammaProcessing(false);
+            
         } catch (e: any) {
             console.log('Failed to convert PDF to images:', e?.message || 'Unknown error');
             setIsGammaProcessing(false);
@@ -591,28 +563,7 @@ const ScriptProductionClient = () => {
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
 
                     applyProjectSettingsDialog('project', scriptData, scriptData.projectSettings || null, null, normalizedFromStorage);
-                    if (!scriptData.videoThumbnailUrl) {
-                        const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
-                        // console.log('Thumbnail URL:', thumbnailUrl);
-                        if (thumbnailUrl) {
-                            const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
-                            // console.log('Upload result:', uploadResult);
-                            if (uploadResult) {
-                                const updatedScriptData = {
-                                    ...scriptData,
-                                    videoThumbnailUrl: uploadResult,
-                                    updated_at: new Date().toISOString(),
-                                } as ScriptData;
-                                setScriptData(updatedScriptData);
-                                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-                            }
-                        }
-                        else {
-                            console.log('Failed to generate thumbnail');
-                        }
-                    } else {
-                        console.log('Thumbnail already exists');
-                    }
+
                 }
             } catch { }
         }
@@ -626,12 +577,14 @@ const ScriptProductionClient = () => {
                 setLoading(false);
                 const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
                 checkAndProcessGamma(updatedScriptData);
+                createThumbnailAndSaveProject(updatedScriptData);
             });
         } else {
             setLoading(false);
             setScenesData(scenesData);
             const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
             checkAndProcessGamma(updatedScriptData);
+            createThumbnailAndSaveProject(updatedScriptData);
         }
     };
 
@@ -660,6 +613,39 @@ const ScriptProductionClient = () => {
             }
         }
     };
+
+    const createThumbnailAndSaveProject = async (scriptData: ScriptData) => {
+        if (!scriptData.videoThumbnailUrl) {
+            const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
+            // console.log('Thumbnail URL:', thumbnailUrl);
+            if (thumbnailUrl) {
+                const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
+                // console.log('Upload result:', uploadResult);
+                if (uploadResult) {
+                    const updatedScriptData = {
+                        ...scriptData,
+                        videoThumbnailUrl: uploadResult,
+                        updated_at: new Date().toISOString(),
+                    } as ScriptData;
+                    setScriptData(updatedScriptData);
+                    SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                }
+            }
+            else {
+                console.log('Failed to generate thumbnail');
+            }
+        }
+
+        try {
+            const projectJSON = HelperFunctions.getProjectJSON(scriptData?.jobId || jobId, scriptData!, scriptData?.projectSettings!, scriptData.scenesData || []);
+            const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
+            if (!result.success) {
+                console.log('Failed to save project and scenes to Supabase: ', result.error);
+            }
+        } catch (e: any) {
+            console.log('Failed to save project and scenes to Supabase: ', e);
+        }
+    }
 
     // SceneData Management Functions
     const handleAddSceneDataAfter = (index: number) => {
@@ -769,7 +755,6 @@ const ScriptProductionClient = () => {
             setAiImagesEnabled(true);
             setRightTabIndex(0);
         } catch (e) {
-            console.log('AI generate failed', e);
             const first = fallbackImages[selectedSceneDataIndex % fallbackImages.length];
             setScenesDataImagesMap(prev => ({ ...prev, [selectedSceneDataIndex]: [first, ...(prev[selectedSceneDataIndex] || [])] }));
             setGeneratedImages([first]);

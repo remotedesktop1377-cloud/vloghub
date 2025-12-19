@@ -64,7 +64,7 @@ export const ProfileDropdown = () => {
 
   const loadProfileSettings = async () => {
     const profileSettings = await profileService.getProfileSettings(user.id);
-    if (profileSettings.projectSettings !== undefined && profileSettings.projectSettings !== null && profileSettings.projectSettings.videoBackgroundVideo && profileSettings.projectSettings.videoBackgroundMusic && profileSettings.projectSettings.videoTransitionEffect) {
+    if (profileSettings.projectSettings !== undefined && profileSettings.projectSettings !== null && profileSettings.projectSettings.videoBackgroundVideo && profileSettings.projectSettings.videoBackgroundMusic) {
       setProjectSettings(profileSettings.projectSettings);
     } else {
       await setDefaultProjectSettings();
@@ -89,9 +89,8 @@ export const ProfileDropdown = () => {
     if (!updatedProjectSettings.videoBackgroundMusic && libraryData.music !== undefined && libraryData.music !== null && libraryData.music.length > 0) {
       updatedProjectSettings.videoBackgroundMusic = libraryData.music[0] as SettingItemInterface;
     }
-    if (!updatedProjectSettings.videoTransitionEffect && libraryData.transitionEffects && libraryData.transitionEffects.length > 0) {
-      updatedProjectSettings.videoTransitionEffect = libraryData.transitionEffects[0] as SettingItemInterface;
-    }
+    updatedProjectSettings.videoTransitionEffect = { id: 'none', name: 'None', type: 'none', direction: '', duration: 0 } as SettingItemInterface;
+
     setProjectSettings(updatedProjectSettings);
     saveProfileSettings(updatedProjectSettings, socialKeys, gammaTextMode, gammaFormat, gammaThemeName);
   }
@@ -315,7 +314,6 @@ export const ProfileDropdown = () => {
                 </div>
                 {/* Social Keys Section */}
                 <div className={styles.socialForm}>
-                  <h3 className={styles.sectionTitle}>Social Media Keys</h3>
                   <Suspense fallback={null}>
                     <SocialMediaPageClient />
                   </Suspense>

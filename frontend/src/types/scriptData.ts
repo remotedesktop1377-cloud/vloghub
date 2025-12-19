@@ -2,6 +2,8 @@ import { SceneData } from "./sceneData";
 import { BackgroundType } from "./backgroundType";
 
 export interface ScriptData {
+    projectId?: string;
+    userId?: string;
     jobId?: string;
     title: string;
     topic: string;

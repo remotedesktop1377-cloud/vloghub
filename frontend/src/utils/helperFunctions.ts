@@ -1,5 +1,5 @@
 import { SceneData } from '../types/sceneData';
-import { ScriptData } from '../types/scriptData';
+import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from '../types/scriptData';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL } from '@/data/constants';
@@ -182,6 +182,60 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 };
 
 export class HelperFunctions {
+
+  static getProjectJSON(jobId: string, scriptData: ScriptData, projectSettings: Settings, scenesData: SceneData[]): any {
+    return {
+      project: {
+        userId: scriptData?.user_id || '',
+        jobId: scriptData?.jobId || '',
+        topic: scriptData?.topic || null,
+        title: scriptData?.title || null,
+        description: scriptData?.description || null,
+        duration: parseInt(scriptData?.duration || '1') || null,
+        resolution: '1920x1080',
+        region: scriptData?.region || null,
+        language: scriptData?.language || null,
+        subtitle_language: scriptData?.subtitle_language || null,
+        narration_type: scriptData?.narration_type || null,
+        narrator_chroma_key_link: scriptData?.narrator_chroma_key_link,
+        transcription: scriptData?.transcription || '',
+        // Project-level settings
+        projectSettings: {
+          videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
+          videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
+          videoBackgroundVideo: projectSettings?.videoBackgroundVideo as SettingItemInterface,
+          videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
+        },
+      },
+      // Use SceneDataForUpload to ensure merged images are included
+      script: scenesData.map(sceneData => ({
+        jobId: jobId,
+        id: sceneData.id,
+        narration: sceneData.narration,
+        duration: sceneData.duration,
+        durationInSeconds: sceneData.durationInSeconds,
+        words: sceneData.words,
+        startTime: sceneData.startTime,
+        endTime: sceneData.endTime,
+        highlightedKeywords: sceneData.highlightedKeywords || [],
+        keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
+        assets: {
+          images: sceneData.assets?.images || [],
+          clips: sceneData.assets?.clips || [],
+        },
+        gammaGenId: sceneData?.gammaGenId || '',
+        gammaUrl: sceneData?.gammaUrl || '',
+        previewImage: sceneData?.gammaPreviewImage || '',
+        previewClip: sceneData?.previewClip || '',
+        sceneSettings: {
+          videoLogo: sceneData.sceneSettings?.videoLogo as LogoOverlayInterface,
+          videoTransitionEffect: sceneData.sceneSettings?.videoTransitionEffect as SettingItemInterface,
+          videoBackgroundMusic: sceneData.sceneSettings?.videoBackgroundMusic as SettingItemInterface,
+          videoBackgroundVideo: sceneData.sceneSettings?.videoBackgroundVideo as SettingItemInterface,
+        },
+      })),
+    };
+  }
 
   static getBackgroundsCacheMaxAge(): number {
     if (process.env.BACKGROUNDS_CACHE_MAX_AGE) {
@@ -990,10 +1044,10 @@ export class HelperFunctions {
 
     try {
       const urlObj = new URL(url);
-      
+
       // Common problematic query parameters that might cause download issues
       const paramsToRemove: string[] = [];
-      
+
       // Envato-specific parameters
       // Note: Envato preview URLs are protected - only remove watermark parameter
       // Keep w, h, cf_fit, format, q, s as they may be required for the URL to work
@@ -1002,22 +1056,22 @@ export class HelperFunctions {
         paramsToRemove.push('mark');
         console.log('Cleaning Envato preview URL (removed watermark param only, keeping size params)');
       }
-      
+
       // Google Images - remove tracking and unnecessary parameters
       if (url.includes('googleusercontent.com') || url.includes('gstatic.com') || url.includes('googleapis.com')) {
         // Remove common Google tracking/redirect parameters
         paramsToRemove.push('usg', 'sig', 'sa', 'source', 'cd', 'ved', 'ictx', 'ei');
         console.log('Cleaning Google image URL (removed tracking params)');
       }
-      
+
       // General problematic parameters for any image URL
       // Remove parameters that might cause redirects or authentication issues
       const generalParamsToRemove = ['ref', 'referrer', 'utm_source', 'utm_medium', 'utm_campaign'];
       paramsToRemove.push(...generalParamsToRemove);
-      
+
       // Remove all problematic parameters
       paramsToRemove.forEach(param => urlObj.searchParams.delete(param));
-      
+
       const cleanedUrl = urlObj.toString();
       if (cleanedUrl !== url) {
         console.log('Cleaned image URL:', cleanedUrl);
@@ -1039,10 +1093,10 @@ export class HelperFunctions {
   // Determine if clip is a local path or Google Drive URL
   static getClipUrl(previewClip: string): string | null {
     if (!previewClip) return null;
-    
+
     // Check if it's an absolute path (Windows: C:\ or Unix: /)
     const isAbsolutePath = /^[A-Za-z]:[\\/]/.test(previewClip) || previewClip.startsWith('/');
-    
+
     if (isAbsolutePath) {
       // Local file path - use serve-clip endpoint
       const encodedPath = encodeURIComponent(previewClip);

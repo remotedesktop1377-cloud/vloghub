@@ -93,7 +93,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             const data = await response.json();
             setPublishedVideos(data.videos || []);
         } catch (error: any) {
-            console.error('Error loading published videos:', error);
+            console.log('Error loading published videos:', error);
         } finally {
             setLoadingPublishedVideos(false);
         }
@@ -204,7 +204,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             setShowManualDeleteDialog(false);
             setManualVideoId('');
         } catch (error: any) {
-            console.error('Error deleting video:', error);
+            console.log('Error deleting video:', error);
             toast.error(error.message || 'Failed to delete video from YouTube');
         } finally {
             setDeletingVideoId(null);

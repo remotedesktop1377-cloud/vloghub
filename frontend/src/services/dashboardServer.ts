@@ -13,7 +13,7 @@ interface DriveFile {
 let cachedAllJobs: OutputVideosResponse | null = null;
 let cachedAllJobsTimestamp: number = 0;
 const CACHE_TTL_MS = process.env.BACKGROUNDS_CACHE_MAX_AGE ? parseInt(process.env.BACKGROUNDS_CACHE_MAX_AGE) : 1 * 60 * 60 * 1000;
-console.log('CACHE_TTL_MS:', CACHE_TTL_MS);
+// console.log('CACHE_TTL_MS:', CACHE_TTL_MS);
 async function listOutputVideosForJobInternal(drive: any, jobFolderId: string, jobId: string): Promise<OutputVideosJob> {
   const outputFolderId = await resolveSubfolderId(drive, jobFolderId, 'output');
   if (!outputFolderId) {
