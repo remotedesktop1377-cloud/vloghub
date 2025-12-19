@@ -1,5 +1,6 @@
 import { getDriveClient, getRootFolderId, resolveSubfolderId } from '@/services/googleDriveServer';
 import type { OutputVideoItem, OutputVideosJob, OutputVideosResponse } from './dashboardService';
+import { ProjectService } from './projectService';
 
 interface DriveFile {
   id: string;
@@ -60,17 +61,19 @@ async function listOutputVideosForJobInternal(drive: any, jobFolderId: string, j
     );
   } catch (e) {
   }
+  const projectData = await ProjectService.getProjectByJobId(jobId);
+  
   const videos: OutputVideoItem[] = videoFiles.map((f: DriveFile) => {
     const id = f.id;
     const webViewLink = f.webViewLink || `https://drive.google.com/file/d/${id}/view`;
     const webContentLink = `https://drive.google.com/uc?id=${id}`;
     return {
       id,
-      name: f.name,
+      name: projectData?.title || f.name,
       mimeType: f.mimeType,
       webViewLink,
       webContentLink,
-      thumbnailLink: f.thumbnailLink || null,
+      thumbnailLink: projectData?.video_thumbnail_url || f.thumbnailLink || null,
       iconLink: f.iconLink || null,
       jobId,
     };
@@ -186,7 +189,24 @@ export async function getOutputVideos(jobId?: string, bypassCache: boolean = fal
       }
     }
   }
-  const result: OutputVideosResponse = { jobs };
+  const jobsWithProjectData: OutputVideosJob[] = await Promise.all(
+    jobs.map(async (job) => {
+      const projectData = await ProjectService.getProjectByJobId(job.jobId);
+      if (projectData) {
+        return {
+          ...job,
+          videos: job.videos.map((video) => ({
+            ...video,
+            name: projectData.title || video.name,
+            thumbnailLink: projectData.video_thumbnail_url || video.thumbnailLink,
+          })),
+        };
+      }
+      return job;
+    })
+  );
+
+  const result: OutputVideosResponse = { jobs: jobsWithProjectData };
   if (!jobId) {
     cachedAllJobs = result;
     cachedAllJobsTimestamp = Date.now();

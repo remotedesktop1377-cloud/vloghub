@@ -103,7 +103,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
         return publishedVideos.find(pv => pv.google_drive_video_id === videoId) || null;
     };
 
-    const handlePublishToYouTube = async (video: { id: string; name: string; webContentLink: string; jobId: string }) => {
+    const handlePublishToYouTube = async (video: { id: string; name: string; webContentLink: string; jobId: string; thumbnailLink?: string | null }) => {
         if (!user) {
             toast.error('Please sign in to publish videos');
             return;
@@ -129,6 +129,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     videoId: video.id,
                     videoName: video.name,
                     videoUrl: video.webContentLink,
+                    thumbnailLink: video.thumbnailLink || null,
                     jobId: video.jobId,
                     userId: user.id,
                 }),
