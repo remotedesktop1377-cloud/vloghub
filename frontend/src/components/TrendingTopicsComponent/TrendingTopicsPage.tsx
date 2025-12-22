@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
 import { TrendingTopic } from '../../types/TrendingTopics';
 
@@ -26,13 +27,13 @@ import HypothesisSection from './HypothesisSection';
 import VideoDurationSection from './VideoDurationSection';
 import HeaderSection from './HeaderSection';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
-import { useAuth } from '@/context/AuthContext';
 import { ScriptData } from '@/types/scriptData';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 
 const TrendingTopics: React.FC = () => {
   const router = useRouter();
-  const { user } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user as any;
   const { getCachedData, setCachedData, clearCache, isCacheValid } = useTrendingTopicsCache();
   const lastFetchRef = useRef<{ key: string; ts: number } | null>(null);
 

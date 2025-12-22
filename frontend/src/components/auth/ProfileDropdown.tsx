@@ -17,9 +17,13 @@ import { SocialKeys } from '@/types/backgroundType';
 import { getSupabase } from '@/utils/supabase';
 import { ROUTES_KEYS } from '@/data/constants';
 import SocialMediaPageClient from '../SocialMedia/SocialMediaPageClient';
+import { signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import router from 'next/router';
 
 export const ProfileDropdown = () => {
-  const { user, signOut } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user;
   const [menuOpen, setMenuOpen] = useState(false);
   const [socialKeys, setSocialKeys] = useState<SocialKeys>({ tiktok: '', instagram: '', facebook: '', youtube: '' });
   const [gammaTextMode, setGammaTextMode] = useState<string>('generate');
@@ -54,16 +58,16 @@ export const ProfileDropdown = () => {
   // Load saved keys and profile settings for this user
   useEffect(() => {
     try {
-      if (user?.id) {
+      if (user?.email) {
         loadProfileSettings();
       }
     } catch {
       HelperFunctions.showError('Failed to load profile settings');
     }
-  }, [user?.id, menuOpen]);
+  }, [user?.email, menuOpen]);
 
   const loadProfileSettings = async () => {
-    const profileSettings = await profileService.getProfileSettings(user.id);
+    const profileSettings = await profileService.getProfileSettings(user.email || '');
     if (profileSettings.projectSettings !== undefined && profileSettings.projectSettings !== null && profileSettings.projectSettings.videoBackgroundVideo && profileSettings.projectSettings.videoBackgroundMusic) {
       setProjectSettings(profileSettings.projectSettings);
     } else {
@@ -83,10 +87,10 @@ export const ProfileDropdown = () => {
   const setDefaultProjectSettings = async () => {
     const libraryData = await GoogleDriveServiceFunctions.loadLibraryData(false);
     let updatedProjectSettings: Settings | null = projectSettings || {} as Settings;
-    if (!updatedProjectSettings.videoBackgroundVideo && libraryData.backgrounds !== undefined && libraryData.backgrounds !== null && libraryData.backgrounds.length > 0) {
+    if (!updatedProjectSettings.videoBackgroundVideo && libraryData && libraryData.backgrounds !== undefined && libraryData.backgrounds !== null && libraryData.backgrounds.length > 0) {
       updatedProjectSettings.videoBackgroundVideo = libraryData.backgrounds[0] as SettingItemInterface;
     }
-    if (!updatedProjectSettings.videoBackgroundMusic && libraryData.music !== undefined && libraryData.music !== null && libraryData.music.length > 0) {
+    if (!updatedProjectSettings.videoBackgroundMusic && libraryData && libraryData.music !== undefined && libraryData.music !== null && libraryData.music.length > 0) {
       updatedProjectSettings.videoBackgroundMusic = libraryData.music[0] as SettingItemInterface;
     }
     updatedProjectSettings.videoTransitionEffect = { id: 'none', name: 'None', type: 'none', direction: '', duration: 0 } as SettingItemInterface;
@@ -95,22 +99,15 @@ export const ProfileDropdown = () => {
     saveProfileSettings(updatedProjectSettings, socialKeys, gammaTextMode, gammaFormat, gammaThemeName);
   }
 
-  const handleSignOut = async () => {
+  const handleSignOutClick = async () => {
     try {
       setMenuOpen(false);
       HelperFunctions.clearSecureStorage();
 
       // Use window.location since router might not be mounted in all contexts
       // This is a client component, so window is always available
-      window.location.href = ROUTES_KEYS.HOME;
-      const supabase = getSupabase();
-      const { error } = await supabase.auth.signOut({ scope: 'local' })
-      if (error) {
-        console.log(error);
-        toast.error("Failed to logout");
-        return;
-      }
-
+      await signOut();
+      router.push(ROUTES_KEYS.HOME);
     } catch (error) {
       console.log('Error during sign out:', error);
       toast.error('An error occurred during sign out');
@@ -120,7 +117,7 @@ export const ProfileDropdown = () => {
   };
 
   const saveProfileSettings = async (projectSettings: Settings | null, socialKeys: SocialKeys, gammaTextMode?: string, gammaFormat?: string, gammaThemeName?: string) => {
-    await profileService.saveProfileSettings(user.id, projectSettings,
+    await profileService.saveProfileSettings(user.email || '', projectSettings,
       socialKeys,
       gammaTextMode,
       gammaFormat,
@@ -143,7 +140,7 @@ export const ProfileDropdown = () => {
     toast.success('Project settings saved');
   };
 
-  const getInitials = (name: string | null, email: string) => {
+  const getInitials = (name: string, email: string) => {
     if (name && name.trim()) {
       return name
         .trim()
@@ -171,15 +168,15 @@ export const ProfileDropdown = () => {
           aria-expanded={menuOpen}
         >
           <div className={styles.avatarCircleSmall}>
-            {user.user_metadata?.picture ? (
+            {user.image ? (
               <img
-                src={user.user_metadata.picture}
+                src={user.image}
                 alt="Profile"
                 className={styles.avatarImage}
               />
             ) : (
               <span className={styles.avatarInitialsSmall}>
-                {getInitials(user.user_metadata?.full_name, user.email || '')}
+                {getInitials(user.name || '', user.email || '')}
               </span>
             )}
           </div>
@@ -203,21 +200,21 @@ export const ProfileDropdown = () => {
             <div className={styles.menuHeader}>
               <div className={styles.headerRow}>
                 <div className={styles.avatarCircle}>
-                  {user.user_metadata?.avatar_url ? (
+                  {user.image ? (
                     <img
-                      src={user.user_metadata.picture}
+                      src={user.image}
                       alt="Profile"
                       className={styles.avatarImage}
                     />
                   ) : (
                     <span className={styles.avatarInitials}>
-                      {getInitials(user.user_metadata?.full_name, user.email || '')}
+                      {getInitials(user.name || '', user.email || '')}
                     </span>
                   )}
                 </div>
                 <div className={styles.userMeta}>
                   <div id="profileMenuTitle" className={styles.userName}>
-                    {user.user_metadata?.full_name || 'User'}
+                    {user.name || 'User'}
                   </div>
                   <div className={styles.userEmail}>{user.email}</div>
                 </div>
@@ -227,7 +224,7 @@ export const ProfileDropdown = () => {
                     variant="outlined"
                     size="medium"
                     sx={{ textTransform: 'none', fontSize: '1.25rem' }}
-                    onClick={handleSignOut}
+                    onClick={handleSignOutClick}
                     startIcon={
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M10 17l5-5-5-5v3H3v4h7v3zm9-12H12V3h7a2 2 0 012 2v14a2 2 0 01-2 2h-7v-2h7V5z" />
@@ -326,7 +323,7 @@ export const ProfileDropdown = () => {
 
       {/* Project Settings Dialog */}
       <ProjectSettingsDialog
-        userId={user.id}
+        userId={user.email || ''}
         jobId={null}
         open={projectSettingsDialogOpen}
         onClose={() => {

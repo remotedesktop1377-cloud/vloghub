@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import type { OutputVideosJob } from '@/services/dashboardService';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import styles from './DashboardPageClient.module.css';
@@ -10,7 +11,6 @@ import { ROUTES_KEYS } from '@/data/constants';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { ArrowBack, Refresh as RefreshIcon, Publish as PublishIcon, Delete as DeleteIcon, YouTube, Add as AddIcon, CheckCircle } from '@mui/icons-material';
 import { Button, CircularProgress, Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton } from '@mui/material';
-import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-toastify';
 
 interface DashboardPageClientProps {
@@ -30,7 +30,8 @@ interface PublishedVideo {
 
 export default function DashboardPageClient({ jobs: initialJobs }: DashboardPageClientProps) {
     const router = useRouter();
-    const { user } = useAuth();
+    const { data: session } = useSession();
+    const user = session?.user as any;
     const [jobs, setJobs] = useState<OutputVideosJob[]>(initialJobs);
     const [refreshing, setRefreshing] = useState(false);
     const [publishingVideoId, setPublishingVideoId] = useState<string | null>(null);

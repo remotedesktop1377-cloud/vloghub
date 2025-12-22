@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { SessionProvider } from 'next-auth/react';
 import ThemeRegistry from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
 import { ToastContainer } from 'react-toastify';
@@ -12,10 +13,11 @@ interface ProvidersProps {
 
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
     return (
-        <AuthProvider>
-            <ThemeRegistry>
-                {children}
-                {/* <ToastContainer
+        <SessionProvider>
+            <AuthProvider>
+                <ThemeRegistry>
+                    {children}
+                    {/* <ToastContainer
           position="top-right"
           autoClose={5000}
           hideProgressBar={false}
@@ -30,7 +32,8 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
           bodyClassName="custom-toast-body"
           progressClassName="custom-toast-progress"
         /> */}
-            </ThemeRegistry>
-        </AuthProvider>
+                </ThemeRegistry>
+            </AuthProvider>
+        </SessionProvider>
     );
 };

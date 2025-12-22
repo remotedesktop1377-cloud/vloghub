@@ -45,16 +45,6 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                   >
                     Dashboard
                   </AuthenticatedButton>
-                  <Typography
-                    component="a"
-                    href={ROUTES_KEYS.SOCIAL_MEDIA}
-                    sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}
-                  >
-                    Social Media
-                  </Typography>
-                  {/* {['Features', 'Examples', 'Blog'].map((item) => (
-                    <Typography key={item} component="a" href="#" sx={{ color: TEXT.secondary, textDecoration: 'none', '&:hover': { color: TEXT.primary }, transition: 'color 0.2s' }}>{item}</Typography>
-                  ))} */}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <AuthenticatedButton
@@ -94,8 +84,6 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
       >
         {children}
       </Box>
-
-
     </Box>
   );
 };

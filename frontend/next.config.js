@@ -13,12 +13,6 @@ const nextConfig = {
     }
     return [];
   },
-  // webpack: (config) => {
-  //   config.externals.push({
-  //     "@ffmpeg-installer/ffmpeg": "@ffmpeg-installer/ffmpeg",
-  //   });
-  //   return config;
-  // },
   images: {
     remotePatterns: [
       {

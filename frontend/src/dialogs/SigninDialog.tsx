@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, IconButton, CircularProgress, Stack, Divider } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import GoogleIcon from '@mui/icons-material/Google';
-import { getSupabase } from '../utils/supabase';
 import { toast } from 'react-toastify';
+import { signIn } from 'next-auth/react';
 
 type SigninDialogProps = { isOpen: boolean; onClose: () => void; onSuccess?: () => void };
 
@@ -15,15 +15,15 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
-      const { error } = await getSupabase().auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
-      });
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success('Redirecting to Google...');
-        onSuccess && onSuccess();
+      const result = await signIn('google');
+      if ((result as any)?.error) {
+        toast.error('Failed to start Google sign in');
+        setGoogleLoading(false);
+        return;
+      }
+      toast.success('Redirecting to Google...');
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to start Google Sign in';
@@ -31,25 +31,10 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
     } finally {
       setGoogleLoading(false);
     }
-    };
+  };
 
   return (
-    <Dialog
-      open={isOpen}
-      onClose={onClose}
-      fullWidth
-      maxWidth="xs"
-      PaperProps={{
-        sx: {
-          overflow: 'hidden',
-          borderRadius: 3,
-          boxShadow: 8,
-          bgcolor: 'background.paper',
-          backdropFilter: 'blur(6px)'
-        }
-      }}
-    >
-      {/* Header */}
+    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="xs" PaperProps={{ sx: { overflow: 'hidden', borderRadius: 3, boxShadow: 8, bgcolor: 'background.paper', backdropFilter: 'blur(6px)' } }}>
       <DialogTitle
         component="div"
         sx={{
@@ -86,13 +71,11 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
         </IconButton>
       </DialogTitle>
 
-      {/* Content */}
       <DialogContent sx={{ p: 3 }}>
         <Stack spacing={5.5} alignItems="stretch">
 
           <Divider sx={{ my: 3.5 }} />
 
-          {/* Google button */}
           <Button
             onClick={handleGoogleSignIn}
             disabled={googleLoading}
@@ -125,7 +108,7 @@ const SigninDialog: React.FC<SigninDialogProps> = ({ isOpen, onClose, onSuccess 
           </Typography>
         </Stack>
       </DialogContent>
-      
+
     </Dialog>
   );
 };

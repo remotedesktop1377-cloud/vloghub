@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
     Box,
     Grid,
@@ -26,7 +27,6 @@ import {
     Delete,
 } from '@mui/icons-material';
 import { BACKGROUND, TEXT, PURPLE, SUCCESS, ERROR, NEUTRAL, SHADOW } from '../../styles/colors';
-import { useAuth } from '../../context/AuthContext';
 import { getSupabase } from '../../utils/supabase';
 import { toast } from 'react-toastify';
 import styles from './SocialMediaAccounts.module.css';
@@ -109,7 +109,8 @@ const mockAccounts: SocialAccount[] = [
 ];
 
 export default function SocialMediaAccounts() {
-    const { user } = useAuth();
+    const { data: session } = useSession();
+    const user = session?.user as any;
     const router = useRouter();
     const searchParams = useSearchParams();
     const [accounts, setAccounts] = useState<SocialAccount[]>(mockAccounts);

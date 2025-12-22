@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../context/AuthContext';
+import { useSession } from 'next-auth/react';
 import SigninDialog from '../../dialogs/SigninDialog';
 import { Button } from '@mui/material';
 import { toast } from 'react-toastify';
@@ -34,7 +34,9 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
   showClickLoading = false,
   loadingText,
 }) => {
-  const { user, loading } = useAuth();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const loading = status === 'loading';
   const router = useRouter();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [buttonLoading, setButtonLoading] = useState(false);
@@ -115,7 +117,9 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
 
 // Hook version for more flexibility
 export const useAuthenticatedNavigation = () => {
-  const { user, loading } = useAuth();
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const loading = status === 'loading';
   const router = useRouter();
   const [showAuthModal, setShowAuthModal] = useState(false);
 

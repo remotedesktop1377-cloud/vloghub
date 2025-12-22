@@ -4,7 +4,7 @@ import { Refresh as RefreshIcon, AccessTime as TimeIcon, Clear as ClearIcon } fr
 import LocationSelector from './LocationSelector';
 import DateRangeSelector from './DateRangeSelector';
 import { ProfileDropdown } from '../auth/ProfileDropdown';
-import { useAuth } from '../../context/AuthContext';
+import { useSession } from 'next-auth/react';
 import styles from './css/TrendingTopics.module.css';
 import { useRouter } from 'next/navigation';
 import { ROUTES_KEYS } from '@/data/constants';
@@ -34,7 +34,8 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
   selectedCountry,
   onCountryChange,
 }) => {
-  const { user } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user as any;
   const router = useRouter();
   const [dashboardLoading, setDashboardLoading] = React.useState(false);
 
@@ -52,7 +53,7 @@ const HeaderSection: React.FC<HeaderSectionProps> = ({
           <Box className={styles.dropdownGroup}>
             {/* Refresh and Dashboard Buttons */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 1 }}>
-            <Button
+              <Button
                 variant="outlined"
                 onClick={() => {
                   setDashboardLoading(true);

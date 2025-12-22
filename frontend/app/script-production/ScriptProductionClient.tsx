@@ -61,6 +61,7 @@ import ProjectSettingsDialog from '@/dialogs/ProjectSettingsDialog';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { predefinedTransitions } from '@/data/DefaultData';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
+import { useSession } from 'next-auth/react';
 
 const ScriptProductionClient = () => {
 
@@ -129,6 +130,8 @@ const ScriptProductionClient = () => {
     // Temp state used inside dialog for cancel/discard behavior
     const [projectSettings, setProjectSettings] = useState<Settings | null>(null);
     const [sceneSettings, setSceneSettings] = useState<Settings | null>(null);
+    const { data: session } = useSession();
+    const user = session?.user as any;
 
     useEffect(() => {
         let storedData = null;
@@ -947,7 +950,7 @@ const ScriptProductionClient = () => {
         }
 
         // save the profile settings to the secure storage
-        const profileSettings = await profileService.getProfileSettings(scriptData?.user_id || '');
+        const profileSettings = await profileService.getProfileSettings(user.email || '');
         const approvedData = { ...scriptData, jobId: jobId, status: SCRIPT_STATUS.APPROVED, projectSettings: profileSettings.projectSettings, updated_at: new Date().toISOString() } as any;
         setScriptData(approvedData);
         SecureStorageHelpers.setScriptMetadata(approvedData);

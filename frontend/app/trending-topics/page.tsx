@@ -1,21 +1,20 @@
 'use client';
 
 import TrendingTopics from '@/components/TrendingTopicsComponent/TrendingTopicsPage';
-import { useAuth } from '../../src/context/AuthContext'
+import { useSession } from 'next-auth/react';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { ROUTES_KEYS } from '@/data/constants';
 
 const TrendingTopicsRoute = () => {
-  const { user, loading } = useAuth();
+  const { data: session, status } = useSession();
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <AppLoadingOverlay />
     );
   }
 
-  // Redirect to home if user is not authenticated
-  if (!user) {
+  if (!session) {
     if (typeof window !== 'undefined') {
       window.location.replace(ROUTES_KEYS.HOME);
     }

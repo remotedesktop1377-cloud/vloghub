@@ -109,14 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           case 'SIGNED_OUT':
             setUser(null);
             setSession(null);
-            // Only redirect if not already on home page
-            if (typeof window !== 'undefined' && !window.location.pathname.includes('home') && window.location.pathname !== '/') {
-              try { 
-                router.push(ROUTES_KEYS.HOME); 
-              } catch (error) {
-                console.log('Error redirecting:', error);
-              }
-            }
             break;
           case 'PASSWORD_RECOVERY':
             toast.success('Password recovery email sent!');

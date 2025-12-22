@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useSession } from 'next-auth/react';
 import { SupabaseHelpers } from '../../utils/SupabaseHelpers';
 import { TrendingTopic } from '../../types/TrendingTopics';
 import { Database } from '../../types/database';
@@ -23,7 +23,9 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
   onTopicsLoaded,
   filters = {}
 }) => {
-  const { user, loading: authLoading } = useAuth();
+  const { data: session, status } = useSession();
+  const user = session?.user as any;
+  const authLoading = status === 'loading';
   const [loading, setLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [savedTopics, setSavedTopics] = useState<SupabaseTrendingTopic[]>([]);
@@ -233,7 +235,8 @@ export const SupabaseIntegration: React.FC<SupabaseIntegrationProps> = ({
 
 // Hook for easy integration with existing components
 export const useSupabaseIntegration = () => {
-  const { user } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user as any;
 
   const saveSearch = async (query: string, filters: any = {}, resultsCount: number = 0) => {
     if (!user) return { error: 'User not authenticated' };
