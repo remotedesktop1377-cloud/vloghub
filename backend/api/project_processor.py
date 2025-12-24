@@ -492,52 +492,117 @@ def process_scene(
     scene_narrator = narrator_clip.subclipped(start_time, actual_end_time)
     video_size = (scene_narrator.w, scene_narrator.h)
     
-    # Download and prepare background video
-    bg_video_url = scene_settings.get("videoBackgroundVideo", {}).get("webViewLink") or \
-                   scene_settings.get("videoBackgroundVideo", {}).get("webContentLink") or \
-                   scene_settings.get("videoBackgroundVideo", {}).get("name", "")
+    # Determine background type (image or video)
+    background_type = scene_settings.get("backgroundType", "video")
+    # Fallback: if backgroundType is not set, infer from videoBackgroundImage presence
+    if background_type not in ["image", "video"]:
+        background_type = "image" if scene_settings.get("videoBackgroundImage") else "video"
     
-    bg_video_path = None
-    if bg_video_url:
-        bg_video_local = temp_dir / f"bg_video_scene_{scene_index}.mp4"
-        bg_video_path = download_media(bg_video_url, bg_video_local, is_video=True)
+    # Download and prepare background (image or video)
+    bg_video_clip = None
+    bg_video_path = None  # Initialize for cleanup later
+    
+    if background_type == "image":
+        # Handle image background
+        video_bg_image = scene_settings.get("videoBackgroundImage", {})
+        print(f"DEBUG: videoBackgroundImage data: {video_bg_image}")
         
-        # Compress background video if it's too large
-        original_size_mb = Path(bg_video_path).stat().st_size / (1024 * 1024)
-        target_size_mb = 20.0
-        if original_size_mb > target_size_mb:
-            print(f"Compressing background video from {original_size_mb:.2f} MB to target {target_size_mb} MB...")
-            bg_video_compressed = temp_dir / f"bg_video_scene_{scene_index}_compressed.mp4"
+        # Try webContentLink first (for direct download), then webViewLink, then name/id
+        bg_image_url = video_bg_image.get("webContentLink") or \
+                      video_bg_image.get("webViewLink") or \
+                      video_bg_image.get("name") or \
+                      (f"https://drive.google.com/uc?id={video_bg_image.get('id')}" if video_bg_image.get("id") else "")
+        
+        print(f"DEBUG: background_type={background_type}, bg_image_url={bg_image_url}")
+        
+        if bg_image_url:
             try:
-                compressed_path = compress_video(str(bg_video_path), str(bg_video_compressed), target_size_mb)
-                bg_video_path = compressed_path
-                compressed_size_mb = Path(compressed_path).stat().st_size / (1024 * 1024)
-                print(f"Background video compressed: {compressed_size_mb:.2f} MB")
+                print(f"Using image background for scene {scene_index + 1}: {bg_image_url}")
+                bg_image_local = temp_dir / f"bg_image_scene_{scene_index}.png"
+                bg_image_path = download_media(bg_image_url, bg_image_local, is_video=False)
+                print(f"Downloaded image to: {bg_image_path}")
+                
+                # Load and resize image
+                bg_image = Image.open(bg_image_path)
+                print(f"Original image size: {bg_image.size}, target size: {video_size}")
+                bg_image = bg_image.resize((video_size[0], video_size[1]), Image.Resampling.LANCZOS)
+                
+                # Save resized image
+                bg_image_resized_path = temp_dir / f"bg_image_scene_{scene_index}_resized.png"
+                bg_image.save(bg_image_resized_path)
+                print(f"Saved resized image to: {bg_image_resized_path}")
+                
+                # Create image clip with scene duration and ensure it matches video size
+                bg_video_clip = ImageClip(str(bg_image_resized_path), duration=scene_duration)
+                # Ensure the clip size matches video dimensions
+                if bg_video_clip.size != video_size:
+                    print(f"Resizing ImageClip from {bg_video_clip.size} to {video_size}")
+                    bg_video_clip = bg_video_clip.resized(new_size=video_size)
+                print(f"Created ImageClip with duration: {scene_duration}s, size: {bg_video_clip.size}")
             except Exception as e:
-                print(f"Warning: Failed to compress background video, using original: {e}")
-        
-        bg_video_clip = VideoFileClip(bg_video_path)
-        
-        # Resize background video to match scene dimensions
-        bg_video_clip = bg_video_clip.resized(new_size=(video_size[0], video_size[1]))
-        
-        # Loop background video to match scene duration
-        if bg_video_clip.duration < scene_duration:
-            # Calculate how many loops we need
-            loops_needed = int(np.ceil(scene_duration / bg_video_clip.duration))
-            # Create a list of the same clip repeated
-            bg_clips = [bg_video_clip] * loops_needed
-            # Concatenate them
-            bg_video_clip = concatenate_videoclips(bg_clips, method="compose")
-        
-        # Trim to exact scene duration
-        bg_video_clip = bg_video_clip.subclipped(0, scene_duration)
-        # Ensure it's exactly the scene duration
-        if abs(bg_video_clip.duration - scene_duration) > 0.1:
-            bg_video_clip = bg_video_clip.subclipped(0, scene_duration)
+                print(f"ERROR: Failed to process image background: {e}")
+                import traceback
+                traceback.print_exc()
+                # Fallback to black background on error
+                bg_video_clip = ImageClip(np.zeros((video_size[1], video_size[0], 3), dtype=np.uint8), duration=scene_duration)
+        else:
+            print(f"WARNING: No image background URL found in videoBackgroundImage: {video_bg_image}, using black background")
+            bg_video_clip = ImageClip(np.zeros((video_size[1], video_size[0], 3), dtype=np.uint8), duration=scene_duration)
     else:
-        # No background video, use black background
+        # Handle video background (original logic)
+        bg_video_url = scene_settings.get("videoBackgroundVideo", {}).get("webViewLink") or \
+                      scene_settings.get("videoBackgroundVideo", {}).get("webContentLink") or \
+                      scene_settings.get("videoBackgroundVideo", {}).get("name", "")
+        
+        if bg_video_url:
+            print(f"Using video background for scene {scene_index + 1}")
+            bg_video_local = temp_dir / f"bg_video_scene_{scene_index}.mp4"
+            bg_video_path = download_media(bg_video_url, bg_video_local, is_video=True)
+            
+            # Compress background video if it's too large
+            original_size_mb = Path(bg_video_path).stat().st_size / (1024 * 1024)
+            target_size_mb = 20.0
+            if original_size_mb > target_size_mb:
+                print(f"Compressing background video from {original_size_mb:.2f} MB to target {target_size_mb} MB...")
+                bg_video_compressed = temp_dir / f"bg_video_scene_{scene_index}_compressed.mp4"
+                try:
+                    compressed_path = compress_video(str(bg_video_path), str(bg_video_compressed), target_size_mb)
+                    bg_video_path = compressed_path
+                    compressed_size_mb = Path(compressed_path).stat().st_size / (1024 * 1024)
+                    print(f"Background video compressed: {compressed_size_mb:.2f} MB")
+                except Exception as e:
+                    print(f"Warning: Failed to compress background video, using original: {e}")
+            
+            bg_video_clip = VideoFileClip(bg_video_path)
+            
+            # Resize background video to match scene dimensions
+            bg_video_clip = bg_video_clip.resized(new_size=(video_size[0], video_size[1]))
+            
+            # Loop background video to match scene duration
+            if bg_video_clip.duration < scene_duration:
+                # Calculate how many loops we need
+                loops_needed = int(np.ceil(scene_duration / bg_video_clip.duration))
+                # Create a list of the same clip repeated
+                bg_clips = [bg_video_clip] * loops_needed
+                # Concatenate them
+                bg_video_clip = concatenate_videoclips(bg_clips, method="compose")
+            
+            # Trim to exact scene duration
+            bg_video_clip = bg_video_clip.subclipped(0, scene_duration)
+            # Ensure it's exactly the scene duration
+            if abs(bg_video_clip.duration - scene_duration) > 0.1:
+                bg_video_clip = bg_video_clip.subclipped(0, scene_duration)
+        else:
+            # No background video, use black background
+            print(f"No video background URL found, using black background")
+            bg_video_clip = ImageClip(np.zeros((video_size[1], video_size[0], 3), dtype=np.uint8), duration=scene_duration)
+    
+    # Ensure bg_video_clip is set (should not be None at this point)
+    if bg_video_clip is None:
+        print(f"ERROR: bg_video_clip is None! Creating black background as fallback.")
         bg_video_clip = ImageClip(np.zeros((video_size[1], video_size[0], 3), dtype=np.uint8), duration=scene_duration)
+    
+    print(f"DEBUG: bg_video_clip type: {type(bg_video_clip)}, duration: {bg_video_clip.duration if hasattr(bg_video_clip, 'duration') else 'N/A'}, size: {bg_video_clip.size if hasattr(bg_video_clip, 'size') else 'N/A'}")
     
     # Process narrator video with transparency (same approach as manual processing)
     print("Processing narrator video with transparency (frame-by-frame)...")
@@ -1077,7 +1142,7 @@ def process_scene(
     narrator_clip.close()
     scene_narrator.close()
     narrator_with_alpha.close()
-    if bg_video_path:
+    if bg_video_clip:
         bg_video_clip.close()
     
     return str(scene_output_path)

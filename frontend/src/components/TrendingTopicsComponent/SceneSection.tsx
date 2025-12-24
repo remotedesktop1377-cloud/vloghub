@@ -901,6 +901,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 videoTransitionEffect: settings.videoTransitionEffect?.name ? settings.videoTransitionEffect?.name : projectSettings?.videoTransitionEffect?.name,
                                                 videoBackgroundMusic: settings.videoBackgroundMusic?.name ? settings.videoBackgroundMusic?.name : projectSettings?.videoBackgroundMusic?.name,
                                                 videoBackgroundVideo: settings.videoBackgroundVideo?.name ? settings.videoBackgroundVideo?.name : projectSettings?.videoBackgroundVideo?.name,
+                                                videoBackgroundImage: settings.videoBackgroundImage?.name ? settings.videoBackgroundImage?.name : projectSettings?.videoBackgroundImage?.name,
+                                                backgroundType: settings.backgroundType || projectSettings?.backgroundType || (settings.videoBackgroundImage || projectSettings?.videoBackgroundImage ? 'image' : 'video'),
                                               };
 
                                               return (
@@ -919,9 +921,14 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                         Background Music: {effective.videoBackgroundMusic}
                                                       </Box>
                                                     )}
-                                                    {effective.videoBackgroundVideo && (
+                                                    {effective.backgroundType === 'video' && effective.videoBackgroundVideo && (
                                                       <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PURPLE.light, color: 'text.white', border: `1px solid ${PURPLE.main}` }}>
                                                         Background Video: {effective.videoBackgroundVideo}
+                                                      </Box>
+                                                    )}
+                                                    {effective.backgroundType === 'image' && effective.videoBackgroundImage && (
+                                                      <Box sx={{ px: 1, py: 0.25, borderRadius: 0.5, fontSize: '1.1rem', bgcolor: PURPLE.light, color: 'text.white', border: `1px solid ${PURPLE.main}` }}>
+                                                        Background Image: {effective.videoBackgroundImage}
                                                       </Box>
                                                     )}
                                                   </Box>

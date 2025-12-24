@@ -65,9 +65,6 @@ export const AuthenticatedButton: React.FC<AuthenticatedButtonProps> = ({
     }
 
     if (!user) {
-      // Store the target route for post-auth redirect
-      sessionStorage.setItem('authRedirectTo', targetRoute);
-      
       // User is not authenticated, show auth modal
       setShowAuthModal(true);
       toast.info('Please sign in to access this feature');

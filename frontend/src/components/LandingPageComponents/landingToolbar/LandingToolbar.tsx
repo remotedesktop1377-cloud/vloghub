@@ -1,10 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Box, AppBar, Toolbar, Typography } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Button } from '@mui/material';
+import { Logout as LogoutIcon } from '@mui/icons-material';
 import { BACKGROUND, TEXT, PURPLE, SHADOW, NEUTRAL } from '../../../styles/colors';
 import { ROUTES_KEYS } from '../../../data/constants';
 import { AuthenticatedButton } from '../../auth/AuthenticatedButton';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'react-toastify';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +17,22 @@ interface LayoutProps {
 }
 
 const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const { signOut: authSignOut } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await authSignOut();
+      await signOut({ redirect: false });
+      toast.success('Logged out successfully');
+      router.push(ROUTES_KEYS.HOME);
+    } catch (error) {
+      console.log('Error logging out:', error);
+      toast.error('Failed to log out');
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {(
@@ -45,6 +66,22 @@ const LandingToolbar: React.FC<LayoutProps> = ({ children }) => {
                   >
                     Dashboard
                   </AuthenticatedButton>
+                  {session?.user && (
+                    <Button
+                      variant="text"
+                      onClick={handleLogout}
+                      startIcon={<LogoutIcon />}
+                      sx={{ 
+                        color: TEXT.secondary, 
+                        textDecoration: 'none', 
+                        '&:hover': { color: TEXT.primary }, 
+                        transition: 'color 0.2s',
+                        textTransform: 'none'
+                      }}
+                    >
+                      Logout
+                    </Button>
+                  )}
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                   <AuthenticatedButton

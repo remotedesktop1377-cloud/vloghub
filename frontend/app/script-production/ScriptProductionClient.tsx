@@ -327,23 +327,27 @@ const ScriptProductionClient = () => {
         // Apply to scenes according to context
         if (mode === 'project') {
             // Update project-level states from temp (global apply)
+            // When saving project settings, overwrite ALL scene settings with project settings
+            // Determine backgroundType: use explicit value if set, otherwise infer from videoBackgroundImage
+            const backgroundType = projectSettings?.backgroundType 
+                ? projectSettings.backgroundType 
+                : (projectSettings?.videoBackgroundImage ? 'image' : 'video');
+            
             const updatedProjectSettings: Settings = {
                 videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
                 videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
                 videoBackgroundVideo: projectSettings?.videoBackgroundVideo as SettingItemInterface,
+                videoBackgroundImage: projectSettings?.videoBackgroundImage as SettingItemInterface,
+                backgroundType: backgroundType,
                 videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
+                showPreviewImageAtStart: projectSettings?.showPreviewImageAtStart,
             }
 
+            // Overwrite ALL scenes with project settings (remove the hasSceneSettings check)
             const updated: SceneData[] = scenesData.map((ch) => {
-                if (hasSceneSettings(ch)) {
-                    return ch;
-                }
                 return {
                     ...(ch as any),
-                    sceneSettings: {
-                        ...(ch as any).sceneSettings,
-                        ...updatedProjectSettings,
-                    }
+                    sceneSettings: updatedProjectSettings,
                 };
             });
             setScenesData(updated);
@@ -357,7 +361,10 @@ const ScriptProductionClient = () => {
                 videoLogo: sceneSettings?.videoLogo as LogoOverlayInterface,
                 videoBackgroundMusic: sceneSettings?.videoBackgroundMusic as SettingItemInterface,
                 videoBackgroundVideo: sceneSettings?.videoBackgroundVideo as SettingItemInterface,
+                videoBackgroundImage: sceneSettings?.videoBackgroundImage as SettingItemInterface,
+                backgroundType: sceneSettings?.backgroundType || (sceneSettings?.videoBackgroundImage ? 'image' : 'video'),
                 videoTransitionEffect: sceneSettings?.videoTransitionEffect as SettingItemInterface,
+                showPreviewImageAtStart: sceneSettings?.showPreviewImageAtStart,
             };
 
             const idx = projectSettingsContext.sceneIndex;
@@ -373,11 +380,32 @@ const ScriptProductionClient = () => {
 
     };
 
+    const getUserProfileId = async (): Promise<string | null> => {
+        if (!user?.email) return null;
+        try {
+            const { getSupabase } = await import('@/utils/supabase');
+            const supabase = getSupabase();
+            const profileResult: any = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', user.email)
+                .maybeSingle();
+            
+            if (profileResult?.data && !profileResult?.error) {
+                return profileResult.data.id;
+            }
+            return null;
+        } catch (error) {
+            console.log('Error getting user profile ID:', error);
+            return null;
+        }
+    };
+
     // Function to upload JSON to Google Drive
     const uploadCompleteProjectToDrive = async () => {
         try {
-
-            const projectJSON = HelperFunctions.getProjectJSON(jobId, scriptData!, projectSettings! as Settings, scenesData);
+            const userId = await getUserProfileId();
+            const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, scenesData, user?.email || '');
 
             try {
                 const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
@@ -640,7 +668,8 @@ const ScriptProductionClient = () => {
         }
 
         try {
-            const projectJSON = HelperFunctions.getProjectJSON(scriptData?.jobId || jobId, scriptData!, scriptData?.projectSettings!, scriptData.scenesData || []);
+            const userId = await getUserProfileId();
+            const projectJSON = HelperFunctions.getProjectJSON(userId || '', scriptData?.jobId || jobId, scriptData!, scriptData?.projectSettings!, scriptData.scenesData || [], user?.email || '');
             const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
             if (!result.success) {
                 console.log('Failed to save project and scenes to Supabase: ', result.error);
