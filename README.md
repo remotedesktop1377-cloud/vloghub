@@ -1,4 +1,4 @@
-# YouTube Research Video Clip Finder
+# Vloghub - AI video content generation
 
 A system that searches YouTube for relevant video content, extracts specific clips or segments, and organizes them for research video compilation.
 
