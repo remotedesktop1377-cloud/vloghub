@@ -12,6 +12,9 @@ import {
     IconButton,
     FormControlLabel,
     Checkbox,
+    Radio,
+    RadioGroup,
+    FormControl,
 } from '@mui/material';
 import {
     PlayArrow as PlayIcon,
@@ -305,6 +308,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
 }) => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const imageBackgroundInputRef = useRef<HTMLInputElement>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
 
     const [music, setMusic] = useState<any[]>([]);
@@ -313,6 +317,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
 
     const [loading, setLoading] = useState(false);
     const [logoUploading, setLogoUploading] = useState(false);
+    const [imageBackgroundUploading, setImageBackgroundUploading] = useState(false);
     const [videoError, setVideoError] = useState(false);
 
     const [projectSettings, setProjectSettings] = useState<Settings | null>(pSettings || null);
@@ -493,8 +498,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             <DialogTitle id="project-settings-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography component="div" sx={{ fontSize: '1.25rem' }}>Project Settings {projectSettingsContext.mode === 'scene' ? `(Scene ${(projectSettingsContext.sceneIndex || 0) + 1})` : ''}</Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button onClick={() => onApply(projectSettingsContext.mode, projectSettings, sceneSettings)} variant="contained" size="medium" disabled={logoUploading} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✔ Save Changes</Button>
-                    <Button onClick={onClose} variant="outlined" size="medium" disabled={logoUploading} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✕ Close</Button>
+                    <Button onClick={() => onApply(projectSettingsContext.mode, projectSettings, sceneSettings)} variant="contained" size="medium" disabled={logoUploading || imageBackgroundUploading} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✔ Save Changes</Button>
+                    <Button onClick={onClose} variant="outlined" size="medium" disabled={logoUploading || imageBackgroundUploading} sx={{ textTransform: 'none', fontSize: '1.25rem' }}>✕ Close</Button>
                 </Box>
             </DialogTitle>
             <DialogContent>
@@ -898,7 +903,7 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                     {/* Background Selection Section */}
                     <Grid item xs={12} md={6}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                            <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background Video</Typography>
+                            <Typography variant="subtitle2" sx={{ fontSize: '1.25rem', fontWeight: 600 }}>Background</Typography>
                             <IconButton
                                 size="small"
                                 onClick={() => initLibraryData(true)}
@@ -917,119 +922,369 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
                             minHeight: 320,
                             maxHeight: 320,
                         }}>
-                            {!backgrounds || backgrounds?.length === 0 ? (
-                                <Box sx={{ textAlign: 'center', py: 4 }}>
-                                    <Typography variant="body2" color="text.secondary">No backgrounds available</Typography>
-                                </Box>
-                            ) : (
-                                <TextField
-                                    select
-                                    fullWidth
-                                    size="small"
-                                    value={isProjectSettings ? projectSettings?.videoBackgroundVideo?.id : sceneSettings?.videoBackgroundVideo?.id}
-                                    onChange={(e) => {
-                                        const backgroundVideoObj = backgrounds.find(bg => bg.id === e.target.value);
-                                        if (backgroundVideoObj) {
-                                            if (isProjectSettings) {
-                                                setProjectSettings({ ...projectSettings, videoBackgroundVideo: backgroundVideoObj as SettingItemInterface } as Settings);
-                                            } else {
-                                                setSceneSettings({ ...sceneSettings, videoBackgroundVideo: backgroundVideoObj as SettingItemInterface } as Settings);
+                            <FormControl component="fieldset" sx={{ mb: 2, width: '100%' }}>
+                                <RadioGroup
+                                    row
+                                    value={(() => {
+                                        if (isProjectSettings) {
+                                            if (projectSettings?.backgroundType) {
+                                                return projectSettings.backgroundType;
                                             }
+                                            return projectSettings?.videoBackgroundImage ? 'image' : 'video';
+                                        } else {
+                                            if (sceneSettings?.backgroundType) {
+                                                return sceneSettings.backgroundType;
+                                            }
+                                            return sceneSettings?.videoBackgroundImage ? 'image' : 'video';
+                                        }
+                                    })()}
+                                    onChange={(e) => {
+                                        const newType = e.target.value as 'video' | 'image';
+                                        if (isProjectSettings) {
+                                            const updatedSettings: any = {
+                                                ...projectSettings, 
+                                                backgroundType: newType
+                                            };
+                                            // Clear the opposite field when switching types
+                                            if (newType === 'video') {
+                                                delete updatedSettings.videoBackgroundImage;
+                                            } else if (newType === 'image') {
+                                                delete updatedSettings.videoBackgroundVideo;
+                                            }
+                                            setProjectSettings(updatedSettings as Settings);
+                                        } else {
+                                            const updatedSettings: any = {
+                                                ...sceneSettings, 
+                                                backgroundType: newType
+                                            };
+                                            // Clear the opposite field when switching types
+                                            if (newType === 'video') {
+                                                delete updatedSettings.videoBackgroundImage;
+                                            } else if (newType === 'image') {
+                                                delete updatedSettings.videoBackgroundVideo;
+                                            }
+                                            setSceneSettings(updatedSettings as Settings);
                                         }
                                     }}
-                                    SelectProps={{ native: true }}
                                 >
-                                    <option value="">Select a background</option>
-                                    {backgrounds.map((background) => (
-                                        <option key={background.id} value={background.id}>
-                                            {background.name}
-                                        </option>
-                                    ))}
-                                </TextField>
-                            )}
-                            {(isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo) && (
-                                <Box sx={{ mt: 2 }}>
-                                    <Box sx={{
-                                        position: 'relative',
-                                        width: '100%',
-                                        height: 180,
-                                        borderRadius: 2,
-                                        overflow: 'hidden',
-                                        border: '1px solid rgba(255,255,255,0.15)',
-                                        bgcolor: '#000'
-                                    }}>
-                                        {videoError ? (
-                                            // Show error message with external link option
+                                    <FormControlLabel value="video" control={<Radio />} label="Video" />
+                                    <FormControlLabel value="image" control={<Radio />} label="Image" />
+                                </RadioGroup>
+                            </FormControl>
+
+                            {(() => {
+                                if (isProjectSettings) {
+                                    const bgType = projectSettings?.backgroundType || (projectSettings?.videoBackgroundImage ? 'image' : 'video');
+                                    return bgType === 'video';
+                                } else {
+                                    const bgType = sceneSettings?.backgroundType || (sceneSettings?.videoBackgroundImage ? 'image' : 'video');
+                                    return bgType === 'video';
+                                }
+                            })() ? (
+                                <>
+                                    {!backgrounds || backgrounds?.length === 0 ? (
+                                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                                            <Typography variant="body2" color="text.secondary">No backgrounds available</Typography>
+                                        </Box>
+                                    ) : (
+                                        <TextField
+                                            select
+                                            fullWidth
+                                            size="small"
+                                            value={isProjectSettings ? projectSettings?.videoBackgroundVideo?.id : sceneSettings?.videoBackgroundVideo?.id}
+                                            onChange={(e) => {
+                                                const backgroundVideoObj = backgrounds.find(bg => bg.id === e.target.value);
+                                                if (backgroundVideoObj) {
+                                                    if (isProjectSettings) {
+                                                        setProjectSettings({ ...projectSettings, videoBackgroundVideo: backgroundVideoObj as SettingItemInterface } as Settings);
+                                                    } else {
+                                                        setSceneSettings({ ...sceneSettings, videoBackgroundVideo: backgroundVideoObj as SettingItemInterface } as Settings);
+                                                    }
+                                                }
+                                            }}
+                                            SelectProps={{ native: true }}
+                                        >
+                                            <option value="">Select a background</option>
+                                            {backgrounds.map((background) => (
+                                                <option key={background.id} value={background.id}>
+                                                    {background.name}
+                                                </option>
+                                            ))}
+                                        </TextField>
+                                    )}
+                                    {(isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo) && (
+                                        <Box sx={{ mt: 2 }}>
                                             <Box sx={{
+                                                position: 'relative',
                                                 width: '100%',
-                                                height: '100%',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                gap: 2,
-                                                p: 2,
-                                                bgcolor: 'rgba(0,0,0,0.8)'
+                                                height: 180,
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                border: '1px solid rgba(255,255,255,0.15)',
+                                                bgcolor: '#000'
                                             }}>
-                                                <Typography variant="body2" color="error" sx={{ textAlign: 'center' }}>
-                                                    Video cannot be played in browser
-                                                </Typography>
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={() => window.open(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink, '_blank')}
-                                                    startIcon={<PlayIcon />}
-                                                    sx={{ textTransform: 'none' }}
-                                                >
-                                                    Open in Google Drive
-                                                </Button>
-                                            </Box>
-                                        ) : (
-                                            <>
-                                                <video
-                                                    ref={videoRef}
-                                                    src={getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo)}
-                                                    muted
-                                                    autoPlay
-                                                    loop
-                                                    onError={handleVideoError}
-                                                    onLoadStart={handleVideoLoadStart}
-                                                    onLoadedData={handleVideoLoaded}
-                                                    onCanPlay={handleVideoLoaded}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
-                                                >
-                                                    Your browser does not support the video tag.
-                                                </video>
-                                                {loading && (
+                                                {videoError ? (
                                                     <Box sx={{
-                                                        position: 'absolute',
-                                                        inset: 0,
+                                                        width: '100%',
+                                                        height: '100%',
                                                         display: 'flex',
+                                                        flexDirection: 'column',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        bgcolor: 'rgba(0,0,0,0.5)'
+                                                        gap: 2,
+                                                        p: 2,
+                                                        bgcolor: 'rgba(0,0,0,0.8)'
                                                     }}>
-                                                        <CircularProgress size={24} sx={{ color: 'white' }} />
+                                                        <Typography variant="body2" color="error" sx={{ textAlign: 'center' }}>
+                                                            Video cannot be played in browser
+                                                        </Typography>
+                                                        <Button
+                                                            variant="contained"
+                                                            size="small"
+                                                            onClick={() => window.open(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink, '_blank')}
+                                                            startIcon={<PlayIcon />}
+                                                            sx={{ textTransform: 'none' }}
+                                                        >
+                                                            Open in Google Drive
+                                                        </Button>
                                                     </Box>
+                                                ) : (
+                                                    <>
+                                                        <video
+                                                            ref={videoRef}
+                                                            src={getPlayableVideoUrl(isProjectSettings ? projectSettings?.videoBackgroundVideo : sceneSettings?.videoBackgroundVideo)}
+                                                            muted
+                                                            autoPlay
+                                                            loop
+                                                            onError={handleVideoError}
+                                                            onLoadStart={handleVideoLoadStart}
+                                                            onLoadedData={handleVideoLoaded}
+                                                            onCanPlay={handleVideoLoaded}
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
+                                                        >
+                                                            Your browser does not support the video tag.
+                                                        </video>
+                                                        {loading && (
+                                                            <Box sx={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                bgcolor: 'rgba(0,0,0,0.5)'
+                                                            }}>
+                                                                <CircularProgress size={24} sx={{ color: 'white' }} />
+                                                            </Box>
+                                                        )}
+                                                    </>
                                                 )}
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                                                {(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink) && (
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => window.open(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink, '_blank')}
+                                                        sx={{ textTransform: 'none', fontSize: '1.25rem', py: 0.25, px: 1 }}
+                                                        startIcon={<PlayIcon fontSize="small" />}
+                                                    >
+                                                        Open in Drive
+                                                    </Button>
+                                                )}
+                                            </Box>
+                                        </Box>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    {(isProjectSettings ? projectSettings?.videoBackgroundImage : sceneSettings?.videoBackgroundImage) ? (
+                                        <Box sx={{
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            borderRadius: 2,
+                                            p: 2,
+                                            backgroundColor: 'background.paper'
+                                        }}>
+                                            <Box sx={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+                                                <img
+                                                    src={HelperFunctions.normalizeGoogleDriveUrl(
+                                                        isProjectSettings 
+                                                            ? projectSettings?.videoBackgroundImage?.webViewLink || projectSettings?.videoBackgroundImage?.webContentLink || ''
+                                                            : sceneSettings?.videoBackgroundImage?.webViewLink || sceneSettings?.videoBackgroundImage?.webContentLink || ''
+                                                    )}
+                                                    alt={isProjectSettings ? projectSettings?.videoBackgroundImage?.name : sceneSettings?.videoBackgroundImage?.name}
+                                                    loading="lazy"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '180px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: 8,
+                                                        border: '1px solid rgba(255,255,255,0.15)',
+                                                        background: '#111',
+                                                        display: 'block'
+                                                    }}
+                                                />
+                                            </Box>
+                                            <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary' }}>
+                                                    {isProjectSettings ? projectSettings?.videoBackgroundImage?.name : sceneSettings?.videoBackgroundImage?.name}
+                                                </Typography>
+                                                <IconButton
+                                                    onClick={() => imageBackgroundInputRef.current?.click()}
+                                                    size="small"
+                                                >
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => window.open(
+                                                        isProjectSettings 
+                                                            ? projectSettings?.videoBackgroundImage?.webViewLink || projectSettings?.videoBackgroundImage?.webContentLink
+                                                            : sceneSettings?.videoBackgroundImage?.webViewLink || sceneSettings?.videoBackgroundImage?.webContentLink, 
+                                                        '_blank'
+                                                    )}
+                                                    sx={{ color: 'primary.main' }}
+                                                >
+                                                    <ViewIcon fontSize="small" />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        if (isProjectSettings) {
+                                                            setProjectSettings({ ...projectSettings, videoBackgroundImage: undefined } as Settings);
+                                                        } else {
+                                                            setSceneSettings({ ...sceneSettings, videoBackgroundImage: undefined } as Settings);
+                                                        }
+                                                    }}
+                                                    sx={{ color: 'error.main' }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        </Box>
+                                    ) : (
+                                        <Box
+                                            onClick={() => imageBackgroundInputRef.current?.click()}
+                                            sx={{
+                                                border: '2px dashed',
+                                                borderColor: 'primary.main',
+                                                borderRadius: 2,
+                                                p: 4,
+                                                textAlign: 'center',
+                                                cursor: 'pointer',
+                                                bgcolor: 'action.hover',
+                                                transition: 'all 0.2s',
+                                                opacity: imageBackgroundUploading ? 0.5 : 1,
+                                                pointerEvents: imageBackgroundUploading ? 'none' : 'auto',
+                                                '&:hover': {
+                                                    borderColor: 'primary.dark',
+                                                    bgcolor: 'action.selected'
+                                                }
+                                            }}
+                                        >
+                                            {imageBackgroundUploading ? <CircularProgress size={20} /> : <EditIcon sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />}
+                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{imageBackgroundUploading ? 'Uploading image to Google Drive...' : 'Upload Background Image'}</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                PNG, JPG, GIF up to 5MB
+                                            </Typography>
+                                        </Box>
+                                    )}
+                                    <input
+                                        ref={imageBackgroundInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        style={{ display: 'none' }}
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
 
-                                            </>
-                                        )}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                                        {(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink) && (
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                onClick={() => window.open(isProjectSettings ? projectSettings?.videoBackgroundVideo?.webViewLink : sceneSettings?.videoBackgroundVideo?.webViewLink, '_blank')}
-                                                sx={{ textTransform: 'none', fontSize: '1.25rem', py: 0.25, px: 1 }}
-                                                startIcon={<PlayIcon fontSize="small" />}
-                                            >
-                                                Open in Drive
-                                            </Button>
-                                        )}
-                                    </Box>
-                                </Box>
+                                            if (jobId) {
+                                                setImageBackgroundUploading(true);
+                                                try {
+                                                    const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+                                                    const imageFileName = `background-image.${fileExtension}`;
+                                                    const renamedFile = new File([file], imageFileName, { type: file.type });
+
+                                                    const uploadResult = await GoogleDriveServiceFunctions.uploadMediaToDrive(
+                                                        jobId,
+                                                        'images/background',
+                                                        renamedFile
+                                                    );
+
+                                                    if (uploadResult.success && uploadResult.fileId) {
+                                                        const imageUrl = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view?usp=drive_link`;
+                                                        const imageData: SettingItemInterface = {
+                                                            id: uploadResult.fileId,
+                                                            name: imageFileName,
+                                                            mimeType: file.type,
+                                                            webViewLink: uploadResult.webViewLink,
+                                                            isVideo: false
+                                                        };
+
+                                                        if (isProjectSettings) {
+                                                            setProjectSettings({ 
+                                                                ...projectSettings, 
+                                                                videoBackgroundImage: imageData 
+                                                            } as Settings);
+                                                        } else {
+                                                            setSceneSettings({ 
+                                                                ...sceneSettings, 
+                                                                videoBackgroundImage: imageData 
+                                                            } as Settings);
+                                                        }
+                                                        toast.success('Background image uploaded successfully');
+                                                    } else {
+                                                        throw new Error(uploadResult?.message || 'Upload failed');
+                                                    }
+                                                } catch (error) {
+                                                    console.log('Error uploading background image to Google Drive:', error);
+                                                    toast.error('Failed to upload background image to Google Drive.');
+                                                } finally {
+                                                    setImageBackgroundUploading(false);
+                                                }
+                                            } else {
+                                                setImageBackgroundUploading(true);
+                                                try {
+                                                    const uploadResult = await GoogleDriveServiceFunctions.uploadMediaToDrive(
+                                                        'users',
+                                                        `${userId}/background`,
+                                                        file
+                                                    );
+                                                    if (!uploadResult.success || !uploadResult.fileId) {
+                                                        console.log('Failed to upload background image to Google Drive:', uploadResult?.message);
+                                                        toast.error(uploadResult?.message || 'Failed to upload background image to Google Drive.');
+                                                        return;
+                                                    }
+                                                    const imageUrl = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view?usp=drive_link`;
+                                                    const imageData: SettingItemInterface = {
+                                                        id: uploadResult.fileId,
+                                                        name: file.name,
+                                                        mimeType: file.type,
+                                                        webViewLink: uploadResult.webViewLink,
+                                                        isVideo: false
+                                                    };
+                                                    if (isProjectSettings) {
+                                                        setProjectSettings({ 
+                                                            ...projectSettings, 
+                                                            videoBackgroundImage: imageData 
+                                                        } as Settings);
+                                                    } else {
+                                                        setSceneSettings({ 
+                                                            ...sceneSettings, 
+                                                            videoBackgroundImage: imageData 
+                                                        } as Settings);
+                                                    }
+                                                    toast.success('Background image uploaded successfully');
+                                                } catch (error) {
+                                                    console.log('Error uploading background image:', error);
+                                                    toast.error('Failed to upload background image.');
+                                                } finally {
+                                                    setImageBackgroundUploading(false);
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </>
                             )}
                         </Box>
                     </Grid>

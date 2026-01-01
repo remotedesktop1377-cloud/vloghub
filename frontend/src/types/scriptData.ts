@@ -40,6 +40,8 @@ export interface Settings {
     videoLogo: LogoOverlayInterface;
     videoBackgroundMusic: SettingItemInterface;
     videoBackgroundVideo: SettingItemInterface;
+    videoBackgroundImage?: SettingItemInterface;
+    backgroundType?: 'video' | 'image';
     videoTransitionEffect: SettingItemInterface;
     showPreviewImageAtStart?: boolean;
 }

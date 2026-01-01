@@ -2,16 +2,16 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, Session } from '@supabase/supabase-js';
-import { getSupabase } from '../utils/supabase';
+import { useSession, signOut as nextAuthSignOut, signIn as nextAuthSignIn } from 'next-auth/react';
 import { SupabaseHelpers } from '../utils/SupabaseHelpers';
 import { HelperFunctions } from '../utils/helperFunctions';
 import { toast } from 'react-toastify';
 import { ROUTES_KEYS } from '@/data/constants';
+import { getSupabase } from '../utils/supabase';
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: any | null;
+  session: any | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
@@ -30,106 +30,76 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: nextAuthSession, status } = useSession();
   const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
 
+  const ensureProfileInSupabase = async (sessionUser: any) => {
+    if (!sessionUser || !sessionUser.email) return;
+
+    try {
+      const supabase = getSupabase();
+      
+      const existingProfileResult: any = await supabase
+        .from('profiles')
+        .select('id, created_at, provider, picture')
+        .eq('email', sessionUser.email)
+        .maybeSingle();
+
+      const updatePayload: any = {
+        email: sessionUser.email || '',
+        full_name: sessionUser.name || sessionUser.full_name || null,
+        provider: sessionUser.provider || 'google',
+        picture: sessionUser.image || sessionUser.picture || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existingProfileResult?.data && !existingProfileResult?.error) {
+        const existingId = existingProfileResult.data.id;
+        
+        const { error: updateError } = await (supabase
+          .from('profiles') as any)
+          .update(updatePayload)
+          .eq('id', existingId)
+          .select();
+
+        if (updateError) {
+          console.log('Error updating profile in Supabase:', updateError);
+        } else {
+          console.log('Profile updated in Supabase successfully');
+        }
+      } else {
+        const insertPayload: any = {
+          ...updatePayload,
+          id: crypto.randomUUID(),
+          created_at: new Date().toISOString(),
+        };
+
+        const { error: insertError } = await (supabase
+          .from('profiles') as any)
+          .insert(insertPayload)
+          .select();
+
+        if (insertError) {
+          console.log('Error inserting profile to Supabase:', insertError);
+        } else {
+          console.log('Profile created in Supabase successfully');
+        }
+      }
+    } catch (error) {
+      console.log('Error ensuring profile in Supabase:', error);
+    }
+  };
+
   useEffect(() => {
-    const ensureProfile = async (u: User | null | undefined) => {
-      try {
-        if (!u) return;
-        await SupabaseHelpers.saveUserProfile(u);
-      } catch (error) {
-        console.log('Error ensuring profile:', error);
-      }
-    };
+    if (status === 'loading') return;
 
-    // Initialize auth state on mount
-    const initAuth = async () => {
-      try {
-        setLoading(true);
-        const supabase = getSupabase();
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.log('Error getting session:', error);
-        }
-        
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        
-        if (initialSession?.user) {
-          await ensureProfile(initialSession.user);
-        }
-      } catch (error) {
-        console.log('Error initializing auth:', error);
-      } finally {
-        setLoading(false);
-        setIsInitialized(true);
-      }
-    };
+    if (nextAuthSession?.user) {
+      ensureProfileInSupabase(nextAuthSession.user);
+    }
 
-    initAuth();
-
-    // Safety fallback: if auth doesn't resolve within 8s, stop loading to avoid UI lock
-    const safetyTimer = setTimeout(() => {
-      setLoading(false);
-      setIsInitialized(true);
-    }, 10000);
-
-    // Listen for auth changes
-    const supabase = getSupabase();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log('Auth state changed:', event);
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        setLoading(false);
-        
-        // Handle auth events
-        switch (event) {
-          case 'SIGNED_IN':
-            if (newSession?.user) {
-              await ensureProfile(newSession.user);
-              // Don't redirect if we're on the callback page - let the callback page handle it
-              // Only redirect if not already on trending topics page or callback page
-              if (typeof window !== 'undefined' 
-                  && !window.location.pathname.includes('trending-topics')
-                  && !window.location.pathname.includes('auth/callback')) {
-                try { 
-                  router.push(ROUTES_KEYS.TRENDING_TOPICS); 
-                } catch (error) {
-                  console.log('Error redirecting:', error);
-                }
-              }
-            }
-            break;
-          case 'SIGNED_OUT':
-            setUser(null);
-            setSession(null);
-            break;
-          case 'PASSWORD_RECOVERY':
-            toast.success('Password recovery email sent!');
-            break;
-          case 'TOKEN_REFRESHED':
-            // Token refreshed, session is still valid
-            break;
-          case 'USER_UPDATED':
-            if (newSession?.user) {
-              await ensureProfile(newSession.user);
-            }
-            break;
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(safetyTimer);
-    };
-  }, [router]);
+    setIsInitialized(true);
+  }, [nextAuthSession, status]);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -181,18 +151,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      await nextAuthSignOut({ redirect: false });
       const supabase = getSupabase();
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        toast.error(error.message);
-        console.log('Error signing out:', error);
-        return { error } as any;
-      }
-      // Clear local secure storage and caches
-      try { HelperFunctions.clearSecureStorage(); } catch {
+      await supabase.auth.signOut();
+      
+      try { 
+        HelperFunctions.clearSecureStorage(); 
+      } catch (error) {
         console.log('Error clearing secure storage:', error);
       }
+      
       return { error: null } as any;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An unexpected error occurred';
@@ -223,16 +191,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const value: AuthContextType = {
-    user,
-    session,
-    loading,
+    user: nextAuthSession?.user || null,
+    session: nextAuthSession,
+    loading: status === 'loading',
     signIn,
     signUp,
     signOut,
     resetPassword,
   };
 
-  // Prevent hydration mismatch by not rendering until initialized
   if (!isInitialized) {
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
   }

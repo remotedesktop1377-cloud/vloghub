@@ -23,20 +23,51 @@ export class SupabaseHelpers {
 
   static async saveUserProfile(profileData: User | null | undefined) {
     try {
+      if (!profileData) {
+        return { data: null, error: new Error('No user data provided') };
+      }
+
+      const pictureUrl = profileData.user_metadata?.picture 
+        || profileData.user_metadata?.avatar_url 
+        || profileData.user_metadata?.avatar
+        || null;
+
+      const fullName = profileData.user_metadata?.full_name 
+        || profileData.user_metadata?.name
+        || null;
+
+      const provider = profileData.app_metadata?.provider 
+        || (profileData.user_metadata?.provider ? profileData.user_metadata.provider : 'email')
+        || null;
+
       const payload: any = {
-        id: profileData?.id,
-        email: profileData?.email,
-        full_name: profileData?.user_metadata?.full_name ?? null,
-        provider: profileData?.app_metadata?.provider ?? null,
-        picture: profileData?.user_metadata?.picture ?? null,
-        created_at: new Date().toISOString(),
+        id: profileData.id,
+        email: profileData.email || '',
+        full_name: fullName,
+        provider: provider,
+        picture: pictureUrl,
         updated_at: new Date().toISOString(),
       };
 
-      // Use upsert to avoid duplicate key errors and to insert-or-update by id
+      if (!payload.id) {
+        return { data: null, error: new Error('User ID is required') };
+      }
+
+      const existingProfile = await SupabaseHelpers.supabase
+        .from('profiles')
+        .select('id, created_at')
+        .eq('id', payload.id)
+        .single();
+
+      if (existingProfile.data && !(existingProfile as any).error) {
+        payload.created_at = (existingProfile as any).data.created_at;
+      } else {
+        payload.created_at = new Date().toISOString();
+      }
+
       const { data, error } = await SupabaseHelpers.supabase
         .from('profiles')
-        .upsert(payload as any)
+        .upsert(payload as any, { onConflict: 'id' })
         .select()
 
       if (error) {
@@ -45,8 +76,6 @@ export class SupabaseHelpers {
         return { data: null, error };
       }
 
-      toast.success('Profile saved successfully');
-      // console.log('🟢 Profile saved successfully:', data);
       return { data, error: null };
     } catch (error) {
       console.log('Unexpected error:', error);
@@ -586,8 +615,54 @@ export class SupabaseHelpers {
 
   static async saveProjectRecord(scriptProductionJSON: any): Promise<{ success: boolean; projectId?: string; error?: any }> {
     try {
+      let userId = scriptProductionJSON.project.userId;
+
+      if (!userId || userId === '' || userId === null || userId === undefined) {
+        const userEmail = scriptProductionJSON.project.userEmail;
+        
+        if (!userEmail) {
+          return { 
+            success: false, 
+            error: new Error('User ID or email is required. Please ensure you are logged in and try again.') 
+          };
+        }
+
+        const supabase = getSupabase();
+        const profileResult: any = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', userEmail)
+          .maybeSingle();
+
+        if (profileResult.error || !profileResult.data) {
+          console.log('Error fetching profile by email:', profileResult.error);
+          return { 
+            success: false, 
+            error: profileResult.error || new Error('User profile not found. Please sign in again.') 
+          };
+        }
+
+        userId = profileResult.data.id;
+      }
+
+      if (!userId) {
+        return { 
+          success: false, 
+          error: new Error('User ID is missing. Please sign in again.') 
+        };
+      }
+
+      // Check if project already exists by job_id
+      const existingProjectResult: any = await (SupabaseHelpers.supabase
+        .from('projects') as any)
+        .select('id')
+        .eq('job_id', scriptProductionJSON.project.jobId)
+        .maybeSingle();
+      
+      const existingProject = existingProjectResult?.data;
+
       const payload: any = {
-        user_id: scriptProductionJSON.project.userId,
+        user_id: userId,
         job_id: scriptProductionJSON.project.jobId,
         title: scriptProductionJSON.project.title,
         topic: scriptProductionJSON.project.topic,
@@ -602,11 +677,31 @@ export class SupabaseHelpers {
         status: 'rendering',
         updated_at: new Date().toISOString(),
       };
-      const { data: projectRow, error: upsertError } = await SupabaseHelpers.supabase
-        .from('projects')
-        .insert(payload)
-        .select('id')
-        .single();
+
+      let projectRow: any = null;
+      let upsertError: any = null;
+
+      if (existingProject && existingProject.id) {
+        // Update existing project
+        const updateResult: any = await (SupabaseHelpers.supabase
+          .from('projects') as any)
+          .update(payload)
+          .eq('id', existingProject.id)
+          .select('id')
+          .single();
+        projectRow = updateResult.data;
+        upsertError = updateResult.error;
+      } else {
+        // Insert new project
+        const insertResult: any = await (SupabaseHelpers.supabase
+          .from('projects') as any)
+          .insert(payload)
+          .select('id')
+          .single();
+        projectRow = insertResult.data;
+        upsertError = insertResult.error;
+      }
+
       if (upsertError || !projectRow) {
         console.log('Error saving project to Supabase:', upsertError);
         return { success: false, error: upsertError };

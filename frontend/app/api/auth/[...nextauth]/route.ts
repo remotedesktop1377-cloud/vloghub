@@ -8,6 +8,24 @@ export const authOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
   ],
+  callbacks: {
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.sub || token.email || '';
+        session.user.provider = 'google';
+      }
+      return session;
+    },
+    async jwt({ token, user, account }) {
+      if (user) {
+        token.id = user.id || user.email || '';
+      }
+      if (account) {
+        token.provider = account.provider;
+      }
+      return token;
+    },
+  },
   secret: process.env.NEXTAUTH_SECRET,
 };
 

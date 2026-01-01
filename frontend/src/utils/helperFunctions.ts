@@ -183,10 +183,11 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 
 export class HelperFunctions {
 
-  static getProjectJSON(jobId: string, scriptData: ScriptData, projectSettings: Settings, scenesData: SceneData[]): any {
+  static getProjectJSON(userId: string, jobId: string, scriptData: ScriptData, projectSettings: Settings, scenesData: SceneData[], userEmail?: string): any {
     return {
       project: {
-        userId: scriptData?.user_id || '',
+        userId: userId,
+        userEmail: userEmail,
         jobId: scriptData?.jobId || '',
         topic: scriptData?.topic || null,
         title: scriptData?.title || null,
@@ -200,12 +201,22 @@ export class HelperFunctions {
         narrator_chroma_key_link: scriptData?.narrator_chroma_key_link,
         transcription: scriptData?.transcription || '',
         // Project-level settings
-        projectSettings: {
-          videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
-          videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
-          videoBackgroundVideo: projectSettings?.videoBackgroundVideo as SettingItemInterface,
-          videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
-        },
+        projectSettings: (() => {
+          // Determine backgroundType: use explicit value if set, otherwise infer from videoBackgroundImage
+          const projectBackgroundType = projectSettings?.backgroundType 
+            ? projectSettings.backgroundType 
+            : (projectSettings?.videoBackgroundImage ? 'image' : 'video');
+          
+          return {
+            videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
+            videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
+            videoBackgroundVideo: projectSettings?.videoBackgroundVideo as SettingItemInterface,
+            videoBackgroundImage: projectSettings?.videoBackgroundImage as SettingItemInterface,
+            backgroundType: projectBackgroundType,
+            videoTransitionEffect: projectSettings?.videoTransitionEffect as SettingItemInterface,
+            showPreviewImageAtStart: projectSettings?.showPreviewImageAtStart,
+          };
+        })(),
       },
       // Use SceneDataForUpload to ensure merged images are included
       script: scenesData.map(sceneData => ({
@@ -232,6 +243,9 @@ export class HelperFunctions {
           videoTransitionEffect: sceneData.sceneSettings?.videoTransitionEffect as SettingItemInterface,
           videoBackgroundMusic: sceneData.sceneSettings?.videoBackgroundMusic as SettingItemInterface,
           videoBackgroundVideo: sceneData.sceneSettings?.videoBackgroundVideo as SettingItemInterface,
+          videoBackgroundImage: sceneData.sceneSettings?.videoBackgroundImage as SettingItemInterface,
+          backgroundType: sceneData.sceneSettings?.backgroundType || (sceneData.sceneSettings?.videoBackgroundImage ? 'image' : 'video'),
+          showPreviewImageAtStart: sceneData.sceneSettings?.showPreviewImageAtStart,
         },
       })),
     };
