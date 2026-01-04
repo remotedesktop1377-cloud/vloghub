@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/utils/supabase';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
 
 export async function GET(request: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const userIdParam = searchParams.get('userId');
 
     // Get session to get user email
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions as any) as any;
     const userEmail = session?.user?.email;
 
     if (!userEmail && !userIdParam) {
