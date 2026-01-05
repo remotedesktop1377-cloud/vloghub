@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabase();
     const supabaseAny: any = supabase;
 
-    const { data: socialAccountData, error: socialAccountError } = await supabase
+    const { data: socialAccountData, error: socialAccountError } = await supabaseAny
       .from('social_accounts')
       .select('oauth_tokens')
       .eq('user_id', userId)
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tokens = socialAccountData.oauth_tokens as any;
+    const tokens = (socialAccountData as any).oauth_tokens;
     const pagesList = tokens.pages_list || [];
 
     const selectedPage = pagesList.find((page: any) => page.pageId === pageId);
