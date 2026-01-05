@@ -14,6 +14,10 @@ import {
     Chip,
     IconButton,
     CircularProgress,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
 } from '@mui/material';
 import {
     YouTube,
@@ -42,6 +46,8 @@ interface SocialAccount {
     connectedAt?: string;
     followers?: number;
     postsCount?: number;
+    pagesList?: Array<{ pageId: string; pageName: string }>;
+    selectedPageId?: string;
 }
 
 const platformConfig = {
@@ -51,24 +57,24 @@ const platformConfig = {
         color: '#FF0000',
         gradient: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
     },
-    instagram: {
-        name: 'Instagram',
-        icon: Instagram,
-        color: '#E4405F',
-        gradient: 'linear-gradient(135deg, #E4405F 0%, #C13584 50%, #833AB4 100%)',
-    },
+    // instagram: {
+    //     name: 'Instagram',
+    //     icon: Instagram,
+    //     color: '#E4405F',
+    //     gradient: 'linear-gradient(135deg, #E4405F 0%, #C13584 50%, #833AB4 100%)',
+    // },
     facebook: {
         name: 'Facebook',
         icon: Facebook,
         color: '#1877F2',
         gradient: 'linear-gradient(135deg, #1877F2 0%, #0C63D4 100%)',
     },
-    tiktok: {
-        name: 'TikTok',
-        icon: VideoLibrary,
-        color: '#000000',
-        gradient: 'linear-gradient(135deg, #000000 0%, #FF0050 50%, #00F2EA 100%)',
-    },
+    // tiktok: {
+    //     name: 'TikTok',
+    //     icon: VideoLibrary,
+    //     color: '#000000',
+    //     gradient: 'linear-gradient(135deg, #000000 0%, #FF0050 50%, #00F2EA 100%)',
+    // },
 };
 
 const mockAccounts: SocialAccount[] = [
@@ -116,6 +122,8 @@ export default function SocialMediaAccounts() {
     const [accounts, setAccounts] = useState<SocialAccount[]>(mockAccounts);
     const [loading, setLoading] = useState(false);
     const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+    const [updatingPage, setUpdatingPage] = useState<string | null>(null);
+    const [localSelectedPageId, setLocalSelectedPageId] = useState<Record<string, string>>({});
 
     useEffect(() => {
         const success = searchParams.get('success');
@@ -123,6 +131,10 @@ export default function SocialMediaAccounts() {
 
         if (success === 'youtube_connected') {
             toast.success('YouTube account connected successfully!');
+            router.replace(ROUTES_KEYS.SOCIAL_MEDIA);
+            loadAccounts();
+        } else if (success === 'facebook_connected') {
+            toast.success('Facebook account connected successfully!');
             router.replace(ROUTES_KEYS.SOCIAL_MEDIA);
             loadAccounts();
         } else if (error) {
@@ -176,10 +188,18 @@ export default function SocialMediaAccounts() {
             socialAccounts.forEach((sa: any) => {
                 let avatarUrl: string | undefined;
 
-                // For YouTube, extract thumbnail from oauth_tokens.channel_info
                 if (sa.platform === 'youtube' && sa.oauth_tokens?.channel_info?.thumbnail) {
                     avatarUrl = sa.oauth_tokens.channel_info.thumbnail;
+                } else if (sa.platform === 'facebook' && sa.oauth_tokens?.user_info?.picture?.data?.url) {
+                    avatarUrl = sa.oauth_tokens.user_info.picture.data.url;
                 }
+
+                const facebookPagesList = sa.platform === 'facebook' && sa.oauth_tokens?.pages_list
+                    ? sa.oauth_tokens.pages_list.map((page: any) => ({
+                        pageId: page.pageId,
+                        pageName: page.pageName,
+                    }))
+                    : undefined;
 
                 nextAccounts = nextAccounts.map((acc) =>
                     acc.platform === sa.platform
@@ -197,6 +217,8 @@ export default function SocialMediaAccounts() {
                                 : undefined,
                             channelId: sa.channel_id || undefined,
                             avatar: avatarUrl,
+                            pagesList: facebookPagesList,
+                            selectedPageId: sa.platform === 'facebook' ? (sa.oauth_tokens?.selected_page_id || sa.channel_id) : undefined,
                         }
                         : acc,
                 );
@@ -229,6 +251,23 @@ export default function SocialMediaAccounts() {
                 window.location.href = data.authUrl;
             } catch (error: any) {
                 toast.error(error.message || 'Failed to connect YouTube');
+                setConnectingPlatform(null);
+                setLoading(false);
+            }
+        } else if (platform === 'facebook') {
+            setConnectingPlatform('facebook');
+            setLoading(true);
+            try {
+                const response = await fetch(`/api/facebook-oauth/initiate?userId=${user.id}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to initiate OAuth');
+                }
+
+                window.location.href = data.authUrl;
+            } catch (error: any) {
+                toast.error(error.message || 'Failed to connect Facebook');
                 setConnectingPlatform(null);
                 setLoading(false);
             }
@@ -282,9 +321,60 @@ export default function SocialMediaAccounts() {
                 ),
             );
 
-            toast.success('YouTube account disconnected successfully');
+            toast.success(`${platform === 'youtube' ? 'YouTube' : platform === 'facebook' ? 'Facebook' : 'Account'} account disconnected successfully`);
         } catch (error: any) {
             toast.error(error.message || 'Failed to disconnect account');
+        }
+    };
+
+    const handlePageChange = async (platform: string, pageId: string, currentSelectedPageId?: string) => {
+        if (!user) {
+            toast.error('Please sign in to change page');
+            return;
+        }
+
+        if (platform !== 'facebook') return;
+
+        if (pageId === currentSelectedPageId) {
+            return;
+        }
+
+        setLocalSelectedPageId(prev => ({ ...prev, [platform]: pageId }));
+        setUpdatingPage(pageId);
+        try {
+            const response = await fetch('/api/facebook-select-page', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: user.id,
+                    pageId: pageId,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to change page');
+            }
+
+            toast.success('Page changed successfully');
+            await loadAccounts();
+            setLocalSelectedPageId(prev => {
+                const newState = { ...prev };
+                delete newState[platform];
+                return newState;
+            });
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to change page');
+            setLocalSelectedPageId(prev => {
+                const newState = { ...prev };
+                delete newState[platform];
+                return newState;
+            });
+        } finally {
+            setUpdatingPage(null);
         }
     };
 
@@ -326,14 +416,14 @@ export default function SocialMediaAccounts() {
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Avatar
-                                                src={account.platform === 'youtube' && account.connected && account.avatar ? account.avatar : undefined}
+                                                src={(account.platform === 'youtube' || account.platform === 'facebook') && account.connected && account.avatar ? account.avatar : undefined}
                                                 sx={{
                                                     bgcolor: config.color,
                                                     width: 56,
                                                     height: 56,
                                                 }}
                                             >
-                                                {(!account.avatar || account.platform !== 'youtube' || !account.connected) && (
+                                                {(!account.avatar || ((account.platform !== 'youtube' && account.platform !== 'facebook') || !account.connected)) && (
                                                     <IconComponent sx={{ fontSize: '32px' }} />
                                                 )}
                                             </Avatar>
@@ -381,24 +471,60 @@ export default function SocialMediaAccounts() {
                                                         ? new Date(account.connectedAt).toLocaleString()
                                                         : 'Just now'}
                                                 </Typography>
-                                                {/* <Box sx={{ display: 'flex', gap: 2, mt: 1.5 }}>
-                                                    <Box>
-                                                        <Typography variant="h6" sx={{ color: TEXT.primary, fontWeight: 600 }}>
-                                                            {formatNumber(account.followers)}
-                                                        </Typography>
-                                                        <Typography variant="caption" sx={{ color: TEXT.secondary }}>
-                                                            Followers
-                                                        </Typography>
-                                                    </Box>
-                                                    <Box>
-                                                        <Typography variant="h6" sx={{ color: TEXT.primary, fontWeight: 600 }}>
-                                                            {formatNumber(account.postsCount)}
-                                                        </Typography>
-                                                        <Typography variant="caption" sx={{ color: TEXT.secondary }}>
-                                                            Posts
-                                                        </Typography>
-                                                    </Box>
-                                                </Box> */}
+                                                {account.platform === 'facebook' && account.pagesList && account.pagesList.length > 1 && (
+                                                    <FormControl fullWidth sx={{ mt: 2, mb: 1 }}>
+                                                        <InputLabel sx={{ color: TEXT.secondary }}>Select Page</InputLabel>
+                                                        <Select
+                                                            value={localSelectedPageId[account.platform] || account.selectedPageId || account.pagesList[0]?.pageId || ''}
+                                                            onChange={(e) => {
+                                                                const newPageId = e.target.value;
+                                                                handlePageChange(account.platform, newPageId, account.selectedPageId);
+                                                            }}
+                                                            disabled={updatingPage !== null}
+                                                            MenuProps={{
+                                                                disablePortal: false,
+                                                                PaperProps: {
+                                                                    style: {
+                                                                        maxHeight: 300,
+                                                                        zIndex: 9999,
+                                                                    },
+                                                                },
+                                                                anchorOrigin: {
+                                                                    vertical: 'bottom',
+                                                                    horizontal: 'left',
+                                                                },
+                                                                transformOrigin: {
+                                                                    vertical: 'top',
+                                                                    horizontal: 'left',
+                                                                },
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                },
+                                                            }}
+                                                            sx={{
+                                                                color: TEXT.primary,
+                                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                                                                },
+                                                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: 'rgba(255, 255, 255, 0.5)',
+                                                                },
+                                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                    borderColor: config.color,
+                                                                },
+                                                                '& .MuiSvgIcon-root': {
+                                                                    color: TEXT.secondary,
+                                                                },
+                                                            }}
+                                                        >
+                                                            {account.pagesList.map((page) => (
+                                                                <MenuItem key={page.pageId} value={page.pageId}>
+                                                                    {page.pageName}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </FormControl>
+                                                )}
                                             </Box>
 
                                         </>

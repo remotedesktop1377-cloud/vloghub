@@ -66,35 +66,41 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get YouTube video IDs and check which are deleted
-    const youtubeVideoIds = publishedData?.map((pv: any) => pv.youtube_video_id) || [];
-    if (youtubeVideoIds.length === 0) {
-      return NextResponse.json({
-        videos: [],
-      });
+    const youtubePublishedVideos = publishedData?.filter((pv: any) => pv.platform === 'youtube') || [];
+    const youtubeVideoIds = youtubePublishedVideos.map((pv: any) => pv.external_video_id || pv.youtube_video_id).filter(Boolean);
+    
+    let deletedVideoIds = new Set();
+    if (youtubeVideoIds.length > 0) {
+      const { data: youtubeVideos, error: youtubeError } = await supabaseAny
+        .from('youtube_videos')
+        .select('video_id, deleted')
+        .eq('user_id', userUuid)
+        .in('video_id', youtubeVideoIds);
+
+      if (youtubeError) {
+        console.log('Error fetching YouTube videos:', youtubeError);
+      } else {
+        deletedVideoIds = new Set(
+          youtubeVideos?.filter((yv: any) => yv.deleted).map((yv: any) => yv.video_id) || []
+        );
+      }
     }
 
-    const { data: youtubeVideos, error: youtubeError } = await supabaseAny
-      .from('youtube_videos')
-      .select('video_id, deleted')
-      .eq('user_id', userUuid)
-      .in('video_id', youtubeVideoIds);
-
-    if (youtubeError) {
-      console.log('Error fetching YouTube videos:', youtubeError);
-      return NextResponse.json(
-        { error: 'Failed to fetch YouTube videos' },
-        { status: 500 }
-      );
-    }
-
-    // Create a map of deleted YouTube videos
-    const deletedVideoIds = new Set(
-      youtubeVideos?.filter((yv: any) => yv.deleted).map((yv: any) => yv.video_id) || []
-    );
-
-    // Filter out published videos that are deleted
-    const data = publishedData?.filter((pv: any) => !deletedVideoIds.has(pv.youtube_video_id)) || [];
+    const data = publishedData?.map((pv: any) => {
+      const isDeleted = pv.platform === 'youtube' && deletedVideoIds.has(pv.external_video_id || pv.youtube_video_id);
+      if (isDeleted) return null;
+      
+      return {
+        ...pv,
+        google_drive_video_id: pv.google_drive_video_id || pv.final_video_id,
+        youtube_video_id: pv.platform === 'youtube' ? (pv.external_video_id || pv.youtube_video_id) : undefined,
+        facebook_video_id: pv.platform === 'facebook' ? (pv.external_video_id || pv.facebook_video_id) : undefined,
+        youtube_title: pv.platform === 'youtube' ? (pv.title || pv.youtube_title) : undefined,
+        facebook_title: pv.platform === 'facebook' ? (pv.title || pv.facebook_title) : undefined,
+        youtube_url: pv.platform === 'youtube' ? (pv.external_url || pv.youtube_url) : undefined,
+        facebook_url: pv.platform === 'facebook' ? (pv.external_url || pv.facebook_url) : undefined,
+      };
+    }).filter(Boolean) || [];
 
     return NextResponse.json({
       videos: data || [],
