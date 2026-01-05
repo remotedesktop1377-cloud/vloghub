@@ -32,17 +32,16 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { data: nextAuthSession, status } = useSession();
   const [isInitialized, setIsInitialized] = useState(false);
-  const router = useRouter();
 
   const ensureProfileInSupabase = async (sessionUser: any) => {
-    if (!sessionUser || !sessionUser.email) return;
+    if (!sessionUser || !sessionUser.email || !sessionUser.id) return;
 
     try {
       const supabase = getSupabase();
       
       const existingProfileResult: any = await supabase
         .from('profiles')
-        .select('id, created_at, provider, picture')
+        .select('id, created_at')
         .eq('email', sessionUser.email)
         .maybeSingle();
 
@@ -56,22 +55,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (existingProfileResult?.data && !existingProfileResult?.error) {
         const existingId = existingProfileResult.data.id;
+        const existingCreatedAt = existingProfileResult.data.created_at;
         
-        const { error: updateError } = await (supabase
-          .from('profiles') as any)
-          .update(updatePayload)
-          .eq('id', existingId)
-          .select();
+        if (existingId === sessionUser.id) {
+          const { error: updateError } = await (supabase
+            .from('profiles') as any)
+            .update(updatePayload)
+            .eq('id', existingId)
+            .select();
 
-        if (updateError) {
-          console.log('Error updating profile in Supabase:', updateError);
+          if (updateError) {
+            console.log('Error updating profile in Supabase:', updateError);
+          }
         } else {
-          console.log('Profile updated in Supabase successfully');
+          console.warn(`Profile ID mismatch: Existing ID (${existingId}) differs from Session ID (${sessionUser.id}). Using existing profile ID.`);
+          
+          const { error: updateError } = await (supabase
+            .from('profiles') as any)
+            .update(updatePayload)
+            .eq('id', existingId)
+            .select();
+
+          if (updateError) {
+            console.log('Error updating profile in Supabase:', updateError);
+          }
         }
       } else {
         const insertPayload: any = {
           ...updatePayload,
-          id: crypto.randomUUID(),
+          id: sessionUser.id,
           created_at: new Date().toISOString(),
         };
 
@@ -81,9 +93,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select();
 
         if (insertError) {
-          console.log('Error inserting profile to Supabase:', insertError);
-        } else {
-          console.log('Profile created in Supabase successfully');
+          if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+            const retryResult: any = await supabase
+              .from('profiles')
+              .select('id, created_at')
+              .eq('email', sessionUser.email)
+              .maybeSingle();
+            
+            if (retryResult?.data?.id) {
+              const retryId = retryResult.data.id;
+              
+              const { error: retryUpdateError } = await (supabase
+                .from('profiles') as any)
+                .update(updatePayload)
+                .eq('id', retryId)
+                .select();
+
+              if (retryUpdateError) {
+                console.log('Error updating profile on retry:', retryUpdateError);
+              }
+            }
+          } else {
+            console.log('Error inserting profile to Supabase:', insertError);
+          }
         }
       }
     } catch (error) {

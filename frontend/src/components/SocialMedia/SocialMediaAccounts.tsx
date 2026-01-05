@@ -138,17 +138,33 @@ export default function SocialMediaAccounts() {
     }, [user]);
 
     const loadAccounts = async () => {
-        if (!user) return;
+        if (!user || !user.email) return;
 
         try {
             const supabase = getSupabase();
             const supabaseAny: any = supabase;
 
+            let profileUuid: string | null = null;
+            const profileResult: any = await supabaseAny
+                .from('profiles')
+                .select('id')
+                .eq('email', user.email)
+                .maybeSingle();
+            
+            if (profileResult?.data && !profileResult?.error) {
+                profileUuid = profileResult.data.id;
+            }
+
+            if (!profileUuid) {
+                console.log('Error: Could not find user profile UUID for email:', user.email);
+                return;
+            }
+
             // Load social accounts
             const socialRes = await supabaseAny
                 .from('social_accounts')
                 .select('platform, channel_id, channel_name, created_at, connected, oauth_tokens')
-                .eq('user_id', user.id);
+                .eq('user_id', profileUuid);
 
             if (socialRes.error && socialRes.error.code !== 'PGRST116') {
                 console.log('Error loading social accounts:', socialRes.error);
@@ -222,15 +238,33 @@ export default function SocialMediaAccounts() {
     };
 
     const handleDisconnect = async (platform: string) => {
-        if (!user) return;
+        if (!user || !user.email) return;
 
         try {
             const supabase = getSupabase();
-            const { error } = await (supabase.from('social_accounts') as any)
+            const supabaseAny: any = supabase;
+
+            let profileUuid: string | null = null;
+            const profileResult: any = await supabaseAny
+                .from('profiles')
+                .select('id')
+                .eq('email', user.email)
+                .maybeSingle();
+            
+            if (profileResult?.data && !profileResult?.error) {
+                profileUuid = profileResult.data.id;
+            }
+
+            if (!profileUuid) {
+                toast.error('User profile not found');
+                return;
+            }
+
+            const { error } = await (supabaseAny.from('social_accounts') as any)
                 .update({
                     connected: false,
                 })
-                .eq('user_id', user.id)
+                .eq('user_id', profileUuid)
                 .eq('platform', platform);
 
             if (error) {

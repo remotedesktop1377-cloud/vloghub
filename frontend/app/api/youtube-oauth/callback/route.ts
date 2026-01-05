@@ -102,6 +102,21 @@ export async function GET(request: NextRequest) {
 
     const supabase: any = getSupabase();
     
+    const profileUuid = userId;
+    
+    const profileCheck: any = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', profileUuid)
+      .maybeSingle();
+    
+    if (!profileCheck?.data || profileCheck?.error) {
+      console.log('Error: Profile not found for UUID:', profileUuid);
+      return NextResponse.redirect(
+        new URL('/social-media?error=user_profile_not_found', request.url)
+      );
+    }
+    
     const tokenData = {
       access_token,
       refresh_token,
@@ -112,7 +127,7 @@ export async function GET(request: NextRequest) {
 
     if (channelInfo?.channelId) {
       const socialAccountData = {
-        user_id: userId,
+        user_id: profileUuid,
         platform: 'youtube',
         channel_id: channelInfo.channelId,
         channel_name: channelInfo.title || null,

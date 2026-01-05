@@ -150,7 +150,8 @@ export async function DELETE(request: NextRequest) {
       .from('published_videos')
       .delete()
       .eq('user_id', userId)
-      .eq('youtube_video_id', videoId);
+      .eq('external_video_id', videoId)
+      .eq('platform', 'youtube');
 
     if (deletePublishedError) {
       console.log('Error deleting from published_videos table:', deletePublishedError);

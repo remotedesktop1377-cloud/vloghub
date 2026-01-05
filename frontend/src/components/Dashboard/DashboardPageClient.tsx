@@ -12,6 +12,8 @@ import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { ArrowBack, Refresh as RefreshIcon, Publish as PublishIcon, Delete as DeleteIcon, YouTube, Add as AddIcon, CheckCircle } from '@mui/icons-material';
 import { Button, CircularProgress, Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton } from '@mui/material';
 import { toast } from 'react-toastify';
+import { ProfileDropdown } from '../auth/ProfileDropdown';
+import { TruckElectric } from 'lucide-react';
 
 interface DashboardPageClientProps {
     jobs: OutputVideosJob[];
@@ -242,18 +244,36 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     </Button>
 
                     <h1 className={styles.title}>Dashboard - Completed Job Videos</h1>
-                    <button
-                        className={styles.refreshButton}
-                        onClick={handleRefresh}
-                        disabled={refreshing}
-                        title="Refresh videos from Google Drive"
-                    >
-                        {refreshing ? (
-                            <CircularProgress size={20} />
-                        ) : (
-                            <RefreshIcon fontSize="small" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <button
+                            className={styles.refreshButton}
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            title="Refresh videos from Google Drive"
+                        >
+                            {refreshing ? (
+                                <CircularProgress size={20} />
+                            ) : (
+                                <RefreshIcon fontSize="small" />
+                            )}
+                        </button>
+                        <button
+                            className={styles.refreshButton}
+                            onClick={() => setShowManualDeleteDialog(true)}
+                            title="Delete YouTube Video by ID"
+                        >
+                            {deletingVideoId ? (
+                                <CircularProgress size={16} sx={{ color: '#ffffff' }} />
+                            ) : (
+                                <DeleteIcon sx={{ fontSize: 18 }} />
+                            )}
+                        </button>
+                        {user && (
+                            <Box sx={{ ml: 0 }}>
+                                <ProfileDropdown />
+                            </Box>
                         )}
-                    </button>
+                    </div>
                 </div>
                 {/* <p className={styles.subtitle}>
                     Review final videos from your completed jobs. Videos are loaded from the output folder in your Google Drive job directories.

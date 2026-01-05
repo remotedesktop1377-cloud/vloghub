@@ -23,42 +23,106 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabase();
     const supabaseAny: any = supabase;
 
-    // Check if video is already published and not deleted
+    // First, find or get final_video_id from final_videos table
+    // final_video_id is UUID type and should reference final_videos.id
+    let finalVideoId: string | null = null;
+    
+    // Check if videoId is already a UUID (in case it's already a final_videos.id)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(videoId)) {
+      // If videoId is a UUID, assume it's already a final_videos.id
+      finalVideoId = videoId;
+    } else {
+      // If videoId is a Google Drive file ID, try to find the final_videos record
+      const { data: finalVideo, error: finalVideoError } = await supabaseAny
+        .from('final_videos')
+        .select('id')
+        .eq('google_drive_video_id', videoId)
+        .maybeSingle();
+      
+      if (finalVideo && !finalVideoError) {
+        finalVideoId = finalVideo.id;
+      } else {
+        // If no final_videos record exists, try to create one
+        let projectId: string | null = null;
+        
+        // Try to find project by jobId if available
+        if (jobId) {
+          const { data: project, error: projectError } = await supabaseAny
+            .from('projects')
+            .select('id')
+            .eq('job_id', jobId)
+            .maybeSingle();
+          
+          if (project && !projectError) {
+            projectId = project.id;
+          }
+        }
+        
+        // Create a final_videos record (with or without project_id)
+        const finalVideoPayload: any = {
+          google_drive_video_id: videoId,
+          google_drive_video_name: videoName || null,
+          google_drive_video_url: videoUrl || null,
+          render_status: 'success',
+          updated_at: new Date().toISOString(),
+        };
+        
+        // Only include project_id if we found one
+        if (projectId) {
+          finalVideoPayload.project_id = projectId;
+        }
+        
+        const { data: newFinalVideo, error: createError } = await supabaseAny
+          .from('final_videos')
+          .insert(finalVideoPayload)
+          .select('id')
+          .single();
+        
+        if (newFinalVideo && !createError) {
+          finalVideoId = newFinalVideo.id;
+          console.log('Created new final_videos record:', finalVideoId);
+        } else {
+          console.log('Error creating final_videos record:', createError);
+          console.log('Payload used:', finalVideoPayload);
+          
+          // If creation failed, return a more helpful error
+          return NextResponse.json(
+            { 
+              error: 'Could not create final video record in database. Please try again or contact support.',
+              details: createError?.message || 'Unknown error'
+            },
+            { status: 500 }
+          );
+        }
+      }
+    }
+
+    // Check if video is already published using the final_video_id UUID
     const { data: existingPublished, error: checkError } = await supabaseAny
       .from('published_videos')
-      .select('youtube_video_id, youtube_url, youtube_title, published_at')
+      .select('external_video_id, external_url, title, published_at')
       .eq('user_id', userId)
-      .eq('google_drive_video_id', videoId)
-      .single();
+      .eq('final_video_id', finalVideoId)
+      .eq('platform', 'youtube')
+      .maybeSingle();
 
     if (checkError && checkError.code !== 'PGRST116') {
       console.log('Error checking published videos:', checkError);
     }
 
     if (existingPublished) {
-      // Check if the YouTube video is deleted
-      const { data: youtubeVideo, error: youtubeVideoError } = await supabaseAny
-        .from('youtube_videos')
-        .select('deleted')
-        .eq('user_id', userId)
-        .eq('video_id', existingPublished.youtube_video_id)
-        .single();
-
-      // If video exists and is not deleted, prevent republishing
-      if (youtubeVideo && !youtubeVideo.deleted) {
-        return NextResponse.json(
-          {
-            error: 'This video has already been published to YouTube',
-            alreadyPublished: true,
-            youtubeVideoId: existingPublished.youtube_video_id,
-            youtubeUrl: existingPublished.youtube_url,
-            youtubeTitle: existingPublished.youtube_title,
-            publishedAt: existingPublished.published_at,
-          },
-          { status: 400 }
-        );
-      }
-      // If video is deleted, allow republishing - we'll update the existing record
+      return NextResponse.json(
+        {
+          error: 'This video has already been published to YouTube',
+          alreadyPublished: true,
+          youtubeVideoId: existingPublished.external_video_id,
+          youtubeUrl: existingPublished.external_url,
+          youtubeTitle: existingPublished.title,
+          publishedAt: existingPublished.published_at,
+        },
+        { status: 400 }
+      );
     }
 
     const { data: socialAccountData, error: socialAccountError } = await supabase
@@ -209,49 +273,49 @@ export async function POST(request: NextRequest) {
     const youtubeVideoUrl = `https://www.youtube.com/watch?v=${youtubeVideoId}`;
     const youtubeTitle = uploadData.snippet?.title || videoName || `Video from ${jobId}`;
     const thumbnailUrl = uploadData.snippet?.thumbnails?.default?.url || null;
+    const publishedAt = new Date().toISOString();
 
-    // Save to youtube_videos table (mark as not deleted if republishing)
-    const { error: saveVideoError } = await supabaseAny
-      .from('youtube_videos')
-      .upsert({
-        user_id: userId,
-        video_id: youtubeVideoId,
-        title: youtubeTitle,
-        description: `Published from VlogHub - Job ID: ${jobId}`,
-        thumbnail_url: thumbnailUrl,
-        published_at: new Date().toISOString(),
-        channel_title: (socialAccountData as any).channel_name || null,
-        deleted: false,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,video_id',
-      });
-
-    if (saveVideoError) {
-      console.log('Error saving YouTube video to database:', saveVideoError);
-    }
+    // finalVideoId is already determined above, so we can use it directly
 
     // Save to published_videos table (links Google Drive video to YouTube video)
-    // If republishing after delete, update existing record; otherwise create new
-    const { error: savePublishedError } = await supabaseAny
+    // This is the critical step - ensure it happens after successful YouTube upload
+    // final_video_id is required, so we must have it at this point
+    const publishedVideoData: any = {
+      user_id: userId,
+      final_video_id: finalVideoId,
+      platform: 'youtube',
+      external_video_id: youtubeVideoId,
+      external_url: youtubeVideoUrl,
+      title: youtubeTitle,
+      thumbnail_url: thumbnailUrl,
+      status: 'published',
+      published_at: publishedAt,
+      updated_at: publishedAt,
+    };
+
+    const { data: savedPublishedVideo, error: savePublishedError } = await supabaseAny
       .from('published_videos')
-      .upsert({
-        user_id: userId,
-        google_drive_video_id: videoId,
-        youtube_video_id: youtubeVideoId,
-        job_id: jobId || null,
-        video_name: videoName || null,
-        youtube_title: youtubeTitle,
-        youtube_url: youtubeVideoUrl,
-        thumbnail_url: thumbnailUrl,
-        published_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,google_drive_video_id',
-      });
+      .upsert(publishedVideoData, {
+        onConflict: 'user_id,final_video_id,platform',
+      })
+      .select()
+      .single();
 
     if (savePublishedError) {
       console.log('Error saving published video to database:', savePublishedError);
+      console.log('Published video data:', publishedVideoData);
+      return NextResponse.json(
+        { error: 'Video uploaded to YouTube but failed to save published video record. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    if (!savedPublishedVideo) {
+      console.log('Warning: Published video upsert returned no data');
+      return NextResponse.json(
+        { error: 'Video uploaded to YouTube but failed to retrieve saved published video record.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -259,6 +323,7 @@ export async function POST(request: NextRequest) {
       videoId: youtubeVideoId,
       videoUrl: youtubeVideoUrl,
       message: 'Video published successfully to YouTube',
+      publishedVideo: savedPublishedVideo,
     });
   } catch (error: any) {
     console.log('YouTube publish error:', error);
