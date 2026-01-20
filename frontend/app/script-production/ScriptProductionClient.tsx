@@ -57,6 +57,7 @@ import LoadingOverlay from '@/components/ui/LoadingOverlay';
 import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from '@/types/scriptData';
 import { BackgroundType } from '@/types/backgroundType';
 import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
+import AlertDialog from '@/dialogs/AlertDialog';
 import ProjectSettingsDialog from '@/dialogs/ProjectSettingsDialog';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { predefinedTransitions } from '@/data/DefaultData';
@@ -76,8 +77,8 @@ const ScriptProductionClient = () => {
     const [isEditingScript, setIsEditingScript] = useState(false);
     const [editedScript, setEditedScript] = useState('');
 
-    // Navigation confirmation states
     const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+    const [showAlertDialog, setShowAlertDialog] = useState(false);
 
     // Production states
     const [scenesData, setScenesData] = useState<SceneData[]>([]);
@@ -408,7 +409,7 @@ const ScriptProductionClient = () => {
             const isReachable = await backendService.isBackendReachable();
             if (!isReachable) {
                 HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
-                alert('Server is not reachable. Please try again later.');
+                setShowAlertDialog(true);
                 setLoading(false);
                 return;
             }
@@ -1838,6 +1839,13 @@ const ScriptProductionClient = () => {
                 onClose={handleCancelBack}
                 onConfirm={handleConfirmBack}
                 isComplete={completeProjectUploaded}
+            />
+
+            <AlertDialog
+                open={showAlertDialog}
+                title="Backend Unavailable"
+                message="Server is not reachable. Please try again later."
+                onClose={() => setShowAlertDialog(false)}
             />
 
             {/* Project Settings Dialog */}

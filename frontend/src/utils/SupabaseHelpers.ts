@@ -795,7 +795,7 @@ export class SupabaseHelpers {
       console.log('saveFinalVideoRecord upsertPayload:', upsertPayload);
 
       const { data: finalData, error: upsertError } = await SupabaseHelpers.supabase
-        .from('final_videos')
+        .from('generated_videos')
         .upsert(upsertPayload as any)
         .select('id');
 

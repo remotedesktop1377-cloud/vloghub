@@ -11,7 +11,7 @@ from googleapiclient.http import MediaFileUpload
 logger = logging.getLogger(__name__)
 
 def _load_drive_service():
-    base_dir = Path(__file__).resolve().parent.parent
+    base_dir = Path(__file__).resolve().parents[2]
     credentials_paths = [
         base_dir / "frontend" / "src" / "config" / "gen-lang-client-0211941879-57f306607431.json",
         base_dir / "backend" / "config" / "gen-lang-client-0211941879-57f306607431.json",

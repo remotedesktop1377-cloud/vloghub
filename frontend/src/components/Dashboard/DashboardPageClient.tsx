@@ -13,7 +13,7 @@ import { ArrowBack, Refresh as RefreshIcon, Publish as PublishIcon, Delete as De
 import { Button, CircularProgress, Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton } from '@mui/material';
 import { toast } from 'react-toastify';
 import { ProfileDropdown } from '../auth/ProfileDropdown';
-import { TruckElectric } from 'lucide-react';
+import AlertDialog from '@/dialogs/AlertDialog';
 
 interface DashboardPageClientProps {
     jobs: OutputVideosJob[];
@@ -50,6 +50,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const [manualVideoId, setManualVideoId] = useState('');
     const [publishedVideos, setPublishedVideos] = useState<PublishedVideo[]>([]);
     const [loadingPublishedVideos, setLoadingPublishedVideos] = useState(false);
+    const [showAlertDialog, setShowAlertDialog] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
 
     const flattenedVideos = useMemo(
         () =>
@@ -163,12 +165,16 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         return;
                     }
                 } else {
-                    toast.error(data.error || 'Failed to publish video to YouTube');
+                    const message = data.error || 'Failed to publish video to YouTube';
+                    toast.error(message);
+                    setAlertMessage(message);
+                    setShowAlertDialog(true);
                     console.log('Failed to publish video to YouTube', data.error);
                 }
             }
 
-            toast.success(`Video published successfully! ${data.videoUrl ? `Watch it here: ${data.videoUrl}` : ''}`);
+            setAlertMessage(`Video published successfully to YouTube! ${data.videoUrl ? `Watch it here: ${data.videoUrl}` : ''}`);
+            setShowAlertDialog(true);
             loadPublishedVideos();
         } catch (error: any) {
             toast.error(error.message || 'Failed to publish video to YouTube');
@@ -225,6 +231,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             }
 
             toast.success(`Video published successfully to Facebook! ${data.videoUrl ? `View it here: ${data.videoUrl}` : ''}`);
+            setAlertMessage(`Video published successfully to Facebook! ${data.videoUrl ? `View it here: ${data.videoUrl}` : ''}`);
+            setShowAlertDialog(true);
             loadPublishedVideos();
         } catch (error: any) {
             toast.error(error.message || 'Failed to publish video to Facebook');
@@ -631,6 +639,13 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <AlertDialog
+                open={showAlertDialog}
+                title="Video Publish Status"
+                message={alertMessage}
+                onClose={() => setShowAlertDialog(false)}
+            />
         </div>
     );
 }

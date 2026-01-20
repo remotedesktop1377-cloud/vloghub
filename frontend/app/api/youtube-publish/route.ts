@@ -23,19 +23,19 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabase();
     const supabaseAny: any = supabase;
 
-    // First, find or get final_video_id from final_videos table
-    // final_video_id is UUID type and should reference final_videos.id
+    // First, find or get final_video_id from generated_videos table
+    // final_video_id is UUID type and should reference generated_videos.id
     let finalVideoId: string | null = null;
     
-    // Check if videoId is already a UUID (in case it's already a final_videos.id)
+    // Check if videoId is already a UUID (in case it's already a generated_videos.id)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(videoId)) {
-      // If videoId is a UUID, assume it's already a final_videos.id
+      // If videoId is a UUID, assume it's already a generated_videos.id
       finalVideoId = videoId;
     } else {
-      // If videoId is a Google Drive file ID, try to find the final_videos record
+      // If videoId is a Google Drive file ID, try to find the generated_videos record
       const { data: finalVideo, error: finalVideoError } = await supabaseAny
-        .from('final_videos')
+        .from('generated_videos')
         .select('id')
         .eq('google_drive_video_id', videoId)
         .maybeSingle();
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       if (finalVideo && !finalVideoError) {
         finalVideoId = finalVideo.id;
       } else {
-        // If no final_videos record exists, try to create one
+        // If no generated_videos record exists, try to create one
         let projectId: string | null = null;
         
         // Try to find project by jobId if available
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        // Create a final_videos record (with or without project_id)
+        // Create a generated_videos record (with or without project_id)
         const finalVideoPayload: any = {
           google_drive_video_id: videoId,
           google_drive_video_name: videoName || null,
@@ -74,16 +74,16 @@ export async function POST(request: NextRequest) {
         }
         
         const { data: newFinalVideo, error: createError } = await supabaseAny
-          .from('final_videos')
+          .from('generated_videos')
           .insert(finalVideoPayload)
           .select('id')
           .single();
         
         if (newFinalVideo && !createError) {
           finalVideoId = newFinalVideo.id;
-          console.log('Created new final_videos record:', finalVideoId);
+          console.log('Created new generated_videos record:', finalVideoId);
         } else {
-          console.log('Error creating final_videos record:', createError);
+          console.log('Error creating generated_videos record:', createError);
           console.log('Payload used:', finalVideoPayload);
           
           // If creation failed, return a more helpful error
@@ -304,18 +304,18 @@ export async function POST(request: NextRequest) {
     if (savePublishedError) {
       console.log('Error saving published video to database:', savePublishedError);
       console.log('Published video data:', publishedVideoData);
-      return NextResponse.json(
-        { error: 'Video uploaded to YouTube but failed to save published video record. Please contact support.' },
-        { status: 500 }
-      );
+      // return NextResponse.json(
+      //   { error: 'Video uploaded to YouTube but failed to save published video record. Please contact support.' },
+      //   { status: 500 }
+      // );
     }
 
     if (!savedPublishedVideo) {
       console.log('Warning: Published video upsert returned no data');
-      return NextResponse.json(
-        { error: 'Video uploaded to YouTube but failed to retrieve saved published video record.' },
-        { status: 500 }
-      );
+      // return NextResponse.json(
+      //   { error: 'Video uploaded to YouTube but failed to retrieve saved published video record.' },
+      //   { status: 500 }
+      // );
     }
 
     return NextResponse.json({

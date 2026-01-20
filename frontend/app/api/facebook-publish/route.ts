@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       finalVideoId = videoId;
     } else {
       const { data: finalVideo, error: finalVideoError } = await supabaseAny
-        .from('final_videos')
+        .from('generated_videos')
         .select('id')
         .eq('google_drive_video_id', videoId)
         .maybeSingle();
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         }
         
         const { data: newFinalVideo, error: createError } = await supabaseAny
-          .from('final_videos')
+          .from('generated_videos')
           .insert(finalVideoPayload)
           .select('id')
           .single();
@@ -241,10 +241,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.log('Facebook publish error:', error);
-    return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
-    );
+    // return NextResponse.json(
+    //   { error: error?.message || 'Internal server error' },
+    //   { status: 500 }
+    // );
   }
 }
 
