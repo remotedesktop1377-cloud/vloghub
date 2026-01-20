@@ -321,22 +321,18 @@ async def processing_status():
         "zipAvailable": latest_zip.exists(),
     }
 
-
 # Include API routes
 app.include_router(api_router, prefix="/api")
-
 
 @app.get("/")
 async def root():
     """Root endpoint that returns a welcome message."""
     return {"message": "Welcome to Vloghub API", "status": "online", "version": "0.1.0"}
 
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
-
 
 def cleanup_directory(directory: Path) -> None:
     """Helper method to remove all files and directories in a given directory"""
@@ -378,7 +374,6 @@ def cleanup_job_files(job_id: str, result: Dict[str, Any]) -> None:
         logger.info(f"Job files cleaned successfully for job_id: {job_id}")
     except Exception:
         logger.exception("Failed to clean up job files")
-
 
 if __name__ == "__main__":
     import uvicorn

@@ -62,6 +62,7 @@ import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { predefinedTransitions } from '@/data/DefaultData';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { useSession } from 'next-auth/react';
+import { backendService } from '@/services/backendService';
 
 const ScriptProductionClient = () => {
 
@@ -76,7 +77,7 @@ const ScriptProductionClient = () => {
     const [editedScript, setEditedScript] = useState('');
 
     // Navigation confirmation states
-    const [showBackConfirmation, setShowBackConfirmation] = useState(false);
+    const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
     // Production states
     const [scenesData, setScenesData] = useState<SceneData[]>([]);
@@ -204,7 +205,7 @@ const ScriptProductionClient = () => {
             if (!isScriptApproved) {
                 e.preventDefault();
                 window.history.pushState(null, '', window.location.href);
-                setShowBackConfirmation(true);
+                setShowConfirmationModal(true);
             }
         };
 
@@ -329,10 +330,10 @@ const ScriptProductionClient = () => {
             // Update project-level states from temp (global apply)
             // When saving project settings, overwrite ALL scene settings with project settings
             // Determine backgroundType: use explicit value if set, otherwise infer from videoBackgroundImage
-            const backgroundType = projectSettings?.backgroundType 
-                ? projectSettings.backgroundType 
+            const backgroundType = projectSettings?.backgroundType
+                ? projectSettings.backgroundType
                 : (projectSettings?.videoBackgroundImage ? 'image' : 'video');
-            
+
             const updatedProjectSettings: Settings = {
                 videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
                 videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
@@ -390,7 +391,7 @@ const ScriptProductionClient = () => {
                 .select('id')
                 .eq('email', user.email)
                 .maybeSingle();
-            
+
             if (profileResult?.data && !profileResult?.error) {
                 return profileResult.data.id;
             }
@@ -401,9 +402,16 @@ const ScriptProductionClient = () => {
         }
     };
 
-    // Function to upload JSON to Google Drive
     const uploadCompleteProjectToDrive = async () => {
         try {
+            setLoading(true);
+            const isReachable = await backendService.isBackendReachable();
+            if (!isReachable) {
+                HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
+                alert('Server is not reachable. Please try again later.');
+                setLoading(false);
+                return;
+            }
             const userId = await getUserProfileId();
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, scenesData, user?.email || '');
 
@@ -451,13 +459,14 @@ const ScriptProductionClient = () => {
                     console.log('Background processProjectJson error', err);
                 });
 
+            setCompleteProjectUploaded(true);
+            setShowConfirmationModal(true);
+
         } catch (e: any) {
             console.log(e);
             toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
-            setCompleteProjectUploaded(true);
-            setShowBackConfirmation(true);
         }
     };
 
@@ -550,7 +559,7 @@ const ScriptProductionClient = () => {
             }
 
             setIsGammaProcessing(false);
-            
+
         } catch (e: any) {
             console.log('Failed to convert PDF to images:', e?.message || 'Unknown error');
             setIsGammaProcessing(false);
@@ -999,7 +1008,7 @@ const ScriptProductionClient = () => {
     };
 
     const handleCancelBack = () => {
-        setShowBackConfirmation(false);
+        setShowConfirmationModal(false);
     };
 
     // Handle text selection for highlighting keywords
@@ -1195,7 +1204,7 @@ const ScriptProductionClient = () => {
             console.warn('Error clearing script cache:', error);
         }
 
-        setShowBackConfirmation(false);
+        setShowConfirmationModal(false);
         router.push(ROUTES_KEYS.TRENDING_TOPICS);
     };
 
@@ -1234,7 +1243,7 @@ const ScriptProductionClient = () => {
                     <Button
                         variant="outlined"
                         startIcon={<BackIcon />}
-                        onClick={() => setShowBackConfirmation(true)}
+                        onClick={() => setShowConfirmationModal(true)}
                         size="medium"
                         sx={{ fontSize: '1.25rem' }}
                     >
@@ -1825,7 +1834,7 @@ const ScriptProductionClient = () => {
 
             {/* Back Confirmation Dialog */}
             <BackConfirmationDialog
-                open={showBackConfirmation}
+                open={showConfirmationModal}
                 onClose={handleCancelBack}
                 onConfirm={handleConfirmBack}
                 isComplete={completeProjectUploaded}
