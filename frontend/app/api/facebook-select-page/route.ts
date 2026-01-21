@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 import { FACEBOOK_OAUTH_CONFIG } from '@/config/facebookOAuthConfig';
 
 export async function POST(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     const supabaseAny: any = supabase;
 
     const { data: socialAccountData, error: socialAccountError } = await supabaseAny
-      .from('social_accounts')
+      .from(DB_TABLES.SOCIAL_ACCOUNTS)
       .select('oauth_tokens')
       .eq('user_id', userId)
       .eq('platform', 'facebook')
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     };
 
     const { data: updatedAccount, error: updateError } = await supabaseAny
-      .from('social_accounts')
+      .from(DB_TABLES.SOCIAL_ACCOUNTS)
       .update({
         oauth_tokens: updatedTokens,
         channel_id: pageId,

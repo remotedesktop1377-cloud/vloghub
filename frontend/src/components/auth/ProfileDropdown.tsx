@@ -258,7 +258,7 @@ export const ProfileDropdown = () => {
               <div className={styles.rightColumn} style={{ width: '100%', borderRight: 'none' }}>
                 {/* Theme & Generation Section */}
                 <div className={styles.generationSection}>
-                  <h3 className={styles.sectionTitle}>Theme & Generation</h3>
+                  <h3 className={styles.sectionTitle}>Gamma Theme Styles</h3>
                   <div className={styles.rowInputs}>
                     <div className={styles.inputGroup}>
                       <label className={styles.inputLabel}>Text mode</label>
@@ -428,7 +428,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
             onClick={() => onSelect(name)}
           // style={cardStyle}
           >
-            <div className={styles.themeThumb} style={{ backgroundColor: preset.pageBg, backgroundImage: 'none', borderBottom: `1px solid #e5e7eb` }}>
+            <div className={styles.themeThumb} style={{ backgroundColor: preset.pageBg, backgroundImage: 'none', borderBottom: `1px solid #1f2937` }}>
               <div
                 className={`${styles.themeThumbInner}`}
                 style={{ borderColor: preset.cardBorder, backgroundColor: preset.cardBg }}
@@ -437,7 +437,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
                 <div className={styles.themeBody} style={{ color: preset.bodyColor }}> Body </div>
               </div>
             </div>
-            <div className={styles.themeName} style={{ color: 'black' }}>{name}</div>
+            <div className={styles.themeName}>{name}</div>
           </button>
         );
       })}

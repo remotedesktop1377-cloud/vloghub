@@ -96,7 +96,7 @@ frontend/supabase/add_youtube_oauth_tokens.sql
    npm run dev
    ```
 
-2. Navigate to `/social-media`
+2. Navigate to `/dashboard`
 3. Click "Connect YouTube" on the YouTube card
 4. Complete the OAuth flow
 5. Verify the account shows as connected with channel information

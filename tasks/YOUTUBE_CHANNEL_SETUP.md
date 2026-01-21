@@ -38,5 +38,5 @@ ADD COLUMN IF NOT EXISTS youtube_oauth_tokens JSONB;
 ```
 
 ## 6) Flow summary
-- User clicks “Connect YouTube” → `/api/youtube-oauth/initiate` builds auth URL → Google consent → redirect to `/api/youtube-oauth/callback` → tokens exchanged and saved → user returned to `/social-media` showing connected status.
+- User clicks “Connect YouTube” → `/api/youtube-oauth/initiate` builds auth URL → Google consent → redirect to `/api/youtube-oauth/callback` → tokens exchanged and saved → user returned to `/dashboard` showing connected status.
 

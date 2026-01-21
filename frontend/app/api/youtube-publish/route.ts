@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     } else {
       // If videoId is a Google Drive file ID, try to find the generated_videos record
       const { data: finalVideo, error: finalVideoError } = await supabaseAny
-        .from('generated_videos')
+        .from(DB_TABLES.GENERATED_VIDEOS)
         .select('id')
         .eq('google_drive_video_id', videoId)
         .maybeSingle();
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
         // Try to find project by jobId if available
         if (jobId) {
           const { data: project, error: projectError } = await supabaseAny
-            .from('projects')
+            .from(DB_TABLES.PROJECTS)
             .select('id')
             .eq('job_id', jobId)
             .maybeSingle();
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         }
         
         const { data: newFinalVideo, error: createError } = await supabaseAny
-          .from('generated_videos')
+          .from(DB_TABLES.GENERATED_VIDEOS)
           .insert(finalVideoPayload)
           .select('id')
           .single();
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // Check if video is already published using the final_video_id UUID
     const { data: existingPublished, error: checkError } = await supabaseAny
-      .from('published_videos')
+      .from(DB_TABLES.PUBLISHED_VIDEOS)
       .select('external_video_id, external_url, title, published_at')
       .eq('user_id', userId)
       .eq('final_video_id', finalVideoId)
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: socialAccountData, error: socialAccountError } = await supabase
-      .from('social_accounts')
+      .from(DB_TABLES.SOCIAL_ACCOUNTS)
       .select('platform, channel_id, connected, oauth_tokens')
       .eq('user_id', userId)
       .eq('platform', 'youtube')
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
           };
 
           await supabaseAny
-            .from('social_accounts')
+            .from(DB_TABLES.SOCIAL_ACCOUNTS)
             .update({
               oauth_tokens: updatedTokens,
               updated_at: new Date().toISOString(),
@@ -294,7 +295,7 @@ export async function POST(request: NextRequest) {
     };
 
     const { data: savedPublishedVideo, error: savePublishedError } = await supabaseAny
-      .from('published_videos')
+      .from(DB_TABLES.PUBLISHED_VIDEOS)
       .upsert(publishedVideoData, {
         onConflict: 'user_id,final_video_id,platform',
       })

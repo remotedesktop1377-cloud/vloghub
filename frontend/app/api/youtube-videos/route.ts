@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]/route';
 
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     let userUuid: string | null = null;
     if (userEmail) {
       const profileResult: any = await supabaseAny
-        .from('profiles')
+        .from(DB_TABLES.PROFILES)
         .select('id')
         .eq('email', userEmail)
         .maybeSingle();
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await supabaseAny
-      .from('youtube_videos')
+      .from(DB_TABLES.YOUTUBE_VIDEOS)
       .select('*')
       .eq('user_id', userUuid)
       .order('published_at', { ascending: false });

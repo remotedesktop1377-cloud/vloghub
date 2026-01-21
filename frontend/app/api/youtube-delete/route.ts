@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabase();
 
     const { data: socialAccountData, error: socialAccountError } = await supabase
-      .from('social_accounts')
+      .from(DB_TABLES.SOCIAL_ACCOUNTS)
       .select('platform, channel_id, connected, oauth_tokens')
       .eq('user_id', userId)
       .eq('platform', 'youtube')
@@ -83,7 +84,7 @@ export async function DELETE(request: NextRequest) {
 
           const supabaseAny = supabase as any;
           await supabaseAny
-            .from('social_accounts')
+            .from(DB_TABLES.SOCIAL_ACCOUNTS)
             .update({
               oauth_tokens: updatedTokens,
               updated_at: new Date().toISOString(),
@@ -133,7 +134,7 @@ export async function DELETE(request: NextRequest) {
     // Mark video as deleted in youtube_videos table (soft delete)
     const supabaseAny: any = supabase;
     const { error: updateVideoError } = await supabaseAny
-      .from('youtube_videos')
+      .from(DB_TABLES.YOUTUBE_VIDEOS)
       .update({
         deleted: true,
         updated_at: new Date().toISOString(),
@@ -147,7 +148,7 @@ export async function DELETE(request: NextRequest) {
 
     // Remove entry from published_videos table (hard delete)
     const { error: deletePublishedError } = await supabase
-      .from('published_videos')
+      .from(DB_TABLES.PUBLISHED_VIDEOS)
       .delete()
       .eq('user_id', userId)
       .eq('external_video_id', videoId)

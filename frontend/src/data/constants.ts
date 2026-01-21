@@ -14,7 +14,6 @@ export const ROUTES_KEYS = {
   TRENDING_TOPICS: '/trending-topics',
   SCRIPT_PRODUCTION: '/script-production',
   DASHBOARD: '/dashboard',
-  SOCIAL_MEDIA: '/social-media'
 } as const; 
 
 export const SCRIPT_STATUS = {

@@ -64,6 +64,7 @@ import { predefinedTransitions } from '@/data/DefaultData';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { useSession } from 'next-auth/react';
 import { backendService } from '@/services/backendService';
+import { DB_TABLES } from '@/config/DbTables';
 
 const ScriptProductionClient = () => {
 
@@ -388,7 +389,7 @@ const ScriptProductionClient = () => {
             const { getSupabase } = await import('@/utils/supabase');
             const supabase = getSupabase();
             const profileResult: any = await supabase
-                .from('profiles')
+                .from(DB_TABLES.PROFILES)
                 .select('id')
                 .eq('email', user.email)
                 .maybeSingle();

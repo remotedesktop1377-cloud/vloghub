@@ -171,11 +171,26 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         return;
                     }
                 } else {
-                    const message = data.error || 'Failed to publish video to YouTube';
+                    const rawMessage = data.error || 'Failed to publish video to YouTube';
+                    const needsReconnect =
+                        response.status === 400 && (
+                            rawMessage.includes('YouTube account not connected') ||
+                            rawMessage.includes('OAuth tokens not found') ||
+                            rawMessage.includes('access token not found') ||
+                            rawMessage.includes('access token expired') ||
+                            rawMessage.includes('Failed to refresh YouTube access token')
+                        ) ||
+                        (response.status === 401 || response.status === 403) &&
+                        rawMessage.toLowerCase().includes('authentication credentials');
+
+                    const message = needsReconnect
+                        ? 'Your YouTube connection is no longer valid. Please reconnect your YouTube account from the Social Media section in your profile before publishing videos.'
+                        : rawMessage;
+
                     toast.error(message);
                     setAlertMessage(message);
                     setShowAlertDialog(true);
-                    console.log('Failed to publish video to YouTube', data.error);
+                    console.log('Failed to publish video to YouTube', rawMessage);
                 }
                 return;
             }
@@ -289,7 +304,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         autoClose: 5000,
                     });
                     setTimeout(() => {
-                        router.push(ROUTES_KEYS.SOCIAL_MEDIA);
+                        router.push(ROUTES_KEYS.DASHBOARD);
                     }, 2000);
                 } else {
                     toast.error(data.error || 'Failed to delete video from YouTube');

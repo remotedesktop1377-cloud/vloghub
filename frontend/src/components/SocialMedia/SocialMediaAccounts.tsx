@@ -36,6 +36,7 @@ import { toast } from 'react-toastify';
 import styles from './SocialMediaAccounts.module.css';
 import { ROUTES_KEYS } from '@/data/constants';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
+import { DB_TABLES } from '@/config/DbTables';
 
 interface SocialAccount {
     id: string;
@@ -159,7 +160,7 @@ export default function SocialMediaAccounts() {
 
             let profileUuid: string | null = null;
             const profileResult: any = await supabaseAny
-                .from('profiles')
+                .from(DB_TABLES.PROFILES)
                 .select('id')
                 .eq('email', user.email)
                 .maybeSingle();
@@ -175,7 +176,7 @@ export default function SocialMediaAccounts() {
 
             // Load social accounts
             const socialRes = await supabaseAny
-                .from('social_accounts')
+                .from(DB_TABLES.SOCIAL_ACCOUNTS)
                 .select('platform, channel_id, channel_name, created_at, connected, oauth_tokens')
                 .eq('user_id', profileUuid);
 
@@ -286,7 +287,7 @@ export default function SocialMediaAccounts() {
 
             let profileUuid: string | null = null;
             const profileResult: any = await supabaseAny
-                .from('profiles')
+                .from(DB_TABLES.PROFILES)
                 .select('id')
                 .eq('email', user.email)
                 .maybeSingle();
@@ -300,7 +301,7 @@ export default function SocialMediaAccounts() {
                 return;
             }
 
-            const { error } = await (supabaseAny.from('social_accounts') as any)
+            const { error } = await (supabaseAny.from(DB_TABLES.SOCIAL_ACCOUNTS) as any)
                 .update({
                     connected: false,
                 })

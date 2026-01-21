@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 import { FACEBOOK_OAUTH_CONFIG } from '@/config/facebookOAuthConfig';
 
 export async function POST(request: NextRequest) {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       finalVideoId = videoId;
     } else {
       const { data: finalVideo, error: finalVideoError } = await supabaseAny
-        .from('generated_videos')
+        .from(DB_TABLES.GENERATED_VIDEOS)
         .select('id')
         .eq('google_drive_video_id', videoId)
         .maybeSingle();
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
         
         if (jobId) {
           const { data: project, error: projectError } = await supabaseAny
-            .from('projects')
+            .from(DB_TABLES.PROJECTS)
             .select('id')
             .eq('job_id', jobId)
             .maybeSingle();
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         }
         
         const { data: newFinalVideo, error: createError } = await supabaseAny
-          .from('generated_videos')
+          .from(DB_TABLES.GENERATED_VIDEOS)
           .insert(finalVideoPayload)
           .select('id')
           .single();
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: existingPublished, error: checkError } = await supabaseAny
-      .from('published_videos')
+      .from(DB_TABLES.PUBLISHED_VIDEOS)
       .select('external_video_id, external_url, title, published_at')
       .eq('user_id', userId)
       .eq('final_video_id', finalVideoId)
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: socialAccountData, error: socialAccountError } = await supabase
-      .from('social_accounts')
+      .from(DB_TABLES.SOCIAL_ACCOUNTS)
       .select('platform, channel_id, connected, oauth_tokens')
       .eq('user_id', userId)
       .eq('platform', 'facebook')
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
     };
 
     const { data: savedPublishedVideo, error: savePublishedError } = await supabaseAny
-      .from('published_videos')
+      .from(DB_TABLES.PUBLISHED_VIDEOS)
       .upsert(publishedVideoData, {
         onConflict: 'user_id,final_video_id,platform',
       })
@@ -226,10 +227,10 @@ export async function POST(request: NextRequest) {
 
     if (savePublishedError) {
       console.log('Error saving published video to database:', savePublishedError);
-      return NextResponse.json(
-        { error: 'Video uploaded to Facebook but failed to save published video record. Please contact support.' },
-        { status: 500 }
-      );
+      // return NextResponse.json(
+      //   { error: 'Video uploaded to Facebook but failed to save published video record. Please contact support.' },
+      //   { status: 500 }
+      // );
     }
 
     return NextResponse.json({

@@ -8,6 +8,7 @@ import { HelperFunctions } from '../utils/helperFunctions';
 import { toast } from 'react-toastify';
 import { ROUTES_KEYS } from '@/data/constants';
 import { getSupabase } from '../utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 
 interface AuthContextType {
   user: any | null;
@@ -40,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const supabase = getSupabase();
       
       const existingProfileResult: any = await supabase
-        .from('profiles')
+        .from(DB_TABLES.PROFILES)
         .select('id, created_at')
         .eq('email', sessionUser.email)
         .maybeSingle();
@@ -59,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (existingId === sessionUser.id) {
           const { error: updateError } = await (supabase
-            .from('profiles') as any)
+            .from(DB_TABLES.PROFILES) as any)
             .update(updatePayload)
             .eq('id', existingId)
             .select();
@@ -71,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log(`Profile ID mismatch: Existing ID (${existingId}) differs from Session ID (${sessionUser.id}). Using existing profile ID.`);
           
           const { error: updateError } = await (supabase
-            .from('profiles') as any)
+            .from(DB_TABLES.PROFILES) as any)
             .update(updatePayload)
             .eq('id', existingId)
             .select();
@@ -88,14 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         const { error: insertError } = await (supabase
-          .from('profiles') as any)
+          .from(DB_TABLES.PROFILES) as any)
           .insert(insertPayload)
           .select();
 
         if (insertError) {
           if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
             const retryResult: any = await supabase
-              .from('profiles')
+              .from(DB_TABLES.PROFILES)
               .select('id, created_at')
               .eq('email', sessionUser.email)
               .maybeSingle();
@@ -104,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               const retryId = retryResult.data.id;
               
               const { error: retryUpdateError } = await (supabase
-                .from('profiles') as any)
+                .from(DB_TABLES.PROFILES) as any)
                 .update(updatePayload)
                 .eq('id', retryId)
                 .select();

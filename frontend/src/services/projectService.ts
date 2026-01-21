@@ -1,4 +1,5 @@
 import { getSupabase } from '@/utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 
 export interface ProjectData {
   title: string | null;
@@ -12,7 +13,7 @@ export const ProjectService = {
       const supabaseAny: any = supabase;
 
       let query = supabaseAny
-        .from('projects')
+        .from(DB_TABLES.PROJECTS)
         .select('title, video_thumbnail_url')
         .eq('job_id', jobId);
 

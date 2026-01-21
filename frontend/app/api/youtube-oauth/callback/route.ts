@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { YOUTUBE_OAUTH_CONFIG } from '@/config/youtubeOAuthConfig';
 import { getSupabase } from '@/utils/supabase';
-
+import { DB_TABLES } from '@/config/DbTables';
+import { ROUTES_KEYS } from '@/data/constants';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -11,13 +12,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       return NextResponse.redirect(
-        new URL(`/dashboard?error=${encodeURIComponent(error)}`, request.url)
+        new URL(`${ROUTES_KEYS.DASHBOARD}?error=${encodeURIComponent(error)}`, request.url)
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL('/dashboard?error=missing_code_or_state', request.url)
+        new URL(`${ROUTES_KEYS.DASHBOARD}?error=missing_code_or_state`, request.url)
       );
     }
 
@@ -26,14 +27,14 @@ export async function GET(request: NextRequest) {
       decodedState = JSON.parse(Buffer.from(state, 'base64').toString());
     } catch (e) {
       return NextResponse.redirect(
-        new URL('/dashboard?error=invalid_state', request.url)
+        new URL(`${ROUTES_KEYS.DASHBOARD}?error=invalid_state`, request.url)
       );
     }
 
     const userId = decodedState.userId;
     if (!userId) {
       return NextResponse.redirect(
-        new URL('/dashboard?error=missing_user_id', request.url)
+        new URL(`${ROUTES_KEYS.DASHBOARD}?error=missing_user_id`, request.url)
       );
     }
 
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       const errorData = await tokenResponse.json().catch(() => ({}));
       console.log('Token exchange error:', errorData);
       return NextResponse.redirect(
-        new URL(`/social-media?error=${encodeURIComponent(errorData.error || 'token_exchange_failed')}`, request.url)
+        new URL(`${ROUTES_KEYS.DASHBOARD}?error=${encodeURIComponent(errorData.error || 'token_exchange_failed')}`, request.url)
       );
     }
 
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
     const profileUuid = userId;
     
     const profileCheck: any = await supabase
-      .from('profiles')
+      .from(DB_TABLES.PROFILES)
       .select('id')
       .eq('id', profileUuid)
       .maybeSingle();
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
     if (!profileCheck?.data || profileCheck?.error) {
       console.log('Error: Profile not found for UUID:', profileUuid);
       return NextResponse.redirect(
-        new URL('/dashboard?error=user_profile_not_found', request.url)
+        new URL(`${ROUTES_KEYS.DASHBOARD}?error=user_profile_not_found`, request.url)
       );
     }
     
@@ -137,7 +138,7 @@ export async function GET(request: NextRequest) {
       };
 
       const { error: socialAccountError } = await supabase
-        .from('social_accounts')
+        .from(DB_TABLES.SOCIAL_ACCOUNTS)
         .upsert(socialAccountData, {
           onConflict: 'user_id,platform',
         })
@@ -147,7 +148,7 @@ export async function GET(request: NextRequest) {
         console.log('Error saving social account:', socialAccountError);
         console.log('Social account data:', socialAccountData);
         return NextResponse.redirect(
-          new URL('/dashboard?error=social_account_save_failed', request.url)
+          new URL(`${ROUTES_KEYS.DASHBOARD}?error=social_account_save_failed`, request.url)
         );
       }
     } else {
@@ -155,12 +156,12 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      new URL('/dashboard?success=youtube_connected', request.url)
+      new URL(`${ROUTES_KEYS.DASHBOARD}?success=youtube_connected`, request.url)
     );
   } catch (error: any) {
     console.log('YouTube OAuth callback error:', error);
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(error?.message || 'oauth_callback_failed')}`, request.url)
+      new URL(`${ROUTES_KEYS.DASHBOARD}?error=${encodeURIComponent(error?.message || 'oauth_callback_failed')}`, request.url)
     );
   }
 }

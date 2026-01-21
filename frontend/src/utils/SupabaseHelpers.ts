@@ -7,6 +7,7 @@
  */
 
 import { getSupabase, getCurrentUser } from './supabase';
+import { DB_TABLES } from '@/config/DbTables';
 import { Database } from '../types/database';
 import { toast, ToastOptions } from 'react-toastify';
 import { User } from '@supabase/supabase-js';
@@ -54,7 +55,7 @@ export class SupabaseHelpers {
       }
 
       const existingProfile = await SupabaseHelpers.supabase
-        .from('profiles')
+        .from(DB_TABLES.PROFILES)
         .select('id, created_at')
         .eq('id', payload.id)
         .single();
@@ -66,7 +67,7 @@ export class SupabaseHelpers {
       }
 
       const { data, error } = await SupabaseHelpers.supabase
-        .from('profiles')
+        .from(DB_TABLES.PROFILES)
         .upsert(payload as any, { onConflict: 'id' })
         .select()
 
@@ -100,7 +101,7 @@ export class SupabaseHelpers {
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await (SupabaseHelpers.supabase.from('profiles') as any)
+      const { data, error } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
         .update(updatePayload as any)
         .eq('id', userId);
 
@@ -133,7 +134,7 @@ export class SupabaseHelpers {
   static async getUserSocialAuthKeys(userId: string) {
     try {
       const { data, error } = await SupabaseHelpers.supabase
-        .from('profiles')
+        .from(DB_TABLES.PROFILES)
         .select('tiktok_key, instagram_key, facebook_key, youtube_key')
         .eq('id', userId)
         .single();
@@ -241,7 +242,7 @@ export class SupabaseHelpers {
 
       // Update profile with logo URL
       console.log('SupabaseHelpers: Updating profile with logo URL...');
-      const { error: updateError } = await (SupabaseHelpers.supabase.from('profiles') as any)
+      const { error: updateError } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
         .update({
           logo_url: logoUrl,
           logo_filename: file.name,
@@ -301,7 +302,7 @@ export class SupabaseHelpers {
       }
 
       // Update profile to remove logo
-      const { error: updateError } = await (SupabaseHelpers.supabase.from('profiles') as any)
+      const { error: updateError } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
         .update({
           logo_url: null,
           logo_filename: null,
@@ -329,7 +330,7 @@ export class SupabaseHelpers {
    */
   static async updateSelectedBackground(userId: string, background: any): Promise<{ success: boolean }> {
     try {
-      const { error } = await (SupabaseHelpers.supabase.from('profiles') as any)
+      const { error } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
         .update({
           selected_background: background,
           updated_at: new Date().toISOString()
@@ -357,7 +358,7 @@ export class SupabaseHelpers {
   static async getUserProfileWithAssets(userId: string) {
     try {
       const { data, error } = await SupabaseHelpers.supabase
-        .from('profiles')
+        .from(DB_TABLES.PROFILES)
         .select('*, logo_url, logo_filename, selected_background')
         .eq('id', userId)
         .single();
@@ -379,7 +380,7 @@ export class SupabaseHelpers {
    */
   static async saveYouTubeVideo(videoData: Database['public']['Tables']['youtube_videos']['Insert']) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase.from('youtube_videos')
+      const { data, error } = await SupabaseHelpers.supabase.from(DB_TABLES.YOUTUBE_VIDEOS)
         .insert(videoData as any)
         .select();
 
@@ -402,7 +403,7 @@ export class SupabaseHelpers {
    */
   static async saveVideoClip(clipData: Database['public']['Tables']['video_clips']['Insert']) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase.from('video_clips')
+      const { data, error } = await SupabaseHelpers.supabase.from(DB_TABLES.VIDEO_CLIPS)
         .insert(clipData as any)
         .select();
 
@@ -427,7 +428,7 @@ export class SupabaseHelpers {
   static async getUserVideoClips(userId: string, limit: number = 50) {
     try {
       const { data, error } = await SupabaseHelpers.supabase
-        .from('video_clips')
+        .from(DB_TABLES.VIDEO_CLIPS)
         .select(`
             *,
             youtube_videos (
@@ -459,7 +460,7 @@ export class SupabaseHelpers {
    */
   static async saveSearchHistory(searchData: Database['public']['Tables']['search_history']['Insert']) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase.from('search_history')
+      const { data, error } = await SupabaseHelpers.supabase.from(DB_TABLES.SEARCH_HISTORY)
         .insert(searchData as any);
 
       if (error) {
@@ -484,7 +485,7 @@ export class SupabaseHelpers {
         return { data: [], error: null } as any;
       }
       const { data, error } = await SupabaseHelpers.supabase
-        .from('search_history')
+        .from(DB_TABLES.SEARCH_HISTORY)
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -534,7 +535,7 @@ export class SupabaseHelpers {
       // console.log('🟢 Trending topics payload:', JSON.stringify(payload, null, 2));
       // Insert per RLS policy (insert allowed for authenticated users)
       const { data, error } = await SupabaseHelpers.supabase
-        .from('trending_topics')
+        .from(DB_TABLES.TRENDING_TOPICS)
         .insert(payload as any)
         .select()
 
@@ -572,7 +573,7 @@ export class SupabaseHelpers {
       // console.log('🟢 Approved Script Payload (normalized):', JSON.stringify(payload, null, 2));
       // Insert (not upsert) to comply with insert-only RLS policy
       const { data, error } = await SupabaseHelpers.supabase
-        .from('scripts_approved')
+        .from(DB_TABLES.SCRIPTS_APPROVED)
         .insert(payload as any)
 
       if (error) {
@@ -629,7 +630,7 @@ export class SupabaseHelpers {
 
         const supabase = getSupabase();
         const profileResult: any = await supabase
-          .from('profiles')
+          .from(DB_TABLES.PROFILES)
           .select('id')
           .eq('email', userEmail)
           .maybeSingle();
@@ -654,7 +655,7 @@ export class SupabaseHelpers {
 
       // Check if project already exists by job_id
       const existingProjectResult: any = await (SupabaseHelpers.supabase
-        .from('projects') as any)
+        .from(DB_TABLES.PROJECTS) as any)
         .select('id')
         .eq('job_id', scriptProductionJSON.project.jobId)
         .maybeSingle();
@@ -684,7 +685,7 @@ export class SupabaseHelpers {
       if (existingProject && existingProject.id) {
         // Update existing project
         const updateResult: any = await (SupabaseHelpers.supabase
-          .from('projects') as any)
+          .from(DB_TABLES.PROJECTS) as any)
           .update(payload)
           .eq('id', existingProject.id)
           .select('id')
@@ -694,7 +695,7 @@ export class SupabaseHelpers {
       } else {
         // Insert new project
         const insertResult: any = await (SupabaseHelpers.supabase
-          .from('projects') as any)
+          .from(DB_TABLES.PROJECTS) as any)
           .insert(payload)
           .select('id')
           .single();
@@ -718,7 +719,7 @@ export class SupabaseHelpers {
   static async saveProjectScenes(projectId: string, scriptProductionJSON: any): Promise<{ success: boolean; error?: any }> {
     try {
       await SupabaseHelpers.supabase
-        .from('project_scenes')
+        .from(DB_TABLES.PROJECT_SCENES)
         .delete()
         .eq('project_id', projectId);
 
@@ -741,7 +742,7 @@ export class SupabaseHelpers {
 
       if (sceneRows.length > 0) {
         const { error: insertScenesError } = await SupabaseHelpers.supabase
-          .from('project_scenes')
+          .from(DB_TABLES.PROJECT_SCENES)
           .insert(sceneRows as any);
 
         if (insertScenesError) {
@@ -770,7 +771,7 @@ export class SupabaseHelpers {
       }
 
       const { data: project, error: projError } = await SupabaseHelpers.supabase
-        .from('projects')
+        .from(DB_TABLES.PROJECTS)
         .select('id')
         .eq('job_id', args.jobId)
         .single();
@@ -795,7 +796,7 @@ export class SupabaseHelpers {
       console.log('saveFinalVideoRecord upsertPayload:', upsertPayload);
 
       const { data: finalData, error: upsertError } = await SupabaseHelpers.supabase
-        .from('generated_videos')
+        .from(DB_TABLES.GENERATED_VIDEOS)
         .upsert(upsertPayload as any)
         .select('id');
 
@@ -807,7 +808,7 @@ export class SupabaseHelpers {
       }
 
       await SupabaseHelpers.supabase
-        .from('projects')
+        .from(DB_TABLES.PROJECTS)
         .update({ status: 'rendered', updated_at: new Date().toISOString() } as unknown as never)
         .eq('id', projectId);
 
@@ -829,7 +830,7 @@ export class SupabaseHelpers {
   } = {}) {
     try {
       let query = SupabaseHelpers.supabase
-        .from('trending_topics')
+        .from(DB_TABLES.TRENDING_TOPICS)
         .select('*');
 
       if (filters.category) {
@@ -869,7 +870,7 @@ export class SupabaseHelpers {
     try {
       const supabase = SupabaseHelpers.supabase;
       let query = supabase
-        .from('video_clips')
+        .from(DB_TABLES.VIDEO_CLIPS)
         .select(`
             *,
             youtube_videos (
@@ -908,7 +909,7 @@ export class SupabaseHelpers {
   static async deleteVideoClip(clipId: string, userId: string) {
     try {
       const { error } = await SupabaseHelpers.supabase
-        .from('video_clips')
+        .from(DB_TABLES.VIDEO_CLIPS)
         .delete()
         .eq('id', clipId)
         .eq('user_id', userId); // Ensure user can only delete their own clips
@@ -937,7 +938,7 @@ export class SupabaseHelpers {
     updates: Database['public']['Tables']['video_clips']['Update']
   ) {
     try {
-      const { data, error } = await (SupabaseHelpers.supabase.from('video_clips') as any)
+      const { data, error } = await (SupabaseHelpers.supabase.from(DB_TABLES.VIDEO_CLIPS) as any)
         .update(updates as any)
         .eq('id', clipId)
         .eq('user_id', userId) // Ensure user can only update their own clips
@@ -971,7 +972,7 @@ export class SupabaseHelpers {
   }): Promise<{ data: any; error: any }> {
     try {
       const { data, error } = await SupabaseHelpers.supabase
-        .from('transcription_jobs')
+        .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .insert({
           user_id: jobData.user_id,
           job_id: jobData.job_id,
@@ -1014,7 +1015,7 @@ export class SupabaseHelpers {
     try {
       // Remove 'as any' from .update(). Cast to Record<string, unknown>, which is generally acceptable for update.
       const { data, error } = await SupabaseHelpers.supabase
-        .from('transcription_jobs')
+        .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .update(updates as never)
         .eq('job_id', jobId)
         .eq('user_id', userId)
@@ -1038,7 +1039,7 @@ export class SupabaseHelpers {
   static async getTranscriptionJob(jobId: string, userId: string): Promise<{ data: any; error: any }> {
     try {
       const { data, error } = await SupabaseHelpers.supabase
-        .from('transcription_jobs')
+        .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .select('*')
         .eq('job_id', jobId)
         .eq('user_id', userId)
@@ -1062,7 +1063,7 @@ export class SupabaseHelpers {
   static async getFailedTranscriptionJobs(userId: string): Promise<{ data: any; error: any }> {
     try {
       const { data, error } = await SupabaseHelpers.supabase
-        .from('transcription_jobs')
+        .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .select('*')
         .eq('user_id', userId)
         .eq('status', 'failed')
