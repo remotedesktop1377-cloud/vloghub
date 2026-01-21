@@ -14,6 +14,9 @@ interface AlertDialogProps {
     message: string;
     onClose: () => void;
     confirmLabel?: string;
+    onConfirm?: () => void;
+    showCancel?: boolean;
+    cancelLabel?: string;
 }
 
 const AlertDialog: React.FC<AlertDialogProps> = ({
@@ -22,6 +25,9 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
     message,
     onClose,
     confirmLabel = 'OK',
+    onConfirm,
+    showCancel = false,
+    cancelLabel = 'Cancel',
 }) => {
     return (
         <Dialog
@@ -40,8 +46,17 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
                 </Typography>
             </DialogContent>
             <DialogActions sx={{ p: 2, gap: 1 }}>
+                {showCancel && (
+                    <Button
+                        onClick={onClose}
+                        variant="outlined"
+                        sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
+                    >
+                        {cancelLabel}
+                    </Button>
+                )}
                 <Button
-                    onClick={onClose}
+                    onClick={onConfirm || onClose}
                     variant="contained"
                     sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                 >

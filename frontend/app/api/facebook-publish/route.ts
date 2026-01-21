@@ -219,18 +219,16 @@ export async function POST(request: NextRequest) {
 
     const { data: savedPublishedVideo, error: savePublishedError } = await supabaseAny
       .from(DB_TABLES.PUBLISHED_VIDEOS)
-      .upsert(publishedVideoData, {
-        onConflict: 'user_id,final_video_id,platform',
-      })
+      .insert(publishedVideoData)
       .select()
       .single();
 
-    if (savePublishedError) {
+    if (savePublishedError || !savedPublishedVideo) {
       console.log('Error saving published video to database:', savePublishedError);
-      // return NextResponse.json(
-      //   { error: 'Video uploaded to Facebook but failed to save published video record. Please contact support.' },
-      //   { status: 500 }
-      // );
+      return NextResponse.json(
+        { error: 'Video uploaded to Facebook but failed to save published video record. Please contact support.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

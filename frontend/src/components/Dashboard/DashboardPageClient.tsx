@@ -52,6 +52,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const [loadingPublishedVideos, setLoadingPublishedVideos] = useState(false);
     const [showAlertDialog, setShowAlertDialog] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
+    const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
+    const [confirmDeleteVideoId, setConfirmDeleteVideoId] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -91,11 +93,11 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     };
 
     const handleBackClick = () => {
-        if (typeof window !== 'undefined' && window.history.length > 1) {
-            router.back();
-        } else {
-            router.push(ROUTES_KEYS.TRENDING_TOPICS);
-        }
+        // if (typeof window !== 'undefined' && window.history.length > 1) {
+        //     router.back();
+        // } else {
+        router.replace(ROUTES_KEYS.TRENDING_TOPICS);
+        // }
     };
 
     const loadPublishedVideos = async () => {
@@ -119,15 +121,19 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     };
 
     const isVideoPublished = (videoId: string, platform?: string): PublishedVideo | null => {
-        const published = publishedVideos.find(pv => {
+        if (platform) {
+            const publishedForPlatform = publishedVideos.find(pv => {
+                const driveId = pv.google_drive_video_id || (pv as any).final_video_id;
+                return driveId === videoId && pv.platform === platform;
+            });
+            return publishedForPlatform || null;
+        }
+
+        const publishedAny = publishedVideos.find(pv => {
             const driveId = pv.google_drive_video_id || (pv as any).final_video_id;
             return driveId === videoId;
         });
-        if (!published) return null;
-        if (platform) {
-            return published.platform === platform ? published : null;
-        }
-        return published;
+        return publishedAny || null;
     };
 
     const handlePublishToYouTube = async (video: { id: string; name: string; webContentLink: string; jobId: string; thumbnailLink?: string | null }) => {
@@ -184,7 +190,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         rawMessage.toLowerCase().includes('authentication credentials');
 
                     const message = needsReconnect
-                        ? 'Your YouTube connection is no longer valid. Please reconnect your YouTube account from the Social Media section in your profile before publishing videos.'
+                        ? 'Your YouTube session is no longer valid. Please reconnect your YouTube account.'
                         : rawMessage;
 
                     toast.error(message);
@@ -280,11 +286,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             return;
         }
 
-        if (!confirm('Are you sure you want to delete this video from YouTube? This action cannot be undone.')) {
-            return;
-        }
-
-        await deleteVideoById(videoId);
+        setConfirmDeleteVideoId(videoId);
+        setShowConfirmDeleteDialog(true);
     };
 
     const deleteVideoById = async (videoId: string) => {
@@ -333,11 +336,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
         }
 
         const videoId = manualVideoId.trim();
-        if (!confirm(`Are you sure you want to delete video "${videoId}" from YouTube? This action cannot be undone.`)) {
-            return;
-        }
-
-        deleteVideoById(videoId);
+        setConfirmDeleteVideoId(videoId);
+        setShowConfirmDeleteDialog(true);
     };
 
     return (
@@ -354,7 +354,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         Back
                     </Button>
 
-                    <h1 className={styles.title}>Dashboard - Completed Job Videos</h1>
+                    <h1 className={styles.title}>Ready to publish videos</h1>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <button
                             className={styles.refreshButton}
@@ -420,27 +420,6 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                                     />
                                     {publishedVideo && (
                                         <>
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 8,
-                                                    right: 8,
-                                                    bgcolor: 'rgba(34, 197, 94, 0.9)',
-                                                    color: '#ffffff',
-                                                    px: 1.5,
-                                                    py: 0.5,
-                                                    borderRadius: 1,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 0.5,
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: 600,
-                                                    zIndex: 10,
-                                                }}
-                                            >
-                                                <CheckCircle sx={{ fontSize: 16 }} />
-                                                Published
-                                            </Box>
                                             {publishedVideoYouTube && publishedVideoYouTube.youtube_video_id && (
                                                 <IconButton
                                                     onClick={() => handleDeleteYouTubeVideo(publishedVideoYouTube.youtube_video_id!)}
@@ -472,53 +451,50 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                                     )}
                                 </div>
                                 <div className={styles.cardBody}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '30px' }}>
-                                        <div className={styles.jobId}>Job ID</div>
-                                        <Box sx={{ mt: 1, mb: 0.5, display: 'flex', gap: 1 }}>
-                                            {publishedVideoYouTube && publishedVideoYouTube.youtube_url && (
-                                                <Button
-                                                    variant="text"
-                                                    size="small"
-                                                    startIcon={<YouTube />}
-                                                    href={publishedVideoYouTube.youtube_url}
-                                                    target="_blank"
-                                                    sx={{
-                                                        color: '#FF0000',
-                                                        fontSize: '0.75rem',
-                                                        textTransform: 'none',
-                                                        p: 0,
-                                                        minWidth: 'auto',
-                                                        '&:hover': {
-                                                            bgcolor: 'rgba(255, 0, 0, 0.1)',
-                                                        },
-                                                    }}
-                                                >
-                                                    View on YouTube
-                                                </Button>
-                                            )}
-                                            {publishedVideoFacebook && publishedVideoFacebook.facebook_url && (
-                                                <Button
-                                                    variant="text"
-                                                    size="small"
-                                                    startIcon={<Facebook />}
-                                                    href={publishedVideoFacebook.facebook_url}
-                                                    target="_blank"
-                                                    sx={{
-                                                        color: '#1877F2',
-                                                        fontSize: '0.75rem',
-                                                        textTransform: 'none',
-                                                        p: 0,
-                                                        minWidth: 'auto',
-                                                        '&:hover': {
-                                                            bgcolor: 'rgba(24, 119, 242, 0.1)',
-                                                        },
-                                                    }}
-                                                >
-                                                    View on Facebook
-                                                </Button>
-                                            )}
-                                        </Box>
-                                    </div>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', }}>
+                                        {publishedVideoYouTube && publishedVideoYouTube.youtube_url && (
+                                            <Button
+                                                variant="text"
+                                                size="small"
+                                                startIcon={<YouTube />}
+                                                href={publishedVideoYouTube.youtube_url}
+                                                target="_blank"
+                                                sx={{
+                                                    color: '#FF0000',
+                                                    fontSize: '0.75rem',
+                                                    textTransform: 'none',
+                                                    p: 0,
+                                                    minWidth: 'auto',
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(255, 0, 0, 0.1)',
+                                                    },
+                                                }}
+                                            >
+                                                View on YouTube
+                                            </Button>
+                                        )}
+                                        {publishedVideoFacebook && publishedVideoFacebook.facebook_url && (
+                                            <Button
+                                                variant="text"
+                                                size="small"
+                                                startIcon={<Facebook />}
+                                                href={publishedVideoFacebook.facebook_url}
+                                                target="_blank"
+                                                sx={{
+                                                    color: '#1877F2',
+                                                    fontSize: '0.75rem',
+                                                    textTransform: 'none',
+                                                    p: 0,
+                                                    minWidth: 'auto',
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(24, 119, 242, 0.1)',
+                                                    },
+                                                }}
+                                            >
+                                                View on Facebook
+                                            </Button>
+                                        )}
+                                    </Box>
                                     <div className={styles.videoName}>{video.name}</div>
 
                                     <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
@@ -679,6 +655,25 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                 title="Video Publish Status"
                 message={alertMessage}
                 onClose={() => setShowAlertDialog(false)}
+            />
+            <AlertDialog
+                open={showConfirmDeleteDialog}
+                title="Delete YouTube Video"
+                message={confirmDeleteVideoId ? `Are you sure you want to delete video "${confirmDeleteVideoId}" from YouTube? This action cannot be undone.` : ''}
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+                showCancel
+                onClose={() => {
+                    setShowConfirmDeleteDialog(false);
+                    setConfirmDeleteVideoId(null);
+                }}
+                onConfirm={async () => {
+                    if (confirmDeleteVideoId) {
+                        await deleteVideoById(confirmDeleteVideoId);
+                    }
+                    setShowConfirmDeleteDialog(false);
+                    setConfirmDeleteVideoId(null);
+                }}
             />
         </div>
     );

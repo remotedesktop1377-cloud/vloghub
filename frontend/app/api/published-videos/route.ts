@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get published videos and filter out those with deleted YouTube videos
+    // Get published videos for this user
     const { data: publishedData, error: publishedError } = await supabaseAny
       .from(DB_TABLES.PUBLISHED_VIDEOS)
       .select('*')
@@ -67,33 +67,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const youtubePublishedVideos = publishedData?.filter((pv: any) => pv.platform === 'youtube') || [];
-    const youtubeVideoIds = youtubePublishedVideos.map((pv: any) => pv.external_video_id || pv.youtube_video_id).filter(Boolean);
-    
-    let deletedVideoIds = new Set();
-    if (youtubeVideoIds.length > 0) {
-      const { data: youtubeVideos, error: youtubeError } = await supabaseAny
-        .from(DB_TABLES.YOUTUBE_VIDEOS)
-        .select('video_id, deleted')
-        .eq('user_id', userUuid)
-        .in('video_id', youtubeVideoIds);
+    // Map generated_videos.final_video_id -> google_drive_video_id so dashboard can match by Drive file id
+    const finalIds = (publishedData || [])
+      .map((pv: any) => pv.final_video_id)
+      .filter((id: string | null) => !!id);
 
-      if (youtubeError) {
-        console.log('Error fetching YouTube videos:', youtubeError);
-      } else {
-        deletedVideoIds = new Set(
-          youtubeVideos?.filter((yv: any) => yv.deleted).map((yv: any) => yv.video_id) || []
-        );
+    let driveIdByFinalId: Record<string, string> = {};
+
+    if (finalIds.length > 0) {
+      const { data: generatedRows, error: generatedError } = await supabaseAny
+        .from(DB_TABLES.GENERATED_VIDEOS)
+        .select('id, google_drive_video_id')
+        .in('id', finalIds);
+
+      if (generatedError) {
+        console.log('Error fetching generated_videos for published videos:', generatedError);
+      } else if (Array.isArray(generatedRows)) {
+        driveIdByFinalId = generatedRows.reduce((acc: Record<string, string>, row: any) => {
+          if (row.id && row.google_drive_video_id) {
+            acc[row.id] = row.google_drive_video_id;
+          }
+          return acc;
+        }, {});
       }
     }
 
     const data = publishedData?.map((pv: any) => {
-      const isDeleted = pv.platform === 'youtube' && deletedVideoIds.has(pv.external_video_id || pv.youtube_video_id);
+      const isDeleted = pv.status && pv.status.toLowerCase() === 'deleted';
       if (isDeleted) return null;
+
+      const mappedDriveId =
+        (pv.final_video_id && driveIdByFinalId[pv.final_video_id]) ||
+        pv.google_drive_video_id ||
+        pv.final_video_id;
       
       return {
         ...pv,
-        google_drive_video_id: pv.google_drive_video_id || pv.final_video_id,
+        google_drive_video_id: mappedDriveId,
         youtube_video_id: pv.platform === 'youtube' ? (pv.external_video_id || pv.youtube_video_id) : undefined,
         facebook_video_id: pv.platform === 'facebook' ? (pv.external_video_id || pv.facebook_video_id) : undefined,
         youtube_title: pv.platform === 'youtube' ? (pv.title || pv.youtube_title) : undefined,

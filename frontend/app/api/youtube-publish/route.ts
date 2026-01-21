@@ -99,32 +99,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if video is already published using the final_video_id UUID
-    const { data: existingPublished, error: checkError } = await supabaseAny
-      .from(DB_TABLES.PUBLISHED_VIDEOS)
-      .select('external_video_id, external_url, title, published_at')
-      .eq('user_id', userId)
-      .eq('final_video_id', finalVideoId)
-      .eq('platform', 'youtube')
-      .maybeSingle();
+    // // Check if video is already published using the final_video_id UUID
+    // const { data: existingPublished, error: checkError } = await supabaseAny
+    //   .from(DB_TABLES.PUBLISHED_VIDEOS)
+    //   .select('external_video_id, external_url, title, published_at')
+    //   .eq('user_id', userId)
+    //   .eq('final_video_id', finalVideoId)
+    //   .eq('platform', 'youtube')
+    //   .maybeSingle();
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.log('Error checking published videos:', checkError);
-    }
+    // if (checkError && checkError.code !== 'PGRST116') {
+    //   console.log('Error checking published videos:', checkError);
+    // }
 
-    if (existingPublished) {
-      return NextResponse.json(
-        {
-          error: 'This video has already been published to YouTube',
-          alreadyPublished: true,
-          youtubeVideoId: existingPublished.external_video_id,
-          youtubeUrl: existingPublished.external_url,
-          youtubeTitle: existingPublished.title,
-          publishedAt: existingPublished.published_at,
-        },
-        { status: 400 }
-      );
-    }
+    // if (existingPublished) {
+    //   return NextResponse.json(
+    //     {
+    //       error: 'This video has already been published to YouTube',
+    //       alreadyPublished: true,
+    //       youtubeVideoId: existingPublished.external_video_id,
+    //       youtubeUrl: existingPublished.external_url,
+    //       youtubeTitle: existingPublished.title,
+    //       publishedAt: existingPublished.published_at,
+    //     },
+    //     { status: 400 }
+    //   );
+    // }
 
     const { data: socialAccountData, error: socialAccountError } = await supabase
       .from(DB_TABLES.SOCIAL_ACCOUNTS)
@@ -296,9 +296,7 @@ export async function POST(request: NextRequest) {
 
     const { data: savedPublishedVideo, error: savePublishedError } = await supabaseAny
       .from(DB_TABLES.PUBLISHED_VIDEOS)
-      .upsert(publishedVideoData, {
-        onConflict: 'user_id,final_video_id,platform',
-      })
+      .insert(publishedVideoData)
       .select()
       .single();
 
