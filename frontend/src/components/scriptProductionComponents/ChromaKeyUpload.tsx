@@ -26,6 +26,8 @@ import { BackgroundType } from '../../types/backgroundType';
 import { useAuth } from '@/context/AuthContext';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { ScriptData } from '@/types/scriptData';
+import { backendService } from '@/services/backendService';
+import AlertDialog from '@/dialogs/AlertDialog';
 
 interface ChromaKeyUploadProps {
     jobId: string;
@@ -47,58 +49,68 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [showBackgroundTypeDialog, setShowBackgroundTypeDialog] = useState(false);
     const [selectedBackgroundType, setSelectedBackgroundType] = useState<BackgroundType | null>(null);
+    const [showAlertDialog, setShowAlertDialog] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
 
     const [progress, setProgress] = useState(0);
 
-    const compressVideo = async (file: File): Promise<{compressedFile: File, compressedFilePath: string}> => {
+    const compressVideo = async (file: File): Promise<{ compressedFile: File, compressedFilePath: string }> => {
         try {
             setCurrentStep('compressing');
             setProgress(10);
-            
+
             const originalSizeMB = file.size / (1024 * 1024);
             console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB to target`);
-            
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('jobId', jobId);
-            
+
             const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}${API_ENDPOINTS.PYTHON_COMPRESS_VIDEO}`, {
                 method: 'POST',
                 body: formData,
             });
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(errorText || 'Video compression failed');
             }
-            
+
             const originalSize = parseInt(response.headers.get('X-Original-Size') || '0');
             const compressedSize = parseInt(response.headers.get('X-Compressed-Size') || '0');
             const compressionRatio = originalSize > 0 ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : '0';
-            
+
             console.log(`Video compressed: ${(compressedSize / (1024 * 1024)).toFixed(2)} MB (${compressionRatio}% reduction)`);
-            
+
             const blob = await response.blob();
             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '_compressed.mp4'), { type: 'video/mp4' });
             const compressedFilePath = URL.createObjectURL(blob);
 
             setProgress(25);
-            return {compressedFile: compressedFile, compressedFilePath: compressedFilePath};
+            return { compressedFile: compressedFile, compressedFilePath: compressedFilePath };
         } catch (error) {
             console.log('Video compression error:', error);
             toast.error('Video compression failed, uploading original file');
-            return {compressedFile: file, compressedFilePath: URL.createObjectURL(file)};
+            return { compressedFile: file, compressedFilePath: URL.createObjectURL(file) };
         }
     };
 
     const startVideoUploadingAndTranscribtion = async (status: string, file: File) => {
         try {
+            const isReachable = await backendService.isBackendReachable();
+            if (!isReachable) {
+                HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
+                setShowAlertDialog(true);
+                setAlertMessage('Server is not reachable. Please try again later.');
+                return;
+            }
+
             setUploading(true);
             setProgress(5);
             setCurrentStep('uploading');
 
-            const {compressedFile, compressedFilePath} = await compressVideo(file);
-            
+            const { compressedFile, compressedFilePath } = await compressVideo(file);
+
             setProgress(30);
             const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', compressedFile);
             if (!upload?.success || !upload?.fileId) {
@@ -111,7 +123,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 return;
             }
             const currentDriveUrl = upload?.webViewLink || '';
-            
+
             setProgress(40);
             setCurrentStep('videoConversion');
 
@@ -151,7 +163,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     }
                 }, 1000);
 
-                const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL }${API_ENDPOINTS.PYTHON_PROCESS}`, {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}${API_ENDPOINTS.PYTHON_PROCESS}`, {
                     method: 'POST',
                     body: formData,
                 });
@@ -166,7 +178,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 setProgress(100);
                 setCurrentStep('completed');
                 // console.log('transcriptionData: ', JSON.stringify(transcriptionData, null, 2));
-                
+
                 onUploadComplete(currentDriveUrl, transcriptionData, selectedBackgroundType as BackgroundType);
             } catch (pipelineError) {
                 console.log('Python pipeline error:', pipelineError);
@@ -288,9 +300,9 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                             pointerEvents: uploading ? 'none' : 'auto',
                         }}
                         onClick={() => handleBackgroundTypeSelected(BackgroundType.CHROMA)}
-                        // onClick={() => {
-                        //     setShowBackgroundTypeDialog(true);
-                        // }}
+                    // onClick={() => {
+                    //     setShowBackgroundTypeDialog(true);
+                    // }}
                     >
                         {progress > 0 ? (
                             <Box sx={{ textAlign: 'center' }}>
@@ -390,6 +402,13 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 open={showBackgroundTypeDialog}
                 onClose={() => setShowBackgroundTypeDialog(false)}
                 onSelectBackgroundType={handleBackgroundTypeSelected}
+            />
+
+            <AlertDialog
+                open={showAlertDialog}
+                title="Backend Unavailable"
+                message={alertMessage}
+                onClose={() => setShowAlertDialog(false)}
             />
         </>
     );
