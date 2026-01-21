@@ -86,31 +86,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data: existingPublished, error: checkError } = await supabaseAny
-      .from(DB_TABLES.PUBLISHED_VIDEOS)
-      .select('external_video_id, external_url, title, published_at')
-      .eq('user_id', userId)
-      .eq('final_video_id', finalVideoId)
-      .eq('platform', 'facebook')
-      .maybeSingle();
+    // const { data: existingPublished, error: checkError } = await supabaseAny
+    //   .from(DB_TABLES.PUBLISHED_VIDEOS)
+    //   .select('external_video_id, external_url, title, published_at')
+    //   .eq('user_id', userId)
+    //   .eq('final_video_id', finalVideoId)
+    //   .eq('platform', 'facebook')
+    //   .maybeSingle();
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.log('Error checking published videos:', checkError);
-    }
+    // if (checkError && checkError.code !== 'PGRST116') {
+    //   console.log('Error checking published videos:', checkError);
+    // }
 
-    if (existingPublished) {
-      return NextResponse.json(
-        {
-          error: 'This video has already been published to Facebook',
-          alreadyPublished: true,
-          facebookPostId: existingPublished.external_video_id,
-          facebookUrl: existingPublished.external_url,
-          facebookTitle: existingPublished.title,
-          publishedAt: existingPublished.published_at,
-        },
-        { status: 400 }
-      );
-    }
+    // if (existingPublished) {
+    //   return NextResponse.json(
+    //     {
+    //       error: 'This video has already been published to Facebook',
+    //       alreadyPublished: true,
+    //       facebookPostId: existingPublished.external_video_id,
+    //       facebookUrl: existingPublished.external_url,
+    //       facebookTitle: existingPublished.title,
+    //       publishedAt: existingPublished.published_at,
+    //     },
+    //     { status: 400 }
+    //   );
+    // }
 
     const { data: socialAccountData, error: socialAccountError } = await supabase
       .from(DB_TABLES.SOCIAL_ACCOUNTS)
