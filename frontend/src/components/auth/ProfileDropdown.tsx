@@ -16,10 +16,10 @@ import AppLoadingOverlay from '../ui/loadingView/AppLoadingOverlay';
 import { SocialKeys } from '@/types/backgroundType';
 import { getSupabase } from '@/utils/supabase';
 import { ROUTES_KEYS } from '@/data/constants';
-import SocialMediaPageClient from '../SocialMedia/SocialMediaPageClient';
 import { signOut } from 'next-auth/react';
 import { useSession } from 'next-auth/react';
 import router from 'next/router';
+import SocialMediaAccounts from '../SocialMedia/SocialMediaAccounts';
 
 export const ProfileDropdown = () => {
   const { data: session } = useSession();
@@ -311,9 +311,7 @@ export const ProfileDropdown = () => {
                 </div>
                 {/* Social Keys Section */}
                 <div className={styles.socialForm}>
-                  <Suspense fallback={null}>
-                    <SocialMediaPageClient />
-                  </Suspense>
+                  <SocialMediaAccounts />
                 </div>
               </div>
             </div>

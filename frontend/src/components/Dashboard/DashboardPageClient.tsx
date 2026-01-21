@@ -53,6 +53,12 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const [showAlertDialog, setShowAlertDialog] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
 
+    useEffect(() => {
+        if (user) {
+            loadPublishedVideos();
+        }
+    }, [user]);
+
     const flattenedVideos = useMemo(
         () =>
             (jobs || []).flatMap(job =>
@@ -69,7 +75,10 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             setRefreshing(true);
             const response = await fetch(`${API_ENDPOINTS.API_GOOGLE_DRIVE_OUTPUT_VIDEOS}?refresh=true`);
             if (!response.ok) {
-                throw new Error('Failed to refresh videos');
+                const data = await response.json();
+                setAlertMessage(data.error || 'Failed to refresh videos');
+                setShowAlertDialog(true);
+                return;
             }
             const data = await response.json();
             setJobs(data.jobs || []);
@@ -89,19 +98,16 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
         }
     };
 
-    useEffect(() => {
-        if (user) {
-            loadPublishedVideos();
-        }
-    }, [user]);
-
     const loadPublishedVideos = async () => {
         if (!user) return;
         setLoadingPublishedVideos(true);
         try {
             const response = await fetch(`/api/published-videos?userId=${user.id}`);
             if (!response.ok) {
-                throw new Error('Failed to fetch published videos');
+                const data = await response.json();
+                setAlertMessage(data.error || 'Failed to fetch published videos');
+                setShowAlertDialog(true);
+                return;
             }
             const data = await response.json();
             setPublishedVideos(data.videos || []);
@@ -171,14 +177,18 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     setShowAlertDialog(true);
                     console.log('Failed to publish video to YouTube', data.error);
                 }
+                return;
             }
 
             setAlertMessage(`Video published successfully to YouTube! ${data.videoUrl ? `Watch it here: ${data.videoUrl}` : ''}`);
             setShowAlertDialog(true);
             loadPublishedVideos();
         } catch (error: any) {
-            toast.error(error.message || 'Failed to publish video to YouTube');
-            console.log('Error publishing video:', error.message);
+            const message = error?.message || 'Failed to publish video to YouTube';
+            toast.error(message);
+            setAlertMessage(message);
+            setShowAlertDialog(true);
+            console.log('Error publishing video:', message);
         } finally {
             setPublishingVideoId(null);
         }
@@ -226,8 +236,12 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     }
                 } else {
                     toast.error(data.error || 'Failed to publish video to Facebook');
+                    setAlertMessage(data.error || 'Failed to publish video to Facebook');
+                    setShowAlertDialog(true);
                     console.log('Failed to publish video to Facebook', data.error);
                 }
+
+                return;
             }
 
             toast.success(`Video published successfully to Facebook! ${data.videoUrl ? `View it here: ${data.videoUrl}` : ''}`);
@@ -235,8 +249,11 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             setShowAlertDialog(true);
             loadPublishedVideos();
         } catch (error: any) {
-            toast.error(error.message || 'Failed to publish video to Facebook');
-            console.log('Error publishing video:', error.message);
+            const message = error?.message || 'Failed to publish video to Facebook';
+            toast.error(message);
+            setAlertMessage(message);
+            setShowAlertDialog(true);
+            console.log('Error publishing video:', message);
         } finally {
             setPublishingToFacebookVideoId(null);
         }
@@ -275,7 +292,9 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         router.push(ROUTES_KEYS.SOCIAL_MEDIA);
                     }, 2000);
                 } else {
-                    throw new Error(data.error || 'Failed to delete video from YouTube');
+                    toast.error(data.error || 'Failed to delete video from YouTube');
+                    setAlertMessage(data.error || 'Failed to delete video from YouTube');
+                    setShowAlertDialog(true);
                 }
                 return;
             }

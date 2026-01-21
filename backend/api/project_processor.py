@@ -188,7 +188,10 @@ def download_media(url_or_path: str, output_path: Path, is_video: bool) -> str:
                     time.sleep(0.2)
                     file_size = output_path.stat().st_size
                     if file_size == 0:
-                        raise ValueError(f"Re-downloaded image file is still empty: {output_path}")
+                        print(f"⚠️ Re-downloaded image file is still empty, skipping: {output_path}")
+                        if output_path.exists():
+                            output_path.unlink()
+                        return str(output_path)
                     
                     try:
                         test_img = Image.open(output_path)
@@ -196,7 +199,11 @@ def download_media(url_or_path: str, output_path: Path, is_video: bool) -> str:
                         test_img.close()
                         print(f"✅ Image file re-downloaded and validated: {output_path} (size: {file_size} bytes)")
                     except Exception as e2:
-                        raise ValueError(f"Re-downloaded image file is still invalid: {e2}. Original error: {e}")
+                        print(f"⚠️ Re-downloaded image file is still invalid, skipping: {output_path}")
+                        print(f"Re-download error: {e2}. Original error: {e}")
+                        if output_path.exists():
+                            output_path.unlink()
+                        return str(output_path)
             else:
                 print(f"✅ Non-image, non-video, non-audio file downloaded: {output_path} (size: {file_size} bytes, Content-Type: {content_type})")
         
@@ -891,6 +898,11 @@ def process_scene(
         for mapping in keyword_image_mappings:
             image_path = mapping["image_path"]
             is_video = mapping.get("is_video", False)
+
+            # Skip mappings where media could not be downloaded or validated
+            if not image_path or not Path(image_path).exists():
+                print(f"⚠️ Skipping keyword media with missing or invalid file: {image_path}")
+                continue
             timestamps = mapping.get("timestamps", [])
             
             # Use different duration based on media type

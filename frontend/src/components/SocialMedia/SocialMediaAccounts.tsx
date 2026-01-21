@@ -131,15 +131,15 @@ export default function SocialMediaAccounts() {
 
         if (success === 'youtube_connected') {
             toast.success('YouTube account connected successfully!');
-            router.replace(ROUTES_KEYS.SOCIAL_MEDIA);
+            router.replace(ROUTES_KEYS.DASHBOARD);
             loadAccounts();
         } else if (success === 'facebook_connected') {
             toast.success('Facebook account connected successfully!');
-            router.replace(ROUTES_KEYS.SOCIAL_MEDIA);
+            router.replace(ROUTES_KEYS.DASHBOARD);
             loadAccounts();
         } else if (error) {
             toast.error(`Connection failed: ${error}`);
-            router.replace(ROUTES_KEYS.SOCIAL_MEDIA);
+            router.replace(ROUTES_KEYS.DASHBOARD);
         }
     }, [searchParams, router]);
 
@@ -378,13 +378,6 @@ export default function SocialMediaAccounts() {
         }
     };
 
-    const formatNumber = (num?: number) => {
-        if (!num) return 'N/A';
-        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-        if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-        return num.toString();
-    };
-
     return (
         <Box>
             <Grid container spacing={3}>
@@ -472,58 +465,32 @@ export default function SocialMediaAccounts() {
                                                         : 'Just now'}
                                                 </Typography>
                                                 {account.platform === 'facebook' && account.pagesList && account.pagesList.length > 1 && (
-                                                    <FormControl fullWidth sx={{ mt: 2, mb: 1 }}>
-                                                        <InputLabel sx={{ color: TEXT.secondary }}>Select Page</InputLabel>
-                                                        <Select
-                                                            value={localSelectedPageId[account.platform] || account.selectedPageId || account.pagesList[0]?.pageId || ''}
-                                                            onChange={(e) => {
-                                                                const newPageId = e.target.value;
-                                                                handlePageChange(account.platform, newPageId, account.selectedPageId);
-                                                            }}
-                                                            disabled={updatingPage !== null}
-                                                            MenuProps={{
-                                                                disablePortal: false,
-                                                                PaperProps: {
-                                                                    style: {
-                                                                        maxHeight: 300,
-                                                                        zIndex: 9999,
-                                                                    },
-                                                                },
-                                                                anchorOrigin: {
-                                                                    vertical: 'bottom',
-                                                                    horizontal: 'left',
-                                                                },
-                                                                transformOrigin: {
-                                                                    vertical: 'top',
-                                                                    horizontal: 'left',
-                                                                },
-                                                                onClick: (e) => {
-                                                                    e.stopPropagation();
-                                                                },
-                                                            }}
-                                                            sx={{
-                                                                color: TEXT.primary,
-                                                                '& .MuiOutlinedInput-notchedOutline': {
-                                                                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                                                                },
-                                                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                                                    borderColor: 'rgba(255, 255, 255, 0.5)',
-                                                                },
-                                                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                                                    borderColor: config.color,
-                                                                },
-                                                                '& .MuiSvgIcon-root': {
-                                                                    color: TEXT.secondary,
-                                                                },
-                                                            }}
-                                                        >
-                                                            {account.pagesList.map((page) => (
-                                                                <MenuItem key={page.pageId} value={page.pageId}>
+                                                    <Box className={styles.pagesCapsules}>
+                                                        {account.pagesList.map((page) => {
+                                                            const effectiveSelectedId =
+                                                                localSelectedPageId[account.platform] || account.selectedPageId || account.pagesList[0]?.pageId || '';
+                                                            const isActive = effectiveSelectedId === page.pageId;
+
+                                                            return (
+                                                                <button
+                                                                    key={page.pageId}
+                                                                    type="button"
+                                                                    disabled={updatingPage !== null}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handlePageChange(account.platform, page.pageId, account.selectedPageId);
+                                                                    }}
+                                                                    className={
+                                                                        isActive
+                                                                            ? `${styles.pageCapsule} ${styles.pageCapsuleActive}`
+                                                                            : styles.pageCapsule
+                                                                    }
+                                                                >
                                                                     {page.pageName}
-                                                                </MenuItem>
-                                                            ))}
-                                                        </Select>
-                                                    </FormControl>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </Box>
                                                 )}
                                             </Box>
 

@@ -164,7 +164,7 @@ def upload_media_to_google_drive(
                         },
                         supportsAllDrives=True,
                     ).execute()
-                    logger.info(f"✅ Set public permissions for file: {file_id}")
+                    # logger.info(f"✅ Set public permissions for file: {file_id}")
                     break
                 except HttpError as e:
                     if perm_attempt < max_retries - 1:

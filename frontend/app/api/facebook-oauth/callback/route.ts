@@ -12,13 +12,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       return NextResponse.redirect(
-        new URL(`/social-media?error=${encodeURIComponent(errorReason || error)}`, request.url)
+        new URL(`/dashboard?error=${encodeURIComponent(errorReason || error)}`, request.url)
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL('/social-media?error=missing_code_or_state', request.url)
+        new URL('/dashboard?error=missing_code_or_state', request.url)
       );
     }
 
@@ -27,14 +27,14 @@ export async function GET(request: NextRequest) {
       decodedState = JSON.parse(Buffer.from(state, 'base64').toString());
     } catch (e) {
       return NextResponse.redirect(
-        new URL('/social-media?error=invalid_state', request.url)
+        new URL('/dashboard?error=invalid_state', request.url)
       );
     }
 
     const userId = decodedState.userId;
     if (!userId) {
       return NextResponse.redirect(
-        new URL('/social-media?error=missing_user_id', request.url)
+        new URL('/dashboard?error=missing_user_id', request.url)
       );
     }
 
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     if (!profileCheck?.data || profileCheck?.error) {
       console.log('Error: Profile not found for UUID:', profileUuid);
       return NextResponse.redirect(
-        new URL('/social-media?error=user_profile_not_found', request.url)
+        new URL('/dashboard?error=user_profile_not_found', request.url)
       );
     }
     
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
         console.log('Error saving social account:', socialAccountError);
         console.log('Social account data:', socialAccountData);
         return NextResponse.redirect(
-          new URL('/social-media?error=social_account_save_failed', request.url)
+          new URL('/dashboard?error=social_account_save_failed', request.url)
         );
       }
     } else {
@@ -153,12 +153,12 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      new URL('/social-media?success=facebook_connected', request.url)
+      new URL('/dashboard?success=facebook_connected', request.url)
     );
   } catch (error: any) {
     console.log('Facebook OAuth callback error:', error);
     return NextResponse.redirect(
-      new URL(`/social-media?error=${encodeURIComponent(error?.message || 'oauth_callback_failed')}`, request.url)
+      new URL(`/dashboard?error=${encodeURIComponent(error?.message || 'oauth_callback_failed')}`, request.url)
     );
   }
 }

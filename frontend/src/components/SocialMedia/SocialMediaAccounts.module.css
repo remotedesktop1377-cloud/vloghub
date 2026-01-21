@@ -35,3 +35,32 @@
   font-weight: 600;
 }
 
+.pagesCapsules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pageCapsule {
+  border-radius: 9999px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e5e7eb;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageCapsule:hover {
+  border-color: rgba(248, 250, 252, 0.7);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.pageCapsuleActive {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.15);
+  color: #bbf7d0;
+}
+

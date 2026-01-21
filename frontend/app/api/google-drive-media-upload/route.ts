@@ -149,7 +149,7 @@ async function handleSingleUpload(
                 },
                 supportsAllDrives: true,
             });
-            console.log(`✅ Set public permissions for file: ${uploaded.data.id}`, permissionResult.data);
+            // console.log(`✅ Set public permissions for file: ${uploaded.data.id}`, permissionResult.data);
             
             await drive.files.update({
                 fileId: uploaded.data.id,
@@ -263,7 +263,7 @@ async function handleChunkUpload(params: {
                 console.log('Permission error details:', JSON.stringify(permJson, null, 2));
             } else {
                 const permData = await permResponse.json().catch(() => ({}));
-                console.log(`✅ Set public permissions for file: ${payloadJson.id}`, permData);
+                // console.log(`✅ Set public permissions for file: ${payloadJson.id}`, permData);
             }
         } catch (e: any) {
             console.log('❌ Error setting Drive permissions:', e?.message || e);
