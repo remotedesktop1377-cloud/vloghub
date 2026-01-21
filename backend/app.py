@@ -106,6 +106,7 @@ def upload_video_to_drive(
 def _save_upload(file: UploadFile, job_id: str) -> Path:
     safe_name = file.filename or "upload.mp4"
     destination = TEMP_DIR / f"{job_id}_{safe_name}"
+    destination.parent.mkdir(parents=True, exist_ok=True)
     with destination.open("wb") as output, file.file as input_stream:
         shutil.copyfileobj(input_stream, output)
     return destination
