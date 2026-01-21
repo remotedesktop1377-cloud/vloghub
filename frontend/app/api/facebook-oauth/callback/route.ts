@@ -97,23 +97,6 @@ export async function GET(request: NextRequest) {
         selectedPageInfo = pagesList[0];
       }
     }
-
-    const supabase: any = getSupabase();
-    
-    const profileUuid = userId;
-    
-    const profileCheck: any = await supabase
-      .from(DB_TABLES.PROFILES)
-      .select('id')
-      .eq('id', profileUuid)
-      .maybeSingle();
-    
-    if (!profileCheck?.data || profileCheck?.error) {
-      console.log('Error: Profile not found for UUID:', profileUuid);
-      return NextResponse.redirect(
-        new URL(`${ROUTES_KEYS.DASHBOARD}?error=user_profile_not_found`, request.url)
-      );
-    }
     
     const tokenData = {
       access_token: selectedPageInfo?.accessToken || access_token,
@@ -128,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     if (selectedPageInfo?.pageId) {
       const socialAccountData = {
-        user_id: profileUuid,
+        user_id: userId,
         platform: 'facebook',
         channel_id: selectedPageInfo.pageId,
         channel_name: selectedPageInfo.pageName || userInfo?.name || null,
@@ -137,22 +120,36 @@ export async function GET(request: NextRequest) {
         updated_at: new Date().toISOString(),
       };
 
-      const { error: socialAccountError } = await supabase
+      const supabase: any = getSupabase();
+
+      const { data: existingAccount, error: checkError } = await supabase
         .from(DB_TABLES.SOCIAL_ACCOUNTS)
-        .upsert(socialAccountData, {
-          onConflict: 'user_id,platform',
-        })
-        .select();
+        .select('id')
+        .eq('user_id', userId)
+        .eq('platform', 'facebook')
+        .maybeSingle();
+
+      let socialAccountError = null;
+
+      if (existingAccount && !checkError) {
+        const { error: updateError } = await supabase
+          .from(DB_TABLES.SOCIAL_ACCOUNTS)
+          .update(socialAccountData)
+          .eq('id', existingAccount.id);
+        socialAccountError = updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from(DB_TABLES.SOCIAL_ACCOUNTS)
+          .insert(socialAccountData);
+        socialAccountError = insertError;
+      }
 
       if (socialAccountError) {
         console.log('Error saving social account:', socialAccountError);
         console.log('Social account data:', socialAccountData);
-        return NextResponse.redirect(
-          new URL('${ROUTES_KEYS.DASHBOARD}?error=social_account_save_failed', request.url)
-        );
       }
     } else {
-      console.warn('No page info available, skipping social_accounts insert');
+      console.warn('No channel info available, skipping social_accounts insert');
     }
 
     return NextResponse.redirect(
