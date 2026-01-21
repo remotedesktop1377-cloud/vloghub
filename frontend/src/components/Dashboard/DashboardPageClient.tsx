@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import type { OutputVideosJob } from '@/services/dashboardService';
@@ -16,7 +16,7 @@ import { ProfileDropdown } from '../auth/ProfileDropdown';
 import AlertDialog from '@/dialogs/AlertDialog';
 
 interface DashboardPageClientProps {
-    jobs: OutputVideosJob[];
+    jobs?: OutputVideosJob[];
 }
 
 interface PublishedVideo {
@@ -41,7 +41,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const router = useRouter();
     const { data: session } = useSession();
     const user = session?.user as any;
-    const [jobs, setJobs] = useState<OutputVideosJob[]>(initialJobs);
+    const [jobs, setJobs] = useState<OutputVideosJob[]>(initialJobs || []);
+    const [loadingJobs, setLoadingJobs] = useState(!initialJobs || initialJobs.length === 0);
     const [refreshing, setRefreshing] = useState(false);
     const [publishingVideoId, setPublishingVideoId] = useState<string | null>(null);
     const [publishingToFacebookVideoId, setPublishingToFacebookVideoId] = useState<string | null>(null);
@@ -49,17 +50,44 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const [showManualDeleteDialog, setShowManualDeleteDialog] = useState(false);
     const [manualVideoId, setManualVideoId] = useState('');
     const [publishedVideos, setPublishedVideos] = useState<PublishedVideo[]>([]);
-    const [loadingPublishedVideos, setLoadingPublishedVideos] = useState(false);
     const [showAlertDialog, setShowAlertDialog] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
     const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
     const [confirmDeleteVideoId, setConfirmDeleteVideoId] = useState<string | null>(null);
+    const hasLoadedJobsRef = useRef(false);
+    const hasLoadedPublishedVideosRef = useRef(false);
 
     useEffect(() => {
-        if (user) {
+        if (user && !hasLoadedJobsRef.current && loadingJobs) {
+            hasLoadedJobsRef.current = true;
+            loadJobs();
+        }
+        if (user && !hasLoadedPublishedVideosRef.current) {
+            hasLoadedPublishedVideosRef.current = true;
             loadPublishedVideos();
         }
     }, [user]);
+
+    const loadJobs = async () => {
+        try {
+            setLoadingJobs(true);
+            const response = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_OUTPUT_VIDEOS);
+            if (!response.ok) {
+                const data = await response.json();
+                setAlertMessage(data.error || 'Failed to load videos');
+                setShowAlertDialog(true);
+                return;
+            }
+            const data = await response.json();
+            setJobs(data.jobs || []);
+        } catch (e: any) {
+            HelperFunctions.showError(e?.message || 'Failed to load videos');
+            setAlertMessage(e?.message || 'Failed to load videos');
+            setShowAlertDialog(true);
+        } finally {
+            setLoadingJobs(false);
+        }
+    };
 
     const flattenedVideos = useMemo(
         () =>
@@ -101,8 +129,6 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     };
 
     const loadPublishedVideos = async () => {
-        if (!user) return;
-        setLoadingPublishedVideos(true);
         try {
             const response = await fetch(`${API_ENDPOINTS.PUBLISHED_VIDEOS}?userId=${user.id}`);
             if (!response.ok) {
@@ -115,10 +141,12 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             setPublishedVideos(data.videos || []);
         } catch (error: any) {
             console.log('Error loading published videos:', error);
-        } finally {
-            setLoadingPublishedVideos(false);
         }
     };
+
+    if (loadingJobs) {
+        return <LoadingOverlay title="Loading videos..." desc="Fetching videos from Google Drive..." />;
+    }
 
     const isVideoPublished = (videoId: string, platform?: string): PublishedVideo | null => {
         if (platform) {
@@ -190,7 +218,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         rawMessage.toLowerCase().includes('authentication credentials');
 
                     const message = needsReconnect
-                        ? 'Your YouTube session is no longer valid. Please reconnect your YouTube account.'
+                        ? 'YouTube session is no longer valid. Please reconnect your YouTube account.'
                         : rawMessage;
 
                     toast.error(message);
@@ -669,9 +697,9 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                 }}
                 onConfirm={async () => {
                     if (confirmDeleteVideoId) {
+                        setShowConfirmDeleteDialog(false);
                         await deleteVideoById(confirmDeleteVideoId);
                     }
-                    setShowConfirmDeleteDialog(false);
                     setConfirmDeleteVideoId(null);
                 }}
             />

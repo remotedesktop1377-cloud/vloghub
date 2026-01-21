@@ -134,29 +134,30 @@ export async function DELETE(request: NextRequest) {
     // Mark video as deleted in youtube_videos table (soft delete)
     const supabaseAny: any = supabase;
     const { error: updateVideoError } = await supabaseAny
-      .from(DB_TABLES.YOUTUBE_VIDEOS)
+      .from(DB_TABLES.PUBLISHED_VIDEOS)
       .update({
-        deleted: true,
+        status: 'deleted',
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
-      .eq('video_id', videoId);
+      .eq('external_video_id', videoId)
+      .eq('platform', 'youtube');
 
     if (updateVideoError) {
       console.log('Error updating youtube_videos table:', updateVideoError);
     }
 
-    // Remove entry from published_videos table (hard delete)
-    const { error: deletePublishedError } = await supabase
-      .from(DB_TABLES.PUBLISHED_VIDEOS)
-      .delete()
-      .eq('user_id', userId)
-      .eq('external_video_id', videoId)
-      .eq('platform', 'youtube');
+    // // Remove entry from published_videos table (hard delete)
+    // const { error: deletePublishedError } = await supabase
+    //   .from(DB_TABLES.PUBLISHED_VIDEOS)
+    //   .delete()
+    //   .eq('user_id', userId)
+    //   .eq('external_video_id', videoId)
+    //   .eq('platform', 'youtube');
 
-    if (deletePublishedError) {
-      console.log('Error deleting from published_videos table:', deletePublishedError);
-    }
+    // if (deletePublishedError) {
+    //   console.log('Error deleting from published_videos table:', deletePublishedError);
+    // }
 
     return NextResponse.json({
       success: true,
