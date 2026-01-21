@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '@/config/apiEndpoints';
 export const FACEBOOK_OAUTH_CONFIG = {
   APP_ID: process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || '',
   APP_SECRET: process.env.FACEBOOK_APP_SECRET || '',
-  REDIRECT_URI: process.env.NEXT_PUBLIC_FACEBOOK_REDIRECT_URI || `${typeof window !== 'undefined' ? window.location.origin : ''}${API_ENDPOINTS.FACEBOOK_OAUTH_CALLBACK}`,
+  REDIRECT_URI: `${typeof window !== 'undefined' ? window.location.origin : ''}${API_ENDPOINTS.FACEBOOK_OAUTH_CALLBACK}`,
   SCOPES: [
     'pages_manage_posts',
     'pages_read_engagement',

@@ -3,6 +3,7 @@ import { FACEBOOK_OAUTH_CONFIG } from '@/config/facebookOAuthConfig';
 import { getSupabase } from '@/utils/supabase';
 import { DB_TABLES } from '@/config/DbTables';
 import { ROUTES_KEYS } from '@/data/constants';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const requestUrl = new URL(request.url);
-    const redirectUri = process.env.NEXT_PUBLIC_FACEBOOK_REDIRECT_URI || `${requestUrl.origin}/api/facebook-oauth/callback`;
+    const redirectUri = `${requestUrl.origin}${API_ENDPOINTS.FACEBOOK_OAUTH_CALLBACK}`;
     
     const tokenUrl = new URL(FACEBOOK_OAUTH_CONFIG.TOKEN_URL);
     tokenUrl.searchParams.set('client_id', FACEBOOK_OAUTH_CONFIG.APP_ID);

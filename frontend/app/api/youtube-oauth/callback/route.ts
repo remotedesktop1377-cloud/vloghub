@@ -3,6 +3,8 @@ import { YOUTUBE_OAUTH_CONFIG } from '@/config/youtubeOAuthConfig';
 import { getSupabase } from '@/utils/supabase';
 import { DB_TABLES } from '@/config/DbTables';
 import { ROUTES_KEYS } from '@/data/constants';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -38,6 +40,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const requestUrl = new URL(request.url);
+    const redirectUri = `${requestUrl.origin}${API_ENDPOINTS.YOUTUBE_OAUTH_CALLBACK}`;
+    const clientId = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID;
+    const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      console.error('YouTube OAuth: Missing CLIENT_ID or CLIENT_SECRET');
+      return NextResponse.redirect(
+        new URL(`${ROUTES_KEYS.DASHBOARD}?error=oauth_config_missing`, request.url)
+      );
+    }
+
     const tokenResponse = await fetch(YOUTUBE_OAUTH_CONFIG.TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -45,9 +59,9 @@ export async function GET(request: NextRequest) {
       },
       body: new URLSearchParams({
         code,
-        client_id: YOUTUBE_OAUTH_CONFIG.CLIENT_ID,
-        client_secret: YOUTUBE_OAUTH_CONFIG.CLIENT_SECRET,
-        redirect_uri: YOUTUBE_OAUTH_CONFIG.REDIRECT_URI,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
     });
