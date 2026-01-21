@@ -1480,7 +1480,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                             onPickerSceneDataIndex(index);
                                             onPickerLoading(true);
                                             const SceneData = scenesData[index];
-                                            const res = await fetch('/api/get-narration-variations', {
+                                            const res = await fetch(API_ENDPOINTS.GET_NARRATION_VARIATIONS, {
                                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                                               body: JSON.stringify({
                                                 narration: sceneData.narration,

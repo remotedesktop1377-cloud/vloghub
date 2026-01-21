@@ -997,12 +997,6 @@ export class HelperFunctions {
     }
   }
 
-  /**
-   * Normalize various Google Drive URLs to use our authenticated proxy endpoint.
-   * - Converts any Google Drive URL format to /api/google-drive-media?id=FILE_ID
-   * - Uses authenticated proxy to access files even if not publicly shared
-   * - Handles URLs like: https://drive.google.com/file/d/FILE_ID/view?usp=drivesdk
-   */
   static normalizeGoogleDriveUrl(inputUrl: string): string {
     try {
       if (!inputUrl || typeof inputUrl !== 'string') return inputUrl;
@@ -1010,10 +1004,8 @@ export class HelperFunctions {
       // Extract file ID from the URL
       const fileId = HelperFunctions.extractGoogleDriveFileId(inputUrl);
 
-      // If we found a file ID, use our authenticated proxy endpoint
       if (fileId) {
-        // console.log('🟡 Normalized Google Drive URL:', `/api/google-drive-media?id=${encodeURIComponent(fileId)}`);
-        return `/api/google-drive-media?id=${encodeURIComponent(fileId)}`;
+        return `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA_BASE}?id=${encodeURIComponent(fileId)}`;
       }
 
       // If it's not a Google Drive URL or we couldn't extract the ID, return as-is
@@ -1112,9 +1104,8 @@ export class HelperFunctions {
     const isAbsolutePath = /^[A-Za-z]:[\\/]/.test(previewClip) || previewClip.startsWith('/');
 
     if (isAbsolutePath) {
-      // Local file path - use serve-clip endpoint
       const encodedPath = encodeURIComponent(previewClip);
-      return `/api/serve-clip?path=${encodedPath}`;
+      return `${API_ENDPOINTS.SERVE_CLIP_BASE}?path=${encodedPath}`;
     } else {
       // Assume it's a Google Drive URL or relative path
       return HelperFunctions.normalizeGoogleDriveUrl(previewClip);

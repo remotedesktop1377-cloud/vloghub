@@ -1,4 +1,5 @@
-// Client-side PDF helper using pdf.js
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
+
 export const PdfService = {
   async loadPdfJs(): Promise<any> {
     if (typeof window === 'undefined') throw new Error('PDF rendering only available in browser');
@@ -41,7 +42,7 @@ export const PdfService = {
     throw lastErr || new Error('Failed to load pdf.js');
   },
   async fetchPdfArrayBuffer(exportUrl: string): Promise<ArrayBuffer> {
-    const res = await fetch(`/api/gamma-pdf?url=${encodeURIComponent(exportUrl)}`, { cache: 'no-store' });
+    const res = await fetch(`${API_ENDPOINTS.GAMMA_PDF}?url=${encodeURIComponent(exportUrl)}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Failed to fetch PDF');
     return await res.arrayBuffer();
   },

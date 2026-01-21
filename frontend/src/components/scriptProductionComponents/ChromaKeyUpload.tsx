@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import BackgroundTypeDialog from '../../dialogs/BackgroundTypeDialog';
 import { BackgroundType } from '../../types/backgroundType';
 import { useAuth } from '@/context/AuthContext';
@@ -61,7 +62,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             formData.append('file', file);
             formData.append('jobId', jobId);
             
-            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}/api/compress-video`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}${API_ENDPOINTS.PYTHON_COMPRESS_VIDEO}`, {
                 method: 'POST',
                 body: formData,
             });
@@ -150,7 +151,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     }
                 }, 1000);
 
-                const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL }/api/process`, {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL }${API_ENDPOINTS.PYTHON_PROCESS}`, {
                     method: 'POST',
                     body: formData,
                 });

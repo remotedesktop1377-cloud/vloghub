@@ -29,6 +29,29 @@ export const API_ENDPOINTS = {
   ENHANCE_TITLE_FOR_THUMBNAIL: '/api/enhance-title-for-thumbnail',
   GENERATE_THUMBNAIL: '/api/generate-thumbnail',
 
+  YOUTUBE_PUBLISH: '/api/youtube-publish',
+  FACEBOOK_PUBLISH: '/api/facebook-publish',
+  FACEBOOK_SELECT_PAGE: '/api/facebook-select-page',
+  GET_NARRATION_VARIATIONS: '/api/get-narration-variations',
+
+  PUBLISHED_VIDEOS: '/api/published-videos',
+  YOUTUBE_DELETE: '/api/youtube-delete',
+
+  YOUTUBE_OAUTH_INITIATE: '/api/youtube-oauth/initiate',
+  FACEBOOK_OAUTH_INITIATE: '/api/facebook-oauth/initiate',
+  YOUTUBE_OAUTH_CALLBACK: '/api/youtube-oauth/callback',
+  FACEBOOK_OAUTH_CALLBACK: '/api/facebook-oauth/callback',
+
+  GOOGLE_DRIVE_MEDIA_BASE: '/api/google-drive-media',
+  SERVE_CLIP_BASE: '/api/serve-clip',
+  PROGRESS: '/api/progress',
+
+  GAMMA_PDF: '/api/gamma-pdf',
+
+  PYTHON_COMPRESS_VIDEO: '/api/compress-video',
+  PYTHON_PROCESS: '/api/process',
+  PYTHON_PROCESS_PROJECT_FROM_JSON: '/api/process-project-from-json',
+
 } as const;
 
 export type ApiEndpoint = typeof API_ENDPOINTS[keyof typeof API_ENDPOINTS]; 

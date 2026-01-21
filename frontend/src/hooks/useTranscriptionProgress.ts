@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ProgressUpdate, ProgressStage } from '@/utils/progressTracker';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 
 interface UseTranscriptionProgressOptions {
     jobId: string | null;
@@ -53,8 +54,7 @@ export function useTranscriptionProgress({ jobId, onComplete, onError }: UseTran
             isLoading: true,
         });
 
-        // Create SSE connection
-        const eventSource = new EventSource(`/api/progress?jobId=${jobId}`);
+        const eventSource = new EventSource(`${API_ENDPOINTS.PROGRESS}?jobId=${jobId}`);
         eventSourceRef.current = eventSource;
 
         eventSource.onmessage = (event) => {

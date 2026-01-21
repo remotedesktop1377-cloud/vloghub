@@ -35,6 +35,7 @@ import { getSupabase } from '../../utils/supabase';
 import { toast } from 'react-toastify';
 import styles from './SocialMediaAccounts.module.css';
 import { ROUTES_KEYS } from '@/data/constants';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 
 interface SocialAccount {
     id: string;
@@ -240,7 +241,7 @@ export default function SocialMediaAccounts() {
             setConnectingPlatform('youtube');
             setLoading(true);
             try {
-                const response = await fetch(`/api/youtube-oauth/initiate?userId=${user.id}`);
+                const response = await fetch(`${API_ENDPOINTS.YOUTUBE_OAUTH_INITIATE}?userId=${user.id}`);
                 const data = await response.json();
                 console.log('data: ', data);
 
@@ -258,7 +259,7 @@ export default function SocialMediaAccounts() {
             setConnectingPlatform('facebook');
             setLoading(true);
             try {
-                const response = await fetch(`/api/facebook-oauth/initiate?userId=${user.id}`);
+                const response = await fetch(`${API_ENDPOINTS.FACEBOOK_OAUTH_INITIATE}?userId=${user.id}`);
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -342,7 +343,7 @@ export default function SocialMediaAccounts() {
         setLocalSelectedPageId(prev => ({ ...prev, [platform]: pageId }));
         setUpdatingPage(pageId);
         try {
-            const response = await fetch('/api/facebook-select-page', {
+            const response = await fetch(API_ENDPOINTS.FACEBOOK_SELECT_PAGE, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -468,7 +469,7 @@ export default function SocialMediaAccounts() {
                                                     <Box className={styles.pagesCapsules}>
                                                         {account.pagesList.map((page) => {
                                                             const effectiveSelectedId =
-                                                                localSelectedPageId[account.platform] || account.selectedPageId || account.pagesList[0]?.pageId || '';
+                                                                localSelectedPageId[account.platform] || account.selectedPageId || account.pagesList?.[0]?.pageId || '';
                                                             const isActive = effectiveSelectedId === page.pageId;
 
                                                             return (

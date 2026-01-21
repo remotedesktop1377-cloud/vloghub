@@ -87,7 +87,7 @@ export const GoogleDriveServiceFunctions = {
         try {
             // Encode the path for URL
             const encodedPath = encodeURIComponent(clipPath);
-            const response = await fetch(`/api/serve-clip?path=${encodedPath}`);
+            const response = await fetch(`${API_ENDPOINTS.SERVE_CLIP_BASE}?path=${encodedPath}`);
             
             if (!response.ok) {
                 console.log('Failed to fetch clip:', response.statusText);

@@ -380,9 +380,8 @@ const ProjectSettingsDialog: React.FC<ProjectSettingsDialogProps> = ({
             return HelperFunctions.normalizeGoogleDriveUrl(background.webContentLink);
         }
 
-        // If we have an ID, use the proxy endpoint directly
         if (background.id) {
-            return `/api/google-drive-media?id=${encodeURIComponent(background.id)}`;
+            return `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA_BASE}?id=${encodeURIComponent(background.id)}`;
         }
 
         return '';

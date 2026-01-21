@@ -1,4 +1,5 @@
 import { HttpService } from './httpService';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 
 const getBackendBaseUrl = () => {
   const url = process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL;
@@ -28,7 +29,7 @@ export const VideoRenderService = {
   async processProjectJson(scriptProductionJSON: any): Promise<ProcessProjectResponse> {
     const baseUrl = getBackendBaseUrl();
     return HttpService.post<ProcessProjectResponse>(
-      `${baseUrl}/api/process-project-from-json`,
+      `${baseUrl}${API_ENDPOINTS.PYTHON_PROCESS_PROJECT_FROM_JSON}`,
       scriptProductionJSON,
     );
   },

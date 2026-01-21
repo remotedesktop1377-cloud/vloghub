@@ -102,7 +102,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
         if (!user) return;
         setLoadingPublishedVideos(true);
         try {
-            const response = await fetch(`/api/published-videos?userId=${user.id}`);
+            const response = await fetch(`${API_ENDPOINTS.PUBLISHED_VIDEOS}?userId=${user.id}`);
             if (!response.ok) {
                 const data = await response.json();
                 setAlertMessage(data.error || 'Failed to fetch published videos');
@@ -146,7 +146,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
 
         setPublishingVideoId(video.id);
         try {
-            const response = await fetch('/api/youtube-publish', {
+            const response = await fetch(API_ENDPOINTS.YOUTUBE_PUBLISH, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -210,7 +210,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
 
         setPublishingToFacebookVideoId(video.id);
         try {
-            const response = await fetch('/api/facebook-publish', {
+            const response = await fetch(API_ENDPOINTS.FACEBOOK_PUBLISH, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -277,7 +277,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
 
         setDeletingVideoId(videoId);
         try {
-            const response = await fetch(`/api/youtube-delete?videoId=${videoId}&userId=${user.id}`, {
+            const response = await fetch(`${API_ENDPOINTS.YOUTUBE_DELETE}?videoId=${videoId}&userId=${user.id}`, {
                 method: 'DELETE',
             });
 
