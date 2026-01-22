@@ -316,8 +316,8 @@ const ScriptProductionClient = () => {
         if (scriptData) {
             const updatedScriptData = {
                 ...scriptData,
-                narrator_chroma_key_link: undefined,
-                transcription: undefined,
+                narrator_chroma_key_link: '',
+                transcription: '',
                 scenesData: [],
                 status: SCRIPT_STATUS.APPROVED,
                 updated_at: new Date().toISOString(),
