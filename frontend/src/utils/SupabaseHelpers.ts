@@ -13,6 +13,7 @@ import { toast, ToastOptions } from 'react-toastify';
 import { User } from '@supabase/supabase-js';
 import { ScriptData } from '@/types/scriptData';
 import { SceneData } from '@/types/sceneData';
+import { RENDER_STATUS } from '@/data/constants';
 // import removed: TrendingTopic no longer used in helper insert signature
 
 export class SupabaseHelpers {
@@ -789,7 +790,7 @@ export class SupabaseHelpers {
         google_drive_video_name: args.googleDriveVideoName || null,
         google_drive_video_url: args.googleDriveVideoUrl || null,
         google_drive_thumbnail_url: args.googleDriveThumbnailUrl || null,
-        render_status: 'success',
+        render_status: RENDER_STATUS.SUCCESS,
         updated_at: new Date().toISOString(),
       };
 
@@ -809,7 +810,7 @@ export class SupabaseHelpers {
 
       await SupabaseHelpers.supabase
         .from(DB_TABLES.PROJECTS)
-        .update({ status: 'rendered', updated_at: new Date().toISOString() } as unknown as never)
+        .update({ status: RENDER_STATUS.RENDERED, updated_at: new Date().toISOString() } as unknown as never)
         .eq('id', projectId);
 
       return { success: true };

@@ -152,13 +152,13 @@ class ProfileServiceImpl implements ProfileService {
             // }
 
             // Save to local secure storage for immediate access
-            console.log('Saving profile settings to secure storage:', {
-                projectSettings: projectSettings,
-                socialKeys: socialKeys,
-                gammaTextMode: gammaTextMode,
-                gammaFormat: gammaFormat,
-                gammaThemeName: gammaThemeName
-            });
+            // console.log('Saving profile settings to secure storage:', {
+            //     projectSettings: projectSettings,
+            //     socialKeys: socialKeys,
+            //     gammaTextMode: gammaTextMode,
+            //     gammaFormat: gammaFormat,
+            //     gammaThemeName: gammaThemeName
+            // });
             const key = `profileSettings_${userId}`;
             const currentSettings = secure.j[key as any].get() || {};
             secure.j[key as any].set({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/utils/supabase';
 import { DB_TABLES } from '@/config/DbTables';
+import { RENDER_STATUS } from '@/data/constants';
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
           google_drive_video_id: videoId,
           google_drive_video_name: videoName || null,
           google_drive_video_url: videoUrl || null,
-          render_status: 'success',
+          render_status: RENDER_STATUS.SUCCESS,
           updated_at: new Date().toISOString(),
         };
         

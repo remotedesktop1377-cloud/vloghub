@@ -7,13 +7,15 @@ import type { OutputVideosJob } from '@/services/dashboardService';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import styles from './DashboardPageClient.module.css';
 import LoadingOverlay from '../ui/LoadingOverlay';
-import { ROUTES_KEYS } from '@/data/constants';
+import { ROUTES_KEYS, RENDER_STATUS } from '@/data/constants';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
-import { ArrowBack, Refresh as RefreshIcon, Publish as PublishIcon, Delete as DeleteIcon, YouTube, Facebook, Add as AddIcon, CheckCircle } from '@mui/icons-material';
+import { ArrowBack, Refresh as RefreshIcon, Publish as PublishIcon, Delete as DeleteIcon, Download as DownloadIcon, YouTube, Facebook, Add as AddIcon, CheckCircle } from '@mui/icons-material';
 import { Button, CircularProgress, Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton } from '@mui/material';
 import { toast } from 'react-toastify';
 import { ProfileDropdown } from '../auth/ProfileDropdown';
 import AlertDialog from '@/dialogs/AlertDialog';
+import { getSupabase } from '@/utils/supabase';
+import { DB_TABLES } from '@/config/DbTables';
 
 interface DashboardPageClientProps {
     jobs?: OutputVideosJob[];
@@ -54,6 +56,9 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const [alertMessage, setAlertMessage] = useState('');
     const [showConfirmDeleteDialog, setShowConfirmDeleteDialog] = useState(false);
     const [confirmDeleteVideoId, setConfirmDeleteVideoId] = useState<string | null>(null);
+    const [showConfirmDeleteVideoDialog, setShowConfirmDeleteVideoDialog] = useState(false);
+    const [videoToDelete, setVideoToDelete] = useState<{ id: string; name: string; projectId?: string; generatedVideoId?: string } | null>(null);
+    const [deletingVideoStatus, setDeletingVideoStatus] = useState(false);
     const hasLoadedJobsRef = useRef(false);
     const hasLoadedPublishedVideosRef = useRef(false);
 
@@ -71,16 +76,101 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const loadJobs = async () => {
         try {
             setLoadingJobs(true);
-            const response = await fetch(API_ENDPOINTS.API_GOOGLE_DRIVE_OUTPUT_VIDEOS);
-            if (!response.ok) {
-                const data = await response.json();
-                setAlertMessage(data.error || 'Failed to load videos');
+            
+            if (!user?.email) {
+                setAlertMessage('User authentication required');
                 setShowAlertDialog(true);
                 return;
             }
-            const data = await response.json();
-            setJobs(data.jobs || []);
+
+            const supabase = getSupabase();
+            const supabaseAny: any = supabase;
+
+            const profileResult: any = await supabaseAny
+                .from(DB_TABLES.PROFILES)
+                .select('id')
+                .eq('email', user.email)
+                .maybeSingle();
+
+            if (!profileResult?.data || profileResult?.error) {
+                setAlertMessage('User profile not found. Please sign in again.');
+                setShowAlertDialog(true);
+                return;
+            }
+
+            const userUuid = profileResult.data.id;
+
+            const { data: userProjects, error: projectsError } = await supabaseAny
+                .from(DB_TABLES.PROJECTS)
+                .select('id, job_id')
+                .eq('user_id', userUuid);
+
+            if (projectsError) {
+                console.log('Error fetching user projects:', projectsError);
+                setAlertMessage(projectsError.message || 'Failed to load videos');
+                setShowAlertDialog(true);
+                return;
+            }
+
+            if (!userProjects || userProjects.length === 0) {
+                setJobs([]);
+                return;
+            }
+
+            const projectIds = userProjects.map((p: any) => p.id);
+            const projectJobMap = new Map<string, string>(userProjects.map((p: any) => [p.id, p.job_id]));
+
+            const { data: generatedVideos, error: videosError } = await supabaseAny
+                .from(DB_TABLES.GENERATED_VIDEOS)
+                .select('id, google_drive_video_id, google_drive_video_name, google_drive_video_url, google_drive_thumbnail_url, project_id, render_status')
+                .in('project_id', projectIds)
+                .eq('render_status', RENDER_STATUS.SUCCESS)
+                .order('updated_at', { ascending: false });
+
+            if (videosError) {
+                console.log('Error fetching generated videos:', videosError);
+                setAlertMessage(videosError.message || 'Failed to load videos');
+                setShowAlertDialog(true);
+                return;
+            }
+
+            const jobsMap = new Map<string, OutputVideosJob>();
+
+            if (generatedVideos && Array.isArray(generatedVideos)) {
+                generatedVideos.forEach((video: any) => {
+                    if (!video.project_id) return;
+                    
+                    const jobId = projectJobMap.get(video.project_id);
+                    if (!jobId) return;
+                    const videoId = video.google_drive_video_id || video.id;
+                    const videoUrl = video.google_drive_video_url || `https://drive.google.com/file/d/${videoId}/view`;
+                    const webContentLink = `https://drive.google.com/uc?id=${videoId}`;
+
+                    if (!jobsMap.has(jobId)) {
+                        jobsMap.set(jobId, {
+                            jobId,
+                            videos: []
+                        });
+                    }
+
+                    const job = jobsMap.get(jobId)!;
+                    job.videos.push({
+                        id: videoId,
+                        name: video.google_drive_video_name || 'Untitled Video',
+                        webViewLink: videoUrl,
+                        webContentLink: webContentLink,
+                        thumbnailLink: video.google_drive_thumbnail_url || null,
+                        jobId,
+                        projectId: video.project_id,
+                        generatedVideoId: video.id
+                    });
+                });
+            }
+
+            const jobsArray = Array.from(jobsMap.values());
+            setJobs(jobsArray);
         } catch (e: any) {
+            console.log('Error loading jobs:', e);
             HelperFunctions.showError(e?.message || 'Failed to load videos');
             setAlertMessage(e?.message || 'Failed to load videos');
             setShowAlertDialog(true);
@@ -103,15 +193,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const handleRefresh = async () => {
         try {
             setRefreshing(true);
-            const response = await fetch(`${API_ENDPOINTS.API_GOOGLE_DRIVE_OUTPUT_VIDEOS}?refresh=true`);
-            if (!response.ok) {
-                const data = await response.json();
-                setAlertMessage(data.error || 'Failed to refresh videos');
-                setShowAlertDialog(true);
-                return;
-            }
-            const data = await response.json();
-            setJobs(data.jobs || []);
+            await loadJobs();
             HelperFunctions.showSuccess('Dashboard refreshed successfully');
         } catch (e: any) {
             HelperFunctions.showError(e?.message || 'Failed to refresh dashboard');
@@ -143,10 +225,6 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             console.log('Error loading published videos:', error);
         }
     };
-
-    if (loadingJobs) {
-        return <LoadingOverlay title="Loading videos..." desc="Fetching videos from Google Drive..." />;
-    }
 
     const isVideoPublished = (videoId: string, platform?: string): PublishedVideo | null => {
         if (platform) {
@@ -368,6 +446,82 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
         setShowConfirmDeleteDialog(true);
     };
 
+    const handleDeleteVideo = (video: { id: string; name: string; projectId?: string; generatedVideoId?: string }) => {
+        setVideoToDelete(video);
+        setShowConfirmDeleteVideoDialog(true);
+    };
+
+    const handleDownloadVideo = (video: { id: string; name: string; webContentLink: string }) => {
+        try {
+            const downloadUrl = HelperFunctions.normalizeGoogleDriveUrl(video.webContentLink);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `${video.name}.mp4`;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            console.log('Download started');
+        } catch (error: any) {
+            console.log('Error downloading video:', error);
+            console.log('Failed to download video');
+        }
+    };
+
+    const confirmDeleteVideo = async () => {
+        if (!videoToDelete || !user?.email) {
+            return;
+        }
+
+        try {
+            setDeletingVideoStatus(true);
+            const supabase = getSupabase();
+            const supabaseAny: any = supabase;
+
+            if (!videoToDelete.generatedVideoId) {
+                toast.error('Video ID not found');
+                return;
+            }
+
+            const { error } = await supabaseAny
+                .from(DB_TABLES.GENERATED_VIDEOS)
+                .update({ render_status: RENDER_STATUS.DELETED, updated_at: new Date().toISOString() })
+                .eq('id', videoToDelete.generatedVideoId);
+
+            if (error) {
+                console.log('Error deleting video:', error);
+                toast.error(error.message || 'Failed to delete video');
+                return;
+            }
+
+            setJobs(prevJobs => {
+                return prevJobs.map(job => {
+                    const updatedVideos = job.videos.filter(video => video.id !== videoToDelete.id);
+                    if (updatedVideos.length === 0) {
+                        return null;
+                    }
+                    return {
+                        ...job,
+                        videos: updatedVideos
+                    };
+                }).filter((job): job is OutputVideosJob => job !== null);
+            });
+
+            toast.success('Video deleted successfully');
+            setShowConfirmDeleteVideoDialog(false);
+            setVideoToDelete(null);
+        } catch (e: any) {
+            console.log('Error deleting video:', e);
+            toast.error(e?.message || 'Failed to delete video');
+        } finally {
+            setDeletingVideoStatus(false);
+        }
+    };
+
+    if (loadingJobs) {
+        return <LoadingOverlay title="Loading videos..." desc="Fetching videos from Google Drive..." />;
+    }
+
     return (
         <div className={styles.container}>
             <div className={styles.header}>
@@ -523,7 +677,45 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                                             </Button>
                                         )}
                                     </Box>
-                                    <div className={styles.videoName}>{video.name}</div>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                        <div className={styles.videoName}>{video.name}</div>
+                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                            <IconButton
+                                                onClick={() => handleDownloadVideo(video)}
+                                                size="small"
+                                                sx={{
+                                                    color: '#3b82f6',
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(59, 130, 246, 0.1)',
+                                                    },
+                                                }}
+                                                title="Download video"
+                                            >
+                                                <DownloadIcon sx={{ fontSize: 20 }} />
+                                            </IconButton>
+                                            <IconButton
+                                                onClick={() => handleDeleteVideo(video)}
+                                                disabled={deletingVideoStatus}
+                                                size="small"
+                                                sx={{
+                                                    color: '#ef4444',
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(239, 68, 68, 0.1)',
+                                                    },
+                                                    '&:disabled': {
+                                                        opacity: 0.6,
+                                                    },
+                                                }}
+                                                title="Delete video"
+                                            >
+                                                {deletingVideoStatus && videoToDelete?.id === video.id ? (
+                                                    <CircularProgress size={16} sx={{ color: '#ef4444' }} />
+                                                ) : (
+                                                    <DeleteIcon sx={{ fontSize: 20 }} />
+                                                )}
+                                            </IconButton>
+                                        </Box>
+                                    </Box>
 
                                     <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
                                         <Button
@@ -702,6 +894,19 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     }
                     setConfirmDeleteVideoId(null);
                 }}
+            />
+            <AlertDialog
+                open={showConfirmDeleteVideoDialog}
+                title="Delete Video"
+                message={videoToDelete ? `Are you sure you want to delete "${videoToDelete.name}"? This will remove it from your dashboard. This action cannot be undone.` : ''}
+                confirmLabel="Delete"
+                cancelLabel="Cancel"
+                showCancel
+                onClose={() => {
+                    setShowConfirmDeleteVideoDialog(false);
+                    setVideoToDelete(null);
+                }}
+                onConfirm={confirmDeleteVideo}
             />
         </div>
     );

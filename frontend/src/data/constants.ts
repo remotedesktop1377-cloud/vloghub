@@ -20,4 +20,11 @@ export const SCRIPT_STATUS = {
   GENERATED: 'generated',
   APPROVED: 'approved',
   UPLOADED: 'uploaded'
+} as const;
+
+export const RENDER_STATUS = {
+  RENDERING: 'rendering',
+  RENDERED: 'rendered',
+  SUCCESS: 'success',
+  DELETED: 'deleted'
 } as const; 

@@ -10,6 +10,8 @@ export interface OutputVideoItem {
   thumbnailLink?: string | null;
   iconLink?: string | null;
   jobId: string;
+  projectId?: string;
+  generatedVideoId?: string;
 }
 
 export interface OutputVideosJob {
