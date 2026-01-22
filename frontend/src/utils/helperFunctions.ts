@@ -2,7 +2,7 @@ import { SceneData } from '../types/sceneData';
 import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from '../types/scriptData';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
-import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL } from '@/data/constants';
+import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '@/data/constants';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -183,6 +183,20 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 
 export class HelperFunctions {
 
+  static convertProjectJSONToScriptData(projectJson: any): ScriptData {
+    // Handle both old nested structure (projectJson.project) and new flat structure
+    const projectData = projectJson.project || projectJson;
+    
+    return {
+      ...projectData,
+      jobName: projectData.jobId || '',
+      status: SCRIPT_STATUS.UPLOADED,
+      isScriptDownloaded: true,
+      // Handle scenesData from flat structure or script from nested structure
+      scenesData: projectJson.scenesData || projectJson.script || [],
+    };
+  }
+
   static getProjectJSON(userId: string, jobId: string, scriptData: ScriptData, projectSettings: Settings, scenesData: SceneData[], userEmail?: string): any {
     return {
       project: {
@@ -231,12 +245,14 @@ export class HelperFunctions {
         highlightedKeywords: sceneData.highlightedKeywords || [],
         keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
         assets: {
-          images: sceneData.assets?.images || [],
-          clips: sceneData.assets?.clips || [],
+          images: Array.isArray(sceneData.assets?.images) 
+            ? sceneData?.assets?.images?.filter(img => !HelperFunctions.isBase64Image(img))
+            : [],
+          clips: sceneData?.assets?.clips || [],
         },
         gammaGenId: sceneData?.gammaGenId || '',
         gammaUrl: sceneData?.gammaUrl || '',
-        previewImage: sceneData?.gammaPreviewImage || '',
+        previewImage: HelperFunctions.sanitizePreviewImage(sceneData?.gammaPreviewImage),
         previewClip: sceneData?.previewClip || '',
         sceneSettings: {
           videoLogo: sceneData.sceneSettings?.videoLogo as LogoOverlayInterface,
@@ -1110,6 +1126,19 @@ export class HelperFunctions {
       // Assume it's a Google Drive URL or relative path
       return HelperFunctions.normalizeGoogleDriveUrl(previewClip);
     }
+  };
+
+  static isBase64Image(value: string | null | undefined): boolean {
+    if (!value || typeof value !== 'string') return false;
+    return value.startsWith('data:image/');
+  };
+
+  static sanitizePreviewImage(previewImage: string | null | undefined): string {
+    if (!previewImage) return '';
+    if (HelperFunctions.isBase64Image(previewImage)) {
+      return '';
+    }
+    return previewImage;
   };
 }
 

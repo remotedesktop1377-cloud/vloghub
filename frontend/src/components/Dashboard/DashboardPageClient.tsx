@@ -7,15 +7,16 @@ import type { OutputVideosJob } from '@/services/dashboardService';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import styles from './DashboardPageClient.module.css';
 import LoadingOverlay from '../ui/LoadingOverlay';
-import { ROUTES_KEYS, RENDER_STATUS } from '@/data/constants';
+import { ROUTES_KEYS, RENDER_STATUS, SCRIPT_STATUS } from '@/data/constants';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
-import { ArrowBack, Refresh as RefreshIcon, Publish as PublishIcon, Delete as DeleteIcon, Download as DownloadIcon, YouTube, Facebook, Add as AddIcon, CheckCircle } from '@mui/icons-material';
-import { Button, CircularProgress, Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton } from '@mui/material';
+import { ArrowBack, Refresh as RefreshIcon, Publish as PublishIcon, Delete as DeleteIcon, Download as DownloadIcon, Edit as EditIcon, YouTube, Facebook, Add as AddIcon, CheckCircle } from '@mui/icons-material';
+import { Button, CircularProgress, Box, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Typography, IconButton, Tabs, Tab, Chip } from '@mui/material';
 import { toast } from 'react-toastify';
 import { ProfileDropdown } from '../auth/ProfileDropdown';
 import AlertDialog from '@/dialogs/AlertDialog';
 import { getSupabase } from '@/utils/supabase';
 import { DB_TABLES } from '@/config/DbTables';
+import { SecureStorageHelpers } from '@/utils/helperFunctions';
 
 interface DashboardPageClientProps {
     jobs?: OutputVideosJob[];
@@ -59,6 +60,9 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
     const [showConfirmDeleteVideoDialog, setShowConfirmDeleteVideoDialog] = useState(false);
     const [videoToDelete, setVideoToDelete] = useState<{ id: string; name: string; projectId?: string; generatedVideoId?: string } | null>(null);
     const [deletingVideoStatus, setDeletingVideoStatus] = useState(false);
+    const [activeTab, setActiveTab] = useState(0);
+    const [inProgressProjects, setInProgressProjects] = useState<any[]>([]);
+    const [loadingInProgress, setLoadingInProgress] = useState(false);
     const hasLoadedJobsRef = useRef(false);
     const hasLoadedPublishedVideosRef = useRef(false);
 
@@ -71,12 +75,15 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             hasLoadedPublishedVideosRef.current = true;
             loadPublishedVideos();
         }
-    }, [user]);
+        if (user && activeTab === 1 && inProgressProjects.length === 0) {
+            loadInProgressProjects();
+        }
+    }, [user, activeTab]);
 
     const loadJobs = async () => {
         try {
             setLoadingJobs(true);
-            
+
             if (!user?.email) {
                 setAlertMessage('User authentication required');
                 setShowAlertDialog(true);
@@ -139,7 +146,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
             if (generatedVideos && Array.isArray(generatedVideos)) {
                 generatedVideos.forEach((video: any) => {
                     if (!video.project_id) return;
-                    
+
                     const jobId = projectJobMap.get(video.project_id);
                     if (!jobId) return;
                     const videoId = video.google_drive_video_id || video.id;
@@ -190,10 +197,71 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
         [jobs],
     );
 
+    const loadInProgressProjects = async () => {
+        try {
+            setLoadingInProgress(true);
+
+            if (!user?.email) {
+                return;
+            }
+
+            const supabase = getSupabase();
+            const supabaseAny: any = supabase;
+
+            const profileResult: any = await supabaseAny
+                .from(DB_TABLES.PROFILES)
+                .select('id')
+                .eq('email', user.email)
+                .maybeSingle();
+
+            if (!profileResult?.data || profileResult?.error) {
+                return;
+            }
+
+            const userUuid = profileResult.data.id;
+
+            const { data: projects, error } = await supabaseAny
+                .from(DB_TABLES.PROJECTS)
+                .select('id, job_id, title, status, raw_project_json, updated_at, video_thumbnail_url')
+                .eq('user_id', userUuid)
+                .eq('status', RENDER_STATUS.RENDERING)
+                .order('updated_at', { ascending: false });
+
+            if (error) {
+                console.log('Error fetching in-progress projects:', error);
+                return;
+            }
+
+            setInProgressProjects(projects || []);
+        } catch (e: any) {
+            console.log('Error loading in-progress projects:', e);
+        } finally {
+            setLoadingInProgress(false);
+        }
+    };
+
+    const handleEditProject = async (project: any) => {
+        try {
+            if (!project.raw_project_json) {
+                toast.error('Project data not found');
+                return;
+            }
+
+            const projectJson = JSON.parse(project.raw_project_json);
+            const updatedScriptData = HelperFunctions.convertProjectJSONToScriptData(projectJson);
+            SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+            router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+        } catch (error: any) {
+            console.log('Error loading project for editing:', error);
+            toast.error('Failed to load project data');
+        }
+    };
+
     const handleRefresh = async () => {
         try {
             setRefreshing(true);
             await loadJobs();
+            await loadInProgressProjects();
             HelperFunctions.showSuccess('Dashboard refreshed successfully');
         } catch (e: any) {
             HelperFunctions.showError(e?.message || 'Failed to refresh dashboard');
@@ -518,7 +586,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
         }
     };
 
-    if (loadingJobs) {
+    if (loadingJobs && activeTab === 0) {
         return <LoadingOverlay title="Loading videos..." desc="Fetching videos from Google Drive..." />;
     }
 
@@ -536,7 +604,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         Back
                     </Button>
 
-                    <h1 className={styles.title}>Ready to publish videos</h1>
+                    <h1 className={styles.title}>Dashboard</h1>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <button
                             className={styles.refreshButton}
@@ -573,213 +641,304 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                 </p> */}
             </div>
 
-            {refreshing && (
-                <LoadingOverlay title="Refreshing videos from Google Drive" desc="This may take a few moments" />
-            )}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+                    <Tab label="Ready to Publish" />
+                    <Tab label="In Progress" />
+                </Tabs>
+            </Box>
 
-            {flattenedVideos.length === 0 && (
-                <div className={styles.emptyState}>
-                    <div className={styles.emptyTitle}>No final videos found yet</div>
-                    <div className={styles.emptyDescription}>
-                        When your background processing finishes and uploads the final video to the output folder of a job on Google Drive, it will appear here.
-                    </div>
-                </div>
-            )}
+            {activeTab === 0 && (
+                <>
+                    {refreshing && (
+                        <LoadingOverlay title="Refreshing videos from Google Drive" desc="This may take a few moments" />
+                    )}
 
-            {flattenedVideos.length > 0 && (
-                <div className={styles.grid}>
-                    {flattenedVideos.map(video => {
-                        const publishedVideoYouTube = isVideoPublished(video.id, 'youtube');
-                        const publishedVideoFacebook = isVideoPublished(video.id, 'facebook');
-                        const publishedVideo = publishedVideoYouTube || publishedVideoFacebook;
-                        return (
-                            <div key={video.id} className={styles.card}>
-                                <div className={styles.videoWrapper} style={{ position: 'relative' }}>
-                                    <video
-                                        className={styles.videoElement}
-                                        src={HelperFunctions.normalizeGoogleDriveUrl(video.webContentLink)}
-                                        controls
-                                    />
-                                    {publishedVideo && (
-                                        <>
-                                            {publishedVideoYouTube && publishedVideoYouTube.youtube_video_id && (
-                                                <IconButton
-                                                    onClick={() => handleDeleteYouTubeVideo(publishedVideoYouTube.youtube_video_id!)}
-                                                    disabled={deletingVideoId === publishedVideoYouTube.youtube_video_id}
+                    {flattenedVideos.length === 0 && (
+                        <div className={styles.emptyState}>
+                            <div className={styles.emptyTitle}>No final videos found yet</div>
+                            <div className={styles.emptyDescription}>
+                                When your background processing finishes and uploads the final video to the output folder of a job on Google Drive, it will appear here.
+                            </div>
+                        </div>
+                    )}
+
+                    {flattenedVideos.length > 0 && (
+                        <div className={styles.grid}>
+                            {flattenedVideos.map(video => {
+                                const publishedVideoYouTube = isVideoPublished(video.id, 'youtube');
+                                const publishedVideoFacebook = isVideoPublished(video.id, 'facebook');
+                                const publishedVideo = publishedVideoYouTube || publishedVideoFacebook;
+                                return (
+                                    <div key={video.id} className={styles.card}>
+                                        <div className={styles.videoWrapper} style={{ position: 'relative' }}>
+                                            <video
+                                                className={styles.videoElement}
+                                                src={HelperFunctions.normalizeGoogleDriveUrl(video.webContentLink)}
+                                                controls
+                                            />
+                                            {publishedVideo && (
+                                                <>
+                                                    {publishedVideoYouTube && publishedVideoYouTube.youtube_video_id && (
+                                                        <IconButton
+                                                            onClick={() => handleDeleteYouTubeVideo(publishedVideoYouTube.youtube_video_id!)}
+                                                            disabled={deletingVideoId === publishedVideoYouTube.youtube_video_id}
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: 8,
+                                                                left: 8,
+                                                                bgcolor: 'rgba(239, 68, 68, 0.9)',
+                                                                color: '#ffffff',
+                                                                zIndex: 10,
+                                                                '&:hover': {
+                                                                    bgcolor: 'rgba(220, 38, 38, 0.9)',
+                                                                },
+                                                                '&:disabled': {
+                                                                    opacity: 0.6,
+                                                                },
+                                                            }}
+                                                            size="small"
+                                                        >
+                                                            {deletingVideoId === publishedVideoYouTube.youtube_video_id ? (
+                                                                <CircularProgress size={16} sx={{ color: '#ffffff' }} />
+                                                            ) : (
+                                                                <DeleteIcon sx={{ fontSize: 18 }} />
+                                                            )}
+                                                        </IconButton>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className={styles.cardBody}>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', }}>
+                                                {publishedVideoYouTube && publishedVideoYouTube.youtube_url && (
+                                                    <Button
+                                                        variant="text"
+                                                        size="small"
+                                                        startIcon={<YouTube />}
+                                                        href={publishedVideoYouTube.youtube_url}
+                                                        target="_blank"
+                                                        sx={{
+                                                            color: '#FF0000',
+                                                            fontSize: '0.75rem',
+                                                            textTransform: 'none',
+                                                            p: 0,
+                                                            minWidth: 'auto',
+                                                            '&:hover': {
+                                                                bgcolor: 'rgba(255, 0, 0, 0.1)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        View on YouTube
+                                                    </Button>
+                                                )}
+                                                {publishedVideoFacebook && publishedVideoFacebook.facebook_url && (
+                                                    <Button
+                                                        variant="text"
+                                                        size="small"
+                                                        startIcon={<Facebook />}
+                                                        href={publishedVideoFacebook.facebook_url}
+                                                        target="_blank"
+                                                        sx={{
+                                                            color: '#1877F2',
+                                                            fontSize: '0.75rem',
+                                                            textTransform: 'none',
+                                                            p: 0,
+                                                            minWidth: 'auto',
+                                                            '&:hover': {
+                                                                bgcolor: 'rgba(24, 119, 242, 0.1)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        View on Facebook
+                                                    </Button>
+                                                )}
+                                            </Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                                <div className={styles.videoName}>{video.name}</div>
+                                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                                    <IconButton
+                                                        onClick={() => handleDownloadVideo(video)}
+                                                        size="small"
+                                                        sx={{
+                                                            color: '#3b82f6',
+                                                            '&:hover': {
+                                                                bgcolor: 'rgba(59, 130, 246, 0.1)',
+                                                            },
+                                                        }}
+                                                        title="Download video"
+                                                    >
+                                                        <DownloadIcon sx={{ fontSize: 20 }} />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        onClick={() => handleDeleteVideo(video)}
+                                                        disabled={deletingVideoStatus}
+                                                        size="small"
+                                                        sx={{
+                                                            color: '#ef4444',
+                                                            '&:hover': {
+                                                                bgcolor: 'rgba(239, 68, 68, 0.1)',
+                                                            },
+                                                            '&:disabled': {
+                                                                opacity: 0.6,
+                                                            },
+                                                        }}
+                                                        title="Delete video"
+                                                    >
+                                                        {deletingVideoStatus && videoToDelete?.id === video.id ? (
+                                                            <CircularProgress size={16} sx={{ color: '#ef4444' }} />
+                                                        ) : (
+                                                            <DeleteIcon sx={{ fontSize: 20 }} />
+                                                        )}
+                                                    </IconButton>
+                                                </Box>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={publishingVideoId === video.id ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : <PublishIcon />}
+                                                    onClick={() => handlePublishToYouTube(video)}
+                                                    disabled={publishingVideoId === video.id || publishingToFacebookVideoId === video.id || !user}
+                                                    fullWidth
                                                     sx={{
-                                                        position: 'absolute',
-                                                        top: 8,
-                                                        left: 8,
-                                                        bgcolor: 'rgba(239, 68, 68, 0.9)',
+                                                        background: publishedVideoYouTube
+                                                            ? 'linear-gradient(135deg, #666666 0%, #555555 100%)'
+                                                            : 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
                                                         color: '#ffffff',
-                                                        zIndex: 10,
+                                                        fontWeight: 600,
                                                         '&:hover': {
-                                                            bgcolor: 'rgba(220, 38, 38, 0.9)',
+                                                            background: publishedVideoYouTube
+                                                                ? 'linear-gradient(135deg, #555555 0%, #444444 100%)'
+                                                                : 'linear-gradient(135deg, #CC0000 0%, #990000 100%)',
                                                         },
                                                         '&:disabled': {
                                                             opacity: 0.6,
                                                         },
                                                     }}
-                                                    size="small"
                                                 >
-                                                    {deletingVideoId === publishedVideoYouTube.youtube_video_id ? (
-                                                        <CircularProgress size={16} sx={{ color: '#ffffff' }} />
-                                                    ) : (
-                                                        <DeleteIcon sx={{ fontSize: 18 }} />
-                                                    )}
-                                                </IconButton>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                                <div className={styles.cardBody}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', }}>
-                                        {publishedVideoYouTube && publishedVideoYouTube.youtube_url && (
-                                            <Button
-                                                variant="text"
-                                                size="small"
-                                                startIcon={<YouTube />}
-                                                href={publishedVideoYouTube.youtube_url}
-                                                target="_blank"
-                                                sx={{
-                                                    color: '#FF0000',
-                                                    fontSize: '0.75rem',
-                                                    textTransform: 'none',
-                                                    p: 0,
-                                                    minWidth: 'auto',
-                                                    '&:hover': {
-                                                        bgcolor: 'rgba(255, 0, 0, 0.1)',
-                                                    },
-                                                }}
-                                            >
-                                                View on YouTube
-                                            </Button>
-                                        )}
-                                        {publishedVideoFacebook && publishedVideoFacebook.facebook_url && (
-                                            <Button
-                                                variant="text"
-                                                size="small"
-                                                startIcon={<Facebook />}
-                                                href={publishedVideoFacebook.facebook_url}
-                                                target="_blank"
-                                                sx={{
-                                                    color: '#1877F2',
-                                                    fontSize: '0.75rem',
-                                                    textTransform: 'none',
-                                                    p: 0,
-                                                    minWidth: 'auto',
-                                                    '&:hover': {
-                                                        bgcolor: 'rgba(24, 119, 242, 0.1)',
-                                                    },
-                                                }}
-                                            >
-                                                View on Facebook
-                                            </Button>
-                                        )}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <div className={styles.videoName}>{video.name}</div>
-                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                            <IconButton
-                                                onClick={() => handleDownloadVideo(video)}
-                                                size="small"
-                                                sx={{
-                                                    color: '#3b82f6',
-                                                    '&:hover': {
-                                                        bgcolor: 'rgba(59, 130, 246, 0.1)',
-                                                    },
-                                                }}
-                                                title="Download video"
-                                            >
-                                                <DownloadIcon sx={{ fontSize: 20 }} />
-                                            </IconButton>
-                                            <IconButton
-                                                onClick={() => handleDeleteVideo(video)}
-                                                disabled={deletingVideoStatus}
-                                                size="small"
-                                                sx={{
-                                                    color: '#ef4444',
-                                                    '&:hover': {
-                                                        bgcolor: 'rgba(239, 68, 68, 0.1)',
-                                                    },
-                                                    '&:disabled': {
-                                                        opacity: 0.6,
-                                                    },
-                                                }}
-                                                title="Delete video"
-                                            >
-                                                {deletingVideoStatus && videoToDelete?.id === video.id ? (
-                                                    <CircularProgress size={16} sx={{ color: '#ef4444' }} />
-                                                ) : (
-                                                    <DeleteIcon sx={{ fontSize: 20 }} />
-                                                )}
-                                            </IconButton>
-                                        </Box>
-                                    </Box>
+                                                    {publishingVideoId === video.id
+                                                        ? 'Publishing...'
+                                                        : publishedVideoYouTube
+                                                            ? 'Publish Again'
+                                                            : 'Publish to YouTube'}
+                                                </Button>
+                                                <Button
+                                                    variant="contained"
+                                                    startIcon={publishingToFacebookVideoId === video.id ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : <PublishIcon />}
+                                                    onClick={() => handlePublishToFacebook(video)}
+                                                    disabled={publishingToFacebookVideoId === video.id || publishingVideoId === video.id || !user}
+                                                    fullWidth
+                                                    sx={{
+                                                        background: publishedVideoFacebook
+                                                            ? 'linear-gradient(135deg, #666666 0%, #555555 100%)'
+                                                            : 'linear-gradient(135deg, #1877F2 0%, #0C63D4 100%)',
+                                                        color: '#ffffff',
+                                                        fontWeight: 600,
+                                                        '&:hover': {
+                                                            background: publishedVideoFacebook
+                                                                ? 'linear-gradient(135deg, #555555 0%, #444444 100%)'
+                                                                : 'linear-gradient(135deg, #0C63D4 0%, #0A52B8 100%)',
+                                                        },
+                                                        '&:disabled': {
+                                                            opacity: 0.6,
+                                                        },
+                                                    }}
+                                                >
+                                                    {publishingToFacebookVideoId === video.id
+                                                        ? 'Publishing...'
+                                                        : publishedVideoFacebook
+                                                            ? 'Publish Again'
+                                                            : 'Publish to Facebook'}
+                                                </Button>
+                                            </Box>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </>
+            )}
 
-                                    <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
-                                        <Button
-                                            variant="contained"
-                                            startIcon={publishingVideoId === video.id ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : <PublishIcon />}
-                                            onClick={() => handlePublishToYouTube(video)}
-                                            disabled={publishingVideoId === video.id || publishingToFacebookVideoId === video.id || !user}
-                                            fullWidth
-                                            sx={{
-                                                background: publishedVideoYouTube
-                                                    ? 'linear-gradient(135deg, #666666 0%, #555555 100%)'
-                                                    : 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
-                                                color: '#ffffff',
-                                                fontWeight: 600,
-                                                '&:hover': {
-                                                    background: publishedVideoYouTube
-                                                        ? 'linear-gradient(135deg, #555555 0%, #444444 100%)'
-                                                        : 'linear-gradient(135deg, #CC0000 0%, #990000 100%)',
-                                                },
-                                                '&:disabled': {
-                                                    opacity: 0.6,
-                                                },
-                                            }}
-                                        >
-                                            {publishingVideoId === video.id
-                                                ? 'Publishing...'
-                                                : publishedVideoYouTube
-                                                    ? 'Publish Again'
-                                                    : 'Publish to YouTube'}
-                                        </Button>
-                                        <Button
-                                            variant="contained"
-                                            startIcon={publishingToFacebookVideoId === video.id ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : <PublishIcon />}
-                                            onClick={() => handlePublishToFacebook(video)}
-                                            disabled={publishingToFacebookVideoId === video.id || publishingVideoId === video.id || !user}
-                                            fullWidth
-                                            sx={{
-                                                background: publishedVideoFacebook
-                                                    ? 'linear-gradient(135deg, #666666 0%, #555555 100%)'
-                                                    : 'linear-gradient(135deg, #1877F2 0%, #0C63D4 100%)',
-                                                color: '#ffffff',
-                                                fontWeight: 600,
-                                                '&:hover': {
-                                                    background: publishedVideoFacebook
-                                                        ? 'linear-gradient(135deg, #555555 0%, #444444 100%)'
-                                                        : 'linear-gradient(135deg, #0C63D4 0%, #0A52B8 100%)',
-                                                },
-                                                '&:disabled': {
-                                                    opacity: 0.6,
-                                                },
-                                            }}
-                                        >
-                                            {publishingToFacebookVideoId === video.id
-                                                ? 'Publishing...'
-                                                : publishedVideoFacebook
-                                                    ? 'Publish Again'
-                                                    : 'Publish to Facebook'}
-                                        </Button>
-                                    </Box>
-                                </div>
+            {activeTab === 1 && (
+                <>
+                    {loadingInProgress ? (
+                        <LoadingOverlay title="Loading projects..." desc="Fetching in-progress projects..." />
+                    ) : inProgressProjects.length === 0 ? (
+                        <div className={styles.emptyState}>
+                            <div className={styles.emptyTitle}>No projects in progress</div>
+                            <div className={styles.emptyDescription}>
+                                Projects that are currently being rendered will appear here.
                             </div>
-                        );
-                    })}
-                </div>
+                        </div>
+                    ) : (
+                        <div className={styles.grid}>
+                            {inProgressProjects.map((project: any) => (
+                                <div key={project.id} className={styles.card}>
+                                    <div className={styles.videoWrapper} style={{ position: 'relative', backgroundColor: '#1f2937', height: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {project.video_thumbnail_url ? (
+                                            <img
+                                                src={HelperFunctions.normalizeGoogleDriveUrl(project.video_thumbnail_url)}
+                                                alt={project.title}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <Box sx={{ 
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center', 
+                                            gap: 1.5, 
+                                            color: 'rgba(255, 255, 255, 0.9)',
+                                            backgroundColor: project.video_thumbnail_url ? 'rgba(0, 0, 0, 0.5)' : 'transparent'
+                                        }}>
+                                            <CircularProgress size={32} />
+                                            <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>Rendering in progress...</Typography>
+                                        </Box>
+                                    </div>
+                                    <div className={styles.cardBody}>
+                                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 2, fontSize: '0.875rem' }}>
+                                            Job ID: {project.job_id}
+                                        </Typography>
+
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                            <div className={styles.videoName}>{project.title || 'Untitled Project'}</div>
+                                        </Box>
+
+                                        <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                                            <Button
+                                                variant="contained"
+                                                startIcon={<EditIcon />}
+                                                onClick={() => handleEditProject(project)}
+                                                fullWidth
+                                                sx={{
+                                                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                                                    color: '#ffffff',
+                                                    fontWeight: 600,
+                                                    '&:hover': {
+                                                        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                                                    },
+                                                }}
+                                            >
+                                                Edit Project
+                                            </Button>
+                                        </Box>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
 
             <Dialog

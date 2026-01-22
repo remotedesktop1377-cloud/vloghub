@@ -9,7 +9,7 @@ export const backendService = {
       const response = await fetch(`${url}/health`, {
         method: 'GET',
       });
-      console.log('response: ', response);
+      // console.log('response: ', response);
       return response.ok;
     } catch {
       return false;
