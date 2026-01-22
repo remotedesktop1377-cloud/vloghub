@@ -308,6 +308,26 @@ const ScriptProductionClient = () => {
         setProjectSettingsDialogOpen(true);
     };
 
+    const handleUploadAgain = () => {
+        setIsNarrationUploadView(true);
+        setIsNarratorVideoUploaded(false);
+        setScenesData([]);
+        setPageTitle('Step 2: Narrator Video Upload Stage');
+        if (scriptData) {
+            const updatedScriptData = {
+                ...scriptData,
+                narrator_chroma_key_link: undefined,
+                transcription: undefined,
+                scenesData: [],
+                status: SCRIPT_STATUS.APPROVED,
+                updated_at: new Date().toISOString(),
+            } as ScriptData;
+            setScriptData(updatedScriptData);
+            SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+        }
+        toast.success('Upload view is ready. Please upload your video again.');
+    };
+
     const closeProjectSettingsDialog = () => {
         setProjectSettingsDialogOpen(false);
     };
@@ -1720,7 +1740,8 @@ const ScriptProductionClient = () => {
                             overflow: 'auto',
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', pr: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', mb: 2, }}>
+                                <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', gap: 2, mb: 2, }}>
+                                    <Button variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={handleUploadAgain} startIcon={<UploadIcon />}>Upload Again</Button>
                                     <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
                                 </Box>
 
