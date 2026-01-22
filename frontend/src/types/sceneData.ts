@@ -30,15 +30,36 @@ export interface SceneData {
     sceneSettings?: Settings,
 }
 
+export interface TextOverlay {
+    text: string;
+    fontSize?: number;
+    fontColor?: string;
+    backgroundColor?: string;
+    position?: 'top-left' | 'top-center' | 'top-right' | 'top-second-left' | 'top-second-center' | 'top-second-right' | 'center-left' | 'center' | 'center-right' | 'lower-third-left' | 'lower-third-center' | 'lower-third-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' | 'custom';
+    customPosition?: {
+        x: number;
+        y: number;
+        usePercentage?: boolean;
+    };
+    duration?: number;
+    startTime?: number;
+    fontFamily?: string;
+    fontWeight?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    padding?: number;
+    borderRadius?: number;
+}
+
 export interface SceneKeywordSelection {
-    suggestedKeyword: string; // highlighted keyword
-    modifiedKeyword?: string; // user-changed search term
+    suggestedKeyword: string;
+    modifiedKeyword?: string;
     media?: {
         lowResMedia?: string;
         highResMedia?: string;
     };
     backgroundMusic?: string;
     transitionsEffects?: string[];
+    textOverlay?: TextOverlay;
 }
 
 export interface VideoClip {

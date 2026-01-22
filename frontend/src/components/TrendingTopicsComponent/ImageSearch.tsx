@@ -28,12 +28,15 @@ import {
     Check as CheckIcon,
     AutoAwesome as AutoAwesomeIcon,
     Google as GoogleIcon,
-    Image as EnvatoIcon
+    Image as EnvatoIcon,
+    TextFields as TextIcon
 } from '@mui/icons-material';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../styles/colors';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
 import { HelperFunctions } from '../../utils/helperFunctions';
 import Image from 'next/image';
+import TextOverlay from './TextOverlay';
+import { TextOverlay as TextOverlayType } from '../../types/sceneData';
 
 interface ImageResult {
     id: string;
@@ -77,9 +80,10 @@ interface ImageSearchProps {
     location?: string;
     scriptTitle?: string;
     keywords?: string[];
+    existingTextOverlay?: TextOverlayType;
 }
 
-type TabValue = 'google' | 'envato' | 'envatoClips' | 'youtube' | 'upload';
+type TabValue = 'google' | 'envato' | 'envatoClips' | 'youtube' | 'upload' | 'textOverlay';
 
 const ImageSearch: React.FC<ImageSearchProps> = ({
     SceneDataNarration,
@@ -97,7 +101,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     trendingTopic,
     location,
     scriptTitle,
-    keywords = []
+    keywords = [],
+    existingTextOverlay
 }) => {
     const [activeTab, setActiveTab] = useState<TabValue>('google');
     const [searchQuery, setSearchQuery] = useState('');
@@ -137,20 +142,20 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
         try {
             // Use the provided query, or fallback to currentKeywordForMapping, or SceneDataNarration, or buildContextString
-            let baseQuery = query && query.trim().length > 0 
-                ? query.trim() 
-                : (currentKeywordForMapping && currentKeywordForMapping.trim() 
-                    ? currentKeywordForMapping.trim() 
-                    : (SceneDataNarration && SceneDataNarration.trim() 
-                        ? SceneDataNarration.trim() 
+            let baseQuery = query && query.trim().length > 0
+                ? query.trim()
+                : (currentKeywordForMapping && currentKeywordForMapping.trim()
+                    ? currentKeywordForMapping.trim()
+                    : (SceneDataNarration && SceneDataNarration.trim()
+                        ? SceneDataNarration.trim()
                         : buildContextString()));
-            
+
             if (!loadMore) {
                 setSearchQuery(baseQuery);
             }
-            
+
             const currentPage = loadMore ? googleCurrentPage + 1 : 1;
-            
+
             // Step 6: Call backend
             const response = await fetch(API_ENDPOINTS.GOOGLE_IMAGE_SEARCH, {
                 method: "POST",
@@ -458,12 +463,12 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             // Apply suggestions to both Google and Envato
             setGoogleSuggestions(suggestionKeywords);
             setEnvatoKeywords(suggestionKeywords);
-            
+
             // Determine the query to use: keyword if available, otherwise narration
-            const queryToUse = currentKeywordForMapping && currentKeywordForMapping.trim() 
-                ? currentKeywordForMapping.trim() 
+            const queryToUse = currentKeywordForMapping && currentKeywordForMapping.trim()
+                ? currentKeywordForMapping.trim()
                 : (SceneDataNarration && SceneDataNarration.trim() ? SceneDataNarration.trim() : (scriptTitle || ''));
-            
+
             setSearchQuery(queryToUse);
             searchGoogleImages(queryToUse);
             const keywordsJoined = suggestionKeywords.join(' ');
@@ -471,7 +476,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             searchEnvatoClips(keywordsJoined);
             return;
         }
-        
+
         // If we have a keyword but no autoSearch, still set the query
         if (currentKeywordForMapping && currentKeywordForMapping.trim() && !hasInitialSearch.current) {
             const keywordQuery = currentKeywordForMapping.trim();
@@ -571,13 +576,13 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 ...uploadedFiles
             ];
             const selectedObj = allResults.find((it) => it.url === selectedUrl);
-            
+
             // Validate and normalize the URL (especially for Envato preview URLs)
             let validatedUrl = HelperFunctions.validateAndNormalizeImageUrl(
                 selectedUrl,
                 selectedObj?.downloadUrl
             );
-            
+
             const updatedSceneData: any = {
                 assets: {
                     images: HelperFunctions.isVideoUrl(validatedUrl) ? [] : [validatedUrl],
@@ -597,7 +602,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             // Also add to keywordsSelected array with media and selected transition effects
             try {
                 // Use validated URL and validate thumbnail as well
-                const validatedThumbnail = selectedObj?.thumbnail 
+                const validatedThumbnail = selectedObj?.thumbnail
                     ? HelperFunctions.validateAndNormalizeImageUrl(selectedObj.thumbnail, selectedObj.downloadUrl)
                     : validatedUrl;
                 const lowResMedia = validatedThumbnail;
@@ -716,8 +721,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                         sx={{
                             flex: 1,
                             minWidth: 0,
-                            width: '50%',
-                            maxWidth: '50%',
+                            width: '25%',
+                            maxWidth: '25%',
                             display: 'flex',
                             justifyContent: 'center'
                         }}
@@ -774,8 +779,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                         sx={{
                             flex: 1,
                             minWidth: 0,
-                            width: '50%',
-                            maxWidth: '50%',
+                            width: '25%',
+                            maxWidth: '25%',
                             display: 'flex',
                             justifyContent: 'center'
                         }}
@@ -821,7 +826,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                         overflow: 'hidden'
                                     }}
                                 >
-                                    <Image src="/images/cloud-computing.png" alt="Envato" fill style={{ objectFit: 'cover' }} />
+                                    <Image src="/images/cloud-computing.png" alt="Upload" fill style={{ objectFit: 'cover' }} />
                                 </Box>
                                 <Badge badgeContent={0} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
                                     Upload
@@ -831,144 +836,165 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                         sx={{
                             flex: 1,
                             minWidth: 0,
-                            width: '50%',
-                            maxWidth: '50%',
+                            width: '25%',
+                            maxWidth: '25%',
+                            display: 'flex',
+                            justifyContent: 'center'
+                        }}
+                    />
+                    <Tab
+                        value="textOverlay"
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                <TextIcon sx={{ fontSize: 18 }} />
+                                <Badge badgeContent={existingTextOverlay ? 1 : 0} color="primary" sx={{ fontSize: '16px' }} showZero={false}>
+                                    Text Overlay
+                                </Badge>
+                            </Box>
+                        }
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            width: '25%',
+                            maxWidth: '25%',
                             display: 'flex',
                             justifyContent: 'center'
                         }}
                     />
                 </Tabs>
 
-                {/* Search Controls */}
-                <Box sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                        Image Search
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                        <TextField
-                            fullWidth
-                            size="medium"
-                            placeholder="Type your search query"
-                            value={searchQuery}
-                            onChange={(e) => handleSearchQueryChange(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                            InputProps={{
-                                endAdornment: searchQuery ? (
-                                    <InputAdornment position="end">
-                                        <IconButton
-                                            aria-label="clear search"
-                                            edge="end"
-                                            onClick={() => {
-                                                // Reset query and regenerate suggestions from narration
-                                                handleSearchQueryChange('');
-                                                // notify parent to clear any text selection overlays
-                                                onClearSelection && onClearSelection();
-                                            }}
-                                            size="small"
-                                        >
-                                            {/* Using Close icon already in bundle */}
-                                            <span style={{ fontSize: 18, lineHeight: 1 }}>✕</span>
-                                        </IconButton>
-                                    </InputAdornment>
-                                ) : undefined
-                            }}
-                            sx={{
-                                fontSize: '1rem',
-                                '& .MuiOutlinedInput-root': {
-                                    borderRadius: 2,
-                                }
-                            }}
-                        />
+                {/* Search Controls - Hide for textOverlay tab */}
+                {activeTab !== 'textOverlay' && (
+                    <Box sx={{ p: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+                            Image Search
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                            <TextField
+                                fullWidth
+                                size="medium"
+                                placeholder="Type your search query"
+                                value={searchQuery}
+                                onChange={(e) => handleSearchQueryChange(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                InputProps={{
+                                    endAdornment: searchQuery ? (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                aria-label="clear search"
+                                                edge="end"
+                                                onClick={() => {
+                                                    // Reset query and regenerate suggestions from narration
+                                                    handleSearchQueryChange('');
+                                                    // notify parent to clear any text selection overlays
+                                                    onClearSelection && onClearSelection();
+                                                }}
+                                                size="small"
+                                            >
+                                                {/* Using Close icon already in bundle */}
+                                                <span style={{ fontSize: 18, lineHeight: 1 }}>✕</span>
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ) : undefined
+                                }}
+                                sx={{
+                                    fontSize: '1rem',
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2,
+                                    }
+                                }}
+                            />
 
-                        <Button
-                            variant="outlined"
-                            fullWidth
-                            startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
-                            onClick={() => {
-                                if (activeTab === 'google') return handleSearch();
-                                if (activeTab === 'envato') return handleSearch();
-                                if (activeTab === 'envatoClips') return searchEnvatoClips(searchQuery); // reuse until dedicated clips implemented
-                            }}
-                            disabled={currentLoading || !searchQuery.trim()}
-                            sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
-                        >
-                            {activeTab === 'google' ? 'Search Google' : activeTab === 'envato' ? 'Search Envato Images' : activeTab === 'envatoClips' ? 'Search Envato Clips' : 'Search'}
-                        </Button>
-                    </Box>
-
-                    {/* Suggested Queries (Google) or Keywords (Envato) */}
-                    {(activeTab === 'google' ? googleSuggestions.length > 0 : envatoKeywords.length > 0) && (
-                        <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" sx={{ color: 'text.primary', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '1.1rem', fontWeight: 500, lineHeight: 1.6 }}>
-                                <AutoAwesomeIcon sx={{ fontSize: 18 }} />
-                                {activeTab === 'google' ? 'Meaningful queries:' : 'Meaningful words:'}
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', width: '100%' }}>
-                                    {(activeTab === 'google' ? googleSuggestions : envatoKeywords).map((suggestion, index) => (
-                                        <Chip
-                                            key={index}
-                                            label={suggestion}
-                                            size="small"
-                                            variant="outlined"
-                                            color="default"
-                                            onClick={() => {
-                                                setSearchQuery(suggestion);
-                                                if (activeTab === 'google') {
-                                                    searchGoogleImages(suggestion);
-                                                } else if (activeTab === 'envato') {
-                                                    searchEnvatoImages(suggestion);
-                                                } else if (activeTab === 'envatoClips') {
-                                                    searchEnvatoClips(suggestion);
-                                                }
-                                            }}
-                                            sx={{
-                                                cursor: 'pointer',
-                                                fontSize: '1rem',
-                                                color: 'text.secondary',
-                                                height: 'auto',
-                                                alignItems: 'flex-start',
-                                                maxWidth: '100%',
-                                                '& .MuiChip-label': {
-                                                    fontSize: '1rem',
-                                                    fontWeight: 500,
-                                                    lineHeight: 1.5,
-                                                    whiteSpace: 'normal',
-                                                    overflow: 'visible',
-                                                    textOverflow: 'unset',
-                                                    display: 'block'
-                                                },
-                                                '&:hover': {
-                                                    backgroundColor: 'action.hover',
-                                                    borderColor: PRIMARY.main,
-                                                    color: 'text.primary',
-                                                }
-                                            }}
-                                        />
-                                    ))}
-                                </Box>
-                                {/* Selection Actions */}
-                                {currentImages.length > 0 && (
-                                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end', mt: 1, width: '100%' }}>
-                                        <Button
-                                            size="large"
-                                            variant="contained"
-                                            onClick={handleDone}
-                                            sx={{
-                                                borderRadius: 1,
-                                                background: PRIMARY.main,
-                                                '&:hover': { background: PRIMARY.dark }
-                                            }}
-                                        >
-                                            Done
-                                        </Button>
-                                    </Box>
-                                )}
-                            </Box>
+                            <Button
+                                variant="outlined"
+                                fullWidth
+                                startIcon={currentLoading ? <CircularProgress size={16} /> : <SearchIcon />}
+                                onClick={() => {
+                                    if (activeTab === 'google') return handleSearch();
+                                    if (activeTab === 'envato') return handleSearch();
+                                    if (activeTab === 'envatoClips') return searchEnvatoClips(searchQuery); // reuse until dedicated clips implemented
+                                }}
+                                disabled={currentLoading || !searchQuery.trim()}
+                                sx={{ width: '25%', height: '56px', fontSize: '1rem', textTransform: 'none' }}
+                            >
+                                {activeTab === 'google' ? 'Search Google' : activeTab === 'envato' ? 'Search Envato Images' : activeTab === 'envatoClips' ? 'Search Envato Clips' : 'Search'}
+                            </Button>
                         </Box>
-                    )}
 
-                </Box>
+                        {/* Suggested Queries (Google) or Keywords (Envato) */}
+                        {(activeTab === 'google' ? googleSuggestions.length > 0 : envatoKeywords.length > 0) && (
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="body2" sx={{ color: 'text.primary', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '1.1rem', fontWeight: 500, lineHeight: 1.6 }}>
+                                    <AutoAwesomeIcon sx={{ fontSize: 18 }} />
+                                    {activeTab === 'google' ? 'Meaningful queries:' : 'Meaningful words:'}
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', width: '100%' }}>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', width: '100%' }}>
+                                        {(activeTab === 'google' ? googleSuggestions : envatoKeywords).map((suggestion, index) => (
+                                            <Chip
+                                                key={index}
+                                                label={suggestion}
+                                                size="small"
+                                                variant="outlined"
+                                                color="default"
+                                                onClick={() => {
+                                                    setSearchQuery(suggestion);
+                                                    if (activeTab === 'google') {
+                                                        searchGoogleImages(suggestion);
+                                                    } else if (activeTab === 'envato') {
+                                                        searchEnvatoImages(suggestion);
+                                                    } else if (activeTab === 'envatoClips') {
+                                                        searchEnvatoClips(suggestion);
+                                                    }
+                                                }}
+                                                sx={{
+                                                    cursor: 'pointer',
+                                                    fontSize: '1rem',
+                                                    color: 'text.secondary',
+                                                    height: 'auto',
+                                                    alignItems: 'flex-start',
+                                                    maxWidth: '100%',
+                                                    '& .MuiChip-label': {
+                                                        fontSize: '1rem',
+                                                        fontWeight: 500,
+                                                        lineHeight: 1.5,
+                                                        whiteSpace: 'normal',
+                                                        overflow: 'visible',
+                                                        textOverflow: 'unset',
+                                                        display: 'block'
+                                                    },
+                                                    '&:hover': {
+                                                        backgroundColor: 'action.hover',
+                                                        borderColor: PRIMARY.main,
+                                                        color: 'text.primary',
+                                                    }
+                                                }}
+                                            />
+                                        ))}
+                                    </Box>
+                                    {/* Selection Actions */}
+                                    {currentImages.length > 0 && (
+                                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end', mt: 1, width: '100%' }}>
+                                            <Button
+                                                size="large"
+                                                variant="contained"
+                                                onClick={handleDone}
+                                                sx={{
+                                                    borderRadius: 1,
+                                                    background: PRIMARY.main,
+                                                    '&:hover': { background: PRIMARY.dark }
+                                                }}
+                                            >
+                                                Done
+                                            </Button>
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Box>
+                        )}
+
+                    </Box>
+                )}
             </Box>
 
             {/* Error Display */}
@@ -981,7 +1007,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             }
 
             {/* Main Content with Transitions Sidebar */}
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+            <Box sx={{ flex: 1, overflowY: 'auto', p: activeTab === 'textOverlay' ? 0 : 2 }}>
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={12} lg={12}>
                         {currentLoading ? (
@@ -1036,10 +1062,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                                 justifyContent: 'center'
                                                             }}>
                                                                 <Box
-                                                                    onClick={(e) => { 
-                                                                        e.stopPropagation(); 
-                                                                        setVideoPreviewUrl(file.url); 
-                                                                        setVideoPreviewOpen(true); 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setVideoPreviewUrl(file.url);
+                                                                        setVideoPreviewOpen(true);
                                                                     }}
                                                                     sx={{
                                                                         width: 52,
@@ -1215,142 +1241,151 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                     </Box>
                                 </Box>
                             )
+                        ) : (activeTab === 'textOverlay') ? (
+                            <TextOverlay
+                                SceneDataNarration={SceneDataNarration}
+                                SceneDataIndex={SceneDataIndex}
+                                onSceneDataUpdate={onSceneDataUpdate}
+                                currentKeywordForMapping={currentKeywordForMapping}
+                                existingTextOverlay={existingTextOverlay}
+                                onDone={onDone}
+                            />
                         ) : currentImages.length > 0 ? (
                             <>
-                            <Grid container spacing={2}>
-                                {currentImages.map((image, index) => (
-                                    <Grid item xs={12} sm={4} md={4} key={image.id}>
-                                        <Card
-                                            sx={{
-                                                height: '100%',
-                                                cursor: 'pointer',
-                                                border: ((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url)))
-                                                    ? `2px solid ${image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' ? WARNING.main : PRIMARY.main)}`
-                                                    : '2px solid transparent',
-                                                transition: 'all 0.2s ease',
-                                                '&:hover': {
-                                                    transform: 'translateY(-2px)',
-                                                    boxShadow: 3
-                                                }
-                                            }}
-                                        >
-                                            <Box sx={{ position: 'relative' }}>
-                                                {activeTab === 'envatoClips' ? (
-                                                    <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
-                                                        <img
-                                                            src={image.thumbnail || '/images/youtube.png'}
-                                                            alt={image.title}
-                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                            onClick={() => {
-                                                                try {
-                                                                    const selectedUrl = image.url;
-                                                                    // ensure consistent single-selection across tabs
-                                                                    handleImageSelect(selectedUrl);
-                                                                    const updatedSceneData: any = {
-                                                                        assets: {
-                                                                            images: [selectedUrl],
-                                                                            imagesGoogle: [],
-                                                                            imagesEnvato: []
-                                                                        }
-                                                                    };
-                                                                    if (currentKeywordForMapping) {
-                                                                        const typed = (searchQuery || '').trim();
-                                                                        updatedSceneData.keywordsSelectedMerge = {
-                                                                            [currentKeywordForMapping]: [selectedUrl]
+                                <Grid container spacing={2}>
+                                    {currentImages.map((image, index) => (
+                                        <Grid item xs={12} sm={4} md={4} key={image.id}>
+                                            <Card
+                                                sx={{
+                                                    height: '100%',
+                                                    cursor: 'pointer',
+                                                    border: ((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url)))
+                                                        ? `2px solid ${image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' ? WARNING.main : PRIMARY.main)}`
+                                                        : '2px solid transparent',
+                                                    transition: 'all 0.2s ease',
+                                                    '&:hover': {
+                                                        transform: 'translateY(-2px)',
+                                                        boxShadow: 3
+                                                    }
+                                                }}
+                                            >
+                                                <Box sx={{ position: 'relative' }}>
+                                                    {activeTab === 'envatoClips' ? (
+                                                        <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
+                                                            <img
+                                                                src={image.thumbnail || '/images/youtube.png'}
+                                                                alt={image.title}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                                onClick={() => {
+                                                                    try {
+                                                                        const selectedUrl = image.url;
+                                                                        // ensure consistent single-selection across tabs
+                                                                        handleImageSelect(selectedUrl);
+                                                                        const updatedSceneData: any = {
+                                                                            assets: {
+                                                                                images: [selectedUrl],
+                                                                                imagesGoogle: [],
+                                                                                imagesEnvato: []
+                                                                            }
                                                                         };
-                                                                        if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
-                                                                            updatedSceneData.modifiedKeywordForMapping = typed;
+                                                                        if (currentKeywordForMapping) {
+                                                                            const typed = (searchQuery || '').trim();
+                                                                            updatedSceneData.keywordsSelectedMerge = {
+                                                                                [currentKeywordForMapping]: [selectedUrl]
+                                                                            };
+                                                                            if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
+                                                                                updatedSceneData.modifiedKeywordForMapping = typed;
+                                                                            }
                                                                         }
+                                                                        onSceneDataUpdate(SceneDataIndex, updatedSceneData);
+                                                                        // notify parent selection if needed
+                                                                        try { onImageSelect(selectedUrl); } catch { }
+                                                                        HelperFunctions.showSuccess('Added video link to SceneData');
+                                                                    } catch (e) {
+                                                                        HelperFunctions.showError('Failed to add video link');
                                                                     }
-                                                                    onSceneDataUpdate(SceneDataIndex, updatedSceneData);
-                                                                    // notify parent selection if needed
-                                                                    try { onImageSelect(selectedUrl); } catch { }
-                                                                    HelperFunctions.showSuccess('Added video link to SceneData');
-                                                                } catch (e) {
-                                                                    HelperFunctions.showError('Failed to add video link');
-                                                                }
-                                                            }}
-                                                        />
-                                                        <Box sx={{
-                                                            position: 'absolute',
-                                                            inset: 0,
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }} onClick={() => handleImageSelect(image.url)}>
-                                                            <Box
-                                                                onClick={(e) => { 
-                                                                    e.stopPropagation(); 
-                                                                    handleImageSelect(image.url); 
-                                                                    setVideoPreviewUrl(image.url); 
-                                                                    setVideoPreviewOpen(true); 
                                                                 }}
-                                                                sx={{
-                                                                    width: 52,
-                                                                    height: 52,
-                                                                    borderRadius: '50%',
-                                                                    backgroundColor: 'rgba(0,0,0,0.55)',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
-                                                                    <path d="M8 5v14l11-7z" />
-                                                                </svg>
+                                                            />
+                                                            <Box sx={{
+                                                                position: 'absolute',
+                                                                inset: 0,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
+                                                            }} onClick={() => handleImageSelect(image.url)}>
+                                                                <Box
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleImageSelect(image.url);
+                                                                        setVideoPreviewUrl(image.url);
+                                                                        setVideoPreviewOpen(true);
+                                                                    }}
+                                                                    sx={{
+                                                                        width: 52,
+                                                                        height: 52,
+                                                                        borderRadius: '50%',
+                                                                        backgroundColor: 'rgba(0,0,0,0.55)',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                >
+                                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                                                        <path d="M8 5v14l11-7z" />
+                                                                    </svg>
+                                                                </Box>
                                                             </Box>
                                                         </Box>
-                                                    </Box>
-                                                ) : (
-                                                    <CardMedia
-                                                        component="img"
-                                                        height="140"
-                                                    image={image.thumbnail}
-                                                    alt={image.title}
-                                                        sx={{ objectFit: 'cover' }}
-                                                        onClick={() => handleImageSelect(image.url)}
-                                                    />
-                                                )}
+                                                    ) : (
+                                                        <CardMedia
+                                                            component="img"
+                                                            height="140"
+                                                            image={image.thumbnail}
+                                                            alt={image.title}
+                                                            sx={{ objectFit: 'cover' }}
+                                                            onClick={() => handleImageSelect(image.url)}
+                                                        />
+                                                    )}
 
-                                                {/* Selection Overlay */}
-                                                {((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url))) && (
+                                                    {/* Selection Overlay */}
+                                                    {((image.source === 'envatoClips' ? selectedBySource.envatoClips.has(image.url) : selectedBySource[image.source || 'google']?.has(image.url))) && (
+                                                        <Box
+                                                            sx={{
+                                                                position: 'absolute',
+                                                                top: 8,
+                                                                right: 8,
+                                                                width: 24,
+                                                                height: 24,
+                                                                borderRadius: '50%',
+                                                                backgroundColor: image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' || image.source === 'envatoClips' ? WARNING.main : PRIMARY.main),
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: 'white'
+                                                            }}
+                                                        >
+                                                            <CheckIcon sx={{ fontSize: 16 }} />
+                                                        </Box>
+                                                    )}
+
+                                                    {/* Source Badge */}
                                                     <Box
                                                         sx={{
                                                             position: 'absolute',
                                                             top: 8,
-                                                            right: 8,
-                                                            width: 24,
-                                                            height: 24,
-                                                            borderRadius: '50%',
-                                                            backgroundColor: image.suggestionIndex === -1 ? SUCCESS.main : (image.source === 'envato' || image.source === 'envatoClips' ? WARNING.main : PRIMARY.main),
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            color: 'white'
+                                                            left: 8,
+                                                            bgcolor: image.source === 'envato' ? WARNING.main : INFO.main,
+                                                            color: 'white',
+                                                            fontSize: '0.6rem',
+                                                            px: 0.5,
+                                                            py: 0.1,
+                                                            borderRadius: 0.5,
+                                                            fontWeight: 'bold'
                                                         }}
                                                     >
-                                                        <CheckIcon sx={{ fontSize: 16 }} />
+                                                        {image.source?.toUpperCase() || 'IMG'}
                                                     </Box>
-                                                )}
-
-                                                {/* Source Badge */}
-                                                <Box
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        top: 8,
-                                                        left: 8,
-                                                        bgcolor: image.source === 'envato' ? WARNING.main : INFO.main,
-                                                        color: 'white',
-                                                        fontSize: '0.6rem',
-                                                        px: 0.5,
-                                                        py: 0.1,
-                                                        borderRadius: 0.5,
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                >
-                                                    {image.source?.toUpperCase() || 'IMG'}
-                                                </Box>
 
                                                     {/* Action Buttons */}
                                                     <Box
@@ -1359,92 +1394,92 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                             bottom: 8,
                                                             right: 8,
                                                             display: 'flex',
-                                                        gap: 0.5
-                                                    }}
-                                                >
-                                                    {activeTab !== 'envatoClips' && (
-                                                        <Tooltip title="Preview">
+                                                            gap: 0.5
+                                                        }}
+                                                    >
+                                                        {activeTab !== 'envatoClips' && (
+                                                            <Tooltip title="Preview">
+                                                                <IconButton
+                                                                    size="medium"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleImagePreview(image.url);
+                                                                    }}
+                                                                    sx={{
+                                                                        backgroundColor: 'rgba(255,255,255,0.9)',
+                                                                        '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
+                                                                    }}
+                                                                >
+                                                                    <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        )}
+                                                        <Tooltip title="Download">
                                                             <IconButton
                                                                 size="medium"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleImagePreview(image.url);
+                                                                    handleDownloadImage(image.url, `${image.source}-image-${index + 1}.jpg`);
                                                                 }}
                                                                 sx={{
                                                                     backgroundColor: 'rgba(255,255,255,0.9)',
                                                                     '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
                                                                 }}
                                                             >
-                                                                <PreviewIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
+                                                                <DownloadIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
                                                             </IconButton>
                                                         </Tooltip>
-                                                    )}
-                                                    <Tooltip title="Download">
-                                                        <IconButton
-                                                            size="medium"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDownloadImage(image.url, `${image.source}-image-${index + 1}.jpg`);
-                                                            }}
-                                                            sx={{
-                                                                backgroundColor: 'rgba(255,255,255,0.9)',
-                                                                '&:hover': { backgroundColor: 'rgba(255,255,255,1)' }
-                                                            }}
-                                                        >
-                                                            <DownloadIcon sx={{ fontSize: 16, color: PRIMARY.main }} />
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    </Box>
                                                 </Box>
-                                            </Box>
 
-                                            <CardContent sx={{ p: 1 }}>
-                                                <Typography
-                                                    variant="subtitle2"
-                                                    sx={{
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 2,
-                                                        WebkitBoxOrient: 'vertical',
-                                                        overflow: 'hidden',
-                                                        fontSize: '1rem',
-                                                        lineHeight: 1.4,
-                                                        color: 'text.secondary'
-                                                    }}
-                                                >
-                                                    {image.title}
-                                                </Typography>
+                                                <CardContent sx={{ p: 1 }}>
+                                                    <Typography
+                                                        variant="subtitle2"
+                                                        sx={{
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical',
+                                                            overflow: 'hidden',
+                                                            fontSize: '1rem',
+                                                            lineHeight: 1.4,
+                                                            color: 'text.secondary'
+                                                        }}
+                                                    >
+                                                        {image.title}
+                                                    </Typography>
 
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                ))}
-                            </Grid>
-                            {/* Load More Button for Google Images */}
-                            {activeTab === 'google' && googleHasMore && (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
-                                    <Button
-                                        variant="outlined"
-                                        size="large"
-                                        onClick={loadMoreGoogleImages}
-                                        disabled={googleLoadingMore}
-                                        startIcon={googleLoadingMore ? <CircularProgress size={20} /> : null}
-                                        sx={{
-                                            minWidth: 200,
-                                            fontSize: '1rem',
-                                            textTransform: 'none',
-                                            borderColor: PRIMARY.main,
-                                            color: PRIMARY.main,
-                                            '&:hover': {
-                                                borderColor: PRIMARY.dark,
-                                                backgroundColor: PRIMARY.light,
-                                                color: PRIMARY.dark
-                                            }
-                                        }}
-                                    >
-                                        {googleLoadingMore ? 'Loading...' : 'Load More'}
-                                    </Button>
-                                </Box>
-                            )}
-                        </>
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                                {/* Load More Button for Google Images */}
+                                {activeTab === 'google' && googleHasMore && (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 2 }}>
+                                        <Button
+                                            variant="outlined"
+                                            size="large"
+                                            onClick={loadMoreGoogleImages}
+                                            disabled={googleLoadingMore}
+                                            startIcon={googleLoadingMore ? <CircularProgress size={20} /> : null}
+                                            sx={{
+                                                minWidth: 200,
+                                                fontSize: '1rem',
+                                                textTransform: 'none',
+                                                borderColor: PRIMARY.main,
+                                                color: PRIMARY.main,
+                                                '&:hover': {
+                                                    borderColor: PRIMARY.dark,
+                                                    backgroundColor: PRIMARY.light,
+                                                    color: PRIMARY.dark
+                                                }
+                                            }}
+                                        >
+                                            {googleLoadingMore ? 'Loading...' : 'Load More'}
+                                        </Button>
+                                    </Box>
+                                )}
+                            </>
                         ) : searchQuery && !currentLoading ? (
                             <Box sx={{ textAlign: 'center', py: 4 }}>
                                 <Typography variant="body1" color="text.secondary">
