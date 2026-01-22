@@ -37,6 +37,7 @@ import {
     Pause as PauseIcon
 } from '@mui/icons-material';
 import SettingsIcon from '@mui/icons-material/Settings';
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import { HelperFunctions, SecureStorageHelpers } from '@/utils/helperFunctions';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { LibraryData, profileService } from '@/services/profileService';
@@ -59,6 +60,7 @@ import { BackgroundType } from '@/types/backgroundType';
 import BackConfirmationDialog from '@/dialogs/BackConfirmationDialog';
 import ProjectSettingsDialog from '@/dialogs/ProjectSettingsDialog';
 import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
+import VideoEditor from '@/components/videoEditor/VideoEditor';
 import { predefinedTransitions } from '@/data/DefaultData';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { useSession } from 'next-auth/react';
@@ -130,6 +132,7 @@ const ScriptProductionClient = () => {
     // Temp state used inside dialog for cancel/discard behavior
     const [projectSettings, setProjectSettings] = useState<Settings | null>(null);
     const [sceneSettings, setSceneSettings] = useState<Settings | null>(null);
+    const [videoEditorOpen, setVideoEditorOpen] = useState(false);
     const { data: session } = useSession();
     const user = session?.user as any;
 
@@ -1709,7 +1712,8 @@ const ScriptProductionClient = () => {
                             overflow: 'auto',
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', pr: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', mb: 2, }}>
+                                <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', mb: 2, gap: 2 }}>
+                                    <Button variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => setVideoEditorOpen(true)} startIcon={<VideoLibraryIcon />}>Edit</Button>
                                     <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
                                 </Box>
 
@@ -1841,6 +1845,27 @@ const ScriptProductionClient = () => {
                 projectSettingsContext={projectSettingsContext}
                 pSettings={projectSettings}
                 sSettings={sceneSettings}
+            />
+
+            {/* Video Editor */}
+            <VideoEditor
+                open={videoEditorOpen}
+                onClose={() => setVideoEditorOpen(false)}
+                scenesData={scenesData}
+                narratorVideoUrl={scriptData?.narrator_chroma_key_link}
+                jobId={jobId}
+                userId={user?.id || ''}
+                onSave={(project, updatedScenes) => {
+                    // Update scenes data with edited timeline
+                    if (updatedScenes && updatedScenes.length > 0) {
+                        setScenesData(updatedScenes);
+                        const updatedScriptData = { ...scriptData, scenesData: updatedScenes } as ScriptData;
+                        setScriptData(updatedScriptData);
+                        SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                    }
+                    console.log('Editor project saved:', project);
+                    setVideoEditorOpen(false);
+                }}
             />
         </Box>
     );

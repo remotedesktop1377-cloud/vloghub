@@ -1,9 +1,9 @@
-import moviepy as mp
+from moviepy import VideoFileClip
 
 
 def convert_video_to_audio(video_file_path: str, output_audio_path: str) -> float:
   """Convert video file to audio file using moviepy and return video duration."""
-  video_clip = mp.VideoFileClip(video_file_path)
+  video_clip = VideoFileClip(video_file_path)
   audio_clip = video_clip.audio
 
   print('audio_clip:', audio_clip)

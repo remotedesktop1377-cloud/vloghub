@@ -174,7 +174,31 @@ export const SecureStorageHelpers = {
   /**
    * Remove script metadata from secure storage
    */
-  removeScriptMetadata: () => secure.j.scriptMetadata.remove()
+  removeScriptMetadata: () => secure.j.scriptMetadata.remove(),
+
+  /**
+   * Get editor draft from secure storage
+   */
+  getEditorDraft: (key: string) => {
+    const storage = SecureStorage.getInstance();
+    return storage.getItem(key);
+  },
+
+  /**
+   * Set editor draft in secure storage
+   */
+  setEditorDraft: (key: string, draft: any) => {
+    const storage = SecureStorage.getInstance();
+    storage.setItem(key, draft);
+  },
+
+  /**
+   * Remove editor draft from secure storage
+   */
+  removeEditorDraft: (key: string) => {
+    const storage = SecureStorage.getInstance();
+    storage.removeItem(key);
+  }
 };
 
 export const cn = (...classes: Array<string | false | null | undefined>): string => {
