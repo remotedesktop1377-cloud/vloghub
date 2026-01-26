@@ -768,21 +768,31 @@ export class SupabaseHelpers {
   }): Promise<{ success: boolean; error?: any }> {
     try {
       if (!args.jobId) {
+        console.error('saveFinalVideoRecord: Missing jobId');
         return { success: false, error: 'Missing jobId' };
       }
+
+      console.log('saveFinalVideoRecord: Looking for project with jobId:', args.jobId);
 
       const { data: project, error: projError } = await SupabaseHelpers.supabase
         .from(DB_TABLES.PROJECTS)
         .select('id')
         .eq('job_id', args.jobId)
-        .single();
+        .maybeSingle();
 
-      if (projError || !project) {
-        console.log('Project not found for jobId when saving final video:', args.jobId, projError);
+      if (projError) {
+        console.error('saveFinalVideoRecord: Error finding project:', projError);
         return { success: false, error: projError };
       }
 
-      const projectId = (project as any).id;
+      const projectAny = project as any;
+      if (!projectAny || !projectAny.id) {
+        console.error('saveFinalVideoRecord: Project not found for jobId:', args.jobId);
+        return { success: false, error: `Project not found for jobId: ${args.jobId}` };
+      }
+
+      const projectId = projectAny.id;
+      console.log('saveFinalVideoRecord: Found project with id:', projectId);
 
       const upsertPayload: any = {
         project_id: projectId,
@@ -794,28 +804,80 @@ export class SupabaseHelpers {
         updated_at: new Date().toISOString(),
       };
 
-      console.log('saveFinalVideoRecord upsertPayload:', upsertPayload);
+      console.log('saveFinalVideoRecord: Upsert payload:', upsertPayload);
 
-      const { data: finalData, error: upsertError } = await SupabaseHelpers.supabase
+      const supabaseAny: any = SupabaseHelpers.supabase;
+      const { data: existingVideo, error: checkError } = await supabaseAny
         .from(DB_TABLES.GENERATED_VIDEOS)
-        .upsert(upsertPayload as any)
-        .select('id');
+        .select('id')
+        .eq('project_id', projectId)
+        .maybeSingle();
 
-      console.log('saveFinalVideoRecord upsert result:', { finalData, upsertError });
-
-      if (upsertError) {
-        console.log('Error saving final video record:', upsertError);
-        return { success: false, error: upsertError };
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('saveFinalVideoRecord: Error checking existing video:', checkError);
+        toast.error(`Failed to check video record: ${checkError.message || 'Unknown error'}`);
+        return { success: false, error: checkError };
       }
 
-      await SupabaseHelpers.supabase
+      let finalData: any;
+      let saveError: any;
+
+      const existingVideoAny = existingVideo as any;
+      if (existingVideoAny && existingVideoAny.id) {
+        console.log('saveFinalVideoRecord: Updating existing video record:', existingVideoAny.id);
+        const { data: updatedData, error: updateError } = await supabaseAny
+          .from(DB_TABLES.GENERATED_VIDEOS)
+          .update(upsertPayload)
+          .eq('id', existingVideoAny.id)
+          .select('id')
+          .single();
+        
+        finalData = updatedData;
+        saveError = updateError;
+      } else {
+        console.log('saveFinalVideoRecord: Inserting new video record');
+        const { data: insertedData, error: insertError } = await supabaseAny
+          .from(DB_TABLES.GENERATED_VIDEOS)
+          .insert(upsertPayload)
+          .select('id')
+          .single();
+        
+        finalData = insertedData;
+        saveError = insertError;
+      }
+
+      console.log('saveFinalVideoRecord: Save result:', { finalData, saveError });
+
+      if (saveError) {
+        console.error('saveFinalVideoRecord: Error saving final video record:', saveError);
+        toast.error(`Failed to save video record: ${saveError.message || 'Unknown error'}`);
+        return { success: false, error: saveError };
+      }
+
+      if (!finalData || !finalData.id) {
+        console.error('saveFinalVideoRecord: Save succeeded but no data returned');
+        toast.error('Failed to save video record: No data returned');
+        return { success: false, error: 'No data returned from save operation' };
+      }
+
+      console.log('saveFinalVideoRecord: Successfully saved video record with id:', finalData.id);
+
+      const { error: updateError } = await SupabaseHelpers.supabase
         .from(DB_TABLES.PROJECTS)
         .update({ status: RENDER_STATUS.RENDERED, updated_at: new Date().toISOString() } as unknown as never)
         .eq('id', projectId);
 
+      if (updateError) {
+        console.warn('saveFinalVideoRecord: Error updating project status:', updateError);
+      } else {
+        console.log('saveFinalVideoRecord: Successfully updated project status');
+      }
+
+      toast.success('Video record saved successfully');
       return { success: true };
     } catch (error) {
-      console.log('Unexpected error in saveFinalVideoRecord:', error);
+      console.error('saveFinalVideoRecord: Unexpected error:', error);
+      toast.error(`Unexpected error saving video record: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return { success: false, error };
     }
   }

@@ -256,6 +256,10 @@ export const ProfileDropdown = () => {
             <div className={styles.dialogContent}>
               {/* Content Column */}
               <div className={styles.rightColumn} style={{ width: '100%', borderRight: 'none' }}>
+                {/* Social Keys Section */}
+                <div className={styles.socialForm}>
+                  <SocialMediaAccounts />
+                </div>
                 {/* Theme & Generation Section */}
                 <div className={styles.generationSection}>
                   <h3 className={styles.sectionTitle}>Gamma Theme Styles</h3>
@@ -308,10 +312,6 @@ export const ProfileDropdown = () => {
                     }}
                   />
 
-                </div>
-                {/* Social Keys Section */}
-                <div className={styles.socialForm}>
-                  <SocialMediaAccounts />
                 </div>
               </div>
             </div>

@@ -364,7 +364,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                         rawMessage.toLowerCase().includes('authentication credentials');
 
                     const message = needsReconnect
-                        ? 'YouTube session is no longer valid. Please reconnect your YouTube account.'
+                        ? 'YouTube session is no longer valid. Please reconnect your YouTube account from Profile menu.'
                         : rawMessage;
 
                     toast.error(message);
