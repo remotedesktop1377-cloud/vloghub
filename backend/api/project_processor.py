@@ -369,77 +369,52 @@ def create_text_overlay(text_overlay_data: dict, duration: float, video_size: tu
     font_size = text_overlay_data.get("fontSize", 48)
     font_color = text_overlay_data.get("fontColor", "#FFFFFF")
     bg_color = text_overlay_data.get("backgroundColor", "#00000080")
-    position = text_overlay_data.get("position", "bottom-center")
-    custom_pos = text_overlay_data.get("customPosition")
+    position = text_overlay_data.get("position", "top-left")
+    duration = text_overlay_data.get("duration", 3)
+    # font_family = text_overlay_data.get("fontFamily", "Arial")
+    # font_weight = text_overlay_data.get("fontWeight", "normal")
+    padding = text_overlay_data.get("padding", 10)
+    # border_radius = text_overlay_data.get("borderRadius", 5)
     
-    print(f"[DEBUG] Creating text overlay: '{text[:50]}...' (font_size={font_size}, position={position}, duration={duration}s)")
+    text_clip = TextClip(text=text, font_size=font_size, color=font_color, bg_color=bg_color, method="label")
+    text_clip = text_clip.with_duration(duration)
     
-    # try:
-    #     # Parse background color and opacity
-    #     bg_opacity = 1.0
-    #     bg_color_parsed = None
+    def get_position(t):
+        video_width, video_height = video_size
+        text_width, text_height = text_clip.size
         
-    #     if bg_color:
-    #         if len(bg_color) > 7:  # Has alpha channel
-    #             try:
-    #                 bg_opacity = int(bg_color[-2:], 16) / 255.0
-    #                 bg_color_parsed = bg_color[:-2] if bg_opacity > 0 else None
-    #             except (ValueError, IndexError):
-    #                 bg_color_parsed = bg_color if len(bg_color) == 7 else bg_color[:7]
-    #         else:
-    #             bg_color_parsed = bg_color
+        position_map = {
+            "top-left": (0.05, 0.08),
+            "top-center": (0.50, 0.08),
+            "top-right": (0.95, 0.08),
+            "top-second-left": (0.05, 0.20),
+            "top-second-center": (0.50, 0.20),
+            "top-second-right": (0.95, 0.20),
+            "center-left": (0.05, 0.40),
+            "center": (0.50, 0.50),
+            "center-right": (0.95, 0.40),
+            "lower-third-left": (0.05, 0.75),
+            "lower-third-center": (0.50, 0.75),
+            "lower-third-right": (0.95, 0.75),
+            "bottom-left": (0.05, 0.95),
+            "bottom-center": (0.50, 0.95),
+            "bottom-right": (0.95, 0.95),
+        }
+
+        # print(f"DEBUG: position={position}")
+
+        if position in position_map:
+            x_percent, y_percent = position_map[position]
+        else:
+            x_percent, y_percent = position_map.get("top-left", (0.50, 0.95))
+
+        x = video_width * x_percent - (text_width / 2)
+        y = video_height * y_percent - (text_height / 2)
         
-    #     # Convert position string to MoviePy position format
-    #     if position == "top-left":
-    #         pos_str = ('left', 'top')
-    #     elif position == "top-center":
-    #         pos_str = ('center', 'top')
-    #     elif position == "top-right":
-    #         pos_str = ('right', 'top')
-    #     elif position == "center":
-    #         pos_str = 'center'
-    #     elif position == "bottom-left":
-    #         pos_str = ('left', 'bottom')
-    #     elif position == "bottom-center":
-    #         pos_str = ('center', 'bottom')
-    #     elif position == "bottom-right":
-    #         pos_str = ('right', 'bottom')
-    #     elif position == "custom" and custom_pos:
-    #         # Use custom position
-    #         if custom_pos.get("usePercentage", True):
-    #             x = int((custom_pos.get("x", 50) / 100) * video_size[0])
-    #             y = int((custom_pos.get("y", 50) / 100) * video_size[1])
-    #         else:
-    #             x = int(custom_pos.get("x", 0))
-    #             y = int(custom_pos.get("y", 0))
-    #         pos_str = (x, y)
-    #     else:
-    #         pos_str = ('center', 'bottom')  # Default
-        
-    #     # Create TextClip - MoviePy TextClip signature: text, font_size (not fontsize), color, bg_color, size, method
-    #     print(f"[DEBUG] Creating TextClip with text: '{text}', font_size: {font_size}, color: {font_color}, bg_color: {bg_color_parsed}")
-        
-    #     # Use correct parameter names: text= and font_size=
-    #     txt_clip = (TextClip("BREAKING NEWS: Gaza Conflict",
-    #             fontsize=80, color='white')
-    #    .set_position(("center","top"))
-    #    .set_duration(5))
-        
-    #     # Set duration and position
-    #     txt_clip = txt_clip.set_duration(duration).set_position(pos_str)
-        
-    #     # Apply opacity if needed
-    #     if bg_opacity < 1.0:
-    #         txt_clip = txt_clip.set_opacity(bg_opacity)
-        
-    #     print(f"[DEBUG] ✓ Successfully created text overlay: '{text[:50]}...' at position {pos_str}, duration {duration}s")
-    #     return txt_clip
-        
-    # except Exception as e:
-    #     print(f"[ERROR] Could not create text overlay: {e}")
-    #     import traceback
-    #     traceback.print_exc()
-    #     return None
+        return (max(0, x), max(0, y))
+    
+    text_clip = text_clip.with_position(get_position)
+    return text_clip
 
 def process_scene(
     scene_data: Dict,
@@ -767,27 +742,13 @@ def process_scene(
                     if scene_relative_timestamps:
                         text_overlay_mappings.append({
                             "textOverlay": text_overlay,
-                            "timestamps": scene_relative_timestamps,
-                            "startTime": text_overlay.get("startTime")  # Use custom start time if provided
+                            "timestamps": scene_relative_timestamps
                         })
                         print(f"✓ Text overlay '{text_overlay.get('text', '')}' for keyword '{keyword}' found at timestamps: {scene_relative_timestamps}")
                     else:
-                        print("[DEBUG] All timestamps were out of bounds, using scene start")
-                        text_overlay_mappings.append({
-                            "textOverlay": text_overlay,
-                            "timestamps": [0.0],
-                            "startTime": text_overlay.get("startTime", 0.0)
-                        })
-                        print(f"✓ Text overlay '{text_overlay.get('text', '')}' scheduled at scene start (0.0s)")
+                        print(f"[DEBUG] All timestamps were out of bounds for keyword '{keyword}', skipping text overlay")
                 else:
-                    # If keyword not found in narration, use start of scene as fallback
-                    print(f"[DEBUG] Keyword '{keyword}' not found in narration, using scene start (0.0s) for text overlay")
-                    text_overlay_mappings.append({
-                        "textOverlay": text_overlay,
-                        "timestamps": [0.0],
-                        "startTime": text_overlay.get("startTime", 0.0)
-                    })
-                    print(f"✓ Text overlay '{text_overlay.get('text', '')}' scheduled at scene start (0.0s)")
+                    print(f"[DEBUG] Keyword '{keyword}' not found in narration, skipping text overlay")
 
     # Create timeline for text overlays (works independently of keyword images)
     text_overlay_timeline = {}
@@ -798,17 +759,12 @@ def process_scene(
             timestamps = mapping.get("timestamps", [])
             duration = text_overlay_data.get("duration", 3.0)
             
-            # If no timestamps found, use scene start as fallback
             if not timestamps:
-                print(f"Warning: No timestamps found for text overlay '{text_overlay_data.get('text', '')}', using scene start (0.0s)")
-                timestamps = [0.0]
+                print(f"Warning: No timestamps found for text overlay '{text_overlay_data.get('text', '')}', skipping")
+                continue
             
             for timestamp in timestamps:
-                start_time = mapping.get("startTime")
-                if start_time is None:
-                    start_time = max(0.0, min(timestamp, scene_duration))
-                else:
-                    start_time = max(0.0, min(start_time, scene_duration))
+                start_time = max(0.0, min(timestamp, scene_duration))
                 end_time = min(scene_duration, start_time + duration)
                 
                 if start_time not in text_overlay_timeline:
@@ -821,19 +777,21 @@ def process_scene(
 
     def add_text_overlays_to_segment(segment_layers, segment_start, segment_duration):
         """Helper function to add text overlays to a segment"""
+        segment_end = segment_start + segment_duration
         for text_start, text_overlays in text_overlay_timeline.items():
-            if text_start >= segment_start and text_start < segment_start + segment_duration:
+            if text_start >= segment_start and text_start < segment_end:
                 for text_overlay_info in text_overlays:
                     text_end = text_overlay_info["end_time"]
-                    if text_end <= segment_start + segment_duration:
-                        overlay_duration = text_end - text_start
-                        text_clip = create_text_overlay(text_overlay_info["data"], overlay_duration, video_size)
-                        if text_clip:
-                            text_clip = text_clip.set_start(text_start - segment_start)
-                            segment_layers.append(text_clip)
-                            print(f"Added text overlay '{text_overlay_info['data'].get('text', '')}' to segment at {text_start - segment_start}s")
-                        else:
-                            print(f"Warning: Failed to create text overlay for '{text_overlay_info['data'].get('text', '')}'")
+                    overlay_duration = min(text_end - text_start, segment_end - text_start)
+                    relative_start = text_start - segment_start
+                    
+                    text_clip = create_text_overlay(text_overlay_info["data"], overlay_duration, video_size)
+                    if text_clip:
+                        text_clip = text_clip.with_start(relative_start)
+                        segment_layers.append(text_clip)
+                        print(f"Added text overlay '{text_overlay_info['data'].get('text', '')}' to segment at {relative_start:.2f}s (duration: {overlay_duration:.2f}s)")
+                    else:
+                        print(f"Warning: Failed to create text overlay for '{text_overlay_info['data'].get('text', '')}'")
 
     # Check if media is scheduled in the first 3 seconds (0.0 to 3.0)
     # This determines if we should show the preview image at the start
@@ -949,6 +907,9 @@ def process_scene(
                 add_text_overlays_to_segment(segment_layers, current_time, segment_duration)
                 
                 segment_clip = CompositeVideoClip(segment_layers, size=video_size)
+                if video_segment.audio is not None:
+                    segment_clip = segment_clip.with_audio(video_segment.audio)
+                segment_clip = segment_clip.with_duration(segment_duration)
                 segments.append(segment_clip)
             
             # Add segment with keyword image/video background (same as manual processing)
@@ -1025,6 +986,9 @@ def process_scene(
                 add_text_overlays_to_segment(segment_layers, start_time, segment_duration)
                 
                 segment_clip = CompositeVideoClip(segment_layers, size=video_size)
+                if video_segment.audio is not None:
+                    segment_clip = segment_clip.with_audio(video_segment.audio)
+                segment_clip = segment_clip.with_duration(segment_duration)
                 segments.append(segment_clip)
                 
                 # Clean up temp image if it was created
@@ -1054,6 +1018,10 @@ def process_scene(
             add_text_overlays_to_segment(segment_layers, current_time, scene_duration - current_time)
             
             segment_clip = CompositeVideoClip(segment_layers, size=video_size)
+            if video_segment.audio is not None:
+                segment_clip = segment_clip.with_audio(video_segment.audio)
+            remaining_duration = scene_duration - current_time
+            segment_clip = segment_clip.with_duration(remaining_duration)
             segments.append(segment_clip)
         
         # If segments were created, use them without transitions
@@ -1102,7 +1070,7 @@ def process_scene(
                 overlay_duration = text_end - text_start
                 text_clip = create_text_overlay(text_overlay_info["data"], overlay_duration, video_size)
                 if text_clip:
-                    text_clip = text_clip.set_start(text_start)
+                    text_clip = text_clip.with_start(text_start)
                     composite_layers.append(text_clip)
                     print(f"Added text overlay '{text_overlay_info['data'].get('text', '')}' to composite at {text_start}s")
                 else:

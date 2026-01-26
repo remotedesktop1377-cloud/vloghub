@@ -62,6 +62,11 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
 
   const currentSceneDataIndex = mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex;
   const currentSceneData = scenesData[currentSceneDataIndex];
+  
+  const currentKeyword = typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword;
+  const existingTextOverlay = currentKeyword && Array.isArray(currentSceneData?.keywordsSelected) 
+    ? (currentSceneData.keywordsSelected as SceneKeywordSelection[]).find(k => k.suggestedKeyword === currentKeyword)?.textOverlay
+    : undefined;
 
   return (
     <Dialog
@@ -116,7 +121,52 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
                 }
               }}
               SceneDataIndex={currentSceneDataIndex}
-              onSceneDataUpdate={async (SceneDataIndex, updatedSceneData: any) => {                
+              onSceneDataUpdate={async (SceneDataIndex, updatedSceneData: any) => {
+                const updated: SceneData[] = scenesData.map((ch, idx) => {
+                  if (idx !== SceneDataIndex) return ch;
+                  
+                  if (updatedSceneData.keywordsSelected && Array.isArray(updatedSceneData.keywordsSelected)) {
+                    const existingArray: SceneKeywordSelection[] = Array.isArray(ch.keywordsSelected) 
+                      ? (ch.keywordsSelected as SceneKeywordSelection[]) 
+                      : [];
+                    
+                    const newKeywordsSelected = updatedSceneData.keywordsSelected.map((newKw: SceneKeywordSelection) => {
+                      const existingIdx = existingArray.findIndex(e => e && e.suggestedKeyword === newKw.suggestedKeyword);
+                      if (existingIdx >= 0) {
+                        return {
+                          ...existingArray[existingIdx],
+                          ...newKw
+                        };
+                      }
+                      return newKw;
+                    });
+                    
+                    const merged = [...existingArray];
+                    newKeywordsSelected.forEach((newKw: SceneKeywordSelection) => {
+                      const idx = merged.findIndex(e => e && e.suggestedKeyword === newKw.suggestedKeyword);
+                      if (idx >= 0) {
+                        merged[idx] = { ...merged[idx], ...newKw };
+                      } else {
+                        merged.push(newKw);
+                      }
+                    });
+                    
+                    return {
+                      ...ch,
+                      keywordsSelected: merged
+                    };
+                  }
+                  
+                  return {
+                    ...ch,
+                    ...updatedSceneData
+                  };
+                });
+                
+                onSceneDataUpdate(updated);
+                if (updated[SceneDataIndex]) {
+                  GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updated[SceneDataIndex], 'Text overlay updated');
+                }
               }}
               onDone={() => {
                 onMediaManagementOpen(false);
@@ -129,6 +179,7 @@ const MediaManagementDialog: React.FC<MediaManagementDialogProps> = ({
               suggestionKeywords={typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords || []}
               autoSearchOnMount={!!(typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keywords?.length)}
               currentKeywordForMapping={typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword}
+              existingTextOverlay={existingTextOverlay}
               onDoneWithSelected={(selectedUrls, modifiedKeyword) => {
                 const SceneDataIdx = mediaManagementSceneDataIndex !== null ? mediaManagementSceneDataIndex : selectedSceneDataIndex;
                 const kw = typeof window !== 'undefined' && (window as any).__keywordSuggestions?.keyword;

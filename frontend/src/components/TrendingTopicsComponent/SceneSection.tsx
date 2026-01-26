@@ -762,14 +762,14 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                             </Box>
                                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                               {sceneData.highlightedKeywords.map((keyword, keywordIndex) => {
-                                                // Check if this keyword has media attached
+                                                // Check if this keyword has media or text overlay attached
                                                 const hasMedia = (() => {
                                                   if (Array.isArray(sceneData.keywordsSelected)) {
                                                     const arr = sceneData.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
                                                     const entry = arr.find(e => 
                                                       (e.suggestedKeyword === keyword || e.modifiedKeyword === keyword)
                                                     );
-                                                    return !!(entry?.media?.lowResMedia || entry?.media?.highResMedia);
+                                                    return !!(entry?.media?.lowResMedia || entry?.media?.highResMedia || entry?.textOverlay);
                                                   } else if (sceneData.keywordsSelected && typeof sceneData.keywordsSelected === 'object') {
                                                     const map = sceneData.keywordsSelected as Record<string, string[]>;
                                                     const mediaUrls = map[keyword] || [];
