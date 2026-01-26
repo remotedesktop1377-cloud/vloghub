@@ -337,3 +337,61 @@ export function parseTime(timeString: string): number {
   return 0;
 }
 
+/**
+ * Get frame rate from project (default: 30fps)
+ */
+export function getFrameRate(project: { frameRate?: number }): number {
+  return project.frameRate || 30;
+}
+
+/**
+ * Convert seconds to milliseconds
+ */
+export function secondsToMilliseconds(seconds: number): number {
+  return seconds * 1000;
+}
+
+/**
+ * Convert milliseconds to seconds
+ */
+export function millisecondsToSeconds(ms: number): number {
+  return ms / 1000;
+}
+
+/**
+ * Convert time in seconds to frame number
+ */
+export function timeToFrame(timeInSeconds: number, frameRate: number = 30): number {
+  return Math.floor(timeInSeconds * frameRate);
+}
+
+/**
+ * Convert frame number to time in seconds
+ */
+export function frameToTime(frameNumber: number, frameRate: number = 30): number {
+  return frameNumber / frameRate;
+}
+
+/**
+ * Format time to frame-accurate string (HH:MM:SS:FF)
+ */
+export function formatTimeWithFrames(seconds: number, frameRate: number = 30): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const frames = timeToFrame(seconds % 1, frameRate);
+  
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}:${String(frames).padStart(2, '0')}`;
+  }
+  return `${minutes}:${String(secs).padStart(2, '0')}:${String(frames).padStart(2, '0')}`;
+}
+
+/**
+ * Snap time to nearest frame
+ */
+export function snapToFrame(timeInSeconds: number, frameRate: number = 30): number {
+  const frameDuration = 1 / frameRate;
+  return Math.round(timeInSeconds / frameDuration) * frameDuration;
+}
+

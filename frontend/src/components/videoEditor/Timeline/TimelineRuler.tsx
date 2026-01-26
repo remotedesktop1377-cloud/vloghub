@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box } from '@mui/material';
+import { formatTime, formatTimeWithFrames, getFrameRate, frameToTime } from '@/utils/videoEditorUtils';
+import { EditorProject } from '@/types/videoEditor';
 
 interface TimelineRulerProps {
   totalDuration: number;
   zoom: number;
   playheadTime: number;
   onPlayheadChange: (time: number) => void;
+  project?: EditorProject;
 }
 
 const TimelineRuler: React.FC<TimelineRulerProps> = ({
@@ -15,22 +18,50 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
   zoom,
   playheadTime,
   onPlayheadChange,
+  project,
 }) => {
   // Calculate pixels per second based on zoom
   const pixelsPerSecond = 50 * zoom;
   const rulerWidth = Math.max(totalDuration * pixelsPerSecond, 1000);
-
-  // Generate time markers - show every second
-  const markers: number[] = [];
-  for (let i = 0; i <= Math.ceil(totalDuration); i += 1) {
-    markers.push(i);
-  }
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const frameRate = getFrameRate(project || {});
+  
+  // Determine if we should show frame markers (at high zoom)
+  const showFrames = zoom > 2;
+  const frameDuration = 1 / frameRate;
+  
+  // Generate markers based on zoom level
+  const markers = useMemo(() => {
+    if (showFrames) {
+      // Show frame markers at high zoom
+      const markers: Array<{ time: number; isFrame: boolean; frameNumber?: number }> = [];
+      const frameCount = Math.ceil(totalDuration * frameRate);
+      
+      // Show every 10th frame to avoid clutter
+      const frameStep = Math.max(1, Math.floor(10 / zoom));
+      for (let frame = 0; frame <= frameCount; frame += frameStep) {
+        const time = frameToTime(frame, frameRate);
+        if (time <= totalDuration) {
+          markers.push({ time, isFrame: true, frameNumber: frame });
+        }
+      }
+      
+      // Also show second markers
+      for (let i = 0; i <= Math.ceil(totalDuration); i += 1) {
+        if (!markers.find(m => Math.abs(m.time - i) < 0.01)) {
+          markers.push({ time: i, isFrame: false });
+        }
+      }
+      
+      return markers.sort((a, b) => a.time - b.time);
+    } else {
+      // Show second markers at normal zoom
+      const markers: Array<{ time: number; isFrame: boolean }> = [];
+      for (let i = 0; i <= Math.ceil(totalDuration); i += 1) {
+        markers.push({ time: i, isFrame: false });
+      }
+      return markers;
+    }
+  }, [totalDuration, zoom, showFrames, frameRate]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -59,15 +90,16 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
           position: 'relative',
         }}
       >
-        {markers.map((time) => (
+        {markers.map((marker, index) => (
           <Box
-            key={time}
+            key={`${marker.time}-${marker.isFrame ? 'frame' : 'second'}-${index}`}
             sx={{
               position: 'absolute',
-              left: `${time * pixelsPerSecond}px`,
+              left: `${marker.time * pixelsPerSecond}px`,
               height: '100%',
               borderLeft: '1px solid',
-              borderColor: 'divider',
+              borderColor: marker.isFrame ? 'divider' : 'text.secondary',
+              borderWidth: marker.isFrame ? '1px' : '2px',
               display: 'flex',
               alignItems: 'flex-start',
               pt: 0.5,
@@ -77,12 +109,14 @@ const TimelineRuler: React.FC<TimelineRulerProps> = ({
             <Box
               component="span"
               sx={{
-                fontSize: '0.75rem',
-                color: 'text.secondary',
+                fontSize: marker.isFrame ? '0.65rem' : '0.75rem',
+                color: marker.isFrame ? 'text.disabled' : 'text.secondary',
                 whiteSpace: 'nowrap',
               }}
             >
-              {formatTime(time)}
+              {marker.isFrame && marker.frameNumber !== undefined
+                ? formatTimeWithFrames(marker.time, frameRate)
+                : formatTime(marker.time)}
             </Box>
           </Box>
         ))}

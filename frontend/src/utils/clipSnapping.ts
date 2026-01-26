@@ -1,4 +1,5 @@
-import { Clip } from '@/types/videoEditor';
+import { Clip, EditorProject } from '@/types/videoEditor';
+import { snapToFrame, getFrameRate, frameToTime } from '@/utils/videoEditorUtils';
 
 export interface SnapResult {
   snapped: boolean;
@@ -21,19 +22,40 @@ const SNAP_THRESHOLD_PIXELS = 10; // Pixels within which to snap
  * @param allClips - All clips in all tracks (for snapping)
  * @param excludeClipId - ID of clip being moved (to exclude from snap targets)
  * @param pixelsPerSecond - Pixels per second for conversion
+ * @param project - Optional project for frame snapping
+ * @param snapToFrames - Whether to snap to frames
  * @returns SnapResult indicating if and where to snap
  */
 export function calculateSnapPosition(
   clipTime: number,
   allClips: Clip[],
   excludeClipId: string,
-  pixelsPerSecond: number
+  pixelsPerSecond: number,
+  project?: EditorProject,
+  snapToFrames: boolean = false
 ): SnapResult {
   // Convert threshold to seconds
   const thresholdSeconds = SNAP_THRESHOLD_PIXELS / pixelsPerSecond;
 
+  // If frame snapping is enabled, snap to nearest frame first
+  if (snapToFrames && project) {
+    const frameRate = getFrameRate(project);
+    const snappedTime = snapToFrame(clipTime, frameRate);
+    const frameDistance = Math.abs(clipTime - snappedTime);
+    
+    // If close enough to a frame, use frame snapping
+    if (frameDistance < thresholdSeconds) {
+      return {
+        snapped: true,
+        snapTime: snappedTime,
+        snapDistance: frameDistance * pixelsPerSecond,
+        snapType: 'playhead', // Use playhead type for frame snaps
+      };
+    }
+  }
+
   // Get all snap points (start and end of clips, plus 0)
-  const snapPoints = getSnapPoints(allClips, excludeClipId);
+  const snapPoints = getSnapPoints(allClips, excludeClipId, undefined, project, snapToFrames);
 
   // Find closest snap point
   let closestSnap: SnapPoint | null = null;
@@ -113,12 +135,16 @@ export function calculateTrimSnapPosition(
  * @param allClips - All clips in all tracks
  * @param excludeClipId - Optional clip ID to exclude from snap points
  * @param playheadTime - Optional playhead time to include as snap point
+ * @param project - Optional project for frame snapping
+ * @param snapToFrames - Whether to include frame snap points
  * @returns Array of snap points
  */
 export function getSnapPoints(
   allClips: Clip[],
   excludeClipId?: string,
-  playheadTime?: number
+  playheadTime?: number,
+  project?: EditorProject,
+  snapToFrames: boolean = false
 ): SnapPoint[] {
   const snapPoints: SnapPoint[] = [{ time: 0, type: 'zero' }];
 
@@ -134,6 +160,21 @@ export function getSnapPoints(
       snapPoints.push({ time: clip.startTime + clip.duration, type: 'clip-end', clipId: clip.id });
     }
   });
+
+  // Add frame snap points if enabled
+  if (snapToFrames && project && playheadTime !== undefined) {
+    const frameRate = getFrameRate(project);
+    const frameDuration = 1 / frameRate;
+    const currentFrame = Math.floor(playheadTime * frameRate);
+    
+    // Add nearby frames as snap points
+    for (let i = -2; i <= 2; i++) {
+      const frameTime = frameToTime(currentFrame + i, frameRate);
+      if (frameTime >= 0 && frameTime <= (allClips.length > 0 ? Math.max(...allClips.map(c => c.startTime + c.duration)) : 0)) {
+        snapPoints.push({ time: frameTime, type: 'playhead' });
+      }
+    }
+  }
 
   // Remove duplicates by time and sort
   const uniqueSnapPoints = Array.from(

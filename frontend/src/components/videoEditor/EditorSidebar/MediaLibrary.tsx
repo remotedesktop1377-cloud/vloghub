@@ -19,6 +19,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ImageIcon from '@mui/icons-material/Image';
 import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+import CollectionsIcon from '@mui/icons-material/Collections';
+import MovieIcon from '@mui/icons-material/Movie';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import { useDraggable } from '@dnd-kit/core';
 import { useDropzone } from 'react-dropzone';
 import { EditorProject, Clip, Track } from '@/types/videoEditor';
@@ -211,21 +214,38 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
     >
       <input {...getInputProps()} />
       
-      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, fontSize: '0.95rem' }}>
         Media Library
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.8rem' }}>
         Drag media to timeline or upload new files
       </Typography>
 
       {/* Upload Button */}
       <Button
-        variant="outlined"
+        variant="contained"
         startIcon={<CloudUploadIcon />}
         component="label"
         fullWidth
-        sx={{ mb: 2, textTransform: 'none' }}
         disabled={uploading}
+        sx={{
+          mb: 2,
+          textTransform: 'none',
+          background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)',
+          color: 'white',
+          fontWeight: 600,
+          py: 1.2,
+          boxShadow: '0 2px 8px rgba(156, 39, 176, 0.3)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%)',
+            boxShadow: '0 4px 12px rgba(156, 39, 176, 0.4)',
+            transform: 'translateY(-1px)',
+          },
+          '&:active': {
+            transform: 'translateY(0)',
+          },
+        }}
       >
         <input
           type="file"
@@ -260,27 +280,60 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
       />
 
       {/* Filter Chips */}
-      <Box sx={{ display: 'flex', gap: 0.5, mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
         <Chip
+          icon={<FolderOpenIcon sx={{ fontSize: '16px !important' }} />}
           label="All"
           size="small"
           onClick={() => setFilterType('all')}
-          color={filterType === 'all' ? 'primary' : 'default'}
-          variant={filterType === 'all' ? 'filled' : 'outlined'}
+          sx={{
+            fontWeight: filterType === 'all' ? 600 : 400,
+            bgcolor: filterType === 'all' ? 'primary.main' : 'transparent',
+            color: filterType === 'all' ? 'white' : 'text.primary',
+            border: filterType === 'all' ? 'none' : '1px solid',
+            borderColor: 'divider',
+            '&:hover': {
+              bgcolor: filterType === 'all' ? 'primary.dark' : 'action.hover',
+            },
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+          }}
         />
         <Chip
+          icon={<CollectionsIcon sx={{ fontSize: '16px !important' }} />}
           label="Images"
           size="small"
           onClick={() => setFilterType('image')}
-          color={filterType === 'image' ? 'primary' : 'default'}
-          variant={filterType === 'image' ? 'filled' : 'outlined'}
+          sx={{
+            fontWeight: filterType === 'image' ? 600 : 400,
+            bgcolor: filterType === 'image' ? 'primary.main' : 'transparent',
+            color: filterType === 'image' ? 'white' : 'text.primary',
+            border: filterType === 'image' ? 'none' : '1px solid',
+            borderColor: 'divider',
+            '&:hover': {
+              bgcolor: filterType === 'image' ? 'primary.dark' : 'action.hover',
+            },
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+          }}
         />
         <Chip
+          icon={<MovieIcon sx={{ fontSize: '16px !important' }} />}
           label="Videos"
           size="small"
           onClick={() => setFilterType('video')}
-          color={filterType === 'video' ? 'primary' : 'default'}
-          variant={filterType === 'video' ? 'filled' : 'outlined'}
+          sx={{
+            fontWeight: filterType === 'video' ? 600 : 400,
+            bgcolor: filterType === 'video' ? 'primary.main' : 'transparent',
+            color: filterType === 'video' ? 'white' : 'text.primary',
+            border: filterType === 'video' ? 'none' : '1px solid',
+            borderColor: 'divider',
+            '&:hover': {
+              bgcolor: filterType === 'video' ? 'primary.dark' : 'action.hover',
+            },
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+          }}
         />
       </Box>
 
@@ -301,21 +354,65 @@ const MediaLibrary: React.FC<MediaLibraryProps> = ({
         {filteredItems.length === 0 ? (
           <Paper
             sx={{
-              p: 2,
+              p: 4,
               textAlign: 'center',
               bgcolor: 'action.hover',
               border: '2px dashed',
               borderColor: 'divider',
+              borderRadius: 2,
+              transition: 'all 0.3s ease',
             }}
           >
-            <Typography variant="body2" color="text.secondary">
-              {mediaItems.length === 0
-                ? 'No media uploaded yet. Upload images or videos to get started.'
-                : 'No media matches your search.'}
-            </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
+              {mediaItems.length === 0 ? (
+                <>
+                  <Box
+                    sx={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: '50%',
+                      bgcolor: 'primary.main',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0.1,
+                    }}
+                  >
+                    <CloudUploadIcon sx={{ fontSize: 32, color: 'primary.main' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      No media uploaded yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Upload images or videos to get started
+                    </Typography>
+                  </Box>
+                </>
+              ) : (
+                <>
+                  <SearchIcon sx={{ fontSize: 48, color: 'text.secondary', opacity: 0.5 }} />
+                  <Box>
+                    <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      No matches found
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Try adjusting your search or filter
+                    </Typography>
+                  </Box>
+                </>
+              )}
+            </Box>
           </Paper>
         ) : (
-          <Grid container spacing={1}>
+          <Grid container spacing={1.5}>
             {filteredItems.map((item) => (
               <Grid item xs={6} key={item.id}>
                 <MediaItemThumbnail
@@ -382,8 +479,16 @@ const MediaItemThumbnail: React.FC<MediaItemThumbnailProps> = ({
         position: 'relative',
         cursor: isDragging ? 'grabbing' : 'grab',
         opacity: isDragging ? 0.5 : 1,
+        borderRadius: 2,
+        overflow: 'hidden',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
         '&:hover': {
-          boxShadow: 3,
+          boxShadow: '0 8px 16px rgba(0, 0, 0, 0.15)',
+          transform: 'translateY(-2px)',
+          '& .media-delete-btn': {
+            opacity: 1,
+          },
         },
         ...style,
       }}
@@ -410,6 +515,10 @@ const MediaItemThumbnail: React.FC<MediaItemThumbnailProps> = ({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
+              transition: 'transform 0.3s ease',
+              '&:hover': {
+                transform: 'scale(1.05)',
+              },
             }}
           />
         ) : (
@@ -422,18 +531,38 @@ const MediaItemThumbnail: React.FC<MediaItemThumbnailProps> = ({
           </Box>
         )}
 
+        {/* Overlay gradient on hover */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 100%)',
+            opacity: 0,
+            transition: 'opacity 0.3s ease',
+            '&:hover': {
+              opacity: 1,
+            },
+          }}
+        />
+
         {/* Type Badge */}
         <Chip
-          label={item.type}
+          label={item.type === 'video' ? 'Video' : 'Image'}
           size="small"
           sx={{
             position: 'absolute',
-            top: 4,
-            left: 4,
-            fontSize: '0.65rem',
-            height: 20,
+            top: 6,
+            left: 6,
+            fontSize: '0.7rem',
+            height: 22,
+            fontWeight: 600,
+            bgcolor: item.type === 'video' ? 'primary.main' : 'secondary.main',
+            color: 'white',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
           }}
-          color={item.type === 'video' ? 'primary' : 'secondary'}
         />
 
         {/* Duration (for videos) */}
@@ -443,41 +572,49 @@ const MediaItemThumbnail: React.FC<MediaItemThumbnailProps> = ({
             size="small"
             sx={{
               position: 'absolute',
-              bottom: 4,
-              right: 4,
-              fontSize: '0.65rem',
-              height: 20,
-              bgcolor: 'rgba(0, 0, 0, 0.7)',
+              bottom: 6,
+              right: 6,
+              fontSize: '0.7rem',
+              height: 22,
+              fontWeight: 600,
+              bgcolor: 'rgba(0, 0, 0, 0.75)',
               color: 'white',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
             }}
           />
         )}
 
-        {/* Delete Button */}
-        <IconButton
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(item.id);
-          }}
-          sx={{
-            position: 'absolute',
-            top: 4,
-            right: 4,
-            bgcolor: 'rgba(255, 255, 255, 0.9)',
-            '&:hover': {
-              bgcolor: 'error.main',
-              color: 'white',
-            },
-          }}
-        >
-          <DeleteIcon fontSize="small" />
-        </IconButton>
+        {/* Delete Button - Reveal on hover */}
+        <Tooltip title="Delete media">
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+            className="media-delete-btn"
+            sx={{
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              bgcolor: 'rgba(255, 255, 255, 0.95)',
+              opacity: 0,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: 'error.main',
+                color: 'white',
+                transform: 'scale(1.1)',
+              },
+            }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Name */}
-      <Box sx={{ p: 0.5 }}>
-        <Tooltip title={item.name}>
+      <Box sx={{ p: 1, minHeight: 40 }}>
+        <Tooltip title={item.name} arrow>
           <Typography
             variant="caption"
             sx={{
@@ -485,6 +622,9 @@ const MediaItemThumbnail: React.FC<MediaItemThumbnailProps> = ({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              fontWeight: 500,
+              fontSize: '0.75rem',
+              lineHeight: 1.4,
             }}
           >
             {item.name}

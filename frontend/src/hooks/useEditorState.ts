@@ -19,10 +19,17 @@ export function useEditorState(initialProject?: EditorProject) {
     playheadTime: 0,
     aspectRatio: '16:9',
     totalDuration: 0,
+    frameRate: 30,
   };
+  
+  // Ensure frameRate is set (backward compatibility)
+  if (defaultProject.frameRate === undefined) {
+    defaultProject.frameRate = 30;
+  }
 
   const [project, setProject] = useState<EditorProject>(defaultProject);
   const [selectedClipIds, setSelectedClipIds] = useState<string[]>([]);
+  const [selectedCanvasClipId, setSelectedCanvasClipId] = useState<string | null>(null); // Canvas selection for transforms
   const [zoom, setZoom] = useState<number>(DEFAULT_ZOOM);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [history, setHistory] = useState<EditorProject[]>([createSnapshot(defaultProject)]);
@@ -116,6 +123,10 @@ export function useEditorState(initialProject?: EditorProject) {
       setSelectedClipIds([]);
     }, []),
 
+    selectCanvasClip: useCallback((clipId: string | null) => {
+      setSelectedCanvasClipId(clipId);
+    }, []),
+
     addTrack: useCallback((type: Track['type']) => {
       // Count existing tracks of this type to generate name
       const existingTracksOfType = project.timeline.filter((t) => t.type === type);
@@ -152,6 +163,7 @@ export function useEditorState(initialProject?: EditorProject) {
   const state: EditorState = {
     project,
     selectedClipIds,
+    selectedCanvasClipId,
     zoom,
     isPlaying,
     history,

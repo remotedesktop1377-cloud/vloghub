@@ -28,6 +28,7 @@ import EditorSidebar from './EditorSidebar';
 import PreviewArea from './PreviewArea';
 import PropertiesPanel from './PropertiesPanel';
 import TimelineContainer from './Timeline/TimelineContainer';
+import ExportDialog from './ExportDialog';
 
 interface VideoEditorProps {
   open: boolean;
@@ -140,6 +141,7 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [dropPosition, setDropPosition] = useState<{ x: number; trackId?: string } | null>(null);
   const [dragTime, setDragTime] = useState<number | null>(null); // Current drag time position for snap indicators
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // Configure sensors for drag and drop
   const sensors = useSensors(
@@ -337,21 +339,19 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
           return;
         }
         
-        // Smart placement logic: auto-append to end for video clips on main video track
+        // Smart placement logic: ALWAYS auto-append to end for video clips on main video track
         const clipDuration = mediaItem.duration || (mediaType === 'image' ? 5 : 10);
         const existingClips = targetTrack.clips;
         const trackEnd = findTrackEnd(targetTrack);
         const isMainVideoTrack = targetTrack.type === 'video' && mediaType === 'video';
-        const shouldAutoAppend = isMainVideoTrack && (
-          existingClips.length === 0 || 
-          isPlayheadNearEnd(state.project.playheadTime, state.project.totalDuration, 0.9)
-        );
         
         let startTime: number;
         
-        if (shouldAutoAppend) {
-          // Auto-append to end of track
+        // For video clips on main video track, ALWAYS append to end (like CapCut)
+        if (isMainVideoTrack) {
+          // Auto-append to end of track - this ensures videos are concatenated sequentially
           startTime = trackEnd;
+          console.log('Auto-appending video to track end:', { trackEnd, clipDuration, totalDuration: state.project.totalDuration });
         } else {
           // Calculate start time from drop position
           startTime = state.project.playheadTime;
@@ -593,34 +593,20 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
           onClose={handleClose}
           isPlaying={state.isPlaying}
           onTogglePlay={actions.togglePlay}
-          zoom={state.zoom}
-          onZoomChange={actions.setZoom}
           playheadTime={state.project.playheadTime}
           totalDuration={state.project.totalDuration}
           isSaving={isSaving}
-          onFitToTimeline={() => {
-            // Calculate optimal zoom to fit entire timeline
-            const containerWidth = 1200; // Approximate timeline container width
-            const optimalZoom = Math.max(0.1, Math.min(10, (containerWidth * 0.8) / (state.project.totalDuration * 50)));
-            actions.setZoom(optimalZoom);
+          projectName={state.project.projectName || 'Untitled video'}
+          onProjectNameChange={(name) => {
+            const updated = {
+              ...state.project,
+              projectName: name,
+            };
+            actions.updateProject(updated);
           }}
-          onZoomToSelection={() => {
-            // Zoom to fit selected clips
-            if (state.selectedClipIds.length > 0) {
-              const selectedClips = state.project.timeline
-                .flatMap(t => t.clips)
-                .filter(c => state.selectedClipIds.includes(c.id));
-              if (selectedClips.length > 0) {
-                const minStart = Math.min(...selectedClips.map(c => c.startTime));
-                const maxEnd = Math.max(...selectedClips.map(c => c.startTime + c.duration));
-                const selectionDuration = maxEnd - minStart;
-                const containerWidth = 1200;
-                const optimalZoom = Math.max(0.1, Math.min(10, (containerWidth * 0.8) / (selectionDuration * 50)));
-                actions.setZoom(optimalZoom);
-              }
-            }
+          onExport={() => {
+            setExportDialogOpen(true);
           }}
-          hasSelection={state.selectedClipIds.length > 0}
         />
 
         {/* Main Editor Layout */}
@@ -679,9 +665,6 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
               };
               actions.updateProject(updated);
             }}
-            onDeleteTrack={(trackId) => {
-              actions.removeTrack(trackId);
-            }}
             tracks={state.project.timeline}
             project={state.project}
             playheadTime={state.project.playheadTime}
@@ -702,13 +685,30 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
               actions.updateProject(updatedWithDuration);
             }}
             onAddClip={(clip, trackId) => {
+              // Find the target track
+              const targetTrack = state.project.timeline.find((t) => t.id === trackId);
+              if (!targetTrack) return;
+
+              // For video clips on main video track, auto-append to end
+              const isMainVideoTrack = targetTrack.type === 'video' && clip.mediaType === 'video';
+              let clipToAdd = clip;
+              
+              if (isMainVideoTrack) {
+                const trackEnd = findTrackEnd(targetTrack);
+                clipToAdd = {
+                  ...clip,
+                  startTime: trackEnd, // Auto-append to end
+                };
+                console.log('Auto-appending video via onAddClip:', { trackEnd, clipDuration: clip.duration });
+              }
+
               const updated = {
                 ...state.project,
                 timeline: state.project.timeline.map((track) =>
                   track.id === trackId
                     ? {
                         ...track,
-                        clips: [...track.clips, clip].sort((a, b) => a.startTime - b.startTime),
+                        clips: [...track.clips, clipToAdd].sort((a, b) => a.startTime - b.startTime),
                       }
                     : track
                 ),
@@ -735,6 +735,25 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
               narratorVideoUrl={narratorVideoUrl}
               onPlayheadChange={actions.setPlayheadTime}
               onProjectUpdate={actions.updateProject}
+              selectedCanvasClipId={state.selectedCanvasClipId}
+              onCanvasClipSelect={actions.selectCanvasClip}
+              onAspectRatioChange={(aspectRatio) => {
+                const updated = {
+                  ...state.project,
+                  aspectRatio,
+                };
+                actions.updateProject(updated);
+              }}
+              onSkipToBeginning={() => {
+                actions.setPlayheadTime(0);
+              }}
+              onUndo={actions.undo}
+              onRedo={actions.redo}
+              canUndo={state.historyIndex > 0}
+              canRedo={state.historyIndex < state.history.length - 1}
+              onExport={() => {
+                setExportDialogOpen(true);
+              }}
             />
 
             {/* Timeline */}
@@ -830,6 +849,18 @@ const VideoEditor: React.FC<VideoEditorProps> = ({
         </DndContext>
       </DialogContent>
       </EditorErrorBoundary>
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        project={state.project}
+        onExport={async (format, quality) => {
+          // TODO: Implement actual export functionality
+          console.log('Exporting:', { format, quality, project: state.project });
+          // This would typically call a backend API or use a video processing library
+        }}
+      />
     </Dialog>
   );
 };

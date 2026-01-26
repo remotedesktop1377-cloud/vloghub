@@ -7,6 +7,7 @@ export interface ClipOperations {
   splitClip: (clipId: string, splitTime: number) => EditorProject;
   moveClip: (clipId: string, newStartTime: number, newTrackId?: string) => EditorProject;
   trimClip: (clipId: string, trimIn: number, trimOut: number, newStartTime?: number, newDuration?: number) => EditorProject;
+  rippleTrimClip: (clipId: string, trimIn: number, trimOut: number, newStartTime?: number, newDuration?: number) => EditorProject;
 }
 
 export function useClipOperations() {
@@ -225,12 +226,87 @@ export function useClipOperations() {
     []
   );
 
+  const rippleTrimClip = useCallback(
+    (
+      project: EditorProject,
+      clipId: string,
+      trimIn: number,
+      trimOut: number,
+      newStartTime?: number,
+      newDuration?: number
+    ): EditorProject => {
+      // Find the clip being trimmed
+      let targetClip: Clip | null = null;
+      let targetTrack: Track | null = null;
+
+      for (const track of project.timeline) {
+        const clip = track.clips.find((c) => c.id === clipId);
+        if (clip) {
+          targetClip = clip;
+          targetTrack = track;
+          break;
+        }
+      }
+
+      if (!targetClip || !targetTrack) {
+        return project;
+      }
+
+      // Calculate the time delta (how much the clip duration changed)
+      const originalDuration = targetClip.duration;
+      const finalDuration = newDuration !== undefined ? newDuration : originalDuration;
+      const durationDelta = finalDuration - originalDuration;
+
+      // Trim the clip
+      const trimmedProject = trimClip(project, clipId, trimIn, trimOut, newStartTime, newDuration);
+
+      // If duration decreased (trimmed), shift subsequent clips forward
+      // If duration increased (extended), shift subsequent clips backward
+      if (durationDelta !== 0) {
+        return {
+          ...trimmedProject,
+          timeline: trimmedProject.timeline.map((track) => {
+            // Only ripple within the same track
+            if (track.id !== targetTrack!.id) {
+              return track;
+            }
+
+            return {
+              ...track,
+              clips: track.clips.map((clip) => {
+                // Skip the clip being trimmed
+                if (clip.id === clipId) {
+                  return clip;
+                }
+
+                // Shift clips that start after the trimmed clip's end
+                const trimmedClipEnd = (newStartTime !== undefined ? newStartTime : targetClip!.startTime) + finalDuration;
+                if (clip.startTime >= trimmedClipEnd - durationDelta) {
+                  return {
+                    ...clip,
+                    startTime: Math.max(0, clip.startTime + durationDelta),
+                  };
+                }
+
+                return clip;
+              }),
+            };
+          }),
+        };
+      }
+
+      return trimmedProject;
+    },
+    [trimClip]
+  );
+
   return {
     deleteClip,
     duplicateClip,
     splitClip,
     moveClip,
     trimClip,
+    rippleTrimClip,
   };
 }
 

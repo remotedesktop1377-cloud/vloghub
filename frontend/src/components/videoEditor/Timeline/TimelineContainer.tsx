@@ -185,11 +185,14 @@ const TimelineContainer: React.FC<TimelineContainerProps> = ({
             zoom={zoom}
             playheadTime={playheadTime}
             onPlayheadChange={onPlayheadChange}
+            project={project}
           />
           <Playhead
             playheadTime={playheadTime}
             totalDuration={project.totalDuration}
             zoom={zoom}
+            project={project}
+            showFrames={zoom > 2}
           />
         </Box>
 

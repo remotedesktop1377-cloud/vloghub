@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Button,
@@ -8,32 +8,33 @@ import {
   Toolbar,
   Typography,
   Tooltip,
-  Slider,
-  ButtonGroup,
+  TextField,
+  Menu,
+  MenuItem,
+  Divider,
 } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import SaveIcon from '@mui/icons-material/Save';
 import CloseIcon from '@mui/icons-material/Close';
-import PreviewIcon from '@mui/icons-material/Preview';
 import GetAppIcon from '@mui/icons-material/GetApp';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import FitScreenIcon from '@mui/icons-material/FitScreen';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 interface EditorTopBarProps {
   onSave: () => void;
   onClose: () => void;
   isPlaying: boolean;
   onTogglePlay: () => void;
-  zoom: number;
-  onZoomChange: (zoom: number) => void;
   playheadTime: number;
   totalDuration: number;
   isSaving?: boolean;
-  onFitToTimeline?: () => void;
-  onZoomToSelection?: () => void;
-  hasSelection?: boolean;
+  projectName?: string;
+  onProjectNameChange?: (name: string) => void;
+  onExport?: () => void;
 }
 
 const EditorTopBar: React.FC<EditorTopBarProps> = ({
@@ -41,20 +42,52 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
   onClose,
   isPlaying,
   onTogglePlay,
-  zoom,
-  onZoomChange,
   playheadTime,
   totalDuration,
   isSaving = false,
-  onFitToTimeline,
-  onZoomToSelection,
-  hasSelection = false,
+  projectName = 'Untitled video',
+  onProjectNameChange,
+  onExport,
 }) => {
+  const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(projectName);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 100);
-    return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleExportClick = (event: React.MouseEvent<HTMLElement>) => {
+    setExportAnchor(event.currentTarget);
+  };
+
+  const handleExportClose = () => {
+    setExportAnchor(null);
+  };
+
+  const handleExportFormat = (format: string) => {
+    if (onExport) {
+      onExport();
+    }
+    handleExportClose();
+  };
+
+  const handleNameBlur = () => {
+    setIsEditingName(false);
+    if (onProjectNameChange && editedName !== projectName) {
+      onProjectNameChange(editedName);
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameBlur();
+    } else if (e.key === 'Escape') {
+      setEditedName(projectName);
+      setIsEditingName(false);
+    }
   };
 
   return (
@@ -63,24 +96,70 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
         borderBottom: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
-        minHeight: '64px !important',
+        minHeight: '56px !important',
         px: 2,
+        justifyContent: 'space-between',
       }}
     >
-      <Typography variant="h6" sx={{ flexGrow: 0, mr: 3, fontWeight: 600 }}>
-        Video Editor
-      </Typography>
+      {/* Left Side */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <IconButton size="small" sx={{ color: 'text.secondary' }}>
+          <MenuIcon />
+        </IconButton>
+        
+        <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+          Vloghub
+        </Typography>
 
-      <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 2 }}>
+        {isEditingName ? (
+          <TextField
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            onBlur={handleNameBlur}
+            onKeyDown={handleNameKeyDown}
+            size="small"
+            autoFocus
+            sx={{
+              minWidth: 200,
+              '& .MuiInputBase-input': {
+                py: 0.5,
+                fontSize: '0.875rem',
+              },
+            }}
+          />
+        ) : (
+          <Typography
+            variant="body1"
+            onClick={() => setIsEditingName(true)}
+            sx={{
+              cursor: 'text',
+              color: 'text.secondary',
+              '&:hover': {
+                color: 'text.primary',
+              },
+            }}
+          >
+            {projectName}
+          </Typography>
+        )}
+
+        <Tooltip title="AI Features (Coming soon)">
+          <IconButton size="small" sx={{ color: 'text.secondary' }}>
+            <AutoAwesomeIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+
+      {/* Center - Playback Controls */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Tooltip title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}>
           <IconButton
             onClick={onTogglePlay}
-            color="primary"
             sx={{
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
+              bgcolor: '#9c27b0', // Purple accent
+              color: 'white',
               '&:hover': {
-                bgcolor: 'primary.dark',
+                bgcolor: '#7b1fa2',
               },
             }}
           >
@@ -88,115 +167,83 @@ const EditorTopBar: React.FC<EditorTopBarProps> = ({
           </IconButton>
         </Tooltip>
 
-        {/* Time Display */}
-        <Typography variant="body2" sx={{ minWidth: 80, fontFamily: 'monospace' }}>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            minWidth: 120, 
+            fontFamily: '"Roboto Mono", "Courier New", monospace', 
+            textAlign: 'center',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            color: 'text.primary',
+            fontSize: '0.875rem',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 1,
+            bgcolor: 'action.hover',
+          }}
+        >
           {formatTime(playheadTime)} / {formatTime(totalDuration)}
         </Typography>
-
-        {/* Zoom Controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 350 }}>
-          <IconButton
-            size="small"
-            onClick={() => onZoomChange(Math.max(0.1, zoom - 0.1))}
-            disabled={zoom <= 0.1}
-          >
-            <ZoomOutIcon fontSize="small" />
-          </IconButton>
-          <Slider
-            value={zoom}
-            onChange={(_, value) => onZoomChange(value as number)}
-            min={0.1}
-            max={10}
-            step={0.1}
-            sx={{ width: 120 }}
-            size="small"
-          />
-          <IconButton
-            size="small"
-            onClick={() => onZoomChange(Math.min(10, zoom + 0.1))}
-            disabled={zoom >= 10}
-          >
-            <ZoomInIcon fontSize="small" />
-          </IconButton>
-          <Typography variant="caption" sx={{ minWidth: 40, textAlign: 'right' }}>
-            {Math.round(zoom * 100)}%
-          </Typography>
-          
-          {/* Zoom Presets */}
-          <ButtonGroup size="small" variant="outlined" sx={{ ml: 1 }}>
-            <Tooltip title="Fit to Timeline">
-              <Button onClick={onFitToTimeline} disabled={!onFitToTimeline}>
-                Fit
-              </Button>
-            </Tooltip>
-            <Button onClick={() => onZoomChange(0.25)}>25%</Button>
-            <Button onClick={() => onZoomChange(0.5)}>50%</Button>
-            <Button onClick={() => onZoomChange(1)}>100%</Button>
-            <Button onClick={() => onZoomChange(2)}>200%</Button>
-            <Button onClick={() => onZoomChange(4)}>400%</Button>
-          </ButtonGroup>
-          
-          {/* Zoom to Selection */}
-          {onZoomToSelection && (
-            <Tooltip title="Zoom to Selection">
-              <IconButton
-                size="small"
-                onClick={onZoomToSelection}
-                disabled={!hasSelection}
-              >
-                <FitScreenIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Box>
       </Box>
 
+      {/* Right Side */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Tooltip title="Preview video (Coming soon)">
-          <span>
-            <Button
-              variant="outlined"
-              startIcon={<PreviewIcon />}
-              onClick={() => {
-                // TODO: Implement preview
-                console.log('Preview clicked');
-              }}
-              disabled
-              sx={{ textTransform: 'none' }}
-            >
-              Preview
-            </Button>
-          </span>
+        <Button
+          variant="outlined"
+          size="small"
+          endIcon={<ArrowDropDownIcon />}
+          startIcon={<GetAppIcon />}
+          onClick={handleExportClick}
+          sx={{ textTransform: 'none' }}
+        >
+          Export
+        </Button>
+        <Menu
+          anchorEl={exportAnchor}
+          open={Boolean(exportAnchor)}
+          onClose={handleExportClose}
+        >
+          <MenuItem onClick={() => handleExportFormat('mp4-1080p')}>MP4 - 1080p</MenuItem>
+          <MenuItem onClick={() => handleExportFormat('mp4-720p')}>MP4 - 720p</MenuItem>
+          <MenuItem onClick={() => handleExportFormat('mp4-480p')}>MP4 - 480p</MenuItem>
+          <Divider />
+          <MenuItem onClick={() => handleExportFormat('webm')}>WebM</MenuItem>
+        </Menu>
+
+        <Tooltip title="Help & Support">
+          <IconButton size="small" sx={{ color: 'text.secondary' }}>
+            <HelpOutlineIcon />
+          </IconButton>
         </Tooltip>
-        <Tooltip title="Export video (Coming soon)">
-          <span>
-            <Button
-              variant="outlined"
-              startIcon={<GetAppIcon />}
-              onClick={() => {
-                // TODO: Implement export
-                console.log('Export clicked');
-              }}
-              disabled
-              sx={{ textTransform: 'none' }}
-            >
-              Export
-            </Button>
-          </span>
+
+        <Tooltip title="Text Size / Accessibility">
+          <IconButton size="small" sx={{ color: 'text.secondary' }}>
+            <TextFieldsIcon />
+          </IconButton>
         </Tooltip>
+
         <Tooltip title={isSaving ? 'Saving project...' : 'Save project (Ctrl/Cmd + S)'}>
           <Button
             variant="contained"
+            size="small"
             startIcon={<SaveIcon />}
             onClick={onSave}
             disabled={isSaving}
-            sx={{ textTransform: 'none' }}
+            sx={{
+              textTransform: 'none',
+              bgcolor: '#9c27b0', // Purple accent
+              '&:hover': {
+                bgcolor: '#7b1fa2',
+              },
+            }}
           >
             {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </Tooltip>
+
         <Tooltip title="Close editor">
-          <IconButton onClick={onClose} color="inherit">
+          <IconButton onClick={onClose} size="small" sx={{ color: 'text.secondary' }}>
             <CloseIcon />
           </IconButton>
         </Tooltip>

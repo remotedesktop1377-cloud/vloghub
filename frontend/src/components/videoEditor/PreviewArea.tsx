@@ -7,6 +7,11 @@ import { HelperFunctions } from '@/utils/helperFunctions';
 import { useAudioEditing } from '@/hooks/useAudioEditing';
 import { getActiveTextClips, calculateTextOpacity, positionToPixels, getTextAlign } from '@/utils/textRenderer';
 import { getActiveClipsAtTime, getBaseVideoClip, calculateClipOpacity, getClipPlaybackTime } from '@/utils/previewCompositor';
+import { useTransformControls } from '@/hooks/useTransformControls';
+import TransformControls from './PreviewArea/TransformControls';
+import SafeAreaGuides from './PreviewArea/SafeAreaGuides';
+import PreviewControls from './PreviewArea/PreviewControls';
+import PlaybackControls from './PreviewArea/PlaybackControls';
 
 interface PreviewAreaProps {
   project: EditorProject;
@@ -15,6 +20,15 @@ interface PreviewAreaProps {
   narratorVideoUrl?: string;
   onPlayheadChange: (time: number) => void;
   onProjectUpdate?: (project: EditorProject) => void;
+  onAspectRatioChange?: (aspectRatio: EditorProject['aspectRatio']) => void;
+  onSkipToBeginning?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onExport?: () => void;
+  selectedCanvasClipId?: string | null;
+  onCanvasClipSelect?: (clipId: string | null) => void;
 }
 
 const PreviewArea: React.FC<PreviewAreaProps> = ({
@@ -24,6 +38,15 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({
   narratorVideoUrl,
   onPlayheadChange,
   onProjectUpdate,
+  onAspectRatioChange,
+  onSkipToBeginning,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  onExport,
+  selectedCanvasClipId,
+  onCanvasClipSelect,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -35,7 +58,30 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({
   const [draggingTextClip, setDraggingTextClip] = useState<Clip | null>(null);
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [showSafeZones, setShowSafeZones] = useState(false);
   const audioEditing = useAudioEditing();
+  const transformControls = useTransformControls();
+  
+  // Sync transform controls with canvas selection
+  useEffect(() => {
+    if (selectedCanvasClipId && onCanvasClipSelect) {
+      // Find the selected clip
+      let selectedClip: Clip | null = null;
+      for (const track of project.timeline) {
+        const clip = track.clips.find(c => c.id === selectedCanvasClipId);
+        if (clip) {
+          selectedClip = clip;
+          break;
+        }
+      }
+      
+      if (selectedClip) {
+        transformControls.selectClip(selectedCanvasClipId, selectedClip);
+      }
+    } else {
+      transformControls.selectClip(null);
+    }
+  }, [selectedCanvasClipId, project.timeline, transformControls, onCanvasClipSelect]);
 
   // Helper to register video element (callback ref pattern)
   const registerVideoRef = React.useCallback((clipId: string) => {
@@ -578,24 +624,44 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({
       sx={{
         flex: 1,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flexDirection: 'column',
         bgcolor: 'background.default',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      <Paper
+      {/* Preview Controls */}
+      <PreviewControls
+        project={project}
+        onAspectRatioChange={onAspectRatioChange}
+        onExport={onExport}
+        showSafeZones={showSafeZones}
+        onToggleSafeZones={setShowSafeZones}
+      />
+
+      {/* Preview Area */}
+      <Box
         sx={{
-          width: '100%',
-          height: '100%',
+          flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: 'black',
           position: 'relative',
+          overflow: 'hidden',
+          mb: 0,
         }}
       >
+        <Paper
+          sx={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'black',
+            position: 'relative',
+          }}
+        >
         {(narratorVideoUrl || activeClips.video.length > 0 || baseVideo.clip || activeClips.image.length > 0 || activeClips.text.length > 0) ? (
           <>
             {videoLoading && (
@@ -639,6 +705,15 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({
                 display: videoReady ? 'block' : 'none',
               }}
             >
+              {/* Safe Area Guides */}
+              {previewContainerRef.current && (
+                <SafeAreaGuides
+                  visible={showSafeZones}
+                  containerWidth={previewContainerRef.current.clientWidth}
+                  containerHeight={previewContainerRef.current.clientHeight}
+                  aspectRatio={project.aspectRatio}
+                />
+              )}
               {/* Base Video Layer - Narrator or first timeline video clip */}
               {baseVideo.clip || baseVideo.narratorUrl || narratorVideoUrl ? (
                 <Box
@@ -718,10 +793,25 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({
                 const opacity = calculateClipOpacity(clip, playheadTime);
                 const trackIndex = project.timeline.findIndex(t => t.id === track.id);
                 const position = clip.position || { x: 50, y: 50 };
+                const isSelected = selectedCanvasClipId === clip.id;
+                const transform = clip.properties.transform;
+                
+                // Apply transform if available
+                const transformStyle = transform ? {
+                  transform: `translate(-50%, -50%) translate(${transform.x}px, ${transform.y}px) rotate(${transform.rotation}deg) scale(${transform.scaleX}, ${transform.scaleY})`,
+                } : {
+                  transform: 'translate(-50%, -50%)',
+                };
                 
                 return (
                   <Box
                     key={`image-overlay-${clip.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onCanvasClipSelect) {
+                        onCanvasClipSelect(isSelected ? null : clip.id);
+                      }
+                    }}
                     component="img"
                     src={clip.mediaId}
                     alt={clip.mediaId}
@@ -729,21 +819,99 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({
                       position: 'absolute',
                       left: `${position.x}%`,
                       top: `${position.y}%`,
-                      transform: 'translate(-50%, -50%)',
                       maxWidth: '100%',
                       maxHeight: '100%',
                       opacity: opacity,
                       zIndex: 500 + trackIndex,
-                      pointerEvents: 'none',
+                      pointerEvents: onCanvasClipSelect ? 'auto' : 'none',
                       objectFit: 'contain',
+                      cursor: onCanvasClipSelect ? 'pointer' : 'default',
+                      outline: isSelected ? '2px solid' : 'none',
+                      outlineColor: 'primary.main',
                     }}
                     style={{ 
                       display: opacity > 0 ? 'block' : 'none',
+                      ...transformStyle,
                     }}
                   />
                 );
               })}
               
+              {/* Transform Controls */}
+              {transformControls.selectedClipId && transformControls.transformState && onProjectUpdate && previewContainerRef.current && (() => {
+                // Find the selected clip to get its dimensions
+                let selectedClip: Clip | null = null;
+                for (const track of project.timeline) {
+                  const clip = track.clips.find(c => c.id === transformControls.selectedClipId);
+                  if (clip) {
+                    selectedClip = clip;
+                    break;
+                  }
+                }
+                
+                if (!selectedClip) return null;
+                
+                // Estimate clip dimensions (this would ideally come from actual media metadata)
+                const containerWidth = previewContainerRef.current.clientWidth;
+                const containerHeight = previewContainerRef.current.clientHeight;
+                const estimatedWidth = containerWidth * 0.3; // Default estimate
+                const estimatedHeight = containerHeight * 0.3;
+                
+                return (
+                  <TransformControls
+                    key={`transform-${transformControls.selectedClipId}`}
+                    clipId={transformControls.selectedClipId}
+                    transform={transformControls.transformState}
+                    containerWidth={containerWidth}
+                    containerHeight={containerHeight}
+                    clipWidth={estimatedWidth}
+                    clipHeight={estimatedHeight}
+                    onTransformUpdate={(delta) => {
+                      transformControls.updateTransform(delta);
+                      // Update clip properties immediately
+                      if (selectedClip && onProjectUpdate) {
+                        const updatedProject = {
+                          ...project,
+                          timeline: project.timeline.map(track => ({
+                            ...track,
+                            clips: track.clips.map(c => {
+                              if (c.id === selectedClip!.id) {
+                                const currentTransform = c.properties.transform || {
+                                  x: 0,
+                                  y: 0,
+                                  scaleX: 1,
+                                  scaleY: 1,
+                                  rotation: 0,
+                                };
+                                return {
+                                  ...c,
+                                  properties: {
+                                    ...c.properties,
+                                    transform: {
+                                      ...currentTransform,
+                                      ...delta,
+                                    },
+                                  },
+                                };
+                              }
+                              return c;
+                            }),
+                          })),
+                        };
+                        onProjectUpdate(updatedProject);
+                      }
+                    }}
+                    onTransformStart={(type) => {
+                      transformControls.startTransform(type, {});
+                    }}
+                    onTransformEnd={() => {
+                      transformControls.commitTransform();
+                    }}
+                    aspectRatioLock={selectedClip.properties.aspectRatioLock}
+                  />
+                );
+              })()}
+
               {/* Text Overlays */}
               {activeTextClips.map((textClip) => {
                 const opacity = calculateTextOpacity(textClip, playheadTime);
@@ -828,6 +996,26 @@ const PreviewArea: React.FC<PreviewAreaProps> = ({
           </Box>
         )}
       </Paper>
+      </Box>
+
+      {/* Playback Controls - Positioned below preview */}
+      <Box
+        sx={{
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
+      >
+        <PlaybackControls
+          playheadTime={playheadTime}
+          totalDuration={project.totalDuration}
+          onSkipToBeginning={onSkipToBeginning}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
+      </Box>
     </Box>
   );
 };

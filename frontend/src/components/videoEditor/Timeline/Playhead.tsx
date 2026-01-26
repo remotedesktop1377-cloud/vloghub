@@ -2,34 +2,33 @@
 
 import React from 'react';
 import { Box } from '@mui/material';
+import { EditorProject } from '@/types/videoEditor';
+import { formatTimeWithFrames, getFrameRate } from '@/utils/videoEditorUtils';
 
 interface PlayheadProps {
   playheadTime: number;
   totalDuration: number;
   zoom: number;
+  project?: EditorProject;
+  showFrames?: boolean;
 }
 
 const Playhead: React.FC<PlayheadProps> = ({
   playheadTime,
   totalDuration,
   zoom,
+  project,
+  showFrames = false,
 }) => {
   const pixelsPerSecond = 50 * zoom;
   const playheadPosition = playheadTime * pixelsPerSecond;
+  const frameRate = project ? getFrameRate(project) : 30;
+  const shouldShowFrames = showFrames || zoom > 2;
   
-  // Ensure playhead is visible even when scrolled
-  const playheadStyle: React.CSSProperties = {
-    position: 'absolute',
-    left: `${playheadPosition}px`,
-    top: 0,
-    bottom: 0,
-    width: '2px',
-    backgroundColor: '#f44336',
-    zIndex: 10,
-    pointerEvents: 'none',
-  };
-
   const formatTime = (seconds: number): string => {
+    if (shouldShowFrames) {
+      return formatTimeWithFrames(seconds, frameRate);
+    }
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     const ms = Math.floor((seconds % 1) * 100);
