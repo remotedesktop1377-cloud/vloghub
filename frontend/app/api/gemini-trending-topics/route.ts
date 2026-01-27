@@ -100,9 +100,31 @@ Use the grounding tool to search for actual trending VIDEO-WORTHY DISCUSSION top
 
     // console.log('📌 Gemini Prompt:', prompt);
     const result = await model.generateContent(prompt);
-    // console.log('🟢 Gemini Prompt result:', result);
     const response = result.response;
+
+    // 1. Get the raw text (the topics)
     const text = response.text();
+
+    // 2. Get the Source Information (Grounding Metadata)
+    const metadata = response.candidates?.[0]?.groundingMetadata;
+    
+    if (metadata) {
+      console.log('🔍 Search Queries Used:', metadata.webSearchQueries);
+      console.log('📚 Sources Found:', metadata.groundingChunks);
+      
+      // Log additional metadata if available
+      if (metadata.groundingChunks) {
+        console.log(`📊 Total Sources: ${metadata.groundingChunks.length}`);
+        metadata.groundingChunks.forEach((chunk: any, index: number) => {
+          console.log(`   Source ${index + 1}:`, {
+            web: chunk.web?.uri,
+            segment: chunk.segment?.text?.substring(0, 100) + '...',
+          });
+        });
+      }
+    } else {
+      console.log('⚠️ No grounding metadata available in response');
+    }
     // Extract JSON from the response
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
