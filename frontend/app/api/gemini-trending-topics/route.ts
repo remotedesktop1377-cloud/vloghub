@@ -1,42 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HelperFunctions } from '@/utils/helperFunctions';
-import { getGeminiModel } from '@/utils/geminiService';
+import { getGeminiClient } from '@/utils/geminiService';
 
 // Helper function to generate random trending topics
 const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
   try {
+    // Inside your model initialization helper
+    const getGeminiModel = () => {
+      const genAI = getGeminiClient();
+      return genAI.getGenerativeModel({
+        model: "gemini-2.5-flash", // Use your 2.5/2.0 flash version
+        tools: [{ googleSearch: {} } as any] // ADD THIS LINE TO ENABLE GROUNDING
+      });
+    };
+
+    // Get the Gemini model instance with grounding enabled
     const model = getGeminiModel();
 
     // Get time range description for the prompt
     const timeRangeDescription = HelperFunctions.getTimeRangeDescription(dateRange);
+    
+    // Build date range context for search queries
+    let dateRangeQuery = '';
+    switch (dateRange) {
+      case '24h':
+        dateRangeQuery = 'past 24 hours';
+        break;
+      case '7d':
+        dateRangeQuery = 'past week';
+        break;
+      case '30d':
+        dateRangeQuery = 'past month';
+        break;
+      case 'anytime':
+        dateRangeQuery = 'all time';
+        break;
+      default:
+        dateRangeQuery = 'past 24 hours';
+    }
+
+    // Add this line to the top of your existing prompt variable
+    const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
     // Enhanced prompt based on location type and date range
-    let prompt = '';
+    let prompt = `ACTUAL REAL-TIME DATA REQUIRED: Use Google Search grounding to find the top 20 VIDEO-WORTHY TRENDING TOPICS 
+from social media platforms (Twitter/X, Reddit, TikTok, Instagram) in the ${region} region from the ${dateRangeQuery} (${timeRangeDescription}). 
 
-    prompt = `Fetch the top 20 trending topics from the ${region} region within the last ${timeRangeDescription} with realistic engagement metrics. 
-        IMPORTANT: Only return topics related to News and Politics. Exclude all other categories such as Entertainment, Sports, Technology, Business, Education, Health, Culture, and Social topics.
-        Prioritize the most relevant and important news and politics topics, including:
-- Political developments, government policies, and political announcements
-- Breaking news stories and current events
-- Political rumors, leaks, and speculations
-- Political leader statements, arrests, or significant events
-- Government budget, economic policies, and political decisions
-- Supreme Court rulings and legal-political developments
-- Political party activities and opposition movements
-- News from recognized news media outlets
-- Political analysis from experts and commentators
-- Local news with political significance
-- Social media trends related to news and politics
-- Google trends for news and political topics`;
+CRITICAL REQUIREMENT: Find topics that are SUITABLE FOR CREATING VIDEO CONTENT - NOT news headlines. 
+These should be DISCUSSION-WORTHY topics that people are actively talking about, analyzing, debating, and exploring from multiple angles.
+The topics must be suitable for creating engaging video scripts and content - topics you can analyze, explain, debate, or explore in depth.
+
+Use grounding to search for topics from the ${dateRangeQuery}:
+- "trending topics ${dateRangeQuery} [region]" or "viral topics ${dateRangeQuery} [region]"
+- "trending discussions ${dateRangeQuery} [region]" or "viral debates ${dateRangeQuery} [region]"
+- "topics people are talking about ${dateRangeQuery} [region]"
+- "controversial topics trending ${dateRangeQuery} [region]"
+- "topics being discussed ${dateRangeQuery} [region]"
+- "trending conversations ${dateRangeQuery} [region]"
+- "what people are debating ${dateRangeQuery} [region]"
+- "video-worthy topics ${dateRangeQuery} [region]"
+
+IMPORTANT: Fetch ONLY News and Politics topics that are VIDEO-WORTHY and DISCUSSION-BASED. These topics should:
+- Be suitable for creating video content/scripts (not just news headlines)
+- Have multiple perspectives, angles, or viewpoints that can be explored
+- Generate conversation, debate, or analysis
+- Be topics people are actively discussing, analyzing, or debating
+- NOT be simple news headlines, breaking news events, or one-time announcements
+- Be topics that can be expanded into longer-form video content (5-15 minutes)
+- Have enough depth for analysis, explanation, or exploration
+
+Exclude:
+- Simple news headlines (e.g., "President announces new policy" - instead find "debate about the new policy")
+- Breaking news events without discussion (e.g., "Earthquake hits city" - instead find "discussion about earthquake response")
+- One-time announcements without ongoing discussion
+- Entertainment, Sports, Technology, Business, Education, Health, Culture, and Social topics
+- Topics that are just facts without discussion or analysis potential
+
+Prioritize trending topics that are:
+- Being actively debated and discussed on social media (${dateRangeQuery})
+- Controversial topics with multiple viewpoints that can be explored
+- Policy discussions with different perspectives and analysis
+- Political issues people are analyzing, discussing, or debating
+- Topics generating conversation threads, debates, and analysis
+- Issues with ongoing discussion suitable for video content
+- Topics suitable for creating educational, analytical, or explanatory videos
+- Discussions that can be expanded into engaging video scripts
+- Topics that spark conversation and have depth for content creation
+
+Use the grounding tool to search for actual trending VIDEO-WORTHY DISCUSSION topics from these platforms from the ${dateRangeQuery}.`;
 
     prompt += ` Return the response as a JSON array with exactly 20 items, each containing:
-    - topic: the trending topic name (keep it concise, 2-5 words)
+    - topic: the video-worthy topic name (keep it concise, 2-6 words, should be a topic suitable for video content, NOT a news headline - e.g., "Debate on Immigration Policy" not "New Immigration Law Passed")
     - category: must be either "News" or "Politics" only
-    - engagement_count: realistic number representing posts/mentions/views (range: 50,000 to 2,000,000)
-    - source_reference: a brief source like "Twitter", "News Media", "Local News", "Expert Analysis", etc.
-    - description: brief explanation of why it's trending (must be news or politics related)
-    Sort by engagement_count (highest first). Make the engagement numbers realistic and varied.
-    Format: [{"topic": "topic name", "category": "News" or "Politics", "engagement_count": 150000, "source_reference": "Twitter", "description": "brief description"}]`;
+    - engagement_count: realistic number representing actual social media engagement from the ${dateRangeQuery} (likes + retweets + shares + mentions + comments) from the grounding search results (range: 50,000 to 2,000,000)
+    - source_reference: the actual platform where it's being discussed like "Twitter", "Reddit", "X", "Social Media", etc. (use actual data from grounding)
+    - description: brief explanation of why this topic is video-worthy and being discussed/debated - should explain what makes it suitable for video content creation (must be news or politics related, should indicate it's a topic for discussion/analysis/exploration in video format, NOT just a news event)
+    Sort by engagement_count (highest first). Make the engagement numbers realistic and varied based on actual grounding data from the ${dateRangeQuery}.
+    Format: [{"topic": "video-worthy topic name (not a headline)", "category": "News" or "Politics", "engagement_count": 150000, "source_reference": "Twitter", "description": "why this topic is video-worthy and being discussed"}]`;
 
     // console.log('📌 Gemini Prompt:', prompt);
     const result = await model.generateContent(prompt);
