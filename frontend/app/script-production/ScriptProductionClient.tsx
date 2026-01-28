@@ -1180,15 +1180,6 @@ const ScriptProductionClient = () => {
         saveHighlightedKeywords(selectedText.SceneDataIndex, newKeywords);
         toast.success(`Added "${selectedText.text}" to keywords`);
 
-        // Open media selector with this keyword as suggestion
-        try {
-            if (typeof window !== 'undefined') {
-                (window as any).__keywordSuggestions = { keyword: selectedText.text, keywords: [selectedText.text] };
-            }
-            setMediaManagementSceneDataIndex(selectedText.SceneDataIndex);
-            setMediaManagementOpen(true);
-        } catch { }
-
         // Clear selection after adding
         setSelectedText(null);
         window.getSelection()?.removeAllRanges();

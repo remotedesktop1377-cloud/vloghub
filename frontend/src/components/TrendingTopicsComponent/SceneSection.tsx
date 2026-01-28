@@ -39,7 +39,13 @@ import {
   AccessTime as TimeIcon,
   Pause as PauseIcon,
   SkipNext as SkipNextIcon,
-  SkipPrevious as SkipPreviousIcon
+  SkipPrevious as SkipPreviousIcon,
+  AddCircle as AddCircleIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  HighlightAlt as HighlightAltIcon,
+  ErrorOutline as ErrorOutlineIcon,
+  WarningAmber as WarningAmberIcon
 } from '@mui/icons-material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
@@ -948,6 +954,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                           const exactMatch = currentKeywords.some(keyword => keyword.toLowerCase().trim() === selectedTextLower);
                                           const containsExisting = currentKeywords.some(keyword => selectedTextLower.includes(keyword.toLowerCase().trim()));
                                           const isContainedInExisting = currentKeywords.some(keyword => keyword.toLowerCase().trim().includes(selectedTextLower));
+                                          const hasError = exactMatch || containsExisting || isContainedInExisting;
+                                          const isRTL = language && ['urdu', 'arabic', 'persian', 'sindhi', 'pashto', 'balochi', 'hebrew'].includes(language.toLowerCase());
 
                                           return (
                                             <Box
@@ -957,79 +965,329 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 top: '50%',
                                                 left: '50%',
                                                 transform: 'translate(-50%, -50%)',
-                                                bgcolor: 'background.paper',
-                                                border: `2px solid ${exactMatch || containsExisting || isContainedInExisting ? '#f44336' : SUCCESS.main}`,
-                                                borderRadius: 2,
-                                                p: 1.5,
-                                                boxShadow: 4,
+                                                bgcolor: 'rgba(20, 20, 20, 0.95)',
+                                                background: hasError
+                                                  ? 'linear-gradient(135deg, rgba(30, 15, 15, 0.98) 0%, rgba(25, 20, 20, 0.98) 50%, rgba(20, 20, 20, 0.98) 100%)'
+                                                  : 'linear-gradient(135deg, rgba(15, 30, 20, 0.98) 0%, rgba(20, 25, 20, 0.98) 50%, rgba(20, 20, 20, 0.98) 100%)',
+                                                border: hasError 
+                                                  ? `2px solid ${ERROR.main}` 
+                                                  : `2px solid ${SUCCESS.main}`,
+                                                borderRadius: '16px',
+                                                p: 0,
+                                                boxShadow: hasError
+                                                  ? `0 20px 60px rgba(239, 68, 68, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)`
+                                                  : `0 20px 60px rgba(76, 175, 80, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)`,
                                                 zIndex: 10000,
                                                 display: 'flex',
-                                                gap: 1,
-                                                alignItems: 'center',
-                                                minWidth: '200px',
-                                                justifyContent: 'center'
+                                                flexDirection: 'column',
+                                                minWidth: '320px',
+                                                maxWidth: '650px',
+                                                backdropFilter: 'blur(20px) saturate(180%)',
+                                                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                                                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                                animation: 'fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+                                                overflow: 'hidden',
+                                                '&::before': {
+                                                  content: '""',
+                                                  position: 'absolute',
+                                                  top: 0,
+                                                  left: 0,
+                                                  right: 0,
+                                                  height: '3px',
+                                                  background: hasError
+                                                    ? `linear-gradient(90deg, ${ERROR.main} 0%, ${ERROR.light} 50%, ${ERROR.main} 100%)`
+                                                    : `linear-gradient(90deg, ${SUCCESS.main} 0%, ${SUCCESS.light} 50%, ${SUCCESS.main} 100%)`,
+                                                  opacity: 0.8,
+                                                },
+                                                ...(isRTL ? { direction: 'rtl' } : { direction: 'ltr' }),
                                               }}
                                               onClick={(e) => e.stopPropagation()}
                                               onMouseEnter={() => onToolbarInteraction(true)}
                                               onMouseLeave={() => onToolbarInteraction(false)}
                                             >
-                                              <Typography variant="body2" sx={{
-                                                color: exactMatch || containsExisting || isContainedInExisting ? 'error.main' : 'text.primary',
-                                                fontWeight: 500
-                                              }}>
-                                                {selectedText?.text}
-                                              </Typography>
-
-                                              {exactMatch ? (
-                                                <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                  Already exists
-                                                </Typography>
-                                              ) : containsExisting ? (
-                                                <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                  Contains existing keywords
-                                                </Typography>
-                                              ) : isContainedInExisting ? (
-                                                <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                  Part of existing keyword
-                                                </Typography>
-                                              ) : (
-                                                <Button
-                                                  size="small"
-                                                  variant="contained"
-                                                  color="success"
-                                                  onClick={onAddKeyword}
-                                                  sx={{
-                                                    minWidth: 'auto',
-                                                    px: 2,
-                                                    py: 0.5,
-                                                    fontSize: '0.8rem',
-                                                    height: '32px',
-                                                    fontWeight: 600
-                                                  }}
-                                                >
-                                                  Add Keyword
-                                                </Button>
-                                              )}
-
-                                              <Button
-                                                size="small"
-                                                variant="outlined"
-                                                color="error"
-                                                onClick={() => {
-                                                  onClearSelection();
-                                                  window.getSelection()?.removeAllRanges();
-                                                }}
+                                              {/* Header Section with Icon */}
+                                              <Box
                                                 sx={{
-                                                  minWidth: 'auto',
-                                                  px: 2,
-                                                  py: 0.5,
-                                                  fontSize: '0.8rem',
-                                                  height: '32px',
-                                                  fontWeight: 600
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  gap: 1.5,
+                                                  px: 3,
+                                                  pt: 3,
+                                                  pb: 2,
+                                                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                                                 }}
                                               >
-                                                Cancel
-                                              </Button>
+                                                <Box
+                                                  sx={{
+                                                    width: 40,
+                                                    height: 40,
+                                                    borderRadius: '10px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    bgcolor: hasError 
+                                                      ? 'rgba(239, 68, 68, 0.15)' 
+                                                      : 'rgba(76, 175, 80, 0.15)',
+                                                    border: `1px solid ${hasError ? ERROR.main : SUCCESS.main}`,
+                                                    boxShadow: hasError
+                                                      ? `0 4px 12px rgba(239, 68, 68, 0.2)`
+                                                      : `0 4px 12px rgba(76, 175, 80, 0.2)`,
+                                                  }}
+                                                >
+                                                  {hasError ? (
+                                                    <ErrorOutlineIcon 
+                                                      sx={{ 
+                                                        fontSize: 20, 
+                                                        color: ERROR.light,
+                                                        animation: 'pulse 2s ease-in-out infinite',
+                                                      }} 
+                                                    />
+                                                  ) : (
+                                                    <HighlightAltIcon 
+                                                      sx={{ 
+                                                        fontSize: 20, 
+                                                        color: SUCCESS.light,
+                                                      }} 
+                                                    />
+                                                  )}
+                                                </Box>
+                                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                  <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                      color: 'rgba(255, 255, 255, 0.6)',
+                                                      fontSize: '11px',
+                                                      fontWeight: 600,
+                                                      fontFamily: 'var(--font-plus-jakarta-sans)',
+                                                      textTransform: 'uppercase',
+                                                      letterSpacing: '0.08em',
+                                                      mb: 0.5,
+                                                    }}
+                                                  >
+                                                    {hasError ? 'Keyword Conflict' : 'Selected Text'}
+                                                  </Typography>
+                                                  <Typography 
+                                                    variant="body1" 
+                                                    sx={{
+                                                      color: hasError ? ERROR.light : TEXT.primary,
+                                                      fontWeight: 600,
+                                                      fontSize: '20px',
+                                                      fontFamily: 'var(--font-playfair-display), Georgia, serif',
+                                                      letterSpacing: '0.02em',
+                                                      lineHeight: 1.4,
+                                                      textAlign: isRTL ? 'right' : 'left',
+                                                      overflow: 'hidden',
+                                                      textOverflow: 'ellipsis',
+                                                      whiteSpace: 'nowrap',
+                                                      textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                                                    }}
+                                                  >
+                                                    {selectedText?.text}
+                                                  </Typography>
+                                                </Box>
+                                              </Box>
+
+                                              {/* Content Section */}
+                                              <Box
+                                                sx={{
+                                                  px: 3,
+                                                  py: 2.5,
+                                                  display: 'flex',
+                                                  flexDirection: 'column',
+                                                  gap: 2,
+                                                }}
+                                              >
+                                                {exactMatch ? (
+                                                  <Box
+                                                    sx={{
+                                                      display: 'flex',
+                                                      alignItems: 'center',
+                                                      gap: 1.5,
+                                                      p: 2,
+                                                      borderRadius: '10px',
+                                                      bgcolor: 'rgba(239, 68, 68, 0.12)',
+                                                      border: `1px solid rgba(239, 68, 68, 0.3)`,
+                                                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)',
+                                                    }}
+                                                  >
+                                                    <ErrorOutlineIcon sx={{ color: ERROR.light, fontSize: 20 }} />
+                                                    <Typography 
+                                                      variant="body2" 
+                                                      sx={{ 
+                                                        color: ERROR.light, 
+                                                        fontWeight: 500,
+                                                        fontSize: '13px',
+                                                        fontFamily: 'var(--font-plus-jakarta-sans)',
+                                                        flex: 1,
+                                                      }}
+                                                    >
+                                                      This keyword already exists in your list
+                                                    </Typography>
+                                                  </Box>
+                                                ) : containsExisting ? (
+                                                  <Box
+                                                    sx={{
+                                                      display: 'flex',
+                                                      alignItems: 'center',
+                                                      gap: 1.5,
+                                                      p: 2,
+                                                      borderRadius: '10px',
+                                                      bgcolor: 'rgba(255, 152, 0, 0.12)',
+                                                      border: `1px solid rgba(255, 152, 0, 0.3)`,
+                                                      boxShadow: '0 4px 12px rgba(255, 152, 0, 0.15)',
+                                                    }}
+                                                  >
+                                                    <WarningAmberIcon sx={{ color: WARNING.light, fontSize: 20 }} />
+                                                    <Typography 
+                                                      variant="body2" 
+                                                      sx={{ 
+                                                        color: WARNING.light, 
+                                                        fontWeight: 500,
+                                                        fontSize: '13px',
+                                                        fontFamily: 'var(--font-plus-jakarta-sans)',
+                                                        flex: 1,
+                                                      }}
+                                                    >
+                                                      Selection contains existing keywords
+                                                    </Typography>
+                                                  </Box>
+                                                ) : isContainedInExisting ? (
+                                                  <Box
+                                                    sx={{
+                                                      display: 'flex',
+                                                      alignItems: 'center',
+                                                      gap: 1.5,
+                                                      p: 2,
+                                                      borderRadius: '10px',
+                                                      bgcolor: 'rgba(255, 152, 0, 0.12)',
+                                                      border: `1px solid rgba(255, 152, 0, 0.3)`,
+                                                      boxShadow: '0 4px 12px rgba(255, 152, 0, 0.15)',
+                                                    }}
+                                                  >
+                                                    <WarningAmberIcon sx={{ color: WARNING.light, fontSize: 20 }} />
+                                                    <Typography 
+                                                      variant="body2" 
+                                                      sx={{ 
+                                                        color: WARNING.light, 
+                                                        fontWeight: 500,
+                                                        fontSize: '13px',
+                                                        fontFamily: 'var(--font-plus-jakarta-sans)',
+                                                        flex: 1,
+                                                      }}
+                                                    >
+                                                      This text is part of an existing keyword
+                                                    </Typography>
+                                                  </Box>
+                                                ) : null}
+
+                                                {/* Action Buttons */}
+                                                <Box
+                                                  sx={{
+                                                    display: 'flex',
+                                                    gap: 1.5,
+                                                    alignItems: 'stretch',
+                                                  }}
+                                                >
+                                                  {!hasError && (
+                                                    <Button
+                                                      variant="contained"
+                                                      onClick={onAddKeyword}
+                                                      sx={{
+                                                        flex: 1,
+                                                        px: 3,
+                                                        py: 1.5,
+                                                        fontSize: '15px',
+                                                        height: '48px',
+                                                        fontWeight: 600,
+                                                        fontFamily: 'var(--font-plus-jakarta-sans)',
+                                                        bgcolor: SUCCESS.main,
+                                                        color: TEXT.primary,
+                                                        borderRadius: '10px',
+                                                        border: `1px solid ${SUCCESS.dark}`,
+                                                        textTransform: 'none',
+                                                        letterSpacing: '0.02em',
+                                                        boxShadow: `0 6px 20px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)`,
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                        position: 'relative',
+                                                        overflow: 'hidden',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 1,
+                                                        '&::before': {
+                                                          content: '""',
+                                                          position: 'absolute',
+                                                          top: 0,
+                                                          left: '-100%',
+                                                          width: '100%',
+                                                          height: '100%',
+                                                          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                                                          transition: 'left 0.5s',
+                                                        },
+                                                        '&:hover': {
+                                                          bgcolor: SUCCESS.dark,
+                                                          boxShadow: `0 8px 24px rgba(76, 175, 80, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)`,
+                                                          transform: 'translateY(-2px) scale(1.02)',
+                                                          '&::before': {
+                                                            left: '100%',
+                                                          },
+                                                        },
+                                                        '&:active': {
+                                                          transform: 'translateY(0px) scale(1)',
+                                                          boxShadow: `0 4px 12px rgba(76, 175, 80, 0.4), 0 2px 6px rgba(0, 0, 0, 0.3)`,
+                                                        },
+                                                      }}
+                                                    >
+                                                      <AddCircleIcon sx={{ fontSize: 18, flexShrink: 0 }} />
+                                                      Add Keyword
+                                                    </Button>
+                                                  )}
+
+                                                  <Button
+                                                    variant="outlined"
+                                                    onClick={() => {
+                                                      onClearSelection();
+                                                      window.getSelection()?.removeAllRanges();
+                                                    }}
+                                                    sx={{
+                                                      flex: hasError ? 1 : '0 0 auto',
+                                                      px: 3,
+                                                      py: 1.5,
+                                                      fontSize: '15px',
+                                                      height: '48px',
+                                                      minWidth: hasError ? 'auto' : '140px',
+                                                      fontWeight: 600,
+                                                      fontFamily: 'var(--font-plus-jakarta-sans)',
+                                                      color: ERROR.main,
+                                                      borderColor: ERROR.main,
+                                                      borderRadius: '10px',
+                                                      borderWidth: '1.5px',
+                                                      textTransform: 'none',
+                                                      letterSpacing: '0.02em',
+                                                      bgcolor: 'transparent',
+                                                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                                                      display: 'flex',
+                                                      alignItems: 'center',
+                                                      gap: 1,
+                                                      '&:hover': {
+                                                        borderColor: ERROR.dark,
+                                                        color: ERROR.dark,
+                                                        bgcolor: 'rgba(239, 68, 68, 0.12)',
+                                                        borderWidth: '1.5px',
+                                                        transform: 'translateY(-2px)',
+                                                        boxShadow: `0 6px 20px rgba(239, 68, 68, 0.3), 0 2px 8px rgba(0, 0, 0, 0.3)`,
+                                                      },
+                                                      '&:active': {
+                                                        transform: 'translateY(0px)',
+                                                        boxShadow: `0 2px 8px rgba(239, 68, 68, 0.2)`,
+                                                      },
+                                                    }}
+                                                  >
+                                                    <CancelIcon sx={{ fontSize: 18, flexShrink: 0 }} />
+                                                    Cancel
+                                                  </Button>
+                                                </Box>
+                                              </Box>
                                             </Box>
                                           );
                                         })()}

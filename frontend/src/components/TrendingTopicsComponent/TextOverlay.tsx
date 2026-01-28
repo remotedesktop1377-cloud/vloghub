@@ -13,7 +13,8 @@ import {
     Paper,
     Divider,
     Switch,
-    FormControlLabel
+    FormControlLabel,
+    Checkbox
 } from '@mui/material';
 import { TextOverlay as TextOverlayType } from '../../types/sceneData';
 import { PRIMARY } from '../../styles/colors';
@@ -49,12 +50,32 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
     const [fontWeight, setFontWeight] = useState(existingTextOverlay?.fontWeight || 'normal');
     const [padding, setPadding] = useState(existingTextOverlay?.padding || 10);
     const [borderRadius, setBorderRadius] = useState(existingTextOverlay?.borderRadius || 5);
+    // Support both new array format and legacy single animationType for backward compatibility
+    const getInitialAnimationTypes = (): ('fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce')[] => {
+        if (existingTextOverlay?.animationTypes) {
+            return existingTextOverlay.animationTypes;
+        }
+        if (existingTextOverlay?.animationType && existingTextOverlay.animationType !== 'none') {
+            return [existingTextOverlay.animationType as 'fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce'];
+        }
+        return [];
+    };
+    const [animationTypes, setAnimationTypes] = useState<('fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce')[]>(getInitialAnimationTypes());
+    const [animationDuration, setAnimationDuration] = useState(existingTextOverlay?.animationDuration || 0.5);
+    const [animationKey, setAnimationKey] = useState(0); // Key to force re-animation
 
     useEffect(() => {
         if (!existingTextOverlay && SceneDataNarration) {
             setText(SceneDataNarration.substring(0, 100));
         }
     }, [SceneDataNarration, existingTextOverlay]);
+
+    // Trigger re-animation when animation types change
+    useEffect(() => {
+        if (animationTypes.length > 0) {
+            setAnimationKey(prev => prev + 1);
+        }
+    }, [animationTypes]);
 
     const handleSave = () => {
         if (!text.trim()) {
@@ -79,7 +100,11 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
             fontFamily,
             fontWeight,
             padding,
-            borderRadius
+            borderRadius,
+            ...(animationTypes.length > 0 && {
+                animationTypes,
+                animationDuration
+            })
         };
 
         const updatedSceneData: any = {
@@ -192,6 +217,48 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
 
     const previewPositionStyle = getPreviewPositionStyle();
 
+    // Map animation types to their keyframe names
+    const getAnimationKeyframe = (type: string): string => {
+        const keyframeMap: Record<string, string> = {
+            'fade-in': 'fadeIn',
+            'fade-out': 'fadeOut',
+            'slide-in': 'slideInBottom',
+            'scale': 'scaleIn',
+            'slide-fade': 'slideFadeIn',
+            'bounce': 'bounceIn'
+        };
+        return keyframeMap[type] || '';
+    };
+
+    // Get animation easing based on animation type
+    const getAnimationEasing = (type: string): string => {
+        const easingMap: Record<string, string> = {
+            'fade-in': 'ease-in',
+            'fade-out': 'ease-out',
+            'slide-in': 'ease-out',
+            'scale': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+            'slide-fade': 'ease-out',
+            'bounce': 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+        };
+        return easingMap[type] || 'ease-in-out';
+    };
+
+    // Get combined animation style for multiple animations
+    const getAnimationStyle = (): React.CSSProperties => {
+        if (animationTypes.length === 0) return {};
+        
+        // Combine multiple animations
+        const animationStrings = animationTypes.map(type => {
+            const keyframe = getAnimationKeyframe(type);
+            const easing = getAnimationEasing(type);
+            return `${keyframe} ${animationDuration}s ${easing} forwards`;
+        });
+        
+        return {
+            animation: animationStrings.join(', ')
+        };
+    };
+
     return (
         <Box sx={{ p: 3, height: '100%', overflowY: 'auto' }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
@@ -266,6 +333,61 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
                         inputProps={{ min: 0.1, step: 0.1 }}
                     />
 
+                    <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                            Animations (Select Multiple)
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {[
+                                { value: 'fade-in', label: 'Fade In' },
+                                { value: 'fade-out', label: 'Fade Out' },
+                                { value: 'slide-in', label: 'Slide In' },
+                                { value: 'scale', label: 'Scale' },
+                                { value: 'slide-fade', label: 'Slide + Fade' },
+                                { value: 'bounce', label: 'Bounce' }
+                            ].map((option) => (
+                                <FormControlLabel
+                                    key={option.value}
+                                    control={
+                                        <Checkbox
+                                            checked={animationTypes.includes(option.value as any)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setAnimationTypes([...animationTypes, option.value as any]);
+                                                } else {
+                                                    setAnimationTypes(animationTypes.filter(t => t !== option.value));
+                                                }
+                                            }}
+                                            size="small"
+                                        />
+                                    }
+                                    label={option.label}
+                                />
+                            ))}
+                        </Box>
+                    </Box>
+
+                    {animationTypes.length > 0 && (
+                        <Box sx={{ mt: 2 }}>
+                            <Typography gutterBottom>
+                                Animation Duration: {animationDuration.toFixed(1)}s
+                            </Typography>
+                            <Slider
+                                value={animationDuration}
+                                onChange={(_, value) => setAnimationDuration(value as number)}
+                                min={0.1}
+                                max={2.0}
+                                step={0.1}
+                                marks={[
+                                    { value: 0.1, label: '0.1' },
+                                    { value: 0.5, label: '0.5' },
+                                    { value: 1.0, label: '1.0' },
+                                    { value: 2.0, label: '2.0' }
+                                ]}
+                            />
+                        </Box>
+                    )}
+
                 </Grid>
 
                 <Grid item xs={6}>
@@ -284,26 +406,33 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
                             sx={{
                                 position: 'absolute',
                                 ...previewPositionStyle,
-                                bgcolor: backgroundColor,
-                                borderRadius: `${borderRadius}px`,
-                                padding: `${padding}px`,
                                 maxWidth: '90%',
-                                border: `2px solid ${fontColor}`,
-                                transition: 'all 0.3s ease'
+                                transition: animationTypes.length === 0 ? 'all 0.3s ease' : 'none'
                             }}
                         >
-                            <Typography
+                            <Box
+                                key={animationKey}
                                 sx={{
-                                    fontSize: `${fontSize}px`,
-                                    color: fontColor,
-                                    fontFamily: fontFamily,
-                                    fontWeight: fontWeight,
-                                    wordBreak: 'break-word',
-                                    whiteSpace: 'pre-wrap'
+                                    bgcolor: backgroundColor,
+                                    borderRadius: `${borderRadius}px`,
+                                    padding: `${padding}px`,
+                                    border: `2px solid ${fontColor}`,
+                                    ...getAnimationStyle()
                                 }}
                             >
-                                {text || 'Preview Text'}
-                            </Typography>
+                                <Typography
+                                    sx={{
+                                        fontSize: `${fontSize}px`,
+                                        color: fontColor,
+                                        fontFamily: fontFamily,
+                                        fontWeight: fontWeight,
+                                        wordBreak: 'break-word',
+                                        whiteSpace: 'pre-wrap'
+                                    }}
+                                >
+                                    {text || 'Preview Text'}
+                                </Typography>
+                            </Box>
                         </Box>
                     </Box>
                 </Grid>
