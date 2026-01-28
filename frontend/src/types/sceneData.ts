@@ -48,6 +48,9 @@ export interface TextOverlay {
     textAlign?: 'left' | 'center' | 'right';
     padding?: number;
     borderRadius?: number;
+    animationType?: 'fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce' | 'none'; // Legacy: single animation (for backward compatibility)
+    animationTypes?: ('fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce')[]; // New: multiple animations array
+    animationDuration?: number;
 }
 
 export interface SceneKeywordSelection {
