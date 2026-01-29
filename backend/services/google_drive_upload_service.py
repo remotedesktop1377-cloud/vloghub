@@ -130,7 +130,7 @@ def upload_media_to_google_drive(
             request = drive.files().create(
                 body=metadata,
                 media_body=media,
-                fields="id,name,webViewLink",
+                fields="id,name,webViewLink,webContentLink",
                 supportsAllDrives=True,
             )
             
@@ -191,6 +191,7 @@ def upload_media_to_google_drive(
                 "fileId": file_id,
                 "fileName": created.get("name"),
                 "webViewLink": created.get("webViewLink"),
+                "webContentLink": created.get("webContentLink"),
             }
             
         except HttpError as e:

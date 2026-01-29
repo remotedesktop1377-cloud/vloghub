@@ -151,6 +151,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     if (!jobId) return;
                     const videoId = video.google_drive_video_id || video.id;
                     const videoUrl = video.google_drive_video_url || `https://drive.google.com/file/d/${videoId}/view`;
+                    // Use format that works with normalizeGoogleDriveUrl to proxy through API endpoint
                     const webContentLink = `https://drive.google.com/uc?id=${videoId}`;
 
                     if (!jobsMap.has(jobId)) {
@@ -676,6 +677,26 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                                                 className={styles.videoElement}
                                                 src={HelperFunctions.normalizeGoogleDriveUrl(video.webContentLink)}
                                                 controls
+                                                onError={(e) => {
+                                                    const videoElement = e.target as HTMLVideoElement;
+                                                    const error = videoElement.error;
+                                                    if (error) {
+                                                        console.warn('Video playback error:', error.code, error.message);
+                                                        // Show user-friendly message for processing errors
+                                                        if (error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || error.code === MediaError.MEDIA_ERR_DECODE) {
+                                                            const wrapper = videoElement.parentElement;
+                                                            if (wrapper) {
+                                                                wrapper.innerHTML = `
+                                                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; text-align: center; color: rgba(255, 255, 255, 0.9); background: rgba(0, 0, 0, 0.5);">
+                                                                        <p style="margin: 0 0 10px 0; font-size: 14px;">Video is still processing on Google Drive</p>
+                                                                        <p style="margin: 0 0 15px 0; font-size: 12px; opacity: 0.7;">Please try again in a few minutes</p>
+                                                                        <a href="${video.webViewLink}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: none; font-size: 12px;">Open in Google Drive</a>
+                                                                    </div>
+                                                                `;
+                                                            }
+                                                        }
+                                                    }
+                                                }}
                                             />
                                             {publishedVideo && (
                                                 <>

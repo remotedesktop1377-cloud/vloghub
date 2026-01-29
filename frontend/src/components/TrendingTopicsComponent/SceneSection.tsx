@@ -215,6 +215,75 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   const [volumeOpenIndex, setVolumeOpenIndex] = React.useState<number | null>(null);
   // Image viewer hook for enhanced image viewing
   const imageViewer = useImageViewer();
+  
+  // Toolbar drag state - initialize to center of viewport
+  const [toolbarPosition, setToolbarPosition] = React.useState<{ x: number; y: number }>(() => {
+    if (typeof window !== 'undefined') {
+      return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }
+    return { x: 0, y: 0 };
+  });
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [dragOffset, setDragOffset] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const toolbarRef = React.useRef<HTMLDivElement>(null);
+
+  // Reset toolbar position to center when new text is selected
+  React.useEffect(() => {
+    if (selectedText) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      setToolbarPosition({ x: centerX, y: centerY });
+    }
+  }, [selectedText]);
+
+  // Drag handlers
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Don't start dragging if clicking on buttons or interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[role="button"]')) {
+      return;
+    }
+
+    if (toolbarRef.current) {
+      const rect = toolbarRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      // Calculate offset from mouse position to box center
+      const offsetX = e.clientX - centerX;
+      const offsetY = e.clientY - centerY;
+      setDragOffset({ x: offsetX, y: offsetY });
+      setIsDragging(true);
+      e.preventDefault();
+    }
+  };
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        const newX = e.clientX - dragOffset.x;
+        const newY = e.clientY - dragOffset.y;
+        setToolbarPosition({ x: newX, y: newY });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'grabbing';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isDragging, dragOffset]);
 
   // Handle opening image viewer for a SceneData
   const handleImageClick = (SceneDataIndex: number, imageIndex: number = 0, isPreview: boolean) => {
@@ -959,11 +1028,13 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
 
                                           return (
                                             <Box
+                                              ref={toolbarRef}
                                               data-toolbar="keyword-toolbar"
+                                              onMouseDown={handleMouseDown}
                                               sx={{
                                                 position: 'fixed',
-                                                top: '50%',
-                                                left: '50%',
+                                                top: `${toolbarPosition.y}px`,
+                                                left: `${toolbarPosition.x}px`,
                                                 transform: 'translate(-50%, -50%)',
                                                 bgcolor: 'rgba(20, 20, 20, 0.95)',
                                                 background: hasError
@@ -984,9 +1055,11 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 maxWidth: '650px',
                                                 backdropFilter: 'blur(20px) saturate(180%)',
                                                 WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                                                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                                                animation: 'fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+                                                transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                                animation: !isDragging ? 'fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
                                                 overflow: 'hidden',
+                                                cursor: isDragging ? 'grabbing' : 'grab',
+                                                userSelect: 'none',
                                                 '&::before': {
                                                   content: '""',
                                                   position: 'absolute',
@@ -1191,7 +1264,11 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                   {!hasError && (
                                                     <Button
                                                       variant="contained"
-                                                      onClick={onAddKeyword}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onAddKeyword();
+                                                      }}
+                                                      onMouseDown={(e) => e.stopPropagation()}
                                                       sx={{
                                                         flex: 1,
                                                         px: 3,
@@ -1244,10 +1321,12 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
 
                                                   <Button
                                                     variant="outlined"
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
                                                       onClearSelection();
                                                       window.getSelection()?.removeAllRanges();
                                                     }}
+                                                    onMouseDown={(e) => e.stopPropagation()}
                                                     sx={{
                                                       flex: hasError ? 1 : '0 0 auto',
                                                       px: 3,
