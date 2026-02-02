@@ -23,7 +23,7 @@ export default function TextProperties() {
         <div className={styles.wrapper}>
             <div className={styles.grid}>
                 <div className={styles.section}>
-                    <h4 className={styles.sectionTitle}>Text Content</h4>
+                    <h4 className={styles.sectionTitle}>Text Properties</h4>
                     <div>
                         <textarea
                             value={textElement.text}

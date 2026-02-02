@@ -73,6 +73,7 @@ export default function RenderOptions() {
                     Current settings: {exportSettings.resolution} at {exportSettings.quality} quality ({exportSettings.speed} processing)
                 </div>
             </div>
+            
             <AlertDialog
                 open={showInfo}
                 title="Resolution vs Quality"

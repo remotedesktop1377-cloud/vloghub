@@ -18,6 +18,7 @@ import closeIcon from "@/assets/images/close.svg";
 import cutIcon from "@/assets/images/cut.svg";
 import duplicateIcon from "@/assets/images/duplicate.svg";
 import deleteIcon from "@/assets/images/delete.svg";
+import { MediaFile, TextElement } from "@/types/video_editor";
 
 export const Timeline = () => {
     const { currentTime, timelineZoom, enableMarkerTracking, activeElement, activeElementIndex, mediaFiles, textElements, duration, isPlaying } = useAppSelector((state) => state.projectState);
@@ -162,9 +163,9 @@ export const Timeline = () => {
     };
 
     const handleDelete = () => {
-        let element = null;
-        let elements = null;
-        let setElements = null;
+        let element: MediaFile | TextElement | null = null;
+        let elements: Array<MediaFile | TextElement> | null = null;
+        let setElements: typeof setMediaFiles | typeof setTextElements | null = null;
 
         if (activeElement === "media") {
             elements = [...mediaFiles];
@@ -182,7 +183,12 @@ export const Timeline = () => {
         }
 
         if (elements) {
-            elements = elements.filter(ele => ele.id !== element.id)
+            const elementId = element?.id;
+            if (!elementId) {
+                toast.error("No element selected.");
+                return;
+            }
+            elements = elements.filter(ele => ele.id !== elementId)
         }
 
         if (elements && setElements) {

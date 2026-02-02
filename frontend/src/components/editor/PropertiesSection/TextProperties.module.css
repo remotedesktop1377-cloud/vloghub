@@ -12,12 +12,12 @@
 
 .section {
   background: #0f182a;
-  border: 1px solid #1e2a3b;
+  /* border: 1px solid #1e2a3b; */
   border-radius: 12px;
-  padding: 16px;
+  /* padding: 16px; */
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .sectionTitle {

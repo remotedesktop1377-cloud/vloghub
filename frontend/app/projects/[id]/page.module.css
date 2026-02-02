@@ -70,8 +70,8 @@
 }
 
 .sidebarPanel {
-  flex: 0 0 320px;
-  min-width: 240px;
+  flex: 0 0 25%;
+  min-width: 260px;
   background: #0d1320;
   border-right: 1px solid #1f2937;
   padding: 16px;
@@ -110,16 +110,15 @@
 }
 
 .playerSizer {
+  width: 100%;
+  /* max-width: 70%; */
   height: 100%;
-  max-height: 100%;
-  width: min(1100px, 92%);
-  max-width: 100%;
   aspect-ratio: 16 / 9;
 }
 
 .rightPanel {
-  flex: 0 0 360px;
-  min-width: 240px;
+  flex: 0 0 25%;
+  min-width: 260px;
   background: #0d1320;
   border-left: 1px solid #1f2937;
   padding: 16px;

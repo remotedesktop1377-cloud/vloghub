@@ -272,15 +272,6 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                                         />
                                         <span className={styles.actionLabel}>Save Video</span>
                                     </a>
-                                    <a
-                                        href="https://github.com/sponsors/mohyware"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={styles.sponsorButton}
-                                    >
-                                        <Heart size={20} className={styles.sponsorIcon} />
-                                        <span className={styles.actionLabel}>Sponsor on Github</span>
-                                    </a>
                                 </div>
                             </div>
                         )}

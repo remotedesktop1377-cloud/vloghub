@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Img, Sequence } from "remotion";
-import { MediaFile } from "@/app/types";
+import { MediaFile } from "@/types/video_editor";
 import { HelperFunctions } from "@/utils/helperFunctions";
 
 const REMOTION_SAFE_FRAME = 0;

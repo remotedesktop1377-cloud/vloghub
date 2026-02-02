@@ -9,7 +9,7 @@ import styles from "./AddText.module.css";
 
 export default function AddTextButton() {
     const [textConfig, setTextConfig] = useState<Partial<TextElement>>({
-        text: "Example",
+        text: "Vloghub Text",
         positionStart: 0,
         positionEnd: 10,
         x: 600,
@@ -78,121 +78,125 @@ export default function AddTextButton() {
         <div className={styles.wrapper}>
             {(
                 <div className={styles.panel}>
-                    <div className={styles.card}>
-                        <div className={styles.form}>
+                    <div className={styles.form}>
+                        <div>
+                            <label className={styles.sectionTitle}>Text Properties</label>
+                            <textarea
+                                value={textConfig.text}
+                                onChange={(e) => setTextConfig({ ...textConfig, text: e.target.value })}
+                                className={styles.textarea}
+                            />
+                        </div>
+
+                        <h4 className={styles.labelLarge}>Timing Position</h4>
+
+                        <div className={styles.gridTwo}>
                             <div>
-                                <label className={styles.labelLarge}>Text Content</label>
-                                <textarea
-                                    value={textConfig.text}
-                                    onChange={(e) => setTextConfig({ ...textConfig, text: e.target.value })}
-                                    className={styles.textarea}
+                                <label className={styles.label}>Start Time (s)</label>
+                                <input
+                                    type="number"
+                                    value={textConfig.positionStart}
+                                    onChange={(e) => setTextConfig({ ...textConfig, positionStart: Number(e.target.value) })}
+                                    className={styles.input}
+                                    min={0}
+                                />
+                            </div>
+                            <div>
+                                <label className={styles.label}>End Time (s)</label>
+                                <input
+                                    type="number"
+                                    value={textConfig.positionEnd}
+                                    onChange={(e) => setTextConfig({ ...textConfig, positionEnd: Number(e.target.value) })}
+                                    className={styles.input}
+                                    min={0}
+                                />
+                            </div>
+                        </div>
+
+                        <h4 className={styles.labelLarge}>Visual Properties</h4>
+
+                        <div className={styles.gridTwo}>
+
+                            <div>
+                                <label className={styles.label}>X Position</label>
+                                <input
+                                    type="number"
+                                    value={textConfig.x}
+                                    onChange={(e) => setTextConfig({ ...textConfig, x: Number(e.target.value) })}
+                                    className={styles.input}
+                                />
+                            </div>
+                            <div>
+                                <label className={styles.label}>Y Position</label>
+                                <input
+                                    type="number"
+                                    value={textConfig.y}
+                                    onChange={(e) => setTextConfig({ ...textConfig, y: Number(e.target.value) })}
+                                    className={styles.input}
+                                />
+                            </div>
+                        </div>
+
+                        <h4 className={styles.labelLarge}>Style Properties</h4>
+
+                        <div className={styles.gridTwo}>
+                            <div>
+                                <label className={styles.label}>Font Size</label>
+                                <input
+                                    type="number"
+                                    value={textConfig.fontSize}
+                                    onChange={(e) => setTextConfig({ ...textConfig, fontSize: Number(e.target.value) })}
+                                    className={styles.input}
+                                    min={0}
                                 />
                             </div>
 
-                            <div className={styles.gridTwo}>
-                                <div>
-                                    <label className={styles.label}>Start Time (s)</label>
-                                    <input
-                                        type="number"
-                                        value={textConfig.positionStart}
-                                        onChange={(e) => setTextConfig({ ...textConfig, positionStart: Number(e.target.value) })}
-                                        className={styles.input}
-                                        min={0}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={styles.label}>End Time (s)</label>
-                                    <input
-                                        type="number"
-                                        value={textConfig.positionEnd}
-                                        onChange={(e) => setTextConfig({ ...textConfig, positionEnd: Number(e.target.value) })}
-                                        className={styles.input}
-                                        min={0}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.gridTwo}>
-                                <div>
-                                    <label className={styles.label}>X Position</label>
-                                    <input
-                                        type="number"
-                                        value={textConfig.x}
-                                        onChange={(e) => setTextConfig({ ...textConfig, x: Number(e.target.value) })}
-                                        className={styles.input}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={styles.label}>Y Position</label>
-                                    <input
-                                        type="number"
-                                        value={textConfig.y}
-                                        onChange={(e) => setTextConfig({ ...textConfig, y: Number(e.target.value) })}
-                                        className={styles.input}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.gridTwo}>
-                                <div>
-                                    <label className={styles.label}>Font Size</label>
-                                    <input
-                                        type="number"
-                                        value={textConfig.fontSize}
-                                        onChange={(e) => setTextConfig({ ...textConfig, fontSize: Number(e.target.value) })}
-                                        className={styles.input}
-                                        min={0}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className={styles.label}>Z-Index</label>
-                                    <input
-                                        type="number"
-                                        value={textConfig.zIndex}
-                                        onChange={(e) => setTextConfig({ ...textConfig, zIndex: Number(e.target.value) })}
-                                        className={styles.input}
-                                        min={0}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={styles.gridOne}>
-                                <div>
-                                    <label className={styles.label}>Font Type</label>
-                                    <select
-                                        value={textConfig.font}
-                                        onChange={(e) => setTextConfig({ ...textConfig, font: e.target.value })}
-                                        className={styles.select}
-                                    >
-                                        <option value="Arial">Arial</option>
-                                        <option value="Inter">Inter</option>
-                                        <option value="Lato">Lato</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className={styles.gridTwo}>
-                                <div>
-                                    <label className={styles.label}>Text Color</label>
-                                    <input
-                                        type="color"
-                                        value={textConfig.color}
-                                        onChange={(e) => setTextConfig({ ...textConfig, color: e.target.value })}
-                                        className={styles.colorInput}
-                                    />
-                                </div>
-
-                            </div>
-                            <div className={styles.buttonRow}>
-                                <button
-                                    onClick={handleAddText}
-                                    className={styles.primaryButton}
-                                >
-                                    Add Text
-                                </button>
+                            <div>
+                                <label className={styles.label}>Z-Index</label>
+                                <input
+                                    type="number"
+                                    value={textConfig.zIndex}
+                                    onChange={(e) => setTextConfig({ ...textConfig, zIndex: Number(e.target.value) })}
+                                    className={styles.input}
+                                    min={0}
+                                />
                             </div>
                         </div>
+
+                        <div className={styles.gridOne}>
+                            <div>
+                                <label className={styles.label}>Font Type</label>
+                                <select
+                                    value={textConfig.font}
+                                    onChange={(e) => setTextConfig({ ...textConfig, font: e.target.value })}
+                                    className={styles.select}
+                                >
+                                    <option value="Arial">Arial</option>
+                                    <option value="Inter">Inter</option>
+                                    <option value="Lato">Lato</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className={styles.gridTwo}>
+                            <div>
+                                <label className={styles.label}>Text Color</label>
+                                <input
+                                    type="color"
+                                    value={textConfig.color}
+                                    onChange={(e) => setTextConfig({ ...textConfig, color: e.target.value })}
+                                    className={styles.colorInput}
+                                />
+                            </div>
+                            <button
+                                onClick={handleAddText}
+                                className={styles.primaryButton}
+                            >
+                                Add Text
+                            </button>
+
+                        </div>
+                      
                     </div>
 
                 </div>

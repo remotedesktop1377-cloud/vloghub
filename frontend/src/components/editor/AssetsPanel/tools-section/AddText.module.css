@@ -23,15 +23,21 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+}
+
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #eef2f8;
 }
 
 .labelLarge {
   display: block;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: #f4f6fb;
-  margin-bottom: 8px;
 }
 
 .label {
@@ -39,7 +45,7 @@
   font-size: 13px;
   font-weight: 600;
   color: #d7dceb;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 
 .input,
@@ -58,6 +64,7 @@
 .textarea {
   min-height: 90px;
   resize: vertical;
+  margin-top: 10px;
 }
 
 .input:focus,

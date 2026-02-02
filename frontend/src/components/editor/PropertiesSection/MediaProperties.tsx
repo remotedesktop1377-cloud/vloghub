@@ -21,71 +21,74 @@ export default function MediaProperties() {
     return (
         <div className={styles.wrapper}>
             <div className={styles.grid}>
-                <div className={styles.section}>
-                    <h4 className={styles.sectionTitle}>Source Video</h4>
-                    <div className={styles.row}>
-                        <div>
-                            <label className={styles.label}>Start (s)</label>
-                            <input
-                                type="number"
-                                readOnly={true}
-                                value={mediaFile.startTime}
-                                min={0}
-                                onChange={(e) => onUpdateMedia(mediaFile.id, {
-                                    startTime: Number(e.target.value),
-                                    endTime: mediaFile.endTime
-                                })}
-                                className={styles.input}
-                            />
+                <div className={styles.gridTwo}>
+                    <div className={styles.section}>
+                        <h4 className={styles.sectionTitle}>Source Video</h4>
+                        <div className={styles.row}>
+                            <div>
+                                <label className={styles.label}>Start (s)</label>
+                                <input
+                                    type="number"
+                                    readOnly={true}
+                                    value={mediaFile.startTime}
+                                    min={0}
+                                    onChange={(e) => onUpdateMedia(mediaFile.id, {
+                                        startTime: Number(e.target.value),
+                                        endTime: mediaFile.endTime
+                                    })}
+                                    className={styles.input}
+                                />
+                            </div>
+                            <div>
+                                <label className={styles.label}>End (s)</label>
+                                <input
+                                    type="number"
+                                    readOnly={true}
+                                    value={mediaFile.endTime}
+                                    min={mediaFile.startTime}
+                                    onChange={(e) => onUpdateMedia(mediaFile.id, {
+                                        startTime: mediaFile.startTime,
+                                        endTime: Number(e.target.value)
+                                    })}
+                                    className={styles.input}
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className={styles.label}>End (s)</label>
-                            <input
-                                type="number"
-                                readOnly={true}
-                                value={mediaFile.endTime}
-                                min={mediaFile.startTime}
-                                onChange={(e) => onUpdateMedia(mediaFile.id, {
-                                    startTime: mediaFile.startTime,
-                                    endTime: Number(e.target.value)
-                                })}
-                                className={styles.input}
-                            />
+                    </div>
+                    <div className={styles.section}>
+                        <h4 className={styles.sectionTitle}>Timing Position</h4>
+                        <div className={styles.row}>
+                            <div>
+                                <label className={styles.label}>Start (s)</label>
+                                <input
+                                    type="number"
+                                    readOnly={true}
+                                    value={mediaFile.positionStart}
+                                    min={0}
+                                    onChange={(e) => onUpdateMedia(mediaFile.id, {
+                                        positionStart: Number(e.target.value),
+                                        positionEnd: Number(e.target.value) + (mediaFile.positionEnd - mediaFile.positionStart)
+                                    })}
+                                    className={styles.input}
+                                />
+                            </div>
+                            <div>
+                                <label className={styles.label}>End (s)</label>
+                                <input
+                                    type="number"
+                                    readOnly={true}
+                                    value={mediaFile.positionEnd}
+                                    min={mediaFile.positionStart}
+                                    onChange={(e) => onUpdateMedia(mediaFile.id, {
+                                        positionEnd: Number(e.target.value)
+                                    })}
+                                    className={styles.input}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div className={styles.section}>
-                    <h4 className={styles.sectionTitle}>Timing Position</h4>
-                    <div className={styles.row}>
-                        <div>
-                            <label className={styles.label}>Start (s)</label>
-                            <input
-                                type="number"
-                                readOnly={true}
-                                value={mediaFile.positionStart}
-                                min={0}
-                                onChange={(e) => onUpdateMedia(mediaFile.id, {
-                                    positionStart: Number(e.target.value),
-                                    positionEnd: Number(e.target.value) + (mediaFile.positionEnd - mediaFile.positionStart)
-                                })}
-                                className={styles.input}
-                            />
-                        </div>
-                        <div>
-                            <label className={styles.label}>End (s)</label>
-                            <input
-                                type="number"
-                                readOnly={true}
-                                value={mediaFile.positionEnd}
-                                min={mediaFile.positionStart}
-                                onChange={(e) => onUpdateMedia(mediaFile.id, {
-                                    positionEnd: Number(e.target.value)
-                                })}
-                                className={styles.input}
-                            />
-                        </div>
-                    </div>
-                </div>
+
                 <div className={styles.section}>
                     <h4 className={styles.sectionTitle}>Visual Properties</h4>
                     <div className={styles.gridTwo}>
@@ -151,6 +154,7 @@ export default function MediaProperties() {
                         </div>
                     </div>
                 </div>
+
                 {(mediaFile.type === "video" || mediaFile.type === "audio") && (
                     <div className={styles.section}>
                         <h4 className={styles.sectionTitle}>Audio Properties</h4>
