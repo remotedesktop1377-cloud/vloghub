@@ -961,6 +961,26 @@ export class HelperFunctions {
     });
   };
 
+  static extractMediaDuration = (file: File, mediaType: MediaType): Promise<number> => {
+    if (mediaType === 'image') {
+      return Promise.resolve(4);
+    }
+    return new Promise((resolve) => {
+      const element = document.createElement(mediaType === 'audio' ? 'audio' : 'video');
+      const url = URL.createObjectURL(file);
+      element.preload = 'metadata';
+      element.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(element.duration);
+      };
+      element.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(4);
+      };
+      element.src = url;
+    });
+  };
+
   static formatTimeWithHours(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
