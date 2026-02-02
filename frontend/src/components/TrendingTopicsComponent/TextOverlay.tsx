@@ -19,6 +19,7 @@ import {
 import { TextOverlay as TextOverlayType } from '../../types/sceneData';
 import { PRIMARY } from '../../styles/colors';
 import { HelperFunctions } from '../../utils/helperFunctions';
+import styles from './TextOverlay.module.css';
 
 interface TextOverlayProps {
     SceneDataNarration: string;
@@ -50,7 +51,6 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
     const [fontWeight, setFontWeight] = useState(existingTextOverlay?.fontWeight || 'normal');
     const [padding, setPadding] = useState(existingTextOverlay?.padding || 10);
     const [borderRadius, setBorderRadius] = useState(existingTextOverlay?.borderRadius || 5);
-    // Support both new array format and legacy single animationType for backward compatibility
     const getInitialAnimationTypes = (): ('fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce')[] => {
         if (existingTextOverlay?.animationTypes) {
             return existingTextOverlay.animationTypes;
@@ -62,7 +62,7 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
     };
     const [animationTypes, setAnimationTypes] = useState<('fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce')[]>(getInitialAnimationTypes());
     const [animationDuration, setAnimationDuration] = useState(existingTextOverlay?.animationDuration || 0.5);
-    const [animationKey, setAnimationKey] = useState(0); // Key to force re-animation
+    const [animationKey, setAnimationKey] = useState(0);
 
     useEffect(() => {
         if (!existingTextOverlay && SceneDataNarration) {
@@ -70,7 +70,6 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
         }
     }, [SceneDataNarration, existingTextOverlay]);
 
-    // Trigger re-animation when animation types change
     useEffect(() => {
         if (animationTypes.length > 0) {
             setAnimationKey(prev => prev + 1);
@@ -217,7 +216,6 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
 
     const previewPositionStyle = getPreviewPositionStyle();
 
-    // Map animation types to their keyframe names
     const getAnimationKeyframe = (type: string): string => {
         const keyframeMap: Record<string, string> = {
             'fade-in': 'fadeIn',
@@ -230,7 +228,6 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
         return keyframeMap[type] || '';
     };
 
-    // Get animation easing based on animation type
     const getAnimationEasing = (type: string): string => {
         const easingMap: Record<string, string> = {
             'fade-in': 'ease-in',
@@ -243,11 +240,9 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
         return easingMap[type] || 'ease-in-out';
     };
 
-    // Get combined animation style for multiple animations
     const getAnimationStyle = (): React.CSSProperties => {
         if (animationTypes.length === 0) return {};
         
-        // Combine multiple animations
         const animationStrings = animationTypes.map(type => {
             const keyframe = getAnimationKeyframe(type);
             const easing = getAnimationEasing(type);
@@ -260,13 +255,13 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
     };
 
     return (
-        <Box sx={{ p: 3, height: '100%', overflowY: 'auto' }}>
+        <Box className={styles.container} sx={{ p: 3, height: '100%', overflowY: 'auto' }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
                 Text Overlay Styling
             </Typography>
 
             <Grid container spacing={3}>
-                <Grid item xs={6}>
+                <Grid item xs={12} md={6}>
                     <TextField
                         fullWidth
                         label="Text Content"
@@ -390,8 +385,9 @@ const TextOverlay: React.FC<TextOverlayProps> = ({
 
                 </Grid>
 
-                <Grid item xs={6}>
+                <Grid item xs={12} md={6}>
                     <Box
+                        className={styles.preview}
                         sx={{
                             position: 'relative',
                             width: '100%',

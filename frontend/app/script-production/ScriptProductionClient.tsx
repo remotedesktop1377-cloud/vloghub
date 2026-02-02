@@ -42,7 +42,7 @@ import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { LibraryData, profileService } from '@/services/profileService';
 import { toast, ToastContainer } from 'react-toastify';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
-import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
 import PdfService from '@/services/pdfService';
 import VideoRenderService from '@/services/videoRenderService';
@@ -702,8 +702,17 @@ const ScriptProductionClient = () => {
             const userId = await getUserProfileId();
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', scriptData?.jobId || jobId, scriptData!, scriptData?.projectSettings!, scriptData.scenesData || [], user?.email || '');
             const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
+            // console.log('Project saved to Supabase: ', result);
             if (!result.success) {
                 console.log('Failed to save project and scenes to Supabase: ', result.error);
+            } else {
+                const updatedScriptData = {
+                    ...scriptData,
+                    projectId: result.projectId
+                } as ScriptData;
+                setScriptData(updatedScriptData);
+                // console.log('Script data updated: ', updatedScriptData);
+                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
             }
         } catch (e: any) {
             console.log('Failed to save project and scenes to Supabase: ', e);
@@ -1293,7 +1302,7 @@ const ScriptProductionClient = () => {
                                 Video Duration:
                             </Typography>
                             <Chip
-                                label={`${HelperFunctions.formatTime(videoDuration)}`}
+                                label={`${HelperFunctions.formatTimeWithHours(videoDuration)}`}
                                 size="medium"
                                 color="success"
                                 sx={{ fontSize: '1.25rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
@@ -1733,6 +1742,25 @@ const ScriptProductionClient = () => {
                             <Box sx={{ display: 'flex', flexDirection: 'column', pr: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', gap: 2, mb: 2, }}>
                                     <Button variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={handleUploadAgain} startIcon={<UploadIcon />}>Upload Again</Button>
+                                    <Button
+                                        variant="outlined"
+                                        size="medium"
+                                        startIcon={<EditIcon />}
+                                        onClick={() => {
+                                            const projectId = scriptData?.projectId || SecureStorageHelpers.getScriptMetadata()?.projectId;
+                                            if (projectId) {
+                                                router.push(`/projects/${projectId}`);
+                                            } else {
+                                                toast.info("Processing... Please wait for a moment.");
+                                            }
+                                        }}
+                                        sx={{
+                                            textTransform: 'none',
+                                            fontSize: '1.25rem'
+                                        }}
+                                    >
+                                        Open Editor
+                                    </Button>
                                     <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
                                 </Box>
 

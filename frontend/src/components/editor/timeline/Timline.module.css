@@ -1,0 +1,133 @@
+.root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 12px 16px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #121a2a;
+  border: 1px solid #1e2a3b;
+}
+
+.toolGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.toolButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #e6eaf2;
+  color: #0b0f17;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.toolButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  background: #f5f7fb;
+}
+
+.toolButtonDanger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f8d7da;
+  color: #7a0b14;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.toolButtonDanger:hover {
+  background: #f4c2c6;
+}
+
+.toolIcon {
+  width: 18px;
+  height: 18px;
+}
+
+.toolText span {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-left: 6px;
+}
+
+.zoomGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e6eaf2;
+  font-weight: 600;
+}
+
+.zoomLabel {
+  font-size: 13px;
+  color: #cbd5f5;
+}
+
+.zoomSign {
+  font-size: 16px;
+  color: #cbd5f5;
+}
+
+.zoomRange {
+  width: 120px;
+  accent-color: #5c8de8;
+  background: transparent;
+}
+
+.timelineScroll {
+  position: relative;
+  overflow-x: auto;
+  width: 100%;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  background: #121521;
+}
+
+.timelineSurface {
+  width: 100%;
+  position: relative;
+  background: #121521;
+}
+
+.timelineCursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ff4d5a;
+  box-shadow: 0 0 12px rgba(255, 77, 90, 0.6);
+  z-index: 50;
+}
+
+.trackStack {
+  width: 100%;
+}
+
+.trackRow {
+  position: relative;
+  height: 64px;
+  border-top: 1px solid #1a2433;
+}

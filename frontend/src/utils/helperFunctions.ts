@@ -3,6 +3,7 @@ import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '@/data/constants';
+import { MediaType } from '@/types/video_editor';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -182,11 +183,16 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 };
 
 export class HelperFunctions {
+  static getValidNumber(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const numericValue = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+    return Number.isFinite(numericValue) ? Number(numericValue) : null;
+  }
 
   static convertProjectJSONToScriptData(projectJson: any): ScriptData {
     // Handle both old nested structure (projectJson.project) and new flat structure
     const projectData = projectJson.project || projectJson;
-    
+
     return {
       ...projectData,
       jobName: projectData.jobId || '',
@@ -217,10 +223,10 @@ export class HelperFunctions {
         // Project-level settings
         projectSettings: (() => {
           // Determine backgroundType: use explicit value if set, otherwise infer from videoBackgroundImage
-          const projectBackgroundType = projectSettings?.backgroundType 
-            ? projectSettings.backgroundType 
+          const projectBackgroundType = projectSettings?.backgroundType
+            ? projectSettings.backgroundType
             : (projectSettings?.videoBackgroundImage ? 'image' : 'video');
-          
+
           return {
             videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
             videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
@@ -245,7 +251,7 @@ export class HelperFunctions {
         highlightedKeywords: sceneData.highlightedKeywords || [],
         keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
         assets: {
-          images: Array.isArray(sceneData.assets?.images) 
+          images: Array.isArray(sceneData.assets?.images)
             ? sceneData?.assets?.images?.filter(img => !HelperFunctions.isBase64Image(img))
             : [],
           clips: sceneData?.assets?.clips || [],
@@ -955,11 +961,17 @@ export class HelperFunctions {
     });
   };
 
-  static formatTime(seconds: number): string {
+  static formatTimeWithHours(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
     return `${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m ` : ''}${secs > 0 ? `${secs}s` : ''}`;
+  }
+
+  static formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
   /**
@@ -1140,5 +1152,14 @@ export class HelperFunctions {
     }
     return previewImage;
   };
+
+  static categorizeFile(mimeType: string): MediaType {
+
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    if (mimeType.startsWith('image/')) return 'image';
+    return 'unknown';
+  };
+
 }
 

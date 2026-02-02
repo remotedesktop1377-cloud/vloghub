@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
 
     const fullUrl = `${pollinationsUrl}?${params.toString()}`;
 
-    console.log('=== Thumbnail Generation API Call ===');
-    console.log('Enhanced Title:', enhancedTitle);
-    console.log('Pollinations URL:', fullUrl);
+    // console.log('=== Thumbnail Generation API Call ===');
+    // console.log('Enhanced Title:', enhancedTitle);
+    // console.log('Pollinations URL:', fullUrl);
     console.log('====================================');
 
     const response = await fetch(fullUrl, {
@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.log('Error generating thumbnail:', error);
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to generate thumbnail',
-        success: false 
+        success: false
       },
       { status: 500 }
     );

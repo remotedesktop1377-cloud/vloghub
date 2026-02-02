@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { Box, Button, Typography, Chip, IconButton, Tooltip } from '@mui/material';
 import { Refresh as RefreshIcon, AccessTime as TimeIcon, Clear as ClearIcon } from '@mui/icons-material';

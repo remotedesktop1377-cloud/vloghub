@@ -13,7 +13,8 @@ import { toast, ToastOptions } from 'react-toastify';
 import { User } from '@supabase/supabase-js';
 import { ScriptData } from '@/types/scriptData';
 import { SceneData } from '@/types/sceneData';
-import { RENDER_STATUS } from '@/data/constants';
+import { RENDER_STATUS, SCRIPT_STATUS } from '@/data/constants';
+import { SecureStorageHelpers } from './helperFunctions';
 // import removed: TrendingTopic no longer used in helper insert signature
 
 export class SupabaseHelpers {
@@ -29,16 +30,16 @@ export class SupabaseHelpers {
         return { data: null, error: new Error('No user data provided') };
       }
 
-      const pictureUrl = profileData.user_metadata?.picture 
-        || profileData.user_metadata?.avatar_url 
+      const pictureUrl = profileData.user_metadata?.picture
+        || profileData.user_metadata?.avatar_url
         || profileData.user_metadata?.avatar
         || null;
 
-      const fullName = profileData.user_metadata?.full_name 
+      const fullName = profileData.user_metadata?.full_name
         || profileData.user_metadata?.name
         || null;
 
-      const provider = profileData.app_metadata?.provider 
+      const provider = profileData.app_metadata?.provider
         || (profileData.user_metadata?.provider ? profileData.user_metadata.provider : 'email')
         || null;
 
@@ -593,7 +594,7 @@ export class SupabaseHelpers {
     }
   }
 
-  static async saveProjectAndScenes(scriptData: ScriptData, scriptProductionJSON: any): Promise<{ success: boolean; error?: any }> {
+  static async saveProjectAndScenes(scriptData: ScriptData, scriptProductionJSON: any): Promise<{ success: boolean; error?: any; projectId?: string }> {
     try {
       if (!scriptData.projectId) {
         const projectResult = await SupabaseHelpers.saveProjectRecord(scriptProductionJSON);
@@ -608,7 +609,7 @@ export class SupabaseHelpers {
         return { success: false, error: scenesResult.error };
       }
 
-      return { success: true, error: null };
+      return { success: true, error: null, projectId: scriptData.projectId };
     } catch (error) {
       console.log('Unexpected error in saveProjectAndScenes:', error);
       return { success: false, error };
@@ -621,11 +622,11 @@ export class SupabaseHelpers {
 
       if (!userId || userId === '' || userId === null || userId === undefined) {
         const userEmail = scriptProductionJSON.project.userEmail;
-        
+
         if (!userEmail) {
-          return { 
-            success: false, 
-            error: new Error('User ID or email is required. Please ensure you are logged in and try again.') 
+          return {
+            success: false,
+            error: new Error('User ID or email is required. Please ensure you are logged in and try again.')
           };
         }
 
@@ -638,9 +639,9 @@ export class SupabaseHelpers {
 
         if (profileResult.error || !profileResult.data) {
           console.log('Error fetching profile by email:', profileResult.error);
-          return { 
-            success: false, 
-            error: profileResult.error || new Error('User profile not found. Please sign in again.') 
+          return {
+            success: false,
+            error: profileResult.error || new Error('User profile not found. Please sign in again.')
           };
         }
 
@@ -648,9 +649,9 @@ export class SupabaseHelpers {
       }
 
       if (!userId) {
-        return { 
-          success: false, 
-          error: new Error('User ID is missing. Please sign in again.') 
+        return {
+          success: false,
+          error: new Error('User ID is missing. Please sign in again.')
         };
       }
 
@@ -660,7 +661,7 @@ export class SupabaseHelpers {
         .select('id')
         .eq('job_id', scriptProductionJSON.project.jobId)
         .maybeSingle();
-      
+
       const existingProject = existingProjectResult?.data;
 
       const payload: any = {
@@ -739,7 +740,7 @@ export class SupabaseHelpers {
         keywords_selected: Array.isArray(scene.keywordsSelected) ? scene.keywordsSelected : [],
       }));
 
-      console.log('sceneRows: ', sceneRows.length);
+      // console.log('sceneRows: ', sceneRows.length);
 
       if (sceneRows.length > 0) {
         const { error: insertScenesError } = await SupabaseHelpers.supabase
@@ -831,7 +832,7 @@ export class SupabaseHelpers {
           .eq('id', existingVideoAny.id)
           .select('id')
           .single();
-        
+
         finalData = updatedData;
         saveError = updateError;
       } else {
@@ -841,7 +842,7 @@ export class SupabaseHelpers {
           .insert(upsertPayload)
           .select('id')
           .single();
-        
+
         finalData = insertedData;
         saveError = insertError;
       }

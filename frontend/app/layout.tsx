@@ -1,9 +1,19 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Roboto_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import { Analytics } from "@vercel/analytics/next"
 
-const inter = Inter({ subsets: ['latin'] })
+
+const geistSans = Inter({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Roboto_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: 'VlogHub - Content Creation Platform',
@@ -41,9 +51,12 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={inter.className}>
+      <body className={`min-h-screen flex flex-col bg-darkSurfacePrimary text-text-primary dark:bg-darkSurfacePrimary dark:text-dark-text-primary font-sans ${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>
-          {children}
+          <main className="flex-grow">
+            {children}
+            <Analytics />
+          </main>
         </Providers>
       </body>
     </html>

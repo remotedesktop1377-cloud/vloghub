@@ -60,7 +60,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             setProgress(10);
 
             const originalSizeMB = file.size / (1024 * 1024);
-            console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB to target`);
+            console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB`);
 
             const formData = new FormData();
             formData.append('file', file);
