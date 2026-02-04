@@ -4,7 +4,7 @@ import React from 'react';
 import { SessionProvider } from 'next-auth/react';
 import ThemeRegistry from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
-import { ToastContainer } from 'react-toastify';
+// import { ToastContainer } from 'react-toastify';
 import { Toaster } from 'react-hot-toast';
 import 'react-toastify/dist/ReactToastify.css';
 import { Provider } from 'react-redux';
@@ -29,7 +29,7 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
                                 },
                             }}
                         />
-                        <ToastContainer
+                        {/* <ToastContainer
                             position="top-right"
                             autoClose={5000}
                             hideProgressBar={false}
@@ -43,7 +43,7 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
                             toastClassName="custom-toast"
                             bodyClassName="custom-toast-body"
                             progressClassName="custom-toast-progress"
-                        />
+                        /> */}
                         {children}
                     </ThemeRegistry>
                 </AuthProvider>

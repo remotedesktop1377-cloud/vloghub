@@ -15,6 +15,8 @@ export const PreviewPlayer = () => {
     const dispatch = useDispatch();
     const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
     const durationInFrames = Math.max(1, Math.floor(safeDuration * fps) + 1);
+    const resolutionWidth = Number.isFinite(projectState.resolution?.width) ? projectState.resolution.width : 1920;
+    const resolutionHeight = Number.isFinite(projectState.resolution?.height) ? projectState.resolution.height : 1080;
 
     // update frame when current time with marker
     useEffect(() => {
@@ -67,8 +69,8 @@ export const PreviewPlayer = () => {
             component={Composition}
             inputProps={{}}
             durationInFrames={durationInFrames}
-            compositionWidth={1920}
-            compositionHeight={1080}
+            compositionWidth={resolutionWidth}
+            compositionHeight={resolutionHeight}
             fps={fps}
             style={{ width: "100%", height: "100%" }}
             controls

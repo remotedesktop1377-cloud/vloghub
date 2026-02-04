@@ -152,20 +152,21 @@ async def process_video(
         #     scene_json_path=str(processed_json_path) if processed_json_path.exists() else None,
         # )
 
-        try:
-            if EXPORTS_DIR.exists() and EXPORTS_DIR.is_dir():
-                for item in EXPORTS_DIR.iterdir():
-                    try:
-                        if item.is_file():
-                            item.unlink()
-                        elif item.is_dir():
-                            shutil.rmtree(item, ignore_errors=True)
-                    except PermissionError:
-                        pass
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+        # delete all files in EXPORTS_DIR
+        # try:
+        #     if EXPORTS_DIR.exists() and EXPORTS_DIR.is_dir():
+        #         for item in EXPORTS_DIR.iterdir():
+        #             try:
+        #                 if item.is_file():
+        #                     item.unlink()
+        #                 elif item.is_dir():
+        #                     shutil.rmtree(item, ignore_errors=True)
+        #             except PermissionError:
+        #                 pass
+        #             except Exception:
+        #                 pass
+        # except Exception:
+        #     pass
 
         return {
             "jobId": job_id,

@@ -62,9 +62,11 @@ export default function Projects() {
             aspectRatio: '16:9',
             history: [],
             future: [],
+            autoRenderRequested: false,
+            autoRenderProjectId: '',
             exportSettings: {
-                resolution: '1080p',
-                quality: 'high',
+                resolution: '480p',
+                quality: 'low',
                 speed: 'fastest',
                 fps: 30,
                 format: 'mp4',

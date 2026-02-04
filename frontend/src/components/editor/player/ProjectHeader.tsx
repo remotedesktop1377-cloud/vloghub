@@ -1,14 +1,16 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useAppSelector, useAppDispatch } from "../../../store";
+import { useAppSelector, useAppDispatch, deleteProject } from "../../../store";
 import { setProjectName } from "../../../store/slices/projectSlice";
 import SidebarButton from "../AssetsPanel/SidebarButtons/SidebarButton";
 import backIcon from "@/assets/images/back.svg";
 import { useRouter } from "next/navigation";
 import styles from "./ProjectHeader.module.css";
+import BackConfirmationDialog from "@/dialogs/BackConfirmationDialog";
 
-export default function ProjectHeader() {
+export default function ProjectHeader({ currentProjectId }: { currentProjectId: string }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [isBackDialogOpen, setIsBackDialogOpen] = useState(false);
     const { projectName } = useAppSelector((state) => state.projectState);
     const dispatch = useAppDispatch();
 
@@ -43,9 +45,23 @@ export default function ProjectHeader() {
         dispatch(setProjectName(e.target.value));
     };
 
+    const handleBackClick = () => {
+        setIsBackDialogOpen(true);
+    };
+
+    const handleBackClose = () => {
+        setIsBackDialogOpen(false);
+    };
+
+    const handleBackConfirm = async () => {
+        setIsBackDialogOpen(false);
+        await deleteProject(currentProjectId);
+        router.back();
+    };
+
     return (
         <div className={styles.header}>
-            <SidebarButton title="" icon={backIcon} onClick={() => router.back()} />
+            <SidebarButton title="" icon={backIcon} onClick={handleBackClick} />
             {isEditing ? (
                 <input
                     ref={inputRef}
@@ -68,6 +84,15 @@ export default function ProjectHeader() {
                     </svg>
                 </p>
             )}
+            <BackConfirmationDialog
+                open={isBackDialogOpen}
+                onClose={handleBackClose}
+                onConfirm={handleBackConfirm}
+                title="Are you sure?"
+                message="Your changes will not be saved."
+                confirmText="Discard Changes"
+                cancelText="Cancel"
+            />
         </div>
     );
 }

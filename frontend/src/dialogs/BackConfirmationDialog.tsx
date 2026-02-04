@@ -9,20 +9,26 @@ import {
 } from '@mui/material';
 
 interface BackConfirmationDialogProps {
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
     open: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    isComplete: boolean;
 }
 
 const BackConfirmationDialog: React.FC<BackConfirmationDialogProps> = ({
+    title,
+    message,
+    confirmText,
+    cancelText,
     open,
     onClose,
     onConfirm,
-    isComplete
 }) => {
     const handleClose = (event: {}, reason: 'backdropClick' | 'escapeKeyDown') => {
-        if (isComplete) {
+        if (title === 'Uploading Completed') {
             return;
         }
         if (reason === 'backdropClick') {
@@ -40,30 +46,28 @@ const BackConfirmationDialog: React.FC<BackConfirmationDialogProps> = ({
             disableEscapeKeyDown={true}
         >
             <DialogTitle id="back-confirmation-dialog-title" variant="h5" sx={{ mb: 2, color: 'warning.main', lineHeight: 2.5 }}>
-                {isComplete ? 'Uploading Completed' : '⚠️ Are you sure?'}
+                {title}
             </DialogTitle>
             <DialogContent>
                 <Typography variant="h5" sx={{ mb: 2, lineHeight: 1.5 }}>
-                    {isComplete ? 'Your video is being generating, We will notify you when it is ready.' : 'You haven\'t approved your script yet. If you go back now, your current progress and script data will be permanently deleted.'}
+                    {message}
                 </Typography>
             </DialogContent>
             <DialogActions sx={{ p: 2, gap: 1 }}>
-                {!isComplete && (
-                    <Button
-                        onClick={onClose}
-                        variant="outlined"
-                        sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
-                    >
-                        Stay Here
-                    </Button>
-                )}
+                <Button
+                    onClick={onClose}
+                    variant="outlined"
+                    sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
+                >
+                    {cancelText}
+                </Button>
                 <Button
                     onClick={onConfirm}
                     variant="contained"
                     color="warning"
                     sx={{ minWidth: 100, fontSize: '1.05rem', lineHeight: 1.5 }}
                 >
-                    {isComplete ? 'Okay' : 'Discard Script'}
+                    {confirmText}
                 </Button>
             </DialogActions>
         </Dialog>

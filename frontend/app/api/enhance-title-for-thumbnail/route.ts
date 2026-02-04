@@ -25,13 +25,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`Pollinations API returned status ${response.status}`);
+      console.log('Pollinations API returned status:', response.status);
     }
 
     const enhancedText = await response.text();
 
     if (!enhancedText || enhancedText.trim().length === 0) {
-      throw new Error('Empty response from Pollinations API');
+      console.log('Empty response from Pollinations API');
     }
 
     return NextResponse.json({

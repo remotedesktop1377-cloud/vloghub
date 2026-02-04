@@ -344,6 +344,7 @@ async def cut_video_segments(video_path: str, edits: list[VideoEdit], job_id: Op
               "endTime": edit.endTime,
               "durationInSeconds": edit.durationInSeconds,
               "previewClip": preview_clip_url,
+              "localPath": str(segment_path.resolve()),
             }
             segment_transcriptions.append(segment_info)
             

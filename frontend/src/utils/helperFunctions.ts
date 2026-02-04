@@ -3,7 +3,7 @@ import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '@/data/constants';
-import { MediaType } from '@/types/video_editor';
+import { MediaFile, MediaType, ProjectState } from '@/types/video_editor';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -187,6 +187,248 @@ export class HelperFunctions {
     if (value === null || value === undefined) return null;
     const numericValue = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
     return Number.isFinite(numericValue) ? Number(numericValue) : null;
+  }
+
+  static getAspectRatio(width: number, height: number): string {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return '16:9';
+    }
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const divisor = gcd(width, height);
+    return `${Math.round(width / divisor)}:${Math.round(height / divisor)}`;
+  }
+
+  static parseResolution(resolution?: string): { width: number; height: number } {
+    if (!resolution || typeof resolution !== 'string') {
+      return { width: 1920, height: 1080 };
+    }
+    const [widthStr, heightStr] = resolution.split('x');
+    const width = HelperFunctions.getValidNumber(widthStr) || 1920;
+    const height = HelperFunctions.getValidNumber(heightStr) || 1080;
+    return { width, height };
+  }
+
+  static getFileNameFromUrl(url: string, fallback: string): string {
+    if (!url) return fallback;
+    try {
+      const parsed = new URL(url);
+      const name = parsed.pathname.split('/').filter(Boolean).pop() || '';
+      return name || fallback;
+    } catch {
+      const parts = url.split('?')[0].split('/').filter(Boolean);
+      const name = parts[parts.length - 1] || '';
+      return name || fallback;
+    }
+  }
+
+  static getScenesFromScriptMetadata(scriptMetadata: any): SceneData[] {
+    if (Array.isArray(scriptMetadata?.script)) {
+      return scriptMetadata.script as SceneData[];
+    }
+    if (Array.isArray(scriptMetadata?.scenesData)) {
+      return scriptMetadata.scenesData as SceneData[];
+    }
+    if (Array.isArray(scriptMetadata?.project?.scenesData)) {
+      return scriptMetadata.project.scenesData as SceneData[];
+    }
+    if (Array.isArray(scriptMetadata?.project?.script)) {
+      return scriptMetadata.project.script as SceneData[];
+    }
+    return [];
+  }
+
+  static getMediaFilesFromScriptMetadata(scriptMetadata: any, resolution: { width: number; height: number }): MediaFile[] {
+    const scenes = HelperFunctions.getScenesFromScriptMetadata(scriptMetadata);
+    const mediaFiles: MediaFile[] = [];
+    let zIndex = 0;
+
+    scenes.forEach((scene, sceneIndex) => {
+      const usedUrls = new Set<string>();
+      const sceneStart = HelperFunctions.getValidNumber(scene.startTime) ?? 0;
+      const sceneEnd = HelperFunctions.getValidNumber(scene.endTime);
+      const durationInSeconds = HelperFunctions.getValidNumber(scene.durationInSeconds) ?? 0;
+      const sceneDuration = sceneEnd && sceneEnd > sceneStart ? sceneEnd - sceneStart : (durationInSeconds || 4);
+      const positionStart = sceneStart;
+      const positionEnd = sceneStart + sceneDuration;
+
+      const previewImage = (scene as any)?.gammaPreviewImage || (scene as any)?.previewImage || '';
+      const imageUrls = [
+        ...(Array.isArray(scene.assets?.images) ? scene.assets!.images!.filter(Boolean) as string[] : []),
+        previewImage
+      ].filter(Boolean);
+
+      const localClipPath = (scene as any)?.localPath || '';
+      const assetClips = Array.isArray(scene.assets?.clips) ? scene.assets!.clips! : [];
+      const localAssetClips = assetClips
+        .map((clip: any) => clip?.url)
+        .filter((url: string | undefined) => {
+          if (!url) return false;
+          return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
+        });
+      const clipUrls = [
+        ...localAssetClips,
+        localClipPath
+      ].filter((url) => {
+        if (!url) return false;
+        return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
+      });
+
+      imageUrls.forEach((url, imageIndex) => {
+        if (usedUrls.has(url)) return;
+        usedUrls.add(url);
+        const id = crypto.randomUUID();
+        const normalizedUrl = HelperFunctions.normalizeGoogleDriveUrl(url);
+        mediaFiles.push({
+          id,
+          fileName: `Image-${sceneIndex + 1}-${imageIndex + 1}`,
+          fileId: id,
+          type: 'image',
+          startTime: 0,
+          endTime: 3,
+          src: normalizedUrl,
+          positionStart,
+          positionEnd,
+          includeInMerge: true,
+          playbackSpeed: 1,
+          volume: 100,
+          zIndex: zIndex++,
+          x: 0,
+          y: 0,
+          width: resolution.width,
+          height: resolution.height,
+          rotation: 0,
+          opacity: 100,
+          crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
+        });
+      });
+
+      clipUrls.forEach((url, clipIndex) => {
+        if (usedUrls.has(url)) return;
+        usedUrls.add(url);
+        const id = crypto.randomUUID();
+        const normalizedUrl = HelperFunctions.getClipUrl(url) || url;
+        mediaFiles.push({
+          id,
+          fileName: `Video-${sceneIndex + 1}-${clipIndex + 1}`,
+          fileId: id,
+          type: 'video',
+          startTime: 0,
+          endTime: sceneDuration,
+          src: normalizedUrl,
+          positionStart,
+          positionEnd,
+          includeInMerge: true,
+          playbackSpeed: 1,
+          volume: 100,
+          zIndex: zIndex++,
+          x: 0,
+          y: 0,
+          width: resolution.width,
+          height: resolution.height,
+          rotation: 0,
+          opacity: 100,
+          crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
+        });
+      });
+    });
+
+    return mediaFiles;
+  }
+
+  static normalizeMediaFiles(mediaFiles: MediaFile[], resolution: { width: number; height: number }): MediaFile[] {
+    const normalized: MediaFile[] = [];
+    let zIndex = 0;
+
+    mediaFiles.forEach((media) => {
+      if (!media) return;
+      const positionStart = HelperFunctions.getValidNumber(media.positionStart) ?? 0;
+      const positionEnd = HelperFunctions.getValidNumber(media.positionEnd);
+      const startTime = HelperFunctions.getValidNumber(media.startTime) ?? 0;
+      const endTime = HelperFunctions.getValidNumber(media.endTime);
+      const safeDuration = endTime && endTime > startTime ? endTime - startTime : 4;
+      const safePositionEnd = positionEnd && positionEnd > positionStart ? positionEnd : positionStart + safeDuration;
+      const normalizedSrc = media.src ? HelperFunctions.normalizeGoogleDriveUrl(media.src) : media.src;
+
+      normalized.push({
+        id: media.id || crypto.randomUUID(),
+        fileName: media.fileName || 'Untitled Media',
+        fileId: media.fileId || media.id || crypto.randomUUID(),
+        type: media.type || 'unknown',
+        startTime,
+        endTime: endTime && endTime > startTime ? endTime : startTime + safeDuration,
+        src: normalizedSrc,
+        positionStart,
+        positionEnd: safePositionEnd,
+        includeInMerge: media.includeInMerge ?? true,
+        playbackSpeed: media.playbackSpeed ?? 1,
+        volume: media.volume ?? 100,
+        zIndex: Number.isFinite(media.zIndex) ? media.zIndex : zIndex++,
+        x: media.x ?? 0,
+        y: media.y ?? 0,
+        width: media.width ?? resolution.width,
+        height: media.height ?? resolution.height,
+        rotation: media.rotation ?? 0,
+        opacity: media.opacity ?? 100,
+        crop: media.crop ?? { x: 0, y: 0, width: resolution.width, height: resolution.height }
+      });
+    });
+
+    return normalized;
+  }
+
+  static createProjectFromScriptMetadata(projectId: string, scriptMetadata: any): ProjectState | null {
+    if (!projectId || !scriptMetadata) return null;
+    const projectData = scriptMetadata?.project && typeof scriptMetadata.project === 'object' ? scriptMetadata.project : scriptMetadata;
+    const resolution = HelperFunctions.parseResolution(projectData?.resolution);
+    const scenes = HelperFunctions.getScenesFromScriptMetadata(scriptMetadata);
+    const mediaFiles = HelperFunctions.getMediaFilesFromScriptMetadata(scriptMetadata, resolution);
+    const sceneEndTimes = scenes
+      .map(scene => {
+        const start = HelperFunctions.getValidNumber(scene.startTime) ?? 0;
+        const end = HelperFunctions.getValidNumber(scene.endTime);
+        if (end && end > start) return end;
+        const duration = HelperFunctions.getValidNumber(scene.durationInSeconds) ?? 0;
+        return start + duration;
+      })
+      .filter(value => Number.isFinite(value)) as number[];
+    const maxSceneEnd = sceneEndTimes.length > 0 ? Math.max(...sceneEndTimes) : 0;
+    const projectDuration = HelperFunctions.getValidNumber(projectData?.videoDuration) ?? 0;
+    const duration = Math.max(projectDuration, maxSceneEnd);
+    const projectName = projectData?.title || scriptMetadata?.title || 'Untitled Project';
+
+    return {
+      id: projectId,
+      projectName,
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      mediaFiles,
+      textElements: [],
+      currentTime: 0,
+      isPlaying: false,
+      isMuted: false,
+      duration,
+      activeSection: 'media',
+      activeElement: 'text',
+      activeElementIndex: 0,
+      filesID: [],
+      zoomLevel: 1,
+      timelineZoom: 100,
+      enableMarkerTracking: true,
+      resolution: { width: resolution.width, height: resolution.height },
+      fps: 30,
+      aspectRatio: HelperFunctions.getAspectRatio(resolution.width, resolution.height),
+      history: [],
+      future: [],
+      autoRenderRequested: true,
+      exportSettings: {
+        resolution: '480p',
+        quality: 'low',
+        speed: 'fastest',
+        fps: 30,
+        format: 'mp4',
+        includeSubtitles: false
+      }
+    };
   }
 
   static convertProjectJSONToScriptData(projectJson: any): ScriptData {

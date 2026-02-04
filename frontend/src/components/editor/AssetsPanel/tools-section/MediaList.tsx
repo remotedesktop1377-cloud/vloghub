@@ -14,6 +14,11 @@ export default function MediaList() {
     const { mediaFiles, filesID } = useAppSelector((state) => state.projectState);
     const dispatch = useAppDispatch();
     const [files, setFiles] = useState<UploadedFile[]>([]);
+    const driveMediaFiles = mediaFiles.filter((media) => {
+        if (!media?.src) return false;
+        if (filesID?.includes(media.fileId)) return false;
+        return true;
+    });
 
     useEffect(() => {
         let mounted = true;
@@ -55,9 +60,14 @@ export default function MediaList() {
         await deleteFile(id);
     };
 
+    const onDeleteDriveMedia = (id: string) => {
+        const onUpdateMedia = mediaFiles.filter(f => f.id !== id);
+        dispatch(setMediaFiles(onUpdateMedia));
+    };
+
     return (
         <>
-            {files.length > 0 && (
+            {(files.length > 0 || driveMediaFiles.length > 0) && (
                 <div className={styles.list}>
                     {files.map((mediaFile) => (
                         <div key={mediaFile.id} className={styles.card}>
@@ -70,6 +80,30 @@ export default function MediaList() {
                                 </div>
                                 <button
                                     onClick={() => onDeleteMedia(mediaFile.id)}
+                                    className={styles.deleteButton}
+                                    aria-label="Delete file"
+                                >
+                                    <Image
+                                        alt="Delete"
+                                        className={styles.deleteIcon}
+                                        height={18}
+                                        width={18}
+                                        src={deleteIcon}
+                                    />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    {driveMediaFiles.map((mediaFile) => (
+                        <div key={mediaFile.id} className={styles.card}>
+                            <div className={styles.row}>
+                                <div className={styles.fileInfo}>
+                                    <span className={styles.fileName} title={mediaFile.fileName}>
+                                        {mediaFile.fileName}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => onDeleteDriveMedia(mediaFile.id)}
                                     className={styles.deleteButton}
                                     aria-label="Delete file"
                                 >

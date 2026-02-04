@@ -101,12 +101,13 @@ export interface ProjectState {
     activeSection: ActiveElement;
     activeElement: ActiveElement | null;
     activeElementIndex: number;
-
     resolution: { width: number; height: number };
     fps: number;
     aspectRatio: string;
     history: ProjectState[]; // stack for undo
     future: ProjectState[]; // stack for redo
+    autoRenderRequested: boolean;
+    autoRenderProjectId: string;
     exportSettings: ExportConfig;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { useEffect, useRef, useState } from "react";
-import { getFile, useAppSelector } from "../../../../store";
+import { getFile, useAppDispatch, useAppSelector } from "../../../../store";
 import { Heart } from "lucide-react";
 import Image from "next/image";
 import { extractConfigs } from "../../../../utils/extractConfigs";
@@ -10,6 +10,8 @@ import { toast } from "react-hot-toast";
 import FfmpegProgressBar from "./ProgressBar";
 import styles from "./FfmpegRender.module.css";
 import saveIcon from "@/assets/images/save.svg";
+import { setAutoRenderRequested, setAutoRenderProjectId, setQuality, setResolution, setSpeed } from "../../../../store/slices/projectSlice";
+import { SecureStorageHelpers } from "../../../../utils/helperFunctions";
 
 interface FileUploaderProps {
     loadFunction: () => Promise<void>;
@@ -19,19 +21,36 @@ interface FileUploaderProps {
 }
 
 export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMessages }: FileUploaderProps) {
-    const { mediaFiles, projectName, exportSettings, duration, textElements } = useAppSelector(state => state.projectState);
+    const { id, mediaFiles, projectName, exportSettings, duration, textElements, autoRenderRequested, autoRenderProjectId } = useAppSelector(state => state.projectState);
     const totalDuration = duration;
     const videoRef = useRef<HTMLVideoElement>(null);
     const [loaded, setLoaded] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isRendering, setIsRendering] = useState(false);
+    const [autoRenderTriggered, setAutoRenderTriggered] = useState(false);
+    const dispatch = useAppDispatch();
 
     useEffect(() => {
         if (loaded && videoRef.current && previewUrl) {
             videoRef.current.src = previewUrl;
         }
     }, [loaded, previewUrl]);
+
+    useEffect(() => {
+        const shouldAutoRender = autoRenderRequested && autoRenderProjectId === id;
+        const hasContent = mediaFiles.length > 0 || textElements.length > 0;
+
+        if (!autoRenderTriggered && shouldAutoRender && loadFfmpeg && !isRendering && hasContent) {
+            dispatch(setResolution("480p"));
+            dispatch(setQuality("low"));
+            dispatch(setSpeed("fastest"));
+            dispatch(setAutoRenderRequested(false));
+            dispatch(setAutoRenderProjectId(''));
+            setAutoRenderTriggered(true);
+            render();
+        }
+    }, [autoRenderProjectId, autoRenderRequested, autoRenderTriggered, dispatch, id, isRendering, loadFfmpeg, mediaFiles.length, textElements.length]);
 
     const handleCloseModal = async () => {
         setShowModal(false);
@@ -70,8 +89,32 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                     const duration = positionEnd - positionStart;
 
                     const fileData = await getFile(sortedMediaFiles[i].fileId);
-                    const buffer = await fileData.arrayBuffer();
-                    const ext = mimeToExt[fileData.type as keyof typeof mimeToExt] || fileData.type.split('/')[1];
+                    let buffer: ArrayBuffer | null = null;
+                    let ext = '';
+                    if (fileData) {
+                        buffer = await fileData.arrayBuffer();
+                        ext = mimeToExt[fileData.type as keyof typeof mimeToExt] || fileData.type.split('/')[1];
+                    } else if (sortedMediaFiles[i].src) {
+                        const src = sortedMediaFiles[i].src;
+                        const response = await fetch(src!);
+                        if (!response.ok) {
+                            throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
+                        }
+                        const blob = await response.blob();
+                        buffer = await blob.arrayBuffer();
+                        const blobType = blob.type || '';
+                        ext = mimeToExt[blobType as keyof typeof mimeToExt] || blobType.split('/')[1] || '';
+                        if (!ext) {
+                            const pathName = new URL(src!, window.location.origin).pathname;
+                            const extMatch = pathName.split('.').pop();
+                            ext = extMatch ? extMatch.toLowerCase() : '';
+                        }
+                    } else {
+                        throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
+                    }
+                    if (!buffer || !ext) {
+                        throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
+                    }
                     await ffmpeg.writeFile(`input${i}.${ext}`, new Uint8Array(buffer));
 
                     if (sortedMediaFiles[i].type === 'image') {

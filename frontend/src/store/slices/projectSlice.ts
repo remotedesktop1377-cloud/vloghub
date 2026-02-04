@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { TextElement, MediaFile, ActiveElement, ExportConfig } from '../../types/video_editor';
 import { ProjectState } from '../../types/video_editor';
+import { deleteProject } from './projectsSlice';
 
 export const initialState: ProjectState = {
     id: crypto.randomUUID(),
@@ -24,9 +25,11 @@ export const initialState: ProjectState = {
     aspectRatio: '16:9',
     history: [],
     future: [],
+    autoRenderRequested: false,
+    autoRenderProjectId: '',
     exportSettings: {
-        resolution: '1080p',
-        quality: 'high',
+        resolution: '480p',
+        quality: 'low',
         speed: 'fastest',
         fps: 30,
         format: 'mp4',
@@ -111,6 +114,12 @@ const projectStateSlice = createSlice({
         setMarkerTrack: (state, action: PayloadAction<boolean>) => {
             state.enableMarkerTracking = action.payload;
         },
+        setAutoRenderRequested: (state, action: PayloadAction<boolean>) => {
+            state.autoRenderRequested = action.payload;
+        },
+        setAutoRenderProjectId: (state, action: PayloadAction<string>) => {
+            state.autoRenderProjectId = action.payload;
+        },
         // Special reducer for rehydrating state from IndexedDB
         rehydrate: (state, action: PayloadAction<ProjectState>) => {
             return { ...state, ...action.payload };
@@ -141,6 +150,8 @@ export const {
     setTimelineZoom,
     rehydrate,
     createNewProject,
+    setAutoRenderRequested,
+    setAutoRenderProjectId,
 } = projectStateSlice.actions;
 
 export default projectStateSlice.reducer; 

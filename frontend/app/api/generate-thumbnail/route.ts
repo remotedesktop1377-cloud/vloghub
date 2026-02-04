@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`Pollinations API returned status ${response.status}`);
+      console.log('Pollinations API returned status:', response.status);
     }
 
     const imageBuffer = await response.arrayBuffer();

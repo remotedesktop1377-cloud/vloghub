@@ -166,7 +166,14 @@ const ScriptProductionClient = () => {
                     setPageTitle('Final Step: Scene Composition & Video Generation');
 
                     if (storedData.transcription) {
-                        updateParagraphs(storedData);
+                        console.log('storedData: ', JSON.stringify(storedData, null, 2));
+                        const projectId = storedData.projectId;
+                        if (projectId) {
+                            router.push(`/projects/${projectId}`);
+                        } else {
+                            toast.info("Project id not found.");
+                        }
+                        // updateParagraphs(storedData);
                     }
                 }
             } else {
@@ -483,6 +490,42 @@ const ScriptProductionClient = () => {
 
             setCompleteProjectUploaded(true);
             setShowConfirmationModal(true);
+
+        } catch (e: any) {
+            console.log(e);
+            toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveProjectAndStartEditing = async (updatedScriptData: ScriptData) => {
+        try {
+            setLoading(true);
+            const isReachable = await backendService.isBackendReachable();
+            if (!isReachable) {
+                HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
+                setShowAlertDialog(true);
+                setLoading(false);
+                return;
+            }
+            const userId = await getUserProfileId();
+            const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, updatedScriptData.scenesData!, user?.email || '');
+
+            try {
+                const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
+                if (!result.success) {
+                    console.log('Failed to save project and scenes to Supabase: ', result.error);
+                }
+                const projectId = result?.projectId;
+                if (projectId) {
+                    router.push(`/projects/${projectId}`);
+                } else {
+                    toast.info("Project id not found.");
+                }
+            } catch (e: any) {
+                console.log('Failed to save project and scenes to Supabase: ', e);
+            }
 
         } catch (e: any) {
             console.log(e);
@@ -1637,14 +1680,25 @@ const ScriptProductionClient = () => {
                                                 status: SCRIPT_STATUS.UPLOADED,
                                                 narrator_chroma_key_link: driveUrl,
                                                 transcription: transcriptionData.text,
+                                                projectSettings: {
+                                                    videoLogo: scriptData?.projectSettings?.videoLogo as LogoOverlayInterface,
+                                                    videoBackgroundMusic: scriptData?.projectSettings?.videoBackgroundMusic as SettingItemInterface,
+                                                    videoBackgroundVideo: scriptData?.projectSettings?.videoBackgroundVideo as SettingItemInterface,
+                                                    videoBackgroundImage: scriptData?.projectSettings?.videoBackgroundImage as SettingItemInterface,
+                                                    backgroundType: scriptData?.projectSettings?.backgroundType || (scriptData?.projectSettings?.videoBackgroundImage ? 'image' : 'video'),
+                                                    videoTransitionEffect: scriptData?.projectSettings?.videoTransitionEffect as SettingItemInterface,
+                                                    showPreviewImageAtStart: scriptData?.projectSettings?.showPreviewImageAtStart,
+                                                },
                                                 scenesData: transcriptionData.scenes,
                                                 updated_at: new Date().toISOString(),
                                             } as ScriptData;
-                                            // console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
                                             setScriptData(updatedScriptData);
                                             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
-                                            updateParagraphs(updatedScriptData);
+                                            saveProjectAndStartEditing(updatedScriptData);                                        
+
+                                            // updateParagraphs(updatedScriptData);
+
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
                                             toast.error(errorMessage);
@@ -1879,7 +1933,10 @@ const ScriptProductionClient = () => {
                 open={showConfirmationModal}
                 onClose={handleCancelBack}
                 onConfirm={handleConfirmBack}
-                isComplete={completeProjectUploaded}
+                title={completeProjectUploaded ? "Uploading Completed" : "Are you sure?"}
+                message={completeProjectUploaded ? "Your video is being generating, We will notify you when it is ready." : "You haven't approved your script yet. If you go back now, your current progress and script data will be permanently deleted."}
+                confirmText={completeProjectUploaded ? "Okay" : "Discard Script"}
+                cancelText={completeProjectUploaded ? "Stay Here" : "Cancel"}
             />
 
             <AlertDialog

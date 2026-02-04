@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -19,6 +19,7 @@ class VideoEdit(BaseModel):
     startTime: float
     endTime: float
     durationInSeconds: float
+    localPath: Optional[str] = None
     # highlightedKeywords: List[str]
 
 def _ensure_scene_word_count(scene_texts: List[str]) -> List[str]:
@@ -85,7 +86,7 @@ async def process_transcription_with_llm(
             scene_texts,
             total_duration=video_duration_seconds
         )
-
+    
         video_edits = [
             VideoEdit(
                 id=f"scene-{index + 1}",
@@ -95,6 +96,7 @@ async def process_transcription_with_llm(
                 startTime=scene["startTime"],
                 endTime=scene["endTime"],
                 durationInSeconds=scene["durationInSeconds"],
+                localPath=scene.get("localPath"),
                 # highlightedKeywords=scene["highlightedKeywords"]
             )
             for index, scene in enumerate(scene_payload)
