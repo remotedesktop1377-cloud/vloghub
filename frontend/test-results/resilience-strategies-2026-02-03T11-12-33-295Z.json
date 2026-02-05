@@ -1,0 +1,351 @@
+{
+  "timestamp": "2026-02-03T11:11:37.912Z",
+  "tests": [
+    {
+      "name": "Baseline",
+      "strategyConfig": {
+        "useTextEnhancement": false,
+        "useResolutionLadder": false,
+        "useSequential": false,
+        "useCircuitBreaker": false,
+        "useCaching": false
+      },
+      "results": [
+        {
+          "sceneId": "scene-1",
+          "success": true
+        },
+        {
+          "sceneId": "scene-2",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-3",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-4",
+          "success": true
+        },
+        {
+          "sceneId": "scene-5",
+          "success": false,
+          "error": "All resolution sizes failed"
+        }
+      ],
+      "elapsed": 3162,
+      "successCount": 2,
+      "failureCount": 3,
+      "skippedCount": 0,
+      "successRate": 40,
+      "circuitBreakerStatus": null,
+      "cacheStats": null
+    },
+    {
+      "name": "Strategy 1: Text Enhancement",
+      "strategyConfig": {
+        "useTextEnhancement": true,
+        "useResolutionLadder": false,
+        "useSequential": false,
+        "useCircuitBreaker": false,
+        "useCaching": false
+      },
+      "results": [
+        {
+          "sceneId": "scene-1",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-2",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-3",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-4",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-5",
+          "success": false,
+          "error": "All resolution sizes failed"
+        }
+      ],
+      "elapsed": 3650,
+      "successCount": 0,
+      "failureCount": 5,
+      "skippedCount": 0,
+      "successRate": 0,
+      "circuitBreakerStatus": null,
+      "cacheStats": null
+    },
+    {
+      "name": "Strategy 2: Resolution Ladder",
+      "strategyConfig": {
+        "useTextEnhancement": false,
+        "useResolutionLadder": true,
+        "useSequential": false,
+        "useCircuitBreaker": false,
+        "useCaching": false
+      },
+      "results": [
+        {
+          "sceneId": "scene-1",
+          "success": true
+        },
+        {
+          "sceneId": "scene-2",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-3",
+          "success": false,
+          "error": "All resolution sizes failed"
+        },
+        {
+          "sceneId": "scene-4",
+          "success": true
+        },
+        {
+          "sceneId": "scene-5",
+          "success": false,
+          "error": "All resolution sizes failed"
+        }
+      ],
+      "elapsed": 1880,
+      "successCount": 2,
+      "failureCount": 3,
+      "skippedCount": 0,
+      "successRate": 40,
+      "circuitBreakerStatus": null,
+      "cacheStats": null
+    },
+    {
+      "name": "Strategy 3: Sequential Processing",
+      "strategyConfig": {
+        "useTextEnhancement": false,
+        "useResolutionLadder": false,
+        "useSequential": true,
+        "useCircuitBreaker": false,
+        "useCaching": false
+      },
+      "results": [
+        {
+          "sceneId": "scene-1",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-2",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-3",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-4",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-5",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        }
+      ],
+      "elapsed": 14020,
+      "successCount": 0,
+      "failureCount": 5,
+      "skippedCount": 0,
+      "successRate": 0,
+      "circuitBreakerStatus": null,
+      "cacheStats": null
+    },
+    {
+      "name": "Strategy 4: Circuit Breaker",
+      "strategyConfig": {
+        "useTextEnhancement": false,
+        "useResolutionLadder": true,
+        "useSequential": true,
+        "useCircuitBreaker": true,
+        "useCaching": false
+      },
+      "results": [
+        {
+          "sceneId": "scene-1",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-2",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        },
+        {
+          "sceneId": "scene-3",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        },
+        {
+          "sceneId": "scene-4",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        },
+        {
+          "sceneId": "scene-5",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        }
+      ],
+      "elapsed": 6564,
+      "successCount": 0,
+      "failureCount": 5,
+      "skippedCount": 4,
+      "successRate": 0,
+      "circuitBreakerStatus": {
+        "isOpen": true,
+        "failureCount": 3,
+        "threshold": 3,
+        "openedAt": 1770117123184,
+        "timeRemaining": 595995
+      },
+      "cacheStats": null
+    },
+    {
+      "name": "Strategy 5: Caching",
+      "strategyConfig": {
+        "useTextEnhancement": true,
+        "useResolutionLadder": true,
+        "useSequential": true,
+        "useCircuitBreaker": false,
+        "useCaching": true
+      },
+      "results": [
+        {
+          "sceneId": "scene-1",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-2",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-3",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-4",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-5",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        }
+      ],
+      "elapsed": 17084,
+      "successCount": 0,
+      "failureCount": 5,
+      "skippedCount": 0,
+      "successRate": 0,
+      "circuitBreakerStatus": null,
+      "cacheStats": {
+        "size": 0,
+        "hits": 0,
+        "misses": 5,
+        "hitRate": 0
+      }
+    },
+    {
+      "name": "All Strategies Combined",
+      "strategyConfig": {
+        "useTextEnhancement": true,
+        "useResolutionLadder": true,
+        "useSequential": true,
+        "useCircuitBreaker": true,
+        "useCaching": true
+      },
+      "results": [
+        {
+          "sceneId": "scene-1",
+          "success": false,
+          "error": "All resolution sizes failed",
+          "skipped": false
+        },
+        {
+          "sceneId": "scene-2",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        },
+        {
+          "sceneId": "scene-3",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        },
+        {
+          "sceneId": "scene-4",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        },
+        {
+          "sceneId": "scene-5",
+          "success": false,
+          "error": "Circuit breaker is open",
+          "skipped": true
+        }
+      ],
+      "elapsed": 9021,
+      "successCount": 0,
+      "failureCount": 5,
+      "skippedCount": 4,
+      "successRate": 0,
+      "circuitBreakerStatus": {
+        "isOpen": true,
+        "failureCount": 3,
+        "threshold": 3,
+        "openedAt": 1770117146744,
+        "timeRemaining": 593449
+      },
+      "cacheStats": {
+        "size": 0,
+        "hits": 0,
+        "misses": 5,
+        "hitRate": 0
+      }
+    }
+  ]
+}

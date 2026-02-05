@@ -11,6 +11,28 @@ export interface ThumbnailCreationResponse {
     error?: string;
 }
 
+export interface SceneThumbnailResponse {
+    success: boolean;
+    sceneId?: string;
+    originalText?: string;
+    enhancedPrompt?: string;
+    image?: string;
+    error?: string;
+}
+
+export interface ScenesThumbnailResponse {
+    success: boolean;
+    scenes?: Array<{
+        sceneId: string;
+        success: boolean;
+        originalText: string;
+        enhancedPrompt: string;
+        image: string;
+        error?: string;
+    }>;
+    error?: string;
+}
+
 export const ThumbnailCreationService = {
 
     async getThumbnail(title: string): Promise<string | null> {
@@ -109,6 +131,56 @@ export const ThumbnailCreationService = {
         } catch (error) {
             console.log('Error uploading thumbnail to Google Drive:', error);
             return null;
+        }
+    },
+
+    /**
+     * Generate enhanced prompt and image for a single scene
+     */
+    async enhanceSceneForThumbnail(scene: { id: string; narration?: string; title?: string }): Promise<SceneThumbnailResponse> {
+        if (!scene || !scene.id) {
+            return {
+                success: false,
+                error: 'Scene with id is required'
+            };
+        }
+
+        try {
+            const response = await HttpService.post<SceneThumbnailResponse>(
+                API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL,
+                { scene }
+            );
+            return response;
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to process scene'
+            };
+        }
+    },
+
+    /**
+     * Generate enhanced prompts and images for multiple scenes
+     */
+    async enhanceScenesForThumbnail(scenes: Array<{ id: string; narration?: string; title?: string }>): Promise<ScenesThumbnailResponse> {
+        if (!Array.isArray(scenes) || scenes.length === 0) {
+            return {
+                success: false,
+                error: 'Scenes array is required and must not be empty'
+            };
+        }
+
+        try {
+            const response = await HttpService.post<ScenesThumbnailResponse>(
+                API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL,
+                { scenes }
+            );
+            return response;
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to process scenes'
+            };
         }
     },
 };

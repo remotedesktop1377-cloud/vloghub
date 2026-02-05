@@ -100,7 +100,7 @@ interface SceneDataSectionProps {
   selectedSceneDataIndex: number;
   rightTabIndex: number;
   aiImagesEnabled: boolean;
-  imagesLoading: boolean;
+  imagesLoading: number | null;
   generatedImages: string[];
   aiPrompt: string;
   pickerOpen: boolean;
@@ -124,6 +124,7 @@ interface SceneDataSectionProps {
   onAIPromptChange: (prompt: string) => void;
   onUseAIChange: (enabled: boolean) => void;
   onGenerateImages: () => void;
+  onGenerateSceneImage?: (sceneIndex: number) => Promise<void>;
   onImageSelect: (imageUrl: string) => void;
   onImageDeselect: (imageUrl: string) => void;
   onDownloadImage: (src: string, idx: number) => void;
@@ -176,6 +177,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   selectedSceneDataIndex,
   SceneDataImagesMap,
   selectedText,
+  imagesLoading,
   onAddSceneDataAfter,
   onDeleteSceneData,
   onSaveEdit,
@@ -209,6 +211,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   scriptTitle,
   trendingTopic,
   location,
+  onGenerateSceneImage,
 }) => {
   const [expandedSceneDataIndex, setExpandedSceneDataIndex] = React.useState<number | null>(null);
   // Volume popover open state per SceneData (inline editor)
@@ -410,9 +413,40 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                       {/* <TimeIcon sx={{ fontSize: 10 }} /> */}
                                       {sceneData.duration || '0s'}
                                     </Box>
-                                    {typeof onOpenProjectSettingsDialog === 'function' && (
-                                      <Button onClick={(e) => { e.stopPropagation(); onOpenProjectSettingsDialog(index); }}><SettingsIcon /></Button>
-                                    )}
+                                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                      {typeof onGenerateSceneImage === 'function' && (
+                                        <Tooltip title="Generate AI Image">
+                                          <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onGenerateSceneImage(index);
+                                            }}
+                                            disabled={imagesLoading !== null}
+                                            sx={{ color: 'primary.main' }}
+                                          >
+                                            {imagesLoading === index ? (
+                                              <CircularProgress size={20} />
+                                            ) : (
+                                              <ImageIcon />
+                                            )}
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
+                                      {typeof onOpenProjectSettingsDialog === 'function' && (
+                                        <Tooltip title="Scene Settings">
+                                          <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onOpenProjectSettingsDialog(index);
+                                            }}
+                                          >
+                                            <SettingsIcon />
+                                          </IconButton>
+                                        </Tooltip>
+                                      )}
+                                    </Box>
                                   </Box>
 
                                 </Box>
@@ -1679,75 +1713,6 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                         </Box>
                                                       );
                                                     })}
-
-                                                    {(SceneDataImagesMap[index] || []).map((imageUrl, imgIndex) => (
-                                                      <Box
-                                                        key={`extra-${imgIndex}`}
-                                                        sx={{ position: 'relative', flex: '0 0 auto', width: '96px', height: '72px', borderRadius: 0.5, overflow: 'hidden', border: `1px solid ${BORDER.light}`, cursor: 'pointer' }}
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          const imageIndex = sceneData.assets?.images?.[imgIndex] ? imgIndex + 1 : imgIndex;
-                                                          handleImageClick(index, imageIndex, false);
-                                                        }}
-                                                      >
-                                                        <img src={imageUrl} alt={`scene ${index + 1} Media ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        <IconButton
-                                                          size="small"
-                                                          sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const currentImages = SceneDataImagesMap[index] || [];
-                                                            const updatedImages = currentImages.filter((_, i) => i !== imgIndex);
-                                                            onSceneDataImagesMapChange({
-                                                              ...SceneDataImagesMap,
-                                                              [index]: updatedImages
-                                                            });
-
-                                                            const imageUrlToRemove = imageUrl;
-                                                            const updatedSceneData: SceneData[] = scenesData.map((ch, chIndex) => {
-                                                              if (chIndex !== index) return ch;
-                                                              const imagesList = Array.isArray(ch.assets?.images) ? (ch.assets!.images as string[]) : [];
-                                                              const newImagesList = imagesList.filter(u => u !== imageUrlToRemove);
-                                                              const newClips = (ch.assets?.clips || []).filter(c => c.url !== imageUrlToRemove) || null;
-
-                                                              let nextKeywordsSelected: any = ch.keywordsSelected;
-                                                              if (Array.isArray(ch.keywordsSelected)) {
-                                                                const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
-                                                                nextKeywordsSelected = arr.filter(entry => {
-                                                                  const low = entry.media?.lowResMedia;
-                                                                  const high = entry.media?.highResMedia;
-                                                                  return low !== imageUrlToRemove && high !== imageUrlToRemove;
-                                                                });
-                                                              } else if (ch.keywordsSelected && typeof ch.keywordsSelected === 'object') {
-                                                                const map = ch.keywordsSelected as Record<string, string[]>;
-                                                                const newMap: Record<string, string[]> = {};
-                                                                Object.entries(map).forEach(([k, list]) => {
-                                                                  const filtered = (list || []).filter(u => u !== imageUrlToRemove);
-                                                                  if (filtered.length > 0) newMap[k] = filtered;
-                                                                });
-                                                                nextKeywordsSelected = newMap;
-                                                              }
-
-                                                              return {
-                                                                ...ch,
-                                                                assets: {
-                                                                  ...ch.assets,
-                                                                  images: newImagesList.length > 0 ? newImagesList : null,
-                                                                  clips: newClips,
-                                                                },
-                                                                ...(nextKeywordsSelected !== undefined ? { keywordsSelected: nextKeywordsSelected } : {})
-                                                              };
-                                                            });
-                                                            onSceneDataUpdate(updatedSceneData);
-                                                            GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[index], 'Media deleted');
-                                                          }}
-                                                        >
-                                                          <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M18 6L6 18M6 6l12 12" stroke={ERROR.main} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                          </svg>
-                                                        </IconButton>
-                                                      </Box>
-                                                    ))}
 
                                                   </Box>
                                                 );

@@ -1,0 +1,505 @@
+{
+  "boundaryTests": [
+    {
+      "test": "dimension_boundary",
+      "dimensions": "1x1",
+      "label": "Minimum (1x1)",
+      "timestamp": "2026-02-03T10:15:38.464Z",
+      "elapsed": 1058,
+      "success": false,
+      "status": 502,
+      "urlLength": 83,
+      "error": "Status 502",
+      "errorText": "502 Bad Gateway\nUnable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared\n"
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "64x64",
+      "label": "Small (64x64)",
+      "timestamp": "2026-02-03T10:15:40.527Z",
+      "elapsed": 608,
+      "success": false,
+      "status": 502,
+      "urlLength": 85,
+      "error": "Status 502",
+      "errorText": "502 Bad Gateway\nUnable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared\n"
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "256x256",
+      "label": "Small-Medium (256x256)",
+      "timestamp": "2026-02-03T10:15:42.135Z",
+      "elapsed": 1029,
+      "success": true,
+      "status": 200,
+      "urlLength": 87,
+      "imageSize": 8992
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "512x512",
+      "label": "Standard (512x512)",
+      "timestamp": "2026-02-03T10:15:44.169Z",
+      "elapsed": 433,
+      "success": true,
+      "status": 200,
+      "urlLength": 87,
+      "imageSize": 28845
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "1024x1024",
+      "label": "Medium (1024x1024)",
+      "timestamp": "2026-02-03T10:15:45.617Z",
+      "elapsed": 448,
+      "success": true,
+      "status": 200,
+      "urlLength": 89,
+      "imageSize": 0
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "1920x1080",
+      "label": "HD (1920x1080)",
+      "timestamp": "2026-02-03T10:15:47.066Z",
+      "elapsed": 608,
+      "success": false,
+      "status": 502,
+      "urlLength": 89,
+      "error": "Status 502",
+      "errorText": "502 Bad Gateway\nUnable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared\n"
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "2560x1440",
+      "label": "2K (2560x1440)",
+      "timestamp": "2026-02-03T10:15:48.677Z",
+      "elapsed": 617,
+      "success": false,
+      "status": 502,
+      "urlLength": 89,
+      "error": "Status 502",
+      "errorText": "502 Bad Gateway\nUnable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared\n"
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "3840x2160",
+      "label": "4K (3840x2160)",
+      "timestamp": "2026-02-03T10:15:50.297Z",
+      "elapsed": 648,
+      "success": false,
+      "status": 502,
+      "urlLength": 89,
+      "error": "Status 502",
+      "errorText": "502 Bad Gateway\nUnable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared\n"
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "512x1",
+      "label": "Extreme Aspect Ratio (512x1)",
+      "timestamp": "2026-02-03T10:15:51.947Z",
+      "elapsed": 637,
+      "success": false,
+      "status": 502,
+      "urlLength": 85,
+      "error": "Status 502",
+      "errorText": "502 Bad Gateway\nUnable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared\n"
+    },
+    {
+      "test": "dimension_boundary",
+      "dimensions": "1x512",
+      "label": "Extreme Aspect Ratio (1x512)",
+      "timestamp": "2026-02-03T10:15:53.587Z",
+      "elapsed": 687,
+      "success": false,
+      "status": 502,
+      "urlLength": 85,
+      "error": "Status 502",
+      "errorText": "502 Bad Gateway\nUnable to reach the origin service. The service may be down or it may not be responding to traffic from cloudflared\n"
+    },
+    {
+      "test": "prompt_length_boundary",
+      "promptLength": 1,
+      "label": "Minimum (1 char)",
+      "timestamp": "2026-02-03T10:15:55.278Z",
+      "urlLength": 82,
+      "urlTooLong": false,
+      "elapsed": 687,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "prompt_length_boundary",
+      "promptLength": 10,
+      "label": "Short (10 chars)",
+      "timestamp": "2026-02-03T10:15:56.966Z",
+      "urlLength": 93,
+      "urlTooLong": false,
+      "elapsed": 599,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "prompt_length_boundary",
+      "promptLength": 53,
+      "label": "Medium (50 chars)",
+      "timestamp": "2026-02-03T10:15:58.566Z",
+      "urlLength": 148,
+      "urlTooLong": false,
+      "elapsed": 678,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "prompt_length_boundary",
+      "promptLength": 238,
+      "label": "Long (200 chars)",
+      "timestamp": "2026-02-03T10:16:00.245Z",
+      "urlLength": 393,
+      "urlTooLong": false,
+      "elapsed": 639,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "prompt_length_boundary",
+      "promptLength": 907,
+      "label": "Very Long (500 chars)",
+      "timestamp": "2026-02-03T10:16:01.885Z",
+      "urlLength": 1326,
+      "urlTooLong": false,
+      "elapsed": 639,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "prompt_length_boundary",
+      "promptLength": 4552,
+      "label": "Extreme (1000 chars)",
+      "timestamp": "2026-02-03T10:16:03.525Z",
+      "urlLength": 6177,
+      "urlTooLong": true,
+      "elapsed": 629,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "URL special chars",
+      "prompt": "sunset & mountains !@#$%",
+      "timestamp": "2026-02-03T10:16:19.906Z",
+      "urlLength": 121,
+      "encodedLength": 40,
+      "elapsed": 598,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "Unicode characters",
+      "prompt": "sunset 日落 山脈 🌅",
+      "timestamp": "2026-02-03T10:16:21.506Z",
+      "urlLength": 144,
+      "encodedLength": 63,
+      "elapsed": 699,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "SQL injection attempt",
+      "prompt": "sunset'; DROP TABLE images; --",
+      "timestamp": "2026-02-03T10:16:23.207Z",
+      "urlLength": 123,
+      "encodedLength": 42,
+      "elapsed": 717,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "XSS attempt",
+      "prompt": "sunset <script>alert(\"xss\")</script>",
+      "timestamp": "2026-02-03T10:16:24.925Z",
+      "urlLength": 133,
+      "encodedLength": 52,
+      "elapsed": 599,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "Newlines and tabs",
+      "prompt": "sunset\nmountains\ttest",
+      "timestamp": "2026-02-03T10:16:26.525Z",
+      "urlLength": 106,
+      "encodedLength": 25,
+      "elapsed": 609,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "Quotes",
+      "prompt": "sunset \"mountains\" 'test'",
+      "timestamp": "2026-02-03T10:16:28.135Z",
+      "urlLength": 114,
+      "encodedLength": 33,
+      "elapsed": 809,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "Backslashes",
+      "prompt": "sunset\\mountains\\test",
+      "timestamp": "2026-02-03T10:16:29.945Z",
+      "urlLength": 106,
+      "encodedLength": 25,
+      "elapsed": 630,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "Percent signs",
+      "prompt": "sunset % mountains % test",
+      "timestamp": "2026-02-03T10:16:31.577Z",
+      "urlLength": 118,
+      "encodedLength": 37,
+      "elapsed": 638,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "Plus signs",
+      "prompt": "sunset + mountains + test",
+      "timestamp": "2026-02-03T10:16:33.216Z",
+      "urlLength": 118,
+      "encodedLength": 37,
+      "elapsed": 588,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "special_characters",
+      "testName": "Equals signs",
+      "prompt": "sunset = mountains = test",
+      "timestamp": "2026-02-03T10:16:34.806Z",
+      "urlLength": 118,
+      "encodedLength": 37,
+      "elapsed": 688,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    }
+  ],
+  "invalidTests": [
+    {
+      "test": "invalid_parameter",
+      "testName": "Negative width",
+      "params": {
+        "width": -100,
+        "height": 512
+      },
+      "timestamp": "2026-02-03T10:16:05.155Z",
+      "elapsed": 638,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Zero width",
+      "params": {
+        "width": 0,
+        "height": 512
+      },
+      "timestamp": "2026-02-03T10:16:06.795Z",
+      "elapsed": 609,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Negative height",
+      "params": {
+        "width": 512,
+        "height": -100
+      },
+      "timestamp": "2026-02-03T10:16:08.406Z",
+      "elapsed": 598,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Zero height",
+      "params": {
+        "width": 512,
+        "height": 0
+      },
+      "timestamp": "2026-02-03T10:16:10.006Z",
+      "elapsed": 590,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Very large width",
+      "params": {
+        "width": 10000,
+        "height": 512
+      },
+      "timestamp": "2026-02-03T10:16:11.598Z",
+      "elapsed": 646,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Very large height",
+      "params": {
+        "width": 512,
+        "height": 10000
+      },
+      "timestamp": "2026-02-03T10:16:13.245Z",
+      "elapsed": 599,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Non-numeric width",
+      "params": {
+        "width": "abc",
+        "height": 512
+      },
+      "timestamp": "2026-02-03T10:16:14.845Z",
+      "elapsed": 679,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Non-numeric height",
+      "params": {
+        "width": 512,
+        "height": "xyz"
+      },
+      "timestamp": "2026-02-03T10:16:16.526Z",
+      "elapsed": 638,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "invalid_parameter",
+      "testName": "Invalid model",
+      "params": {
+        "width": 512,
+        "height": 512,
+        "model": "invalid-model-name"
+      },
+      "timestamp": "2026-02-03T10:16:18.166Z",
+      "elapsed": 738,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    }
+  ],
+  "combinationTests": [
+    {
+      "test": "parameter_combination",
+      "testName": "Small image, short prompt",
+      "params": {
+        "width": 256,
+        "height": 256,
+        "prompt": "sunset"
+      },
+      "timestamp": "2026-02-03T10:16:36.497Z",
+      "urlLength": 87,
+      "elapsed": 527,
+      "success": true,
+      "status": 200,
+      "imageSize": 8992
+    },
+    {
+      "test": "parameter_combination",
+      "testName": "Large image, short prompt",
+      "params": {
+        "width": 1920,
+        "height": 1080,
+        "prompt": "sunset"
+      },
+      "timestamp": "2026-02-03T10:16:39.025Z",
+      "urlLength": 89,
+      "elapsed": 558,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "parameter_combination",
+      "testName": "Small image, long prompt",
+      "params": {
+        "width": 256,
+        "height": 256,
+        "prompt": "A beautiful sunset over mountains with vibrant colors, dramatic clouds, cinematic lighting, professional photography, 8K ultra-high resolution, detailed textures, depth of field, golden hour atmosphere, landscape photography, nature scene, mountain range, sky, clouds, sun, colors, photography"
+      },
+      "timestamp": "2026-02-03T10:16:41.583Z",
+      "urlLength": 474,
+      "elapsed": 671,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    },
+    {
+      "test": "parameter_combination",
+      "testName": "Large image, long prompt",
+      "params": {
+        "width": 1920,
+        "height": 1080,
+        "prompt": "A beautiful sunset over mountains with vibrant colors, dramatic clouds, cinematic lighting, professional photography, 8K ultra-high resolution, detailed textures, depth of field, golden hour atmosphere, landscape photography, nature scene, mountain range, sky, clouds, sun, colors, photography"
+      },
+      "timestamp": "2026-02-03T10:16:44.256Z",
+      "urlLength": 476,
+      "elapsed": 597,
+      "success": false,
+      "status": 502,
+      "error": "Status 502"
+    }
+  ],
+  "summary": {
+    "timestamp": "2026-02-03T10:16:46.856Z",
+    "overallElapsed": 68393,
+    "boundaryTests": 26,
+    "invalidTests": 9,
+    "combinationTests": 4,
+    "boundaryPass": 3,
+    "invalidPass": 9,
+    "combinationPass": 1
+  }
+}
