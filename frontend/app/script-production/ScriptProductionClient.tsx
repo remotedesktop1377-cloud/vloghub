@@ -1097,8 +1097,9 @@ const ScriptProductionClient = () => {
         let imgs = SceneDataImagesMap[idx] || [];
         
         // If no images in map, check scene's assets.images
-        if (imgs.length === 0 && scenesData[idx]?.assets?.images && scenesData[idx].assets.images.length > 0) {
-            imgs = scenesData[idx].assets.images;
+        const scene = scenesData?.[idx];
+        if (imgs.length === 0 && scene?.assets?.images && scene.assets.images.length > 0) {
+            imgs = scene.assets.images || [];
             // Sync to map for future use
             setScenesDataImagesMap(prev => ({
                 ...prev,
