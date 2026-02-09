@@ -843,7 +843,7 @@ const ScriptProductionClient = () => {
             toast.info(`Generating AI images for ${scenes.length} scene${scenes.length > 1 ? 's' : ''}...`);
 
             // Call the new API with all scenes
-            const response = await fetch(API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL, {
+            const response = await fetch(API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -993,7 +993,7 @@ const ScriptProductionClient = () => {
                 narrationLength: scene.narration?.length || 0
             });
 
-            const response = await fetch(API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL, {
+            const response = await fetch(API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
@@ -1097,8 +1097,9 @@ const ScriptProductionClient = () => {
         let imgs = SceneDataImagesMap[idx] || [];
         
         // If no images in map, check scene's assets.images
-        if (imgs.length === 0 && scenesData[idx]?.assets?.images && scenesData[idx].assets.images.length > 0) {
-            imgs = scenesData[idx].assets.images;
+        const sceneImages = scenesData[idx]?.assets?.images;
+        if (imgs.length === 0 && sceneImages && sceneImages.length > 0) {
+            imgs = sceneImages;
             // Sync to map for future use
             setScenesDataImagesMap(prev => ({
                 ...prev,

@@ -55,7 +55,7 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<ThumbnailCreationResponse>(
-                API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL,
+                API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES,
                 { title: title.trim() }
             );
             return response;
@@ -147,7 +147,7 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<SceneThumbnailResponse>(
-                API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL,
+                API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES,
                 { scene }
             );
             return response;
@@ -172,7 +172,7 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<ScenesThumbnailResponse>(
-                API_ENDPOINTS.ENHANCE_TITLE_FOR_THUMBNAIL,
+                API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES,
                 { scenes }
             );
             return response;
