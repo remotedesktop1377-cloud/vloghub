@@ -1013,7 +1013,8 @@ const ScriptProductionClient = () => {
                 } catch (e) {
                     console.error('Failed to read error response:', e);
                 }
-                throw new Error(errorMessage);
+                HelperFunctions.showError(errorMessage);
+                return;
             }
 
             data = await response.json();
