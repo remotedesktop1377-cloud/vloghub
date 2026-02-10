@@ -164,7 +164,7 @@ export const GoogleDriveServiceFunctions = {
         try {
             // const jobName = String((SceneData as any).jobName || jobInfo?.jobName || '');
             if (!jobId || !sceneData) return;
-            const ok = await GoogleDriveServiceFunctions.updateSceneDataceneOnDrive(jobId, sceneData);
+            const ok = await GoogleDriveServiceFunctions.updateSceneDataOnDrive(jobId, sceneData);
             if (ok) {
                 HelperFunctions.showSuccess(successMessage);
             } else {
@@ -176,7 +176,7 @@ export const GoogleDriveServiceFunctions = {
         }
     },
 
-    async updateSceneDataceneOnDrive(jobId: string, sceneData: SceneData): Promise<boolean> {
+    async updateSceneDataOnDrive(jobId: string, sceneData: SceneData): Promise<boolean> {
         try {
             const SceneDataWithAssets = HelperFunctions.ensureAssetsContainKeywordMedia(sceneData);
             const settings: Settings = SceneDataWithAssets.sceneSettings as Settings;
@@ -231,7 +231,7 @@ export const GoogleDriveServiceFunctions = {
             }
             return true;
         } catch (e) {
-            console.log('updateSceneDataceneOnDrive error', e);
+            console.log('updateSceneDataOnDrive error', e);
             return false;
         }
     },

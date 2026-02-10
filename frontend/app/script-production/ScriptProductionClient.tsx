@@ -638,6 +638,7 @@ const ScriptProductionClient = () => {
                         durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,
                         gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
                         previewClip: ch.previewClip || scriptData.scenesData![index]?.previewClip || '',
+                        localPath: ch.localPath || scriptData.scenesData![index]?.localPath || '',
                         highlightedKeywords: ch.highlightedKeywords ?? [],
                         keywordsSelected: ch.keywordsSelected ?? {},
                         assets: {
