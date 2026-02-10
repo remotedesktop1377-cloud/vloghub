@@ -19,20 +19,15 @@ import {
     RecordVoiceOver as TranscriptionIcon,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { HelperFunctions, SecureStorageHelpers } from '../../utils/helperFunctions';
-import { API_ENDPOINTS } from '@/config/apiEndpoints';
-import BackgroundTypeDialog from '../../dialogs/BackgroundTypeDialog';
-import { BackgroundType } from '../../types/backgroundType';
-import { useAuth } from '@/context/AuthContext';
+import { HelperFunctions } from '../../utils/helperFunctions';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
-import { ScriptData } from '@/types/scriptData';
-import { backendService } from '@/services/backendService';
-import AlertDialog from '@/dialogs/AlertDialog';
+import { processService } from '@/services/processService';
+import { SceneData } from '@/types/sceneData';
 
 interface ChromaKeyUploadProps {
     jobId: string;
     videoDurationCaptured: (duration: number) => void;
-    onUploadComplete: (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => void;
+    onUploadComplete: (narratorVideoUrl: string, transcription: string, scenes: SceneData[]) => void;
     onUploadFailed: (errorMessage: string) => void;
 }
 
@@ -47,71 +42,20 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<'upload' | 'transcribe' | 'general' | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [showBackgroundTypeDialog, setShowBackgroundTypeDialog] = useState(false);
-    const [selectedBackgroundType, setSelectedBackgroundType] = useState<BackgroundType | null>(null);
-    const [showAlertDialog, setShowAlertDialog] = useState(false);
-    const [alertMessage, setAlertMessage] = useState('');
-
+    const [videoDurationSeconds, setVideoDurationSeconds] = useState<number>(0);
     const [progress, setProgress] = useState(0);
 
-    const compressVideo = async (file: File): Promise<{ compressedFile: File, compressedFilePath: string }> => {
+    const startVideoUploadingAndTranscribtion = async (file: File) => {
         try {
-            setCurrentStep('compressing');
-            setProgress(10);
-
-            const originalSizeMB = file.size / (1024 * 1024);
-            console.log(`Compressing video from ${originalSizeMB.toFixed(2)} MB`);
-
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('jobId', jobId);
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}${API_ENDPOINTS.PYTHON_COMPRESS_VIDEO}`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Video compression failed');
-            }
-
-            const originalSize = parseInt(response.headers.get('X-Original-Size') || '0');
-            const compressedSize = parseInt(response.headers.get('X-Compressed-Size') || '0');
-            const compressionRatio = originalSize > 0 ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : '0';
-
-            console.log(`Video compressed: ${(compressedSize / (1024 * 1024)).toFixed(2)} MB (${compressionRatio}% reduction)`);
-
-            const blob = await response.blob();
-            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '_compressed.mp4'), { type: 'video/mp4' });
-            const compressedFilePath = URL.createObjectURL(blob);
-
-            setProgress(25);
-            return { compressedFile: compressedFile, compressedFilePath: compressedFilePath };
-        } catch (error) {
-            console.log('Video compression error:', error);
-            toast.error('Video compression failed, uploading original file');
-            return { compressedFile: file, compressedFilePath: URL.createObjectURL(file) };
-        }
-    };
-
-    const startVideoUploadingAndTranscribtion = async (status: string, file: File) => {
-        try {
-            const isReachable = await backendService.isBackendReachable();
-            if (!isReachable) {
-                HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
-                setShowAlertDialog(true);
-                setAlertMessage('Server is not reachable. Please try again later.');
-                return;
-            }
-
             setUploading(true);
             setProgress(5);
+            setCurrentStep('compressing');
+
+            const compressedFile = await processService.compressVideo(file, jobId);
+
+            setProgress(10);
             setCurrentStep('uploading');
 
-            const { compressedFile, compressedFilePath } = await compressVideo(file);
-
-            setProgress(30);
             const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', compressedFile);
             if (!upload?.success || !upload?.fileId) {
                 const message = upload?.message || 'Failed to upload video to Drive';
@@ -122,75 +66,32 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 toast.error(message);
                 return;
             }
-            const currentDriveUrl = upload?.webViewLink || '';
+            const narratorVideoUrl = upload?.webViewLink || '';
 
-            setProgress(40);
+            setProgress(15);
             setCurrentStep('videoConversion');
 
-            try {
-                const formData = new FormData();
-                formData.append('file', compressedFile);  // Backend expects 'file' parameter
-                formData.append('jobId', jobId);
+            const audioFile = await processService.extractAudioFromVideo(compressedFile);
+            // console.log('audioFile: ', audioFile);
+            setCurrentStep('transcribing');
+            setProgress(20);
 
-                // Progressively set progress over 60s to 70, then step, then again over 60s to 90 and step.
-                let firstInterval: NodeJS.Timeout | null = null;
-                let secondInterval: NodeJS.Timeout | null = null;
-                let progressValue = 40;
+            const transcription = await processService.transcribeAudio(audioFile);
+            // console.log('transcription: ', transcription);
+            setProgress(30);
+            setCurrentStep('llmProcessing');
 
-                // Step 1: progress from 40 to 70 in 60s
-                let step1 = 0;
-                firstInterval = setInterval(() => {
-                    step1++;
-                    progressValue = 40 + Math.floor((step1 / 60) * 30); // 40 to 70 over 60s
-                    setProgress(progressValue);
-                    if (step1 >= 60) {
-                        clearInterval(firstInterval!);
-                        setProgress(70);
-                        setCurrentStep('llmProcessing');
+            const scenes = await processService.planScenesWithLLM({ transcription, videoDurationSeconds });
+            // console.log('scenes: ', scenes);
+            setProgress(40);
+            setCurrentStep('segmentation');
 
-                        // Step 2: after first 60s, progress from 70 to 90 in 60s
-                        let step2 = 0;
-                        secondInterval = setInterval(() => {
-                            step2++;
-                            progressValue = 70 + Math.floor((step2 / 60) * 20); // 70 to 90 over 60s
-                            setProgress(progressValue);
-                            if (step2 >= 60) {
-                                clearInterval(secondInterval!);
-                                setProgress(90);
-                                setCurrentStep('segmentation');
-                            }
-                        }, 1000);
-                    }
-                }, 1000);
+            const updatedScenes = await processService.cutClipsAndPackageResults({ videoFile: compressedFile, scenes, jobId });
+            // console.log('updatedScenes: ', updatedScenes.scenes);
+            setProgress(100);
+            setCurrentStep('completed');
 
-                const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_BACKEND_URL}${API_ENDPOINTS.PYTHON_PROCESS}`, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                // console.log('response: ', response);
-                if (!response.ok) {
-                    const message = await response.text();
-                    throw new Error(message || 'Python pipeline failed');
-                }
-
-                const transcriptionData = await response.json();
-                setProgress(100);
-                setCurrentStep('completed');
-                // console.log('transcriptionData: ', JSON.stringify(transcriptionData, null, 2));
-
-                onUploadComplete(currentDriveUrl, transcriptionData, selectedBackgroundType as BackgroundType);
-            } catch (pipelineError) {
-                console.log('Python pipeline error:', pipelineError);
-                const message = pipelineError instanceof Error ? pipelineError.message : 'Pipeline failed';
-                setError(message);
-                setUploading(false);
-                onUploadFailed(message);
-                toast.error(message);
-            } finally {
-                setUploading(true);
-            }
-
+            onUploadComplete(narratorVideoUrl, transcription, updatedScenes.scenes);
 
         } catch (error) {
             setUploading(false);
@@ -206,27 +107,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
         setError(null);
         setErrorType(null);
         setCurrentStep('idle');
-    };
-
-    const getProgressMessage = () => {
-        switch (currentStep) {
-            case 'compressing':
-                return 'Compressing video to reduce file size...';
-            case 'uploading':
-                return 'Uploading video to Google Drive...';
-            case 'videoConversion':
-                return 'Converting video to audio...';
-            case 'transcribing':
-                return 'Transcribing audio to text...';
-            case 'llmProcessing':
-                return 'Processing with LLM...';
-            case 'segmentation':
-                return 'Segmenting video...';
-            case 'completed':
-                return 'All done! Your video has been processed successfully.';
-            default:
-                return 'Processing...';
-        }
     };
 
     const getStepIcon = () => {
@@ -248,10 +128,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
         }
     };
 
-    const handleBackgroundTypeSelected = (type: BackgroundType) => {
-        setSelectedBackgroundType(type);
-        setShowBackgroundTypeDialog(false);
-
+    const handleUploadVideo = () => {
         // Create a file input for chroma key upload
         const input = document.createElement('input');
         input.type = 'file';
@@ -267,11 +144,12 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 try {
                     const duration = await HelperFunctions.extractVideoDuration(file);
                     videoDurationCaptured(duration);
+                    setVideoDurationSeconds(duration);
                 } catch (error) {
                     console.log('Failed to extract video duration:', error);
                 }
 
-                startVideoUploadingAndTranscribtion('upload', file);
+                startVideoUploadingAndTranscribtion(file);
             }
         };
         input.click();
@@ -299,16 +177,13 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                             },
                             pointerEvents: uploading ? 'none' : 'auto',
                         }}
-                        onClick={() => handleBackgroundTypeSelected(BackgroundType.CHROMA)}
-                    // onClick={() => {
-                    //     setShowBackgroundTypeDialog(true);
-                    // }}
+                        onClick={() => handleUploadVideo()}
                     >
                         {progress > 0 ? (
                             <Box sx={{ textAlign: 'center' }}>
                                 {/* Step Indicator */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-                                    {getStepIcon()} <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{getProgressMessage()}</Typography>
+                                    {getStepIcon()} <Typography variant="h6" sx={{ fontWeight: 'bold' }}>{HelperFunctions.getProgressMessage(currentStep)}</Typography>
                                 </Box>
 
                                 {/* Progress Bar */}
@@ -356,7 +231,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                                             size="small"
                                             onClick={() => {
                                                 clearError();
-                                                startVideoUploadingAndTranscribtion(errorType || '', uploadedFile as File);
+                                                startVideoUploadingAndTranscribtion(uploadedFile as File);
                                             }}
                                             // disabled={uploading}
                                             color="inherit"
@@ -396,20 +271,6 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     )}
                 </CardContent>
             </Card>
-
-            {/* Background Type Selection Dialog */}
-            <BackgroundTypeDialog
-                open={showBackgroundTypeDialog}
-                onClose={() => setShowBackgroundTypeDialog(false)}
-                onSelectBackgroundType={handleBackgroundTypeSelected}
-            />
-
-            <AlertDialog
-                open={showAlertDialog}
-                title="Backend Unavailable"
-                message={alertMessage}
-                onClose={() => setShowAlertDialog(false)}
-            />
         </>
     );
 };

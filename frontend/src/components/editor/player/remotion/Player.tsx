@@ -13,10 +13,10 @@ export const PreviewPlayer = () => {
     const { duration, currentTime, isPlaying, isMuted } = projectState;
     const playerRef = useRef<PlayerRef>(null);
     const dispatch = useDispatch();
-    const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+    const safeDuration = Number.isNaN(duration) && duration > 0 ? duration : 0;
     const durationInFrames = Math.max(1, Math.floor(safeDuration * fps) + 1);
-    const resolutionWidth = Number.isFinite(projectState.resolution?.width) ? projectState.resolution.width : 1920;
-    const resolutionHeight = Number.isFinite(projectState.resolution?.height) ? projectState.resolution.height : 1080;
+    const resolutionWidth = Number.isNaN(projectState.resolution?.width) ? 1920 : projectState.resolution.width;
+    const resolutionHeight = Number.isNaN(projectState.resolution?.height) ? 1080 : projectState.resolution.height;
 
     // update frame when current time with marker
     useEffect(() => {

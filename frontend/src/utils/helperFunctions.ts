@@ -420,6 +420,7 @@ export class HelperFunctions {
       history: [],
       future: [],
       autoRenderRequested: true,
+      autoRenderProjectId: '',
       exportSettings: {
         resolution: '480p',
         quality: 'low',
@@ -579,6 +580,27 @@ export class HelperFunctions {
       }
     }
     return false;
+  };
+
+  static getProgressMessage = (currentStep: string) => {
+    switch (currentStep) {
+      case 'compressing':
+        return 'Compressing video. Please wait...';
+      case 'uploading':
+        return 'Uploading video to Google Drive. Please wait...';
+      case 'videoConversion':
+        return 'Converting video to audio. Please wait...';
+      case 'transcribing':
+        return 'Transcribing audio to text. Please wait...';
+      case 'llmProcessing':
+        return 'Processing with LLM. Please wait...';
+      case 'segmentation':
+        return 'Segmenting video. Please wait...';
+      case 'completed':
+        return 'All done! Your video has been processed successfully.';
+      default:
+        return 'Processing...';
+    }
   };
 
   static handleDownloadAllNarrations = (scriptData: ScriptData) => {

@@ -19,18 +19,12 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
-from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 
-from backend.api.convert import convert_video_to_audio
-from backend.api.cut_video import cut_video_segments
-from backend.api.download import zip_and_download_files
-from backend.api.llm import process_transcription_with_llm
-from backend.api.transcribe import transcribe_audio
 from backend.api.project_processor import process_project_json
-from backend.api.compress_video import compress_video
 from backend.services.google_drive_upload_service import upload_media_to_google_drive
 
 # Setup logging
@@ -102,85 +96,6 @@ def upload_video_to_drive(
     # Should not reach here, but just in case
     return None, {"error": "Upload failed after all retries", "type": "UnknownError"}
 
-
-def _save_upload(file: UploadFile, job_id: str) -> Path:
-    safe_name = file.filename or "upload.mp4"
-    destination = TEMP_DIR / f"{job_id}_{safe_name}"
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with destination.open("wb") as output, file.file as input_stream:
-        shutil.copyfileobj(input_stream, output)
-    return destination
-
-
-@api_router.post("/process")
-async def process_video(
-    file: UploadFile = File(...),
-    jobId: str = Form(""),
-):
-    """
-    Execute the four-step pipeline:
-    1. Convert video to audio
-    2. Transcribe audio
-    3. Plan scenes with LLM
-    4. Cut clips & package results
-    """
-    job_id = jobId
-
-    try:
-        video_path = _save_upload(file, job_id)
-        audio_path = TEMP_DIR / f"{video_path.stem}.wav"
-
-        video_duration_seconds = convert_video_to_audio(str(video_path), str(audio_path))
-        transcription_text = transcribe_audio(str(audio_path))
-        transcript_json_path = str(audio_path).replace(".wav", ".json")
-
-        edits = await process_transcription_with_llm(
-            transcript_path=transcript_json_path,
-            video_duration_seconds=video_duration_seconds,
-        )
-
-        clips, scenes_with_clips = await cut_video_segments(
-            str(video_path), edits, job_id
-        )
-        print(f"clips: {clips}")
-        print(f"scenes_with_clips: {scenes_with_clips}")
-
-        # processed_json_path = TEMP_DIR / "processed_result.json"
-        # zip_path = await zip_and_download_files(
-        #     exports_directory=str(EXPORTS_DIR),
-        #     temp_directory=str(TEMP_DIR),
-        #     scene_json_path=str(processed_json_path) if processed_json_path.exists() else None,
-        # )
-
-        # delete all files in EXPORTS_DIR
-        # try:
-        #     if EXPORTS_DIR.exists() and EXPORTS_DIR.is_dir():
-        #         for item in EXPORTS_DIR.iterdir():
-        #             try:
-        #                 if item.is_file():
-        #                     item.unlink()
-        #                 elif item.is_dir():
-        #                     shutil.rmtree(item, ignore_errors=True)
-        #             except PermissionError:
-        #                 pass
-        #             except Exception:
-        #                 pass
-        # except Exception:
-        #     pass
-
-        return {
-            "jobId": job_id,
-            "text": transcription_text,
-            "scenes": scenes_with_clips,
-            # 'clips': clips,
-            # "zipPath": str(zip_path),
-        }
-
-    except Exception as exc:
-        logger.exception("Video processing failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-
 @api_router.post("/process-project-from-json")
 async def process_project_from_json(payload: dict):
     try:
@@ -224,50 +139,6 @@ async def process_project_from_json(payload: dict):
         logger.exception("Project JSON processing failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
-@api_router.post("/compress-video")
-async def compress_video_endpoint(
-    file: UploadFile = File(...),
-    jobId: str = Form(""),
-    targetSizeMb: float = Form(50.0),
-):
-    """
-    Compress video file to reduce size before upload.
-
-    Args:
-        file: Video file to compress
-        jobId: Job ID for temporary file naming
-        targetSizeMb: Target file size in MB (default: 50MB)
-
-    Returns:
-        Compressed video file as FileResponse
-    """
-    job_id = jobId or str(uuid4())
-
-    try:
-        input_path = _save_upload(file, job_id)
-        output_path = TEMP_DIR / f"{input_path.stem}_compressed.mp4"
-
-        compressed_path = compress_video(
-            str(input_path), str(output_path), targetSizeMb
-        )
-
-        return FileResponse(
-            compressed_path,
-            media_type="video/mp4",
-            filename=f"{input_path.stem}_compressed.mp4",
-            headers={
-                "X-Original-Size": str(input_path.stat().st_size),
-                "X-Compressed-Size": str(output_path.stat().st_size),
-            },
-        )
-    except Exception as exc:
-        logger.exception("Video compression failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-    finally:
-        file.file.close()
-
-
 @api_router.post("/upload-video")
 async def upload_video(payload: dict):
     job_id = payload.get("jobId") or payload.get("job_id")
@@ -293,7 +164,6 @@ async def upload_video(payload: dict):
         "driveUploadError": drive_upload_error,
     }
 
-
 @api_router.get("/download")
 async def download_processed_files():
     """
@@ -309,7 +179,6 @@ async def download_processed_files():
         media_type="application/zip",
         filename="processed_files.zip",
     )
-
 
 @api_router.get("/status")
 async def processing_status():

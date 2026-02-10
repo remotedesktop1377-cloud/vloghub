@@ -49,9 +49,10 @@ export const API_ENDPOINTS = {
   GAMMA_PDF: '/api/gamma-pdf',
 
   PYTHON_COMPRESS_VIDEO: '/api/compress-video',
-  PYTHON_PROCESS: '/api/process',
   PYTHON_PROCESS_PROJECT_FROM_JSON: '/api/process-project-from-json',
-
+  API_TRANSCRIBE_AUDIO: '/api/transcribe-audio',
+  PLAN_SCENES: '/api/plan-scenes',
+  CUT_CLIPS: '/api/cut-clips',
 } as const;
 
 export type ApiEndpoint = typeof API_ENDPOINTS[keyof typeof API_ENDPOINTS]; 

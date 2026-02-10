@@ -166,14 +166,14 @@ const ScriptProductionClient = () => {
                     setPageTitle('Final Step: Scene Composition & Video Generation');
 
                     if (storedData.transcription) {
-                        console.log('storedData: ', JSON.stringify(storedData, null, 2));
-                        const projectId = storedData.projectId;
-                        if (projectId) {
-                            router.push(`/projects/${projectId}`);
-                        } else {
-                            toast.info("Project id not found.");
-                        }
-                        // updateParagraphs(storedData);
+                        // console.log('storedData: ', JSON.stringify(storedData, null, 2));
+                        // const projectId = storedData.projectId;
+                        // if (projectId) {
+                        //     router.push(`/projects/${projectId}`);
+                        // } else {
+                        //     toast.info("Project id not found.");
+                        // }
+                        updateParagraphs(storedData);
                     }
                 }
             } else {
@@ -383,8 +383,6 @@ const ScriptProductionClient = () => {
             setScenesData(updated);
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, projectSettings: updatedProjectSettings, scenesData: updated });
 
-            applyHighlights(scriptData, updated);
-
         } else if (mode === 'scene') {
 
             const updatedSceneSettings: Settings = {
@@ -405,12 +403,12 @@ const ScriptProductionClient = () => {
             setScenesData(updatedSceneData);
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updatedSceneData });
 
-            applyHighlights(scriptData, updatedSceneData);
         }
 
     };
 
     const getUserProfileId = async (): Promise<string | null> => {
+        if (user?.id) return user.id;
         if (!user?.email) return null;
         try {
             const { getSupabase } = await import('@/utils/supabase');
@@ -434,14 +432,11 @@ const ScriptProductionClient = () => {
     const uploadCompleteProjectToDrive = async () => {
         try {
             setLoading(true);
-            const isReachable = await backendService.isBackendReachable();
-            if (!isReachable) {
-                HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
-                setShowAlertDialog(true);
-                setLoading(false);
+            const userId = await getUserProfileId();
+            if (!userId) {
+                toast.info("User not found. Please login again.");
                 return;
             }
-            const userId = await getUserProfileId();
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, scenesData, user?.email || '');
 
             try {
@@ -502,13 +497,6 @@ const ScriptProductionClient = () => {
     const saveProjectAndStartEditing = async (updatedScriptData: ScriptData) => {
         try {
             setLoading(true);
-            const isReachable = await backendService.isBackendReachable();
-            if (!isReachable) {
-                HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
-                setShowAlertDialog(true);
-                setLoading(false);
-                return;
-            }
             const userId = await getUserProfileId();
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, updatedScriptData.scenesData!, user?.email || '');
 
@@ -633,12 +621,10 @@ const ScriptProductionClient = () => {
 
     // Function to break down script into paragraphs and calculate individual durations
     const updateParagraphs = async (scriptData: ScriptData) => {
-        // Check if we have scenes data from the new transcribe API
-        if (scriptData?.scenesData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length > 0) {
-            // console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
-
-            // If SceneData with images already exist in approvedScript, reuse them
-            try {
+        try {
+            if (scriptData?.scenesData && Array.isArray(scriptData?.scenesData) && scriptData?.scenesData?.length > 0) {
+                // console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
+                // If SceneData with images already exist in approvedScript, reuse them
                 if (scriptData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length === scriptData.scenesData!.length) {
                     const normalizedFromStorage: SceneData[] = scriptData.scenesData.map((ch: any, index: number) => ({
                         id: ch.id || scriptData.scenesData![index]?.id || `scene-${index + 1}`,
@@ -665,13 +651,10 @@ const ScriptProductionClient = () => {
                             videoBackgroundVideo: ch.sceneSettings?.videoBackgroundVideo || scriptData.scenesData![index]?.sceneSettings?.videoBackgroundVideo || '',
                         },
                     }));
-                    // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
-
-                    applyProjectSettingsDialog('project', scriptData, scriptData.projectSettings || null, null, normalizedFromStorage);
-
+                    applyHighlights(scriptData, normalizedFromStorage);
                 }
-            } catch { }
-        }
+            }
+        } catch { }
     };
 
     const applyHighlights = async (scriptData: ScriptData, scenesData: SceneData[]) => {
@@ -1669,17 +1652,16 @@ const ScriptProductionClient = () => {
                                             setScriptData(updatedScriptData);
                                             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
                                         }}
-                                        onUploadComplete={async (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
+                                        onUploadComplete={async (narratorVideoUrl: string, transcription: string, scenes: SceneData[]) => {
                                             setPageTitle('Final Step: Scene Composition & Video Generation');
                                             setIsNarratorVideoUploaded(true);
                                             setIsNarrationUploadView(false);
 
                                             const updatedScriptData = {
                                                 ...scriptData,
-                                                videoBackground: backgroundType,
                                                 status: SCRIPT_STATUS.UPLOADED,
-                                                narrator_chroma_key_link: driveUrl,
-                                                transcription: transcriptionData.text,
+                                                narrator_chroma_key_link: narratorVideoUrl,
+                                                transcription: transcription,
                                                 projectSettings: {
                                                     videoLogo: scriptData?.projectSettings?.videoLogo as LogoOverlayInterface,
                                                     videoBackgroundMusic: scriptData?.projectSettings?.videoBackgroundMusic as SettingItemInterface,
@@ -1689,16 +1671,14 @@ const ScriptProductionClient = () => {
                                                     videoTransitionEffect: scriptData?.projectSettings?.videoTransitionEffect as SettingItemInterface,
                                                     showPreviewImageAtStart: scriptData?.projectSettings?.showPreviewImageAtStart,
                                                 },
-                                                scenesData: transcriptionData.scenes,
+                                                scenesData: scenes,
                                                 updated_at: new Date().toISOString(),
                                             } as ScriptData;
                                             setScriptData(updatedScriptData);
                                             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
-                                            saveProjectAndStartEditing(updatedScriptData);                                        
-
-                                            // updateParagraphs(updatedScriptData);
-
+                                            updateParagraphs(updatedScriptData);
+                                            // saveProjectAndStartEditing(updatedScriptData);                                        
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
                                             toast.error(errorMessage);
