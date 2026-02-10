@@ -1,0 +1,125 @@
+{
+  "timestamp": "2026-02-03T11:12:40.823Z",
+  "sourceFile": "resilience-strategies-2026-02-03T11-12-33-295Z.json",
+  "strategies": [
+    {
+      "name": "Baseline",
+      "successRate": 40,
+      "successCount": 2,
+      "totalCount": 5,
+      "elapsed": 3162,
+      "skipped": 0,
+      "cacheHitRate": 0,
+      "circuitBreakerOpen": false
+    },
+    {
+      "name": "Strategy 1: Text Enhancement",
+      "successRate": 0,
+      "successCount": 0,
+      "totalCount": 5,
+      "elapsed": 3650,
+      "skipped": 0,
+      "cacheHitRate": 0,
+      "circuitBreakerOpen": false
+    },
+    {
+      "name": "Strategy 2: Resolution Ladder",
+      "successRate": 40,
+      "successCount": 2,
+      "totalCount": 5,
+      "elapsed": 1880,
+      "skipped": 0,
+      "cacheHitRate": 0,
+      "circuitBreakerOpen": false
+    },
+    {
+      "name": "Strategy 3: Sequential Processing",
+      "successRate": 0,
+      "successCount": 0,
+      "totalCount": 5,
+      "elapsed": 14020,
+      "skipped": 0,
+      "cacheHitRate": 0,
+      "circuitBreakerOpen": false
+    },
+    {
+      "name": "Strategy 4: Circuit Breaker",
+      "successRate": 0,
+      "successCount": 0,
+      "totalCount": 5,
+      "elapsed": 6564,
+      "skipped": 4,
+      "cacheHitRate": 0,
+      "circuitBreakerOpen": true
+    },
+    {
+      "name": "Strategy 5: Caching",
+      "successRate": 0,
+      "successCount": 0,
+      "totalCount": 5,
+      "elapsed": 17084,
+      "skipped": 0,
+      "cacheHitRate": 0,
+      "circuitBreakerOpen": false
+    },
+    {
+      "name": "All Strategies Combined",
+      "successRate": 0,
+      "successCount": 0,
+      "totalCount": 5,
+      "elapsed": 9021,
+      "skipped": 4,
+      "cacheHitRate": 0,
+      "circuitBreakerOpen": true
+    }
+  ],
+  "improvements": [
+    {
+      "name": "Baseline",
+      "successRateImprovement": 0,
+      "relativeImprovement": 0,
+      "timeDifference": 0
+    },
+    {
+      "name": "Strategy 1: Text Enhancement",
+      "successRateImprovement": -40,
+      "relativeImprovement": -100,
+      "timeDifference": 488
+    },
+    {
+      "name": "Strategy 2: Resolution Ladder",
+      "successRateImprovement": 0,
+      "relativeImprovement": 0,
+      "timeDifference": -1282
+    },
+    {
+      "name": "Strategy 3: Sequential Processing",
+      "successRateImprovement": -40,
+      "relativeImprovement": -100,
+      "timeDifference": 10858
+    },
+    {
+      "name": "Strategy 4: Circuit Breaker",
+      "successRateImprovement": -40,
+      "relativeImprovement": -100,
+      "timeDifference": 3402
+    },
+    {
+      "name": "Strategy 5: Caching",
+      "successRateImprovement": -40,
+      "relativeImprovement": -100,
+      "timeDifference": 13922
+    },
+    {
+      "name": "All Strategies Combined",
+      "successRateImprovement": -40,
+      "relativeImprovement": -100,
+      "timeDifference": 5859
+    }
+  ],
+  "bestStrategy": {
+    "name": "Baseline",
+    "successRate": 40,
+    "improvement": 0
+  }
+}

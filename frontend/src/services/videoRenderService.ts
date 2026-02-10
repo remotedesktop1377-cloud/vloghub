@@ -21,6 +21,7 @@ export interface ProcessProjectResponse {
     fileId?: string;
     fileName?: string;
     webViewLink?: string;
+    webContentLink?: string;
     message?: string;
   } | null;
 }

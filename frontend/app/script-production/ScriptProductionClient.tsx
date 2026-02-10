@@ -96,7 +96,7 @@ const ScriptProductionClient = () => {
     const [uploadedImages, setUploadedImages] = useState<string[]>([]);
     const [aiImagesEnabled, setAiImagesEnabled] = useState(false);
     const [rightTabIndex, setRightTabIndex] = useState(0);
-    const [imagesLoading, setImagesLoading] = useState(false);
+    const [imagesLoadingSceneIndex, setImagesLoadingSceneIndex] = useState<number | null>(null);
     const [aiPrompt, setAiPrompt] = useState('');
     const [pickerOpen, setPickerOpen] = useState(false);
     const [pickerSceneDataIndex, setPickerSceneDataIndex] = useState<number | null>(null);
@@ -624,6 +624,19 @@ const ScriptProductionClient = () => {
                     }));
                     // console.log('Using existing SceneData with scenes data:', JSON.stringify(normalizedFromStorage, null, 2));
 
+                    // Sync images from assets.images to SceneDataImagesMap for UI display
+                    const imagesMap: Record<number, string[]> = {};
+                    normalizedFromStorage.forEach((scene, index) => {
+                        if (scene.assets?.images && scene.assets.images.length > 0) {
+                            imagesMap[index] = scene.assets.images;
+                        }
+                    });
+                    if (Object.keys(imagesMap).length > 0) {
+                        setScenesDataImagesMap(prev => ({ ...prev, ...imagesMap }));
+                        // Enable AI images if any scene has images
+                        setAiImagesEnabled(true);
+                    }
+
                     applyProjectSettingsDialog('project', scriptData, scriptData.projectSettings || null, null, normalizedFromStorage);
 
                 }
@@ -749,21 +762,11 @@ const ScriptProductionClient = () => {
         updatedSceneData.splice(destination.index, 0, reorderedSceneData);
         setScenesData(updatedSceneData);
 
-        // Reorder SceneData images map to follow the SceneData
+        // Sync SceneData images map from updated scenes' assets.images (single source of truth)
         const updatedSceneDataImagesMap: Record<number, string[]> = {};
-
-        // Create a temporary mapping of old indices to their images
-        const tempImageMap: Record<number, string[]> = {};
-        Object.keys(SceneDataImagesMap).forEach(key => {
-            tempImageMap[parseInt(key)] = SceneDataImagesMap[parseInt(key)];
-        });
-
-        // Reorder the images based on the new SceneData order
         updatedSceneData.forEach((sceneData, newIndex) => {
-            // Find the original index of this SceneData
-            const originalIndex = scenesData.findIndex(c => c.id === sceneData.id);
-            if (originalIndex !== -1 && tempImageMap[originalIndex]) {
-                updatedSceneDataImagesMap[newIndex] = tempImageMap[originalIndex];
+            if (sceneData.assets?.images && sceneData.assets.images.length > 0) {
+                updatedSceneDataImagesMap[newIndex] = sceneData.assets.images;
             }
         });
 
@@ -805,7 +808,7 @@ const ScriptProductionClient = () => {
 
     const handleGenerateImages = async () => {
         try {
-            setImagesLoading(true);
+            setImagesLoadingSceneIndex(selectedSceneDataIndex);
             const visuals = aiPrompt;
             const res = await fetch(API_ENDPOINTS.GENERATE_IMAGES, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visuals })
@@ -823,7 +826,252 @@ const ScriptProductionClient = () => {
             setGeneratedImages([first]);
             setRightTabIndex(0);
         } finally {
-            setImagesLoading(false);
+            setImagesLoadingSceneIndex(null);
+        }
+    };
+
+    /* =========================================================
+       GENERATE IMAGES FOR SCENES (AUTOMATIC)
+    ========================================================= */
+    const generateImagesForScenes = async (scenes: SceneData[]): Promise<SceneData[]> => {
+        if (!scenes || scenes.length === 0) {
+            return scenes;
+        }
+
+        try {
+            setLoading(true);
+            toast.info(`Generating AI images for ${scenes.length} scene${scenes.length > 1 ? 's' : ''}...`);
+
+            // Call the new API with all scenes
+            const response = await fetch(API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scenes: scenes.map(scene => ({
+                        id: scene.id,
+                        narration: scene.narration,
+                        title: scene.title
+                    }))
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`API returned status ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success && data.scenes && Array.isArray(data.scenes)) {
+                // Map the generated images back to scenes
+                const updatedScenes = scenes.map((scene, sceneIndex) => {
+                    // Try to match by scene ID first
+                    let generatedScene = data.scenes.find((s: any) => s.sceneId === scene.id);
+
+                    // Fallback: if ID matching fails, match by array index
+                    if (!generatedScene && data.scenes[sceneIndex]) {
+                        console.warn(`Scene ID mismatch for scene ${sceneIndex}, using index-based matching. Scene ID: ${scene.id}, Response sceneId: ${data.scenes[sceneIndex].sceneId}`);
+                        generatedScene = data.scenes[sceneIndex];
+                    }
+
+                    if (generatedScene && generatedScene.success && generatedScene.image) {
+                        // Store the generated image in the scene's assets
+                        const existingImages = scene.assets?.images || [];
+                        return {
+                            ...scene,
+                            assets: {
+                                ...scene.assets,
+                                images: [generatedScene.image, ...existingImages]
+                            }
+                        };
+                    } else if (generatedScene && !generatedScene.success) {
+                        // Log error for failed scene generation
+                        console.error(`Failed to generate image for scene ${sceneIndex} (ID: ${scene.id}):`, generatedScene.error || 'Unknown error');
+                    } else if (!generatedScene) {
+                        // Log warning if no matching scene found
+                        console.warn(`No matching generated scene found for scene ${sceneIndex} (ID: ${scene.id})`);
+                    }
+                    return scene;
+                });
+
+                // Update the scenes data images map for UI display
+                const updatedImagesMap: Record<number, string[]> = {};
+                updatedScenes.forEach((scene, index) => {
+                    if (scene.assets?.images && scene.assets.images.length > 0) {
+                        updatedImagesMap[index] = scene.assets.images;
+                    }
+                });
+                setScenesDataImagesMap(prev => ({ ...prev, ...updatedImagesMap }));
+
+                // Enable AI images mode and show images for the first scene if selected
+                if (Object.keys(updatedImagesMap).length > 0) {
+                    setAiImagesEnabled(true);
+                    // If first scene is selected, show its image
+                    if (selectedSceneDataIndex === 0 && updatedImagesMap[0]) {
+                        setGeneratedImages([updatedImagesMap[0][0]]);
+                        setRightTabIndex(0);
+                    }
+                }
+
+                const successCount = data.scenes.filter((s: any) => s.success).length;
+                toast.success(`Successfully generated ${successCount} image${successCount > 1 ? 's' : ''} for scenes`);
+
+                return updatedScenes;
+            } else {
+                console.warn('Image generation response format unexpected:', data);
+                toast.warning('Image generation completed with unexpected response format');
+                return scenes;
+            }
+        } catch (error) {
+            console.error('Error generating images for scenes:', error);
+            toast.error(`Failed to generate images: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            return scenes;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /* =========================================================
+       GENERATE IMAGE FOR SINGLE SCENE (MANUAL)
+    ========================================================= */
+    const handleGenerateSceneImage = async (sceneIndex: number) => {
+        // Validate scene index
+        if (sceneIndex < 0 || sceneIndex >= scenesData.length) {
+            const errorMsg = `Invalid scene index: ${sceneIndex}. Valid range: 0-${scenesData.length - 1}`;
+            console.error(errorMsg);
+            toast.error('Invalid scene index');
+            return;
+        }
+
+        const scene = scenesData[sceneIndex];
+        if (!scene) {
+            const errorMsg = `Scene not found at index ${sceneIndex}`;
+            console.error(errorMsg);
+            toast.error('Scene not found');
+            return;
+        }
+
+        // Validate scene has narration or title
+        const sceneText = (scene.narration || scene.title || '').trim();
+        if (!sceneText) {
+            const errorMsg = `Scene ${sceneIndex} (ID: ${scene.id}) has no narration or title to generate image from`;
+            console.error(errorMsg);
+            toast.error('Scene has no text content to generate image from');
+            return;
+        }
+
+        // Validate scene ID
+        if (!scene.id) {
+            const errorMsg = `Scene at index ${sceneIndex} has no ID`;
+            console.error(errorMsg);
+            toast.error('Scene is missing an ID');
+            return;
+        }
+
+        try {
+            setImagesLoadingSceneIndex(sceneIndex);
+            toast.info(`Generating AI image for scene ${sceneIndex + 1}...`);
+
+            // Add a delay before generating scene 2+ to avoid rate limiting
+            // The API might have per-minute limits, so we add a delay if this isn't the first scene
+            if (sceneIndex > 0) {
+                const delayMs = 3000; // 3 second delay for scene 2+
+                console.log(`Adding ${delayMs}ms delay before generating image for scene ${sceneIndex + 1}...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+
+            const requestBody = {
+                scene: {
+                    id: scene.id,
+                    narration: scene.narration,
+                    title: scene.title
+                }
+            };
+
+            console.log(`Generating image for scene ${sceneIndex} (ID: ${scene.id})`, {
+                hasNarration: !!scene.narration,
+                hasTitle: !!scene.title,
+                narrationLength: scene.narration?.length || 0
+            });
+
+            const response = await fetch(API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            let data;
+            if (!response.ok) {
+                let errorMessage = `API returned status ${response.status}`;
+                try {
+                    const errorText = await response.text();
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch {
+                        errorMessage = errorText || errorMessage;
+                    }
+                } catch (e) {
+                    console.error('Failed to read error response:', e);
+                }
+                HelperFunctions.showError(errorMessage);
+                return;
+            }
+
+            data = await response.json();
+
+            if (!data.success) {
+                const errorMsg = data.error || 'Image generation failed';
+                console.error(`Image generation failed for scene ${sceneIndex}:`, errorMsg);
+                throw new Error(errorMsg);
+            }
+
+            if (data.image) {
+                // Update the scene with the new image
+                const existingImages = scene.assets?.images || [];
+                const updatedScene: SceneData = {
+                    ...scene,
+                    assets: {
+                        ...scene.assets,
+                        images: [data.image, ...existingImages]
+                    }
+                };
+
+                // Update scenes data
+                const updatedScenes = [...scenesData];
+                updatedScenes[sceneIndex] = updatedScene;
+                setScenesData(updatedScenes);
+
+                // Sync images map from scene.assets.images (single source of truth)
+                setScenesDataImagesMap(prev => ({
+                    ...prev,
+                    [sceneIndex]: updatedScene.assets?.images || []
+                }));
+
+                // If this is the selected scene, update the generated images display
+                if (sceneIndex === selectedSceneDataIndex) {
+                    setGeneratedImages([data.image]);
+                    setAiImagesEnabled(true);
+                    setRightTabIndex(0);
+                }
+
+                // Update script metadata
+                const updatedScriptData = {
+                    ...scriptData,
+                    scenesData: updatedScenes,
+                    updated_at: new Date().toISOString()
+                } as ScriptData;
+                setScriptData(updatedScriptData);
+                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+
+                toast.success('Image generated successfully!');
+            } else {
+                throw new Error(data.error || 'Failed to generate image');
+            }
+        } catch (error) {
+            console.error('Error generating scene image:', error);
+            toast.error(`Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setImagesLoadingSceneIndex(null);
         }
     };
 
@@ -845,10 +1093,34 @@ const ScriptProductionClient = () => {
 
     const selectSceneData = (idx: number) => {
         setSelectedSceneDataIndex(idx);
-        if (aiImagesEnabled) {
-            const imgs = SceneDataImagesMap[idx] || [];
+        
+        // Check SceneDataImagesMap first
+        let imgs = SceneDataImagesMap[idx] || [];
+        
+        // If no images in map, check scene's assets.images
+<<<<<<< HEAD
+        const sceneImages = scenesData[idx]?.assets?.images;
+        if (imgs.length === 0 && sceneImages && sceneImages.length > 0) {
+            imgs = sceneImages;
+=======
+        const scene = scenesData?.[idx];
+        if (imgs.length === 0 && scene?.assets?.images && scene.assets.images.length > 0) {
+            imgs = scene.assets.images || [];
+>>>>>>> da49b7af6788060feb690807ad19e22e8191add8
+            // Sync to map for future use
+            setScenesDataImagesMap(prev => ({
+                ...prev,
+                [idx]: imgs
+            }));
+        }
+        
+        if (aiImagesEnabled || imgs.length > 0) {
             const fallback = [fallbackImages[idx % fallbackImages.length]];
             setGeneratedImages(imgs.length > 0 ? [imgs[0]] : fallback);
+            // Enable AI images if we have images
+            if (imgs.length > 0) {
+                setAiImagesEnabled(true);
+            }
         } else {
             setGeneratedImages(fallbackImages);
         }
@@ -1636,6 +1908,40 @@ const ScriptProductionClient = () => {
                                             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                                             updateParagraphs(updatedScriptData);
+
+                                            // Automatically generate images for all scenes after video upload
+                                            if (transcriptionData.scenes && Array.isArray(transcriptionData.scenes) && transcriptionData.scenes.length > 0) {
+                                                // Set scenes first so they're visible
+                                                setScenesData(transcriptionData.scenes);
+                                                
+                                                // Generate images in the background (non-blocking)
+                                                generateImagesForScenes(transcriptionData.scenes)
+                                                    .then((scenesWithImages) => {
+                                                        const updatedScriptDataWithImages = {
+                                                            ...updatedScriptData,
+                                                            scenesData: scenesWithImages,
+                                                            updated_at: new Date().toISOString(),
+                                                        };
+                                                        setScriptData(updatedScriptDataWithImages);
+                                                        setScenesData(scenesWithImages);
+                                                        SecureStorageHelpers.setScriptMetadata(updatedScriptDataWithImages);
+                                                        
+                                                        // Select first scene and show its image if available
+                                                        if (scenesWithImages.length > 0) {
+                                                            const firstSceneImages = scenesWithImages[0]?.assets?.images;
+                                                            if (firstSceneImages && firstSceneImages.length > 0) {
+                                                                selectSceneData(0);
+                                                            }
+                                                        }
+                                                    })
+                                                    .catch((error) => {
+                                                        console.error('Error generating images for scenes:', error);
+                                                        // Don't show error toast here as it's background process
+                                                    });
+                                            } else {
+                                                // If no scenes, still set empty array
+                                                setScenesData([]);
+                                            }
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
                                             toast.error(errorMessage);
@@ -1747,7 +2053,7 @@ const ScriptProductionClient = () => {
                                     selectedSceneDataIndex={selectedSceneDataIndex}
                                     rightTabIndex={rightTabIndex}
                                     aiImagesEnabled={aiImagesEnabled}
-                                    imagesLoading={imagesLoading}
+                                    imagesLoading={imagesLoadingSceneIndex}
                                     generatedImages={generatedImages}
                                     aiPrompt={aiPrompt}
                                     pickerOpen={pickerOpen}
@@ -1775,6 +2081,7 @@ const ScriptProductionClient = () => {
                                     onAIPromptChange={setAiPrompt}
                                     onUseAIChange={setAiImagesEnabled}
                                     onGenerateImages={handleGenerateImages}
+                                    onGenerateSceneImage={handleGenerateSceneImage}
                                     onImageSelect={handleImageSelect}
                                     onImageDeselect={handleImageDeselect}
                                     onDownloadImage={handleDownloadImage}
