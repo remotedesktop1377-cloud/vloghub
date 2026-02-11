@@ -1,5 +1,0 @@
-"""
-Video processing project backend
-"""
-
-
