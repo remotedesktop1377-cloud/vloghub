@@ -335,47 +335,6 @@ export class HelperFunctions {
     return mediaFiles;
   }
 
-  static normalizeMediaFiles(mediaFiles: MediaFile[], resolution: { width: number; height: number }): MediaFile[] {
-    const normalized: MediaFile[] = [];
-    let zIndex = 0;
-
-    mediaFiles.forEach((media) => {
-      if (!media) return;
-      const positionStart = HelperFunctions.getValidNumber(media.positionStart) ?? 0;
-      const positionEnd = HelperFunctions.getValidNumber(media.positionEnd);
-      const startTime = HelperFunctions.getValidNumber(media.startTime) ?? 0;
-      const endTime = HelperFunctions.getValidNumber(media.endTime);
-      const safeDuration = endTime && endTime > startTime ? endTime - startTime : 4;
-      const safePositionEnd = positionEnd && positionEnd > positionStart ? positionEnd : positionStart + safeDuration;
-      const normalizedSrc = media.src ? HelperFunctions.normalizeGoogleDriveUrl(media.src) : media.src;
-
-      normalized.push({
-        id: media.id || crypto.randomUUID(),
-        fileName: media.fileName || 'Untitled Media',
-        fileId: media.fileId || media.id || crypto.randomUUID(),
-        type: media.type || 'unknown',
-        startTime,
-        endTime: endTime && endTime > startTime ? endTime : startTime + safeDuration,
-        src: normalizedSrc,
-        positionStart,
-        positionEnd: safePositionEnd,
-        includeInMerge: media.includeInMerge ?? true,
-        playbackSpeed: media.playbackSpeed ?? 1,
-        volume: media.volume ?? 100,
-        zIndex: Number.isFinite(media.zIndex) ? media.zIndex : zIndex++,
-        x: media.x ?? 0,
-        y: media.y ?? 0,
-        width: media.width ?? resolution.width,
-        height: media.height ?? resolution.height,
-        rotation: media.rotation ?? 0,
-        opacity: media.opacity ?? 100,
-        crop: media.crop ?? { x: 0, y: 0, width: resolution.width, height: resolution.height }
-      });
-    });
-
-    return normalized;
-  }
-
   static createProjectFromScriptMetadata(projectId: string, scriptMetadata: any): ProjectState | null {
     if (!projectId || !scriptMetadata) return null;
     const projectData = scriptMetadata?.project && typeof scriptMetadata.project === 'object' ? scriptMetadata.project : scriptMetadata;

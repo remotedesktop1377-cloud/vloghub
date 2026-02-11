@@ -46,9 +46,6 @@ export default function Project() {
     useEffect(() => {
         const loadProject = async () => {
             if (id) {
-                debugger;
-                setIsLoading(true);
-                dispatch(setCurrentProjectId(id));
                 const project = await getProject(id);
                 if (project) {
                     console.log(`Project exist: ${id}`);
@@ -60,13 +57,15 @@ export default function Project() {
                         handleBuildProject(newProject);
                     }
                 }
+            } else {
+                setIsLoading(false);
+                setHasLoadedProject(true);
             }
         };
         loadProject();
-    }, [id]);
+    }, []);
 
     const handleBuildProject = async (project: ProjectState) => {
-        debugger;
         if (project) {
             dispatch(rehydrate(project));
             dispatch(setCurrentProjectId(project.id));
@@ -105,8 +104,6 @@ export default function Project() {
             isCreatingProjectRef.current = false;
             return;
         }
-
-        debugger;
 
         await storeProject(newProject);
         dispatch(addProject(newProject));

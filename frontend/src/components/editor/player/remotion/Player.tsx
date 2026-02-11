@@ -9,42 +9,42 @@ import { useDispatch } from "react-redux";
 const fps = 30;
 
 export const PreviewPlayer = () => {
+    const dispatch = useDispatch();
+
     const projectState = useAppSelector((state) => state.projectState);
     const { duration, currentTime, isPlaying, isMuted } = projectState;
     const playerRef = useRef<PlayerRef>(null);
-    const dispatch = useDispatch();
-    const safeDuration = Number.isNaN(duration) && duration > 0 ? duration : 0;
+    const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
     const durationInFrames = Math.max(1, Math.floor(safeDuration * fps) + 1);
-    const resolutionWidth = Number.isNaN(projectState.resolution?.width) ? 1920 : projectState.resolution.width;
-    const resolutionHeight = Number.isNaN(projectState.resolution?.height) ? 1080 : projectState.resolution.height;
-
-    // update frame when current time with marker
+    const resolutionWidth = Number.isFinite(projectState.resolution?.width) ? projectState.resolution.width : 1920;
+    const resolutionHeight = Number.isFinite(projectState.resolution?.height) ? projectState.resolution.height : 1080;
     useEffect(() => {
         const frame = Number.isFinite(currentTime) ? Math.round(currentTime * fps) : 0;
         if (playerRef.current && !isPlaying) {
             playerRef.current.pause();
             playerRef.current.seekTo(frame);
         }
-    }, [currentTime, fps]);
+    }, [currentTime, isPlaying]);
 
     useEffect(() => {
-        playerRef?.current?.addEventListener("play", () => {
-            dispatch(setIsPlaying(true));
-        });
-        playerRef?.current?.addEventListener("pause", () => {
-            dispatch(setIsPlaying(false));
-        });
-        return () => {
-            playerRef?.current?.removeEventListener("play", () => {
+        const handlePlay = () => {
+            if (!isPlaying) {
                 dispatch(setIsPlaying(true));
-            });
-            playerRef?.current?.removeEventListener("pause", () => {
-                dispatch(setIsPlaying(false));
-            });
+            }
         };
-    }, [playerRef]);
+        const handlePause = () => {
+            if (isPlaying) {
+                dispatch(setIsPlaying(false));
+            }
+        };
+        playerRef?.current?.addEventListener("play", handlePlay);
+        playerRef?.current?.addEventListener("pause", handlePause);
+        return () => {
+            playerRef?.current?.removeEventListener("play", handlePlay);
+            playerRef?.current?.removeEventListener("pause", handlePause);
+        };
+    }, [dispatch, isPlaying]);
 
-    // to control with keyboard
     useEffect(() => {
         if (!playerRef.current) return;
         if (isPlaying) {
