@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Image from "next/image";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from '@/store';
-import { addProject, deleteProject, rehydrateProjects, setCurrentProject } from '@/store/slices/projectsSlice';
+import { addProject, deleteProject, rehydrateProjects, setCurrentProjectId } from '@/store/slices/projectsSlice';
 import { listProjects, storeProject, deleteProject as deleteProjectFromDB } from '@/store';
 import { ProjectState } from '@/types/video_editor';
 import { toast } from 'react-hot-toast';
@@ -153,7 +153,7 @@ export default function Projects() {
                                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                 .map(({ id, projectName, createdAt, lastModified }) => (
                                     <div key={id} className="">
-                                        <Link href={`/projects/${id}`} onClick={() => dispatch(setCurrentProject(id))} className="group block h-full">
+                                        <Link href={`/projects/${id}`} onClick={() => dispatch(setCurrentProjectId(id))} className="group block h-full">
                                             <div
                                                 className="flex flex-col gap-4 rounded-lg border border-white border-opacity-10 shadow-md p-4 transition-transform transform group-hover:scale-105 group-hover:border-opacity-10 group-hover:shadow-lg [box-shadow:_70px_-20px_130px_0px_rgba(255,255,255,0.05)_inset] dark:[box-shadow:_70px_-20px_130px_0px_rgba(255,255,255,0.05)_inset]"
                                             >

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getFile, storeProject, useAppDispatch, useAppSelector } from "@/store";
 import { getProject } from "@/store";
-import { addProject, setCurrentProject, updateProject } from "@/store/slices/projectsSlice";
+import { addProject, setCurrentProjectId, updateProject } from "@/store/slices/projectsSlice";
 import { rehydrate, setAutoRenderProjectId, setAutoRenderRequested, setMediaFiles } from '@/store/slices/projectSlice';
 import { setActiveSection } from "@/store/slices/projectSlice";
 import AddText from '@/components/editor/AssetsPanel/tools-section/AddText';
@@ -14,7 +14,7 @@ import MediaProperties from "@/components/editor/PropertiesSection/MediaProperti
 import TextProperties from "@/components/editor/PropertiesSection/TextProperties";
 import { Timeline } from "@/components/editor/timeline/Timline";
 import { PreviewPlayer } from "@/components/editor/player/remotion/Player";
-import { MediaFile } from "@/types/video_editor";
+import { MediaFile, ProjectState } from "@/types/video_editor";
 import ExportList from "@/components/editor/AssetsPanel/tools-section/ExportList";
 import Ffmpeg from "@/components/editor/render/Ffmpeg/Ffmpeg";
 import Image from "next/image";
@@ -25,18 +25,15 @@ import videoIcon from "@/assets/images/video.svg";
 import musicIcon from "@/assets/images/music.svg";
 import imageIcon from "@/assets/images/image.svg";
 import textIcon from "@/assets/images/text.svg";
-import backIcon from "@/assets/images/back.svg";
 import textSidebarIcon from "@/assets/images/text-sidebar.svg";
 import mediaSidebarIcon from "@/assets/images/media-upload.svg";
 import exportSidebarIcon from "@/assets/images/export.svg";
-import { useRouter } from 'next/navigation'
 import { HelperFunctions, SecureStorageHelpers } from "@/utils/helperFunctions";
 
 export default function Project() {
     const params = useParams<{ id?: string | string[] }>();
     const id = Array.isArray(params?.id) ? params?.id[0] : params?.id;
     const dispatch = useAppDispatch();
-    const router = useRouter();
 
     const projectState = useAppSelector((state) => state.projectState);
     const { currentProjectId } = useAppSelector((state) => state.projects);
@@ -45,85 +42,53 @@ export default function Project() {
     const isCreatingProjectRef = useRef(false);
 
     const { activeSection, activeElement } = projectState;
+
     useEffect(() => {
         const loadProject = async () => {
             if (id) {
+                debugger;
                 setIsLoading(true);
+                dispatch(setCurrentProjectId(id));
                 const project = await getProject(id);
                 if (project) {
-                    console.log('Project exist: ', JSON.stringify(project, null, 2));
-                    dispatch(setCurrentProject(id));
+                    console.log(`Project exist: ${id}`);
+                    handleBuildProject(project);
                 } else {
                     console.log(`Project not found: ${id}`);
-                    const createdProject = await handleCreateProject(id);
-                    if (createdProject) {
-                        dispatch(setCurrentProject(id));
-                    } else {
-                        setIsLoading(false);
+                    const newProject = await handleCreateProject(id);
+                    if (newProject) {
+                        handleBuildProject(newProject);
                     }
                 }
             }
         };
         loadProject();
-    }, [id, dispatch]);
+    }, [id]);
 
-    useEffect(() => {
-        const loadProject = async () => {
-            if (currentProjectId) {
-                const project = await getProject(currentProjectId);
-                const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
-                let resolvedProject = project;
-                if (resolvedProject && (!resolvedProject.mediaFiles || resolvedProject.mediaFiles.length === 0)) {
-                    const rebuiltProject = HelperFunctions.createProjectFromScriptMetadata(currentProjectId, scriptMetadata);
-                    if (rebuiltProject && rebuiltProject.mediaFiles.length > 0) {
-                        resolvedProject = {
-                            ...resolvedProject,
-                            mediaFiles: rebuiltProject.mediaFiles,
-                            duration: rebuiltProject.duration,
-                            resolution: rebuiltProject.resolution,
-                            aspectRatio: rebuiltProject.aspectRatio,
-                        };
-                        await storeProject(resolvedProject);
-                        dispatch(updateProject(resolvedProject));
+    const handleBuildProject = async (project: ProjectState) => {
+        debugger;
+        if (project) {
+            dispatch(rehydrate(project));
+            dispatch(setCurrentProjectId(project.id));
+            dispatch(setMediaFiles(await Promise.all(
+                project.mediaFiles.map(async (media: MediaFile) => {
+                    if (media.src) {
+                        return media;
                     }
-                }
-                if (!resolvedProject && scriptMetadata) {
-                    const createdProject = await handleCreateProject(currentProjectId);
-                    resolvedProject = createdProject ?? null;
-                }
-                if (resolvedProject) {
-                    dispatch(rehydrate(resolvedProject));
-                    dispatch(setMediaFiles(await Promise.all(
-                        resolvedProject.mediaFiles.map(async (media: MediaFile) => {
-                            if (media.src) {
-                                return media;
-                            }
-                            if (!media.fileId) {
-                                return media;
-                            }
-                            const file = await getFile(media.fileId);
-                            if (!file) {
-                                return media;
-                            }
-                            return { ...media, src: URL.createObjectURL(file) };
-                        })
-                    )));
-                }
-                setHasLoadedProject(true);
-                setIsLoading(false);
-            }
-        };
-        loadProject();
-    }, [dispatch, currentProjectId]);
-
-    useEffect(() => {
-        const saveProject = async () => {
-            if (!hasLoadedProject || !projectState || projectState.id != currentProjectId) return;
-            await storeProject(projectState);
-            dispatch(updateProject(projectState));
-        };
-        saveProject();
-    }, [projectState, dispatch, currentProjectId, hasLoadedProject]);
+                    if (!media.fileId) {
+                        return media;
+                    }
+                    const file = await getFile(media.fileId);
+                    if (!file) {
+                        return media;
+                    }
+                    return { ...media, src: URL.createObjectURL(file) };
+                })
+            )));
+        }
+        setHasLoadedProject(true);
+        setIsLoading(false);
+    }
 
     const handleCreateProject = async (id: string) => {
         if (isCreatingProjectRef.current) {
@@ -141,20 +106,31 @@ export default function Project() {
             return;
         }
 
-        console.log('newProject: ', JSON.stringify(newProject, null, 2));
+        debugger;
 
         await storeProject(newProject);
         dispatch(addProject(newProject));
-        console.log('Project created successfully');
-        if (!scriptMetadata?.projectCreatedToastShown) {
-            toast.success('Project created successfully');
-        }
         dispatch(setActiveSection("export"));
         dispatch(setAutoRenderRequested(true));
         dispatch(setAutoRenderProjectId(id));
+
+        if (!scriptMetadata?.projectCreatedToastShown) {
+            console.log('Project created successfully');
+            toast.success('Project created successfully');
+        }
+
         isCreatingProjectRef.current = false;
         return newProject;
     };
+
+    useEffect(() => {
+        const saveProject = async () => {
+            if (!hasLoadedProject || !projectState || projectState?.id != currentProjectId) return;
+            await storeProject(projectState);
+            dispatch(updateProject(projectState));
+        };
+        saveProject();
+    }, [projectState, dispatch, currentProjectId, hasLoadedProject]);
 
     const handleFocus = (section: "media" | "text" | "export") => {
         dispatch(setActiveSection(section));

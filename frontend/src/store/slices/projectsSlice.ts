@@ -31,7 +31,7 @@ const projectsSlice = createSlice({
                 state.currentProjectId = state.projects.length > 0 ? state.projects[0].id : null;
             }
         },
-        setCurrentProject: (state, action: PayloadAction<string>) => {
+        setCurrentProjectId: (state, action: PayloadAction<string>) => {
             state.currentProjectId = action.payload;
         },
         rehydrateProjects: (state, action: PayloadAction<ProjectState[]>) => {
@@ -44,7 +44,7 @@ export const {
     addProject,
     updateProject,
     deleteProject,
-    setCurrentProject,
+    setCurrentProjectId,
     rehydrateProjects,
 } = projectsSlice.actions;
 
