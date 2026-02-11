@@ -28,11 +28,11 @@ export const ProfileDropdown = () => {
   const [socialKeys, setSocialKeys] = useState<SocialKeys>({ tiktok: '', instagram: '', facebook: '', youtube: '' });
   const [gammaTextMode, setGammaTextMode] = useState<string>('generate');
   const [gammaFormat, setGammaFormat] = useState<string>('presentation');
-  const [gammaThemeName, setGammaThemeName] = useState<string>('Pearl');
+  const [gammaThemeName, setGammaThemeName] = useState<string>('pearl');
   const [themeFilter, setThemeFilter] = useState<string>('');
   const allThemes: string[] = [
     // 'Pearl', 'Vortex', 'Clementa', 'Stratos', 'Nova', 'Twilight', 'Coral Glow', 'Mercury', 'Ashrose', 'Spectrum', 'Chisel', 'Stardust', 'Seafoam', 'Nebulae', 'Creme', 'Lux', 'Consultant', 'Marine', 'Elysia', 'Prism', 'Lunaria', 'Night Sky', 'Commons', 'Bonan Hale', 'Gamma', 'Gamma Dark', 'Dialogue', 'Founder', 'Lavender', 'Indigo', 'Howlite', 'Onyx', 'Atmosphere', 'Blueberry', 'Kraft', 'Mystique', 'Petrol', 'Blues', 'Peach', 'Incandescent', 'Oatmeal', 'Sanguine', 'Sage', 'Verdigris', 'Ash', 'Coal', 'Flamingo', 'Canaveral', 'Oasis', 'Fluo', 'Finesse', 'Electric', 'Zephyr', 'Chimney Smoke', 'Chimney Dust', 'Icebreaker', 'Blue Steel', 'Daydream', 'Orbit', 'Dune', 'Mocha', 'Serene', 'Cornflower', 'Vanilla', 'Alien', 'Breeze', 'Aurora', 'Velvet Tides', 'Tranquil', 'Borealis', 'Terracotta', 'Bubble Gum', 'Snowball', 'Pistachio', 'Piano', 'Atacama', 'Wireframe', 'Aurum', 'Bee Happy', 'Chocolate', 'Cigar', 'Cornfield', 'Daktilo', 'Dawn', 'Editoria', 'Flax', 'Gleam', 'Gold Leaf', 'Iris', 'Keepsake', 'Leimoon', 'Linen', 'Malibu', 'Moss & Mist', 'Plant Shop', 'Rush', 'Shadow', 'Slate', 'Sprout', 'Wine', 'Basic Light', 'Basic Dark'
-    'Pearl', 'Vortex', 'Clementa', 'Seafoam', 'Chisel', 'Marine', 'Lux',
+    'pearl', 'vortex', 'clementa', 'stratos', 'chisel', 'marine', 'lux',
   ];
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -349,7 +349,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
     pageBg?: string;
     shadow?: string;
   }> = {
-    Pearl: {
+    pearl: {
       accentColor: '#1B1B27', // Primary accent color
       titleColor: '#1B1B27', // Heading color
       bodyColor: '#3C3939', // Body color
@@ -357,7 +357,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
       pageBg: '#ECECF3', // Page background   
       cardBorder: '#E6E6E6', // Card border color
     },
-    Vortex: {
+    vortex: {
       titleColor: '#F2F2F3', // Heading color
       accentColor: '#F2F2F3', // Primary accent color
       cardBg: '#050505', // Card background color
@@ -365,7 +365,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
       bodyColor: '#E5E0DF', // Body color
       pageBg: '#19191A', // Page background   
     },
-    Clementa: {
+    clementa: {
       accentColor: '#FF954F', // Primary accent color
       titleColor: '#532418', // Heading color
       bodyColor: '#67534F', // Body color
@@ -381,7 +381,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
     //   pageBg: '#101620', // Page background   
     //   cardBorder: '', // Card border color
     // },
-    Seafoam: {
+    seafoam: {
       accentColor: '#26A688', // Primary accent color
       titleColor: '#333F70', // Heading color
       bodyColor: '#333F70', // Body color
@@ -389,7 +389,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
       pageBg: '#D6F5EE', // Page background   
       cardBorder: '#E5E0DF', // Card border color
     },
-    Chisel: {
+    chisel: {
       accentColor: '#3E2513', // Primary accent color
       titleColor: '#201B18', // Heading color
       bodyColor: '#504C49', // Body color
@@ -397,7 +397,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
       pageBg: '#F7F3F0', // Page background   
       cardBorder: '', // Card border color
     },
-    Marine: {
+    marine: {
       accentColor: '#8C98CA', // Primary accent color
       titleColor: '#FFFFFF', // Heading color
       bodyColor: '#EBECEF', // Body color
@@ -405,7 +405,7 @@ const ThemeCards: React.FC<{ themes: string[]; selected: string; onSelect: (name
       pageBg: '#A8AFCC', // Page background   
       cardBorder: '#565151', // Card border color
     },
-    Lux: {
+    lux: {
       accentColor: '#EF9C82', // Primary accent color
       titleColor: '#FFD9BE', // Heading color
       bodyColor: '#F9EEE7', // Body color

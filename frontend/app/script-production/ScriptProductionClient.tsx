@@ -598,12 +598,18 @@ const ScriptProductionClient = () => {
                     const ch: SceneData = mapped[i];
                     if (!ch?.gammaPreviewImage) continue;
                     try {
-                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobId, ch.id ?? i + 1, ch.gammaPreviewImage);
+                        let jobName = jobId;
+                        if(!jobId) { 
+                            jobName = SecureStorageHelpers.getScriptMetadata()?.jobId;
+                        } else if(!jobName) {
+                            jobName = SecureStorageHelpers.getApprovedScript()?.jobName;
+                        }
+                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobName, ch.id ?? i + 1, ch.gammaPreviewImage);
                         if (uploadResult.success) {
                             ch.gammaPreviewImage = uploadResult.result.webViewLink;
                             // update scene data with the updated scene data
                             setScenesData((prev: SceneData[]) => prev.map((s: SceneData) => s.id === ch.id ? ch : s));
-                            await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, ch, 'Preview image uploaded');
+                            await GoogleDriveServiceFunctions.persistSceneUpdate(jobName, ch, 'Preview image uploaded');
                         }
                     } catch { }
                 }
@@ -664,14 +670,14 @@ const ScriptProductionClient = () => {
             setLoading(true);
             HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setScenesData, (scenesData) => {
                 setLoading(false);
-                const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
+                const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() };
                 checkAndProcessGamma(updatedScriptData);
                 createThumbnailAndSaveProject(updatedScriptData);
             });
         } else {
             setLoading(false);
             setScenesData(scenesData);
-            const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
+            const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() };
             checkAndProcessGamma(updatedScriptData);
             createThumbnailAndSaveProject(updatedScriptData);
         }
@@ -704,26 +710,26 @@ const ScriptProductionClient = () => {
     };
 
     const createThumbnailAndSaveProject = async (scriptData: ScriptData) => {
-        // if (!scriptData.videoThumbnailUrl) {
-        //     const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
-        //     // console.log('Thumbnail URL:', thumbnailUrl);
-        //     if (thumbnailUrl) {
-        //         const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
-        //         // console.log('Upload result:', uploadResult);
-        //         if (uploadResult) {
-        //             const updatedScriptData = {
-        //                 ...scriptData,
-        //                 videoThumbnailUrl: uploadResult?.webViewLink,
-        //                 updated_at: new Date().toISOString(),
-        //             } as ScriptData;
-        //             setScriptData(updatedScriptData);
-        //             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-        //         }
-        //     }
-        //     else {
-        //         console.log('Failed to generate thumbnail');
-        //     }
-        // }
+        const existingThumbnail = scriptData.videoThumbnailUrl || null;
+        let uploadResult: string | null | undefined = scriptData.videoThumbnailUrl;
+        if (!existingThumbnail) {
+            const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
+            if (thumbnailUrl) {
+                uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
+                if (uploadResult) {
+                    const updatedScriptData = {
+                        ...scriptData,
+                        videoThumbnailUrl: uploadResult,
+                        updated_at: new Date().toISOString(),
+                    } as ScriptData;
+                    setScriptData(updatedScriptData);
+                    SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                }
+            }
+            else {
+                console.log('Failed to generate thumbnail');
+            }
+        }
 
         try {
             const userId = await getUserProfileId();
@@ -735,7 +741,8 @@ const ScriptProductionClient = () => {
             } else {
                 const updatedScriptData = {
                     ...scriptData,
-                    projectId: result.projectId
+                    projectId: result.projectId,
+                    videoThumbnailUrl: uploadResult
                 } as ScriptData;
                 setScriptData(updatedScriptData);
                 // console.log('Script data updated: ', updatedScriptData);

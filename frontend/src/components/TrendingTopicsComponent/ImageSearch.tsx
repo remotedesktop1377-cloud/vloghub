@@ -172,7 +172,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 const data = await response.json();
                 const errorMessage = data.error || "Failed to search Google images";
                 const errorDetails = data.details ? ` (${data.details})` : "";
-                throw new Error(`${errorMessage}${errorDetails}`);
             }
 
             const data = await response.json();
@@ -1271,7 +1270,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                             >
                                                 <Box sx={{ position: 'relative' }}>
                                                     {activeTab === 'envatoClips' ? (
-                                                        <Box sx={{ position: 'relative', width: '100%', height: 140 }}>
+                                                        <Box sx={{ position: 'relative', width: '100%', height: '250px' }}>
                                                             <img
                                                                 src={image.thumbnail || '/images/youtube.png'}
                                                                 alt={image.title}
@@ -1340,10 +1339,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                     ) : (
                                                         <CardMedia
                                                             component="img"
-                                                            height="140"
+                                                            // height="100"
                                                             image={image.thumbnail}
-                                                            alt={image.title}
-                                                            sx={{ objectFit: 'cover' }}
+                                                            // alt={image.title}
+                                                            sx={{ objectFit: 'cover', height: '250px' }}
                                                             onClick={() => handleImageSelect(image.url)}
                                                         />
                                                     )}

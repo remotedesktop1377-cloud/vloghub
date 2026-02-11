@@ -127,6 +127,9 @@
   border-radius: 10px;
   color: #9ca3af;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dialogClose:hover {
@@ -317,8 +320,9 @@
 
 .themeName {
   padding: 12px;
-  color: #e5e7eb;
+  color: black;
   font-size: 16px;
+  background-color: #e5e7eb;
 }
 
 .dialogSection {

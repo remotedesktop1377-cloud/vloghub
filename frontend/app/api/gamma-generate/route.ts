@@ -1,3 +1,4 @@
+import { API_ENDPOINTS } from "@/config/apiEndpoints";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       textMode,
       format,
       // Forward optional fields (hardcoded by caller except inputText/numCards)
-      themeName: body?.themeName,
+      themeId: body?.themeName,
       numCards: body?.numCards,
       cardSplit: body?.cardSplit,
       additionalInstructions: body?.additionalInstructions,
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
       sharingOptions: body?.sharingOptions,
     };
 
-    const res = await fetch("https://public-api.gamma.app/v0.2/generations", {
+    const res = await fetch(`${API_ENDPOINTS.GAMMA_API_GENERATION_API}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

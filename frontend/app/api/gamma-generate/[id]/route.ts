@@ -1,3 +1,4 @@
+import { API_ENDPOINTS } from "@/config/apiEndpoints";
 import { NextRequest, NextResponse } from "next/server";
 
 let API_IN_PROGRESS = false;
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
       return NextResponse.json({ error: "Gamma API key not configured" }, { status: 500 });
     }
 
-    const url = `https://public-api.gamma.app/v0.2/generations/${encodeURIComponent(generationId)}`;
+    const url = `${API_ENDPOINTS.GAMMA_API_GENERATION_API}${encodeURIComponent(generationId)}`;
     const res = await fetch(url, {
       method: "GET",
       headers: {

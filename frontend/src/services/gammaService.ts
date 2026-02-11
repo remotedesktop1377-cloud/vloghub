@@ -1,5 +1,3 @@
-// Gamma client-side service using public Gamma API
-
 import { API_ENDPOINTS } from "@/config/apiEndpoints";
 import HttpService from "./httpService";
 
@@ -16,21 +14,12 @@ export const GammaService = {
         }
         API_IN_PROGRESS = true;
         const res = await HttpService.post<any>(API_ENDPOINTS.API_GAMMA_GENERATE, {
-            inputText,
-            textMode: 'preserve',   // generate, condense, preserve
-            format: 'presentation', // presentation, document, social
-            themeName: 'Oasis', // Oasis, Ocean, Forest, City, Sunset, Winter, Spring, Summer, Autumn
+            inputText: inputText,
             numCards,
-            cardSplit: 'auto', // auto, manual
-            additionalInstructions: 'Make the card headings humorous and catchy',
-            exportAs: 'pdf', // pdf, pptx, docx
+            exportAs: 'pdf',
             imageOptions: {
-                source: 'aiGenerated',
                 model: 'imagen-4-pro',
-                style: 'line art',
-            },
-            cardOptions: {
-                dimensions: '16x9', // fluid, 16x9, 4x3
+                style: 'photorealistic',
             },
             sharingOptions: {
                 workspaceAccess: 'view',

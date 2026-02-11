@@ -25,7 +25,7 @@ export const API_ENDPOINTS = {
   API_TRANSCRIBE_VIDEO: '/api/transcribe',
   API_GOOGLE_DRIVE_GENERATE_FOLDER: '/api/google-drive-generate-folder',
   API_GAMMA_GENERATE: '/api/gamma-generate',
-  GAMMA_API_GENERATION_API: 'https://public-api.gamma.app/v0.2/generations',
+  GAMMA_API_GENERATION_API: 'https://public-api.gamma.app/v1.0/generations/',
   ENHANCE_TITLE_FOR_THUMBNAIL: '/api/enhance-title-for-thumbnail',
   GENERATE_THUMBNAIL: '/api/generate-thumbnail',
 
