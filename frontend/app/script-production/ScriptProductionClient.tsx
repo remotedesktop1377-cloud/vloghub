@@ -45,7 +45,6 @@ import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
 import PdfService from '@/services/pdfService';
-import VideoRenderService from '@/services/videoRenderService';
 import { SceneData } from '@/types/sceneData';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
 import ThumbnailCreationService from '@/services/thumbnailCreationService';
@@ -63,7 +62,6 @@ import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { predefinedTransitions } from '@/data/DefaultData';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { useSession } from 'next-auth/react';
-import { backendService } from '@/services/backendService';
 import { DB_TABLES } from '@/config/DbTables';
 
 const ScriptProductionClient = () => {
@@ -119,7 +117,6 @@ const ScriptProductionClient = () => {
     });
     // Project-level settings
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
-    const [completeProjectUploaded, setCompleteProjectUploaded] = useState(false);
     const [pageTitle, setPageTitle] = useState('Script Review & Approval');
 
     const [jobId, setJobId] = useState<string>('');
@@ -460,31 +457,12 @@ const ScriptProductionClient = () => {
                 console.log('Failed to upload project JSON to Google Drive: ', uploadResult.result);
             }
 
-            VideoRenderService.processProjectJson(projectJSON)
-                .then(async (renderResult) => {
-                    if (!renderResult || !renderResult.finalVideo) {
-                        console.log('Final video generation failed or missing finalVideo');
-                        return;
-                    }
-                    if (!renderResult.driveUpload || renderResult.driveUpload.success === false) {
-                        console.log('Final video upload to Google Drive failed', renderResult.driveUpload);
-                    }
-
-                    const driveUpload = renderResult.driveUpload || {};
-                    await SupabaseHelpers.saveFinalVideoRecord({
-                        jobId,
-                        googleDriveVideoId: driveUpload.fileId || null,
-                        googleDriveVideoName: projectJSON.project?.title || '',
-                        googleDriveVideoUrl: driveUpload.webViewLink || renderResult.finalVideo || null,
-                        googleDriveThumbnailUrl: scriptData?.videoThumbnailUrl || null,
-                    });
-                })
-                .catch((err) => {
-                    console.log('Background processProjectJson error', err);
-                });
-
-            setCompleteProjectUploaded(true);
-            setShowConfirmationModal(true);
+            const projectId = scriptData?.projectId || SecureStorageHelpers.getScriptMetadata()?.projectId;
+            if (projectId) {
+                router.push(`/projects/${projectId}`);
+            } else {
+                toast.info("Processing... Please wait for a moment.");
+            }
 
         } catch (e: any) {
             console.log(e);
@@ -599,9 +577,9 @@ const ScriptProductionClient = () => {
                     if (!ch?.gammaPreviewImage) continue;
                     try {
                         let jobName = jobId;
-                        if(!jobId) { 
+                        if (!jobId) {
                             jobName = SecureStorageHelpers.getScriptMetadata()?.jobId;
-                        } else if(!jobName) {
+                        } else if (!jobName) {
                             jobName = SecureStorageHelpers.getApprovedScript()?.jobName;
                         }
                         const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobName, ch.id ?? i + 1, ch.gammaPreviewImage);
@@ -1788,20 +1766,13 @@ const ScriptProductionClient = () => {
                                         variant="outlined"
                                         size="medium"
                                         startIcon={<EditIcon />}
-                                        onClick={() => {
-                                            const projectId = scriptData?.projectId || SecureStorageHelpers.getScriptMetadata()?.projectId;
-                                            if (projectId) {
-                                                router.push(`/projects/${projectId}`);
-                                            } else {
-                                                toast.info("Processing... Please wait for a moment.");
-                                            }
-                                        }}
+                                        onClick={() => uploadCompleteProjectToDrive()}
                                         sx={{
                                             textTransform: 'none',
                                             fontSize: '1.25rem'
                                         }}
                                     >
-                                        Open Editor
+                                        Generate video
                                     </Button>
                                     <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
                                 </Box>
@@ -1883,31 +1854,6 @@ const ScriptProductionClient = () => {
                                     location={scriptData?.region || ''}
                                 />
 
-                                {/* Production Actions - Only show when script is approved */}
-                                <Box sx={{ mt: 5 }}>
-                                    {/* <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5, fontSize: '1.5rem' }}>
-                                    🎬 Production Actions
-                                </Typography> */}
-
-                                    {/* Other Actions */}
-                                    <Grid container spacing={2}>
-
-                                        <Grid item xs={12}>
-                                            <Button
-                                                variant="contained"
-                                                size="medium"
-                                                fullWidth
-                                                startIcon={isGammaProcessing ? <CircularProgress size={20} /> : <VideoIcon />}
-                                                onClick={() => uploadCompleteProjectToDrive()}
-                                                disabled={!scenesData.length || isGammaProcessing}
-                                                sx={{ textTransform: 'none', fontSize: '1.25rem' }}
-                                            >
-                                                Generate Video
-                                            </Button>
-                                        </Grid>
-
-                                    </Grid>
-                                </Box>
                             </Box>
                         </Paper>
                     }
@@ -1921,10 +1867,10 @@ const ScriptProductionClient = () => {
                 open={showConfirmationModal}
                 onClose={handleCancelBack}
                 onConfirm={handleConfirmBack}
-                title={completeProjectUploaded ? "Uploading Completed" : "Are you sure?"}
-                message={completeProjectUploaded ? "Your video is being generating, We will notify you when it is ready." : "You haven't approved your script yet. If you go back now, your current progress and script data will be permanently deleted."}
-                confirmText={completeProjectUploaded ? "Okay" : "Discard Script"}
-                cancelText={completeProjectUploaded ? "Stay Here" : "Cancel"}
+                title={"Are you sure?"}
+                message={"You haven't approved your script yet. If you go back now, your current progress and script data will be permanently deleted."}
+                confirmText={"Discard Script"}
+                cancelText={"Cancel"}
             />
 
             <AlertDialog
