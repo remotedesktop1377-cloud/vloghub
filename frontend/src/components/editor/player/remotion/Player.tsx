@@ -78,7 +78,7 @@ export const PreviewPlayer = () => {
             controls
             clickToPlay={false}
             acknowledgeRemotionLicense={true}
-            loop
+            loop={false}
             bufferStateDelayInMilliseconds={0}
         />
     )

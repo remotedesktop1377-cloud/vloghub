@@ -7,6 +7,8 @@
   color: #0b0f17;
   font-weight: 700;
   border-radius: 12px;
+  cursor: pointer;
+  margin-top: 10px;
   border: 1px solid transparent;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
