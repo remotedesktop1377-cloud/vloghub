@@ -294,14 +294,14 @@ export class HelperFunctions {
           includeInMerge: true,
           playbackSpeed: 1,
           volume: 100,
-          zIndex: zIndex++,
+          zIndex: scenes.length,
           x: 0,
           y: 0,
-          width: resolution.width,
-          height: resolution.height,
+          width: 500,
+          height: 500,
           rotation: 0,
           opacity: 100,
-          crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
+          crop: { x: 0, y: 0, width: 500, height: 500 }
         });
       });
 
