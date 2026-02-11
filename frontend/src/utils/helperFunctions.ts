@@ -257,7 +257,9 @@ export class HelperFunctions {
         previewImage
       ].filter(Boolean);
 
-      const localClipPath = (scene as any)?.localPath || '';
+      // const previewClip = (scene as any)?.localPath || '';
+      // const previewClip = 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+      const previewClip = (scene as any)?.previewClip || '';
       const assetClips = Array.isArray(scene.assets?.clips) ? scene.assets!.clips! : [];
       const localAssetClips = assetClips
         .map((clip: any) => clip?.url)
@@ -267,11 +269,12 @@ export class HelperFunctions {
         });
       const clipUrls = [
         ...localAssetClips,
-        localClipPath
-      ].filter((url) => {
-        if (!url) return false;
-        return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
-      });
+        previewClip
+      ]
+      // .filter((url) => {
+      //   if (!url) return false;
+      //   return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
+      // });
 
       imageUrls.forEach((url, imageIndex) => {
         if (usedUrls.has(url)) return;

@@ -704,26 +704,26 @@ const ScriptProductionClient = () => {
     };
 
     const createThumbnailAndSaveProject = async (scriptData: ScriptData) => {
-        if (!scriptData.videoThumbnailUrl) {
-            const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
-            // console.log('Thumbnail URL:', thumbnailUrl);
-            if (thumbnailUrl) {
-                const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
-                // console.log('Upload result:', uploadResult);
-                if (uploadResult) {
-                    const updatedScriptData = {
-                        ...scriptData,
-                        videoThumbnailUrl: uploadResult,
-                        updated_at: new Date().toISOString(),
-                    } as ScriptData;
-                    setScriptData(updatedScriptData);
-                    SecureStorageHelpers.setScriptMetadata(updatedScriptData);
-                }
-            }
-            else {
-                console.log('Failed to generate thumbnail');
-            }
-        }
+        // if (!scriptData.videoThumbnailUrl) {
+        //     const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
+        //     // console.log('Thumbnail URL:', thumbnailUrl);
+        //     if (thumbnailUrl) {
+        //         const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
+        //         // console.log('Upload result:', uploadResult);
+        //         if (uploadResult) {
+        //             const updatedScriptData = {
+        //                 ...scriptData,
+        //                 videoThumbnailUrl: uploadResult?.webViewLink,
+        //                 updated_at: new Date().toISOString(),
+        //             } as ScriptData;
+        //             setScriptData(updatedScriptData);
+        //             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+        //         }
+        //     }
+        //     else {
+        //         console.log('Failed to generate thumbnail');
+        //     }
+        // }
 
         try {
             const userId = await getUserProfileId();

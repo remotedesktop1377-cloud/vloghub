@@ -55,7 +55,7 @@ export default function ProjectHeader({ currentProjectId }: { currentProjectId: 
 
     const handleBackConfirm = async () => {
         setIsBackDialogOpen(false);
-        // await deleteProject(currentProjectId);
+        await deleteProject(currentProjectId);
         router.back();
     };
 

@@ -1,5 +1,5 @@
-import React from "react";
-import { AbsoluteFill, OffthreadVideo, Sequence, Video, getRemotionEnvironment } from "remotion";
+import React, { useEffect } from "react";
+import { AbsoluteFill, OffthreadVideo, Sequence, Video, getRemotionEnvironment, prefetch } from "remotion";
 import { MediaFile } from "@/types/video_editor";
 import { HelperFunctions } from "@/utils/helperFunctions";
 
@@ -39,14 +39,6 @@ export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, opti
         fps
     );
 
-    // TODO: Add crop
-    // const crop = item.crop || {
-    //     x: 0,
-    //     y: 0,
-    //     width: item.width,
-    //     height: item.height
-    // };
-
     const trimFrom = HelperFunctions.getValidNumber(item.startTime) ?? 0;
     const trimTo = HelperFunctions.getValidNumber(item.endTime) ?? 0;
     const safeX = HelperFunctions.getValidNumber(item.x) ?? 0;
@@ -59,11 +51,23 @@ export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, opti
     const VideoComponent = isRendering ? OffthreadVideo : Video;
     const trimFromFrames = Math.max(0, Math.floor(trimFrom * fps));
     const trimToFrames = trimTo > 0 ? Math.floor(trimTo * fps) + REMOTION_SAFE_FRAME : undefined;
+    const premountFor = Math.min(durationInFrames, Math.max(1, Math.floor(fps)));
+    const src = item.src || "";
+
+    useEffect(() => {
+        if (!src) return;
+        const { free, waitUntilDone } = prefetch(src);
+        waitUntilDone().catch(() => undefined);
+        return () => {
+            free();
+        };
+    }, [src]);
 
     return (
         <Sequence
             key={item.id}
             from={from}
+            premountFor={premountFor}
             durationInFrames={durationInFrames + REMOTION_SAFE_FRAME}
             style={{ pointerEvents: "none" }}
         >
@@ -93,10 +97,11 @@ export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, opti
                     }}
                 >
                     <VideoComponent
-                        startFrom={trimFromFrames}
+                        startFrom={trimFromFrames}  
                         endAt={trimToFrames}
                         playbackRate={playbackRate}
-                        src={item.src || ""}
+                        src={src}
+                        pauseWhenBuffering
                         volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
                         style={{
                             pointerEvents: "none",

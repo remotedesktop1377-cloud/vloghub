@@ -21,8 +21,10 @@ export const PreviewPlayer = () => {
     useEffect(() => {
         const frame = Number.isFinite(currentTime) ? Math.round(currentTime * fps) : 0;
         if (playerRef.current && !isPlaying) {
-            playerRef.current.pause();
-            playerRef.current.seekTo(frame);
+            const currentFrame = playerRef.current.getCurrentFrame();
+            if (Math.abs(currentFrame - frame) > 1) {
+                playerRef.current.seekTo(frame);
+            }
         }
     }, [currentTime, isPlaying]);
 
@@ -76,6 +78,8 @@ export const PreviewPlayer = () => {
             controls
             clickToPlay={false}
             acknowledgeRemotionLicense={true}
+            loop
+            bufferStateDelayInMilliseconds={0}
         />
     )
 };
