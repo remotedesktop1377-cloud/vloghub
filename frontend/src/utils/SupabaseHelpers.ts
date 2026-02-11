@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // SUPABASE HELPER FUNCTIONS
 // ============================================================================
 
@@ -18,11 +18,13 @@ import { SecureStorageHelpers } from './helperFunctions';
 // import removed: TrendingTopic no longer used in helper insert signature
 
 export class SupabaseHelpers {
+  static getClient() {
+    return getSupabase();
+  }
 
   /**
    * Save user profile to Supabase
    */
-  static supabase = getSupabase();
 
   static async saveUserProfile(profileData: User | null | undefined) {
     try {
@@ -56,7 +58,7 @@ export class SupabaseHelpers {
         return { data: null, error: new Error('User ID is required') };
       }
 
-      const existingProfile = await SupabaseHelpers.supabase
+      const existingProfile = await SupabaseHelpers.getClient()
         .from(DB_TABLES.PROFILES)
         .select('id, created_at')
         .eq('id', payload.id)
@@ -68,13 +70,13 @@ export class SupabaseHelpers {
         payload.created_at = new Date().toISOString();
       }
 
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.PROFILES)
         .upsert(payload as any, { onConflict: 'id' })
         .select()
 
       if (error) {
-        console.log('🟢 Error saving profile:', error);
+        console.log('ðŸŸ¢ Error saving profile:', error);
         toast.error('Failed to save user profile');
         return { data: null, error };
       }
@@ -103,7 +105,7 @@ export class SupabaseHelpers {
         updated_at: new Date().toISOString()
       };
 
-      const { data, error } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
+      const { data, error } = await (SupabaseHelpers.getClient().from(DB_TABLES.PROFILES) as any)
         .update(updatePayload as any)
         .eq('id', userId);
 
@@ -135,7 +137,7 @@ export class SupabaseHelpers {
    */
   static async getUserSocialAuthKeys(userId: string) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.PROFILES)
         .select('tiktok_key, instagram_key, facebook_key, youtube_key')
         .eq('id', userId)
@@ -159,7 +161,7 @@ export class SupabaseHelpers {
       console.log('Testing logos bucket access...');
 
       // Try to list files in the logos bucket
-      const { data, error } = await SupabaseHelpers.supabase.storage
+      const { data, error } = await SupabaseHelpers.getClient().storage
         .from('logos')
         .list('', { limit: 1 });
 
@@ -200,7 +202,7 @@ export class SupabaseHelpers {
       console.log('SupabaseHelpers: Uploading to bucket "logos" with filename:', fileName);
 
       // Add a timeout to the upload operation
-      const uploadPromise = SupabaseHelpers.supabase.storage
+      const uploadPromise = SupabaseHelpers.getClient().storage
         .from('logos')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -235,7 +237,7 @@ export class SupabaseHelpers {
       console.log('SupabaseHelpers: Upload successful, getting public URL...');
 
       // Get public URL
-      const { data: urlData } = SupabaseHelpers.supabase.storage
+      const { data: urlData } = SupabaseHelpers.getClient().storage
         .from('logos')
         .getPublicUrl(fileName);
 
@@ -244,7 +246,7 @@ export class SupabaseHelpers {
 
       // Update profile with logo URL
       console.log('SupabaseHelpers: Updating profile with logo URL...');
-      const { error: updateError } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
+      const { error: updateError } = await (SupabaseHelpers.getClient().from(DB_TABLES.PROFILES) as any)
         .update({
           logo_url: logoUrl,
           logo_filename: file.name,
@@ -289,7 +291,7 @@ export class SupabaseHelpers {
           ? url.split('/storage/v1/object/public/logos/')[1]
           : `${userId}/logo-${fileName}`;
 
-        const { error: deleteError } = await SupabaseHelpers.supabase.storage
+        const { error: deleteError } = await SupabaseHelpers.getClient().storage
           .from('logos')
           .remove([filePath]);
 
@@ -304,7 +306,7 @@ export class SupabaseHelpers {
       }
 
       // Update profile to remove logo
-      const { error: updateError } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
+      const { error: updateError } = await (SupabaseHelpers.getClient().from(DB_TABLES.PROFILES) as any)
         .update({
           logo_url: null,
           logo_filename: null,
@@ -332,7 +334,7 @@ export class SupabaseHelpers {
    */
   static async updateSelectedBackground(userId: string, background: any): Promise<{ success: boolean }> {
     try {
-      const { error } = await (SupabaseHelpers.supabase.from(DB_TABLES.PROFILES) as any)
+      const { error } = await (SupabaseHelpers.getClient().from(DB_TABLES.PROFILES) as any)
         .update({
           selected_background: background,
           updated_at: new Date().toISOString()
@@ -359,7 +361,7 @@ export class SupabaseHelpers {
    */
   static async getUserProfileWithAssets(userId: string) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.PROFILES)
         .select('*, logo_url, logo_filename, selected_background')
         .eq('id', userId)
@@ -382,7 +384,7 @@ export class SupabaseHelpers {
    */
   static async saveYouTubeVideo(videoData: Database['public']['Tables']['youtube_videos']['Insert']) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase.from(DB_TABLES.YOUTUBE_VIDEOS)
+      const { data, error } = await SupabaseHelpers.getClient().from(DB_TABLES.YOUTUBE_VIDEOS)
         .insert(videoData as any)
         .select();
 
@@ -405,7 +407,7 @@ export class SupabaseHelpers {
    */
   static async saveVideoClip(clipData: Database['public']['Tables']['video_clips']['Insert']) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase.from(DB_TABLES.VIDEO_CLIPS)
+      const { data, error } = await SupabaseHelpers.getClient().from(DB_TABLES.VIDEO_CLIPS)
         .insert(clipData as any)
         .select();
 
@@ -429,7 +431,7 @@ export class SupabaseHelpers {
    */
   static async getUserVideoClips(userId: string, limit: number = 50) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.VIDEO_CLIPS)
         .select(`
             *,
@@ -462,7 +464,7 @@ export class SupabaseHelpers {
    */
   static async saveSearchHistory(searchData: Database['public']['Tables']['search_history']['Insert']) {
     try {
-      const { data, error } = await SupabaseHelpers.supabase.from(DB_TABLES.SEARCH_HISTORY)
+      const { data, error } = await SupabaseHelpers.getClient().from(DB_TABLES.SEARCH_HISTORY)
         .insert(searchData as any);
 
       if (error) {
@@ -483,10 +485,10 @@ export class SupabaseHelpers {
   static async getSearchHistory(userId: string, limit: number = 20) {
     try {
       if (!userId) {
-        // No user → nothing to fetch, avoid noisy errors
+        // No user â†’ nothing to fetch, avoid noisy errors
         return { data: [], error: null } as any;
       }
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.SEARCH_HISTORY)
         .select('*')
         .eq('user_id', userId)
@@ -534,9 +536,9 @@ export class SupabaseHelpers {
         narration_type: narration_type,
         created_at: created_at,
       };
-      // console.log('🟢 Trending topics payload:', JSON.stringify(payload, null, 2));
+      // console.log('ðŸŸ¢ Trending topics payload:', JSON.stringify(payload, null, 2));
       // Insert per RLS policy (insert allowed for authenticated users)
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.TRENDING_TOPICS)
         .insert(payload as any)
         .select()
@@ -548,7 +550,7 @@ export class SupabaseHelpers {
       }
 
       toast.success('Trending topics saved successfully');
-      // console.log('🟢 Trending topics saved successfully:', data);
+      // console.log('ðŸŸ¢ Trending topics saved successfully:', data);
       return { data, error: null };
     } catch (error) {
       console.log('Unexpected error:', error);
@@ -572,9 +574,9 @@ export class SupabaseHelpers {
         updated_at: new Date().toISOString(),
       };
 
-      // console.log('🟢 Approved Script Payload (normalized):', JSON.stringify(payload, null, 2));
+      // console.log('ðŸŸ¢ Approved Script Payload (normalized):', JSON.stringify(payload, null, 2));
       // Insert (not upsert) to comply with insert-only RLS policy
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.SCRIPTS_APPROVED)
         .insert(payload as any)
 
@@ -585,7 +587,7 @@ export class SupabaseHelpers {
       }
 
       toast.success('Approved Script saved successfully');
-      // console.log('🟢 Approved Script saved successfully:', data);
+      // console.log('ðŸŸ¢ Approved Script saved successfully:', data);
       return { data, error: null };
     } catch (error) {
       console.log('Unexpected error:', error);
@@ -656,7 +658,7 @@ export class SupabaseHelpers {
       }
 
       // Check if project already exists by job_id
-      const existingProjectResult: any = await (SupabaseHelpers.supabase
+      const existingProjectResult: any = await (SupabaseHelpers.getClient()
         .from(DB_TABLES.PROJECTS) as any)
         .select('id')
         .eq('job_id', scriptProductionJSON.project.jobId)
@@ -686,7 +688,7 @@ export class SupabaseHelpers {
 
       if (existingProject && existingProject.id) {
         // Update existing project
-        const updateResult: any = await (SupabaseHelpers.supabase
+        const updateResult: any = await (SupabaseHelpers.getClient()
           .from(DB_TABLES.PROJECTS) as any)
           .update(payload)
           .eq('id', existingProject.id)
@@ -696,7 +698,7 @@ export class SupabaseHelpers {
         upsertError = updateResult.error;
       } else {
         // Insert new project
-        const insertResult: any = await (SupabaseHelpers.supabase
+        const insertResult: any = await (SupabaseHelpers.getClient()
           .from(DB_TABLES.PROJECTS) as any)
           .insert(payload)
           .select('id')
@@ -720,7 +722,7 @@ export class SupabaseHelpers {
 
   static async saveProjectScenes(projectId: string, scriptProductionJSON: any): Promise<{ success: boolean; error?: any }> {
     try {
-      await SupabaseHelpers.supabase
+      await SupabaseHelpers.getClient()
         .from(DB_TABLES.PROJECT_SCENES)
         .delete()
         .eq('project_id', projectId);
@@ -743,7 +745,7 @@ export class SupabaseHelpers {
       // console.log('sceneRows: ', sceneRows.length);
 
       if (sceneRows.length > 0) {
-        const { error: insertScenesError } = await SupabaseHelpers.supabase
+        const { error: insertScenesError } = await SupabaseHelpers.getClient()
           .from(DB_TABLES.PROJECT_SCENES)
           .insert(sceneRows as any);
 
@@ -775,7 +777,7 @@ export class SupabaseHelpers {
 
       console.log('saveFinalVideoRecord: Looking for project with jobId:', args.jobId);
 
-      const { data: project, error: projError } = await SupabaseHelpers.supabase
+      const { data: project, error: projError } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.PROJECTS)
         .select('id')
         .eq('job_id', args.jobId)
@@ -807,7 +809,7 @@ export class SupabaseHelpers {
 
       console.log('saveFinalVideoRecord: Upsert payload:', upsertPayload);
 
-      const supabaseAny: any = SupabaseHelpers.supabase;
+      const supabaseAny: any = SupabaseHelpers.getClient();
       const { data: existingVideo, error: checkError } = await supabaseAny
         .from(DB_TABLES.GENERATED_VIDEOS)
         .select('id')
@@ -863,7 +865,7 @@ export class SupabaseHelpers {
 
       console.log('saveFinalVideoRecord: Successfully saved video record with id:', finalData.id);
 
-      const { error: updateError } = await SupabaseHelpers.supabase
+      const { error: updateError } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.PROJECTS)
         .update({ status: RENDER_STATUS.RENDERED, updated_at: new Date().toISOString() } as unknown as never)
         .eq('id', projectId);
@@ -893,7 +895,7 @@ export class SupabaseHelpers {
     limit?: number;
   } = {}) {
     try {
-      let query = SupabaseHelpers.supabase
+      let query = SupabaseHelpers.getClient()
         .from(DB_TABLES.TRENDING_TOPICS)
         .select('*');
 
@@ -932,7 +934,7 @@ export class SupabaseHelpers {
    */
   static async searchVideoClips(searchQuery: string, userId?: string, limit: number = 20) {
     try {
-      const supabase = SupabaseHelpers.supabase;
+      const supabase = SupabaseHelpers.getClient();
       let query = supabase
         .from(DB_TABLES.VIDEO_CLIPS)
         .select(`
@@ -972,7 +974,7 @@ export class SupabaseHelpers {
    */
   static async deleteVideoClip(clipId: string, userId: string) {
     try {
-      const { error } = await SupabaseHelpers.supabase
+      const { error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.VIDEO_CLIPS)
         .delete()
         .eq('id', clipId)
@@ -1002,7 +1004,7 @@ export class SupabaseHelpers {
     updates: Database['public']['Tables']['video_clips']['Update']
   ) {
     try {
-      const { data, error } = await (SupabaseHelpers.supabase.from(DB_TABLES.VIDEO_CLIPS) as any)
+      const { data, error } = await (SupabaseHelpers.getClient().from(DB_TABLES.VIDEO_CLIPS) as any)
         .update(updates as any)
         .eq('id', clipId)
         .eq('user_id', userId) // Ensure user can only update their own clips
@@ -1035,7 +1037,7 @@ export class SupabaseHelpers {
     script_language: string;
   }): Promise<{ data: any; error: any }> {
     try {
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .insert({
           user_id: jobData.user_id,
@@ -1078,7 +1080,7 @@ export class SupabaseHelpers {
   ): Promise<{ data: any; error: any }> {
     try {
       // Remove 'as any' from .update(). Cast to Record<string, unknown>, which is generally acceptable for update.
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .update(updates as never)
         .eq('job_id', jobId)
@@ -1102,7 +1104,7 @@ export class SupabaseHelpers {
    */
   static async getTranscriptionJob(jobId: string, userId: string): Promise<{ data: any; error: any }> {
     try {
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .select('*')
         .eq('job_id', jobId)
@@ -1126,7 +1128,7 @@ export class SupabaseHelpers {
    */
   static async getFailedTranscriptionJobs(userId: string): Promise<{ data: any; error: any }> {
     try {
-      const { data, error } = await SupabaseHelpers.supabase
+      const { data, error } = await SupabaseHelpers.getClient()
         .from(DB_TABLES.TRANSCRIPTION_JOBS)
         .select('*')
         .eq('user_id', userId)
