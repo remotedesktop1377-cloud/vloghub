@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('Error updating profile in Supabase:', updateError);
           }
         } else {
-          console.log(`Profile ID mismatch: Existing ID (${existingId}) differs from Session ID (${sessionUser.id}). Using existing profile ID.`);
+          // console.log(`Profile ID mismatch: Existing ID (${existingId}) differs from Session ID (${sessionUser.id}). Using existing profile ID.`);
           
           const { error: updateError } = await (supabase
             .from(DB_TABLES.PROFILES) as any)

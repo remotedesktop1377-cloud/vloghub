@@ -1,0 +1,76 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.section {
+  background: #0f182a;
+  /* border: 1px solid #1e2a3b; */
+  border-radius: 12px;
+  /* padding: 8px; */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #eef2f8;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #cfd6e6;
+  margin-bottom: 6px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gridTwo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gridOne {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0b111d;
+  border: 1px solid #233044;
+  border-radius: 10px;
+  color: #eef2f8;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #5c8de8;
+  box-shadow: 0 0 0 2px rgba(92, 141, 232, 0.2);
+}
+
+.range {
+  width: 100%;
+  accent-color: #5c8de8;
+}

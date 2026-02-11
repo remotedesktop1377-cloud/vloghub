@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
     Dialog,
     DialogTitle,
@@ -11,7 +11,7 @@ import {
 interface AlertDialogProps {
     open: boolean;
     title: string;
-    message: string;
+    message: React.ReactNode;
     onClose: () => void;
     confirmLabel?: string;
     onConfirm?: () => void;
@@ -24,10 +24,10 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
     title,
     message,
     onClose,
-    confirmLabel = 'OK',
+    confirmLabel = "OK",
     onConfirm,
     showCancel = false,
-    cancelLabel = 'Cancel',
+    cancelLabel = "Cancel",
 }) => {
     return (
         <Dialog
@@ -41,7 +41,7 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
                 {title}
             </DialogTitle>
             <DialogContent>
-                <Typography variant="h6" sx={{ mb: 2, lineHeight: 1.5 }}>
+                <Typography variant="h6" sx={{ mb: 2, lineHeight: 1.6 }}>
                     {message}
                 </Typography>
             </DialogContent>

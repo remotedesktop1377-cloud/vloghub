@@ -1,0 +1,52 @@
+.header {
+  width: min(1100px, 92%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px;
+}
+
+.input {
+  flex: 1;
+  font-size: 22px;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+  background: #0b111d;
+  color: #eef2f8;
+  border: 1px solid #233044;
+  border-radius: 10px;
+  padding: 8px 12px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #5c8de8;
+  box-shadow: 0 0 0 2px rgba(92, 141, 232, 0.2);
+}
+
+.title {
+  flex: 1;
+  font-size: 22px;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+  color: #eef2f8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.title:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.editIcon {
+  width: 16px;
+  height: 16px;
+  color: #9aa7bd;
+}

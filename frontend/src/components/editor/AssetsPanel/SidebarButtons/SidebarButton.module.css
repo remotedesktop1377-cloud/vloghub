@@ -1,0 +1,31 @@
+.button {
+  background: #0b0f17;
+  color: #e6eaf2;
+  border: 1px solid #1e2a3b;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  font-weight: 700;
+  font-size: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.button:hover {
+  background: #121a2a;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+}
+
+.icon {
+  width: 28px;
+  height: 28px;
+}
+
+.label {
+  font-size: 11px;
+  letter-spacing: 0.2px;
+}

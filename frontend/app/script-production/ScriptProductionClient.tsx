@@ -42,10 +42,9 @@ import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { LibraryData, profileService } from '@/services/profileService';
 import { toast, ToastContainer } from 'react-toastify';
 import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
-import { API_ENDPOINTS } from '../../src/config/apiEndpoints';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
 import PdfService from '@/services/pdfService';
-import VideoRenderService from '@/services/videoRenderService';
 import { SceneData } from '@/types/sceneData';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
 import ThumbnailCreationService from '@/services/thumbnailCreationService';
@@ -63,7 +62,6 @@ import AppLoadingOverlay from '@/components/ui/loadingView/AppLoadingOverlay';
 import { predefinedTransitions } from '@/data/DefaultData';
 import { SupabaseHelpers } from '@/utils/SupabaseHelpers';
 import { useSession } from 'next-auth/react';
-import { backendService } from '@/services/backendService';
 import { DB_TABLES } from '@/config/DbTables';
 
 const ScriptProductionClient = () => {
@@ -119,7 +117,6 @@ const ScriptProductionClient = () => {
     });
     // Project-level settings
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
-    const [completeProjectUploaded, setCompleteProjectUploaded] = useState(false);
     const [pageTitle, setPageTitle] = useState('Script Review & Approval');
 
     const [jobId, setJobId] = useState<string>('');
@@ -166,6 +163,13 @@ const ScriptProductionClient = () => {
                     setPageTitle('Final Step: Scene Composition & Video Generation');
 
                     if (storedData.transcription) {
+                        // console.log('storedData: ', JSON.stringify(storedData, null, 2));
+                        // const projectId = storedData.projectId;
+                        // if (projectId) {
+                        //     router.push(`/projects/${projectId}`);
+                        // } else {
+                        //     toast.info("Project id not found.");
+                        // }
                         updateParagraphs(storedData);
                     }
                 }
@@ -376,8 +380,6 @@ const ScriptProductionClient = () => {
             setScenesData(updated);
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, projectSettings: updatedProjectSettings, scenesData: updated });
 
-            applyHighlights(scriptData, updated);
-
         } else if (mode === 'scene') {
 
             const updatedSceneSettings: Settings = {
@@ -398,12 +400,12 @@ const ScriptProductionClient = () => {
             setScenesData(updatedSceneData);
             SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: updatedSceneData });
 
-            applyHighlights(scriptData, updatedSceneData);
         }
 
     };
 
     const getUserProfileId = async (): Promise<string | null> => {
+        if (user?.id) return user.id;
         if (!user?.email) return null;
         try {
             const { getSupabase } = await import('@/utils/supabase');
@@ -427,14 +429,11 @@ const ScriptProductionClient = () => {
     const uploadCompleteProjectToDrive = async () => {
         try {
             setLoading(true);
-            const isReachable = await backendService.isBackendReachable();
-            if (!isReachable) {
-                HelperFunctions.showError('Video rendering backend is not reachable. Please try again later.');
-                setShowAlertDialog(true);
-                setLoading(false);
+            const userId = await getUserProfileId();
+            if (!userId) {
+                toast.info("User not found. Please login again.");
                 return;
             }
-            const userId = await getUserProfileId();
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, scenesData, user?.email || '');
 
             try {
@@ -458,31 +457,41 @@ const ScriptProductionClient = () => {
                 console.log('Failed to upload project JSON to Google Drive: ', uploadResult.result);
             }
 
-            VideoRenderService.processProjectJson(projectJSON)
-                .then(async (renderResult) => {
-                    if (!renderResult || !renderResult.finalVideo) {
-                        console.log('Final video generation failed or missing finalVideo');
-                        return;
-                    }
-                    if (!renderResult.driveUpload || renderResult.driveUpload.success === false) {
-                        console.log('Final video upload to Google Drive failed', renderResult.driveUpload);
-                    }
+            const projectId = scriptData?.projectId || SecureStorageHelpers.getScriptMetadata()?.projectId;
+            if (projectId) {
+                router.push(`/projects/${projectId}`);
+            } else {
+                toast.info("Processing... Please wait for a moment.");
+            }
 
-                    const driveUpload = renderResult.driveUpload || {};
-                    await SupabaseHelpers.saveFinalVideoRecord({
-                        jobId,
-                        googleDriveVideoId: driveUpload.fileId || null,
-                        googleDriveVideoName: projectJSON.project?.title || '',
-                        googleDriveVideoUrl: driveUpload.webViewLink || renderResult.finalVideo || null,
-                        googleDriveThumbnailUrl: scriptData?.videoThumbnailUrl || null,
-                    });
-                })
-                .catch((err) => {
-                    console.log('Background processProjectJson error', err);
-                });
+        } catch (e: any) {
+            console.log(e);
+            toast.error(`Failed to upload to Google Drive: ${e?.message || 'Unknown error'}`);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            setCompleteProjectUploaded(true);
-            setShowConfirmationModal(true);
+    const saveProjectAndStartEditing = async (updatedScriptData: ScriptData) => {
+        try {
+            setLoading(true);
+            const userId = await getUserProfileId();
+            const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, updatedScriptData.scenesData!, user?.email || '');
+
+            try {
+                const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
+                if (!result.success) {
+                    console.log('Failed to save project and scenes to Supabase: ', result.error);
+                }
+                const projectId = result?.projectId;
+                if (projectId) {
+                    router.push(`/projects/${projectId}`);
+                } else {
+                    toast.info("Project id not found.");
+                }
+            } catch (e: any) {
+                console.log('Failed to save project and scenes to Supabase: ', e);
+            }
 
         } catch (e: any) {
             console.log(e);
@@ -567,12 +576,18 @@ const ScriptProductionClient = () => {
                     const ch: SceneData = mapped[i];
                     if (!ch?.gammaPreviewImage) continue;
                     try {
-                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobId, ch.id ?? i + 1, ch.gammaPreviewImage);
+                        let jobName = jobId;
+                        if (!jobId) {
+                            jobName = SecureStorageHelpers.getScriptMetadata()?.jobId;
+                        } else if (!jobName) {
+                            jobName = SecureStorageHelpers.getApprovedScript()?.jobName;
+                        }
+                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobName, ch.id ?? i + 1, ch.gammaPreviewImage);
                         if (uploadResult.success) {
                             ch.gammaPreviewImage = uploadResult.result.webViewLink;
                             // update scene data with the updated scene data
                             setScenesData((prev: SceneData[]) => prev.map((s: SceneData) => s.id === ch.id ? ch : s));
-                            await GoogleDriveServiceFunctions.persistSceneUpdate(jobId, ch, 'Preview image uploaded');
+                            await GoogleDriveServiceFunctions.persistSceneUpdate(jobName, ch, 'Preview image uploaded');
                         }
                     } catch { }
                 }
@@ -590,12 +605,10 @@ const ScriptProductionClient = () => {
 
     // Function to break down script into paragraphs and calculate individual durations
     const updateParagraphs = async (scriptData: ScriptData) => {
-        // Check if we have scenes data from the new transcribe API
-        if (scriptData?.scenesData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length > 0) {
-            // console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
-
-            // If SceneData with images already exist in approvedScript, reuse them
-            try {
+        try {
+            if (scriptData?.scenesData && Array.isArray(scriptData?.scenesData) && scriptData?.scenesData?.length > 0) {
+                // console.log('Using scenes data from transcribe API:', scriptData.scenesData.length, 'scenes');
+                // If SceneData with images already exist in approvedScript, reuse them
                 if (scriptData && Array.isArray(scriptData.scenesData) && scriptData.scenesData.length === scriptData.scenesData!.length) {
                     const normalizedFromStorage: SceneData[] = scriptData.scenesData.map((ch: any, index: number) => ({
                         id: ch.id || scriptData.scenesData![index]?.id || `scene-${index + 1}`,
@@ -609,6 +622,7 @@ const ScriptProductionClient = () => {
                         durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,
                         gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
                         previewClip: ch.previewClip || scriptData.scenesData![index]?.previewClip || '',
+                        localPath: ch.localPath || scriptData.scenesData![index]?.localPath || '',
                         highlightedKeywords: ch.highlightedKeywords ?? [],
                         keywordsSelected: ch.keywordsSelected ?? {},
                         assets: {
@@ -637,11 +651,10 @@ const ScriptProductionClient = () => {
                         setAiImagesEnabled(true);
                     }
 
-                    applyProjectSettingsDialog('project', scriptData, scriptData.projectSettings || null, null, normalizedFromStorage);
-
+                    applyHighlights(scriptData, normalizedFromStorage);
                 }
-            } catch { }
-        }
+            }
+        } catch { }
     };
 
     const applyHighlights = async (scriptData: ScriptData, scenesData: SceneData[]) => {
@@ -650,14 +663,14 @@ const ScriptProductionClient = () => {
             setLoading(true);
             HelperFunctions.fetchAndApplyHighlightedKeywords(scenesData, setScenesData, (scenesData) => {
                 setLoading(false);
-                const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
+                const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() };
                 checkAndProcessGamma(updatedScriptData);
                 createThumbnailAndSaveProject(updatedScriptData);
             });
         } else {
             setLoading(false);
             setScenesData(scenesData);
-            const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() } as ScriptData;
+            const updatedScriptData = { ...scriptData, scenesData, updated_at: new Date().toISOString() };
             checkAndProcessGamma(updatedScriptData);
             createThumbnailAndSaveProject(updatedScriptData);
         }
@@ -690,12 +703,12 @@ const ScriptProductionClient = () => {
     };
 
     const createThumbnailAndSaveProject = async (scriptData: ScriptData) => {
-        if (!scriptData.videoThumbnailUrl) {
+        const existingThumbnail = scriptData.videoThumbnailUrl || null;
+        let uploadResult: string | null | undefined = scriptData.videoThumbnailUrl;
+        if (!existingThumbnail) {
             const thumbnailUrl = await ThumbnailCreationService.getThumbnail(scriptData.title || scriptData.topic || 'Untitled Script');
-            // console.log('Thumbnail URL:', thumbnailUrl);
             if (thumbnailUrl) {
-                const uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
-                // console.log('Upload result:', uploadResult);
+                uploadResult = await ThumbnailCreationService.uploadThumbnailToDrive(scriptData?.jobId || jobId, thumbnailUrl);
                 if (uploadResult) {
                     const updatedScriptData = {
                         ...scriptData,
@@ -715,8 +728,18 @@ const ScriptProductionClient = () => {
             const userId = await getUserProfileId();
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', scriptData?.jobId || jobId, scriptData!, scriptData?.projectSettings!, scriptData.scenesData || [], user?.email || '');
             const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
+            // console.log('Project saved to Supabase: ', result);
             if (!result.success) {
                 console.log('Failed to save project and scenes to Supabase: ', result.error);
+            } else {
+                const updatedScriptData = {
+                    ...scriptData,
+                    projectId: result.projectId,
+                    videoThumbnailUrl: uploadResult
+                } as ScriptData;
+                setScriptData(updatedScriptData);
+                // console.log('Script data updated: ', updatedScriptData);
+                SecureStorageHelpers.setScriptMetadata(updatedScriptData);
             }
         } catch (e: any) {
             console.log('Failed to save project and scenes to Supabase: ', e);
@@ -1559,7 +1582,7 @@ const ScriptProductionClient = () => {
                                 Video Duration:
                             </Typography>
                             <Chip
-                                label={`${HelperFunctions.formatTime(videoDuration)}`}
+                                label={`${HelperFunctions.formatTimeWithHours(videoDuration)}`}
                                 size="medium"
                                 color="success"
                                 sx={{ fontSize: '1.25rem', fontWeight: 500, height: 28, '& .MuiChip-label': { px: 1, lineHeight: 1.4 } }}
@@ -1883,33 +1906,37 @@ const ScriptProductionClient = () => {
                                             setScriptData(updatedScriptData);
                                             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
                                         }}
-                                        onUploadComplete={async (driveUrl: string, transcriptionData: any, backgroundType: BackgroundType) => {
+                                        onUploadComplete={async (narratorVideoUrl: string, transcription: string, scenes: SceneData[]) => {
                                             setPageTitle('Final Step: Scene Composition & Video Generation');
                                             setIsNarratorVideoUploaded(true);
                                             setIsNarrationUploadView(false);
 
                                             const updatedScriptData = {
                                                 ...scriptData,
-                                                videoBackground: backgroundType,
                                                 status: SCRIPT_STATUS.UPLOADED,
-                                                narrator_chroma_key_link: driveUrl,
-                                                transcription: transcriptionData.text,
-                                                scenesData: transcriptionData.scenes,
+                                                narrator_chroma_key_link: narratorVideoUrl,
+                                                transcription: transcription,
+                                                projectSettings: {
+                                                    videoLogo: scriptData?.projectSettings?.videoLogo as LogoOverlayInterface,
+                                                    videoBackgroundMusic: scriptData?.projectSettings?.videoBackgroundMusic as SettingItemInterface,
+                                                    videoBackgroundVideo: scriptData?.projectSettings?.videoBackgroundVideo as SettingItemInterface,
+                                                    videoBackgroundImage: scriptData?.projectSettings?.videoBackgroundImage as SettingItemInterface,
+                                                    backgroundType: scriptData?.projectSettings?.backgroundType || (scriptData?.projectSettings?.videoBackgroundImage ? 'image' : 'video'),
+                                                    videoTransitionEffect: scriptData?.projectSettings?.videoTransitionEffect as SettingItemInterface,
+                                                    showPreviewImageAtStart: scriptData?.projectSettings?.showPreviewImageAtStart,
+                                                },
+                                                scenesData: scenes,
                                                 updated_at: new Date().toISOString(),
                                             } as ScriptData;
-                                            // console.log('updatedScriptData: ', JSON.stringify(updatedScriptData, null, 2));
                                             setScriptData(updatedScriptData);
                                             SecureStorageHelpers.setScriptMetadata(updatedScriptData);
 
                                             updateParagraphs(updatedScriptData);
 
                                             // Automatically generate images for all scenes after video upload
-                                            if (transcriptionData.scenes && Array.isArray(transcriptionData.scenes) && transcriptionData.scenes.length > 0) {
-                                                // Set scenes first so they're visible
-                                                setScenesData(transcriptionData.scenes);
-                                                
+                                            if (scenes && Array.isArray(scenes) && scenes.length > 0) {
                                                 // Generate images in the background (non-blocking)
-                                                generateImagesForScenes(transcriptionData.scenes)
+                                                generateImagesForScenes(scenes)
                                                     .then((scenesWithImages) => {
                                                         const updatedScriptDataWithImages = {
                                                             ...updatedScriptData,
@@ -1932,9 +1959,6 @@ const ScriptProductionClient = () => {
                                                         console.error('Error generating images for scenes:', error);
                                                         // Don't show error toast here as it's background process
                                                     });
-                                            } else {
-                                                // If no scenes, still set empty array
-                                                setScenesData([]);
                                             }
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
@@ -2033,6 +2057,18 @@ const ScriptProductionClient = () => {
                             <Box sx={{ display: 'flex', flexDirection: 'column', pr: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', gap: 2, mb: 2, }}>
                                     <Button variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={handleUploadAgain} startIcon={<UploadIcon />}>Upload Again</Button>
+                                    <Button
+                                        variant="outlined"
+                                        size="medium"
+                                        startIcon={<EditIcon />}
+                                        onClick={() => uploadCompleteProjectToDrive()}
+                                        sx={{
+                                            textTransform: 'none',
+                                            fontSize: '1.25rem'
+                                        }}
+                                    >
+                                        Generate video
+                                    </Button>
                                     <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
                                 </Box>
 
@@ -2114,31 +2150,6 @@ const ScriptProductionClient = () => {
                                     location={scriptData?.region || ''}
                                 />
 
-                                {/* Production Actions - Only show when script is approved */}
-                                <Box sx={{ mt: 5 }}>
-                                    {/* <Typography variant="h6" sx={{ mb: 3, color: 'primary.main', lineHeight: 2.5, fontSize: '1.5rem' }}>
-                                    🎬 Production Actions
-                                </Typography> */}
-
-                                    {/* Other Actions */}
-                                    <Grid container spacing={2}>
-
-                                        <Grid item xs={12}>
-                                            <Button
-                                                variant="contained"
-                                                size="medium"
-                                                fullWidth
-                                                startIcon={isGammaProcessing ? <CircularProgress size={20} /> : <VideoIcon />}
-                                                onClick={() => uploadCompleteProjectToDrive()}
-                                                disabled={!scenesData.length || isGammaProcessing}
-                                                sx={{ textTransform: 'none', fontSize: '1.25rem' }}
-                                            >
-                                                Generate Video
-                                            </Button>
-                                        </Grid>
-
-                                    </Grid>
-                                </Box>
                             </Box>
                         </Paper>
                     }
@@ -2152,7 +2163,10 @@ const ScriptProductionClient = () => {
                 open={showConfirmationModal}
                 onClose={handleCancelBack}
                 onConfirm={handleConfirmBack}
-                isComplete={completeProjectUploaded}
+                title={"Are you sure?"}
+                message={"You haven't approved your script yet. If you go back now, your current progress and script data will be permanently deleted."}
+                confirmText={"Discard Script"}
+                cancelText={"Cancel"}
             />
 
             <AlertDialog

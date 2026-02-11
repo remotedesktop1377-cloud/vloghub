@@ -3,6 +3,7 @@ import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '@/data/constants';
+import { MediaFile, MediaType, ProjectState } from '@/types/video_editor';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -182,11 +183,221 @@ export const cn = (...classes: Array<string | false | null | undefined>): string
 };
 
 export class HelperFunctions {
+  static getValidNumber(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const numericValue = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+    return Number.isFinite(numericValue) ? Number(numericValue) : null;
+  }
+
+  static getAspectRatio(width: number, height: number): string {
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+      return '16:9';
+    }
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const divisor = gcd(width, height);
+    return `${Math.round(width / divisor)}:${Math.round(height / divisor)}`;
+  }
+
+  static parseResolution(resolution?: string): { width: number; height: number } {
+    if (!resolution || typeof resolution !== 'string') {
+      return { width: 1920, height: 1080 };
+    }
+    const [widthStr, heightStr] = resolution.split('x');
+    const width = HelperFunctions.getValidNumber(widthStr) || 1920;
+    const height = HelperFunctions.getValidNumber(heightStr) || 1080;
+    return { width, height };
+  }
+
+  static getFileNameFromUrl(url: string, fallback: string): string {
+    if (!url) return fallback;
+    try {
+      const parsed = new URL(url);
+      const name = parsed.pathname.split('/').filter(Boolean).pop() || '';
+      return name || fallback;
+    } catch {
+      const parts = url.split('?')[0].split('/').filter(Boolean);
+      const name = parts[parts.length - 1] || '';
+      return name || fallback;
+    }
+  }
+
+  static getScenesFromScriptMetadata(scriptMetadata: any): SceneData[] {
+    if (Array.isArray(scriptMetadata?.script)) {
+      return scriptMetadata.script as SceneData[];
+    }
+    if (Array.isArray(scriptMetadata?.scenesData)) {
+      return scriptMetadata.scenesData as SceneData[];
+    }
+    if (Array.isArray(scriptMetadata?.project?.scenesData)) {
+      return scriptMetadata.project.scenesData as SceneData[];
+    }
+    if (Array.isArray(scriptMetadata?.project?.script)) {
+      return scriptMetadata.project.script as SceneData[];
+    }
+    return [];
+  }
+
+  static getMediaFilesFromScriptMetadata(scriptMetadata: any, resolution: { width: number; height: number }): MediaFile[] {
+    const scenes = HelperFunctions.getScenesFromScriptMetadata(scriptMetadata);
+    const mediaFiles: MediaFile[] = [];
+    let zIndex = 0;
+
+    scenes.forEach((scene, sceneIndex) => {
+      const usedUrls = new Set<string>();
+      const sceneStart = HelperFunctions.getValidNumber(scene.startTime) ?? 0;
+      const sceneEnd = HelperFunctions.getValidNumber(scene.endTime);
+      const durationInSeconds = HelperFunctions.getValidNumber(scene.durationInSeconds) ?? 0;
+      const sceneDuration = sceneEnd && sceneEnd > sceneStart ? sceneEnd - sceneStart : (durationInSeconds || 4);
+      const positionStart = sceneStart;
+      const positionEnd = sceneStart + sceneDuration;
+
+      const previewImage = (scene as any)?.gammaPreviewImage || (scene as any)?.previewImage || '';
+      const imageUrls = [
+        ...(Array.isArray(scene.assets?.images) ? scene.assets!.images!.filter(Boolean) as string[] : []),
+        previewImage
+      ].filter(Boolean);
+
+      // const previewClip = (scene as any)?.localPath || '';
+      // const previewClip = 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+      const previewClip = (scene as any)?.previewClip || '';
+      const assetClips = Array.isArray(scene.assets?.clips) ? scene.assets!.clips! : [];
+      const localAssetClips = assetClips
+        .map((clip: any) => clip?.url)
+        .filter((url: string | undefined) => {
+          if (!url) return false;
+          return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
+        });
+      const clipUrls = [
+        ...localAssetClips,
+        previewClip
+      ]
+      // .filter((url) => {
+      //   if (!url) return false;
+      //   return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
+      // });
+
+      imageUrls.forEach((url, imageIndex) => {
+        if (usedUrls.has(url)) return;
+        usedUrls.add(url);
+        const id = crypto.randomUUID();
+        const normalizedUrl = HelperFunctions.normalizeGoogleDriveUrl(url);
+        mediaFiles.push({
+          id,
+          fileName: `Image-${sceneIndex + 1}-${imageIndex + 1}`,
+          fileId: id,
+          type: 'image',
+          startTime: 0,
+          endTime: 3,
+          src: normalizedUrl,
+          positionStart,
+          positionEnd,
+          includeInMerge: true,
+          playbackSpeed: 1,
+          volume: 100,
+          zIndex: scenes.length,
+          x: 0,
+          y: 0,
+          width: 500,
+          height: 500,
+          rotation: 0,
+          opacity: 100,
+          crop: { x: 0, y: 0, width: 500, height: 500 }
+        });
+      });
+
+      clipUrls.forEach((url, clipIndex) => {
+        if (usedUrls.has(url)) return;
+        usedUrls.add(url);
+        const id = crypto.randomUUID();
+        const normalizedUrl = HelperFunctions.getClipUrl(url) || url;
+        mediaFiles.push({
+          id,
+          fileName: `Video-${sceneIndex + 1}-${clipIndex + 1}`,
+          fileId: id,
+          type: 'video',
+          startTime: 0,
+          endTime: sceneDuration,
+          src: normalizedUrl,
+          positionStart,
+          positionEnd,
+          includeInMerge: true,
+          playbackSpeed: 1,
+          volume: 100,
+          zIndex: zIndex++,
+          x: 0,
+          y: 0,
+          width: resolution.width,
+          height: resolution.height,
+          rotation: 0,
+          opacity: 100,
+          crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
+        });
+      });
+    });
+
+    return mediaFiles;
+  }
+
+  static createProjectFromScriptMetadata(projectId: string, scriptMetadata: any): ProjectState | null {
+    if (!projectId || !scriptMetadata) return null;
+    const projectData = scriptMetadata?.project && typeof scriptMetadata.project === 'object' ? scriptMetadata.project : scriptMetadata;
+    const resolution = HelperFunctions.parseResolution(projectData?.resolution);
+    const scenes = HelperFunctions.getScenesFromScriptMetadata(scriptMetadata);
+    const mediaFiles = HelperFunctions.getMediaFilesFromScriptMetadata(scriptMetadata, resolution);
+    const sceneEndTimes = scenes
+      .map(scene => {
+        const start = HelperFunctions.getValidNumber(scene.startTime) ?? 0;
+        const end = HelperFunctions.getValidNumber(scene.endTime);
+        if (end && end > start) return end;
+        const duration = HelperFunctions.getValidNumber(scene.durationInSeconds) ?? 0;
+        return start + duration;
+      })
+      .filter(value => Number.isFinite(value)) as number[];
+    const maxSceneEnd = sceneEndTimes.length > 0 ? Math.max(...sceneEndTimes) : 0;
+    const projectDuration = HelperFunctions.getValidNumber(projectData?.videoDuration) ?? 0;
+    const duration = Math.max(projectDuration, maxSceneEnd);
+    const projectName = projectData?.title || scriptMetadata?.title || 'Untitled Project';
+
+    return {
+      id: projectId,
+      projectName,
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      mediaFiles,
+      textElements: [],
+      currentTime: 0,
+      isPlaying: false,
+      isMuted: false,
+      duration,
+      activeSection: 'media',
+      activeElement: 'text',
+      activeElementIndex: 0,
+      filesID: [],
+      zoomLevel: 1,
+      timelineZoom: 100,
+      enableMarkerTracking: true,
+      resolution: { width: resolution.width, height: resolution.height },
+      fps: 30,
+      aspectRatio: HelperFunctions.getAspectRatio(resolution.width, resolution.height),
+      history: [],
+      future: [],
+      autoRenderRequested: true,
+      autoRenderProjectId: '',
+      exportSettings: {
+        resolution: '480p',
+        quality: 'low',
+        speed: 'fastest',
+        fps: 30,
+        format: 'mp4',
+        includeSubtitles: false
+      }
+    };
+  }
 
   static convertProjectJSONToScriptData(projectJson: any): ScriptData {
     // Handle both old nested structure (projectJson.project) and new flat structure
     const projectData = projectJson.project || projectJson;
-    
+
     return {
       ...projectData,
       jobName: projectData.jobId || '',
@@ -217,10 +428,10 @@ export class HelperFunctions {
         // Project-level settings
         projectSettings: (() => {
           // Determine backgroundType: use explicit value if set, otherwise infer from videoBackgroundImage
-          const projectBackgroundType = projectSettings?.backgroundType 
-            ? projectSettings.backgroundType 
+          const projectBackgroundType = projectSettings?.backgroundType
+            ? projectSettings.backgroundType
             : (projectSettings?.videoBackgroundImage ? 'image' : 'video');
-          
+
           return {
             videoLogo: projectSettings?.videoLogo as LogoOverlayInterface,
             videoBackgroundMusic: projectSettings?.videoBackgroundMusic as SettingItemInterface,
@@ -245,7 +456,7 @@ export class HelperFunctions {
         highlightedKeywords: sceneData.highlightedKeywords || [],
         keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
         assets: {
-          images: Array.isArray(sceneData.assets?.images) 
+          images: Array.isArray(sceneData.assets?.images)
             ? sceneData?.assets?.images?.filter(img => !HelperFunctions.isBase64Image(img))
             : [],
           clips: sceneData?.assets?.clips || [],
@@ -331,6 +542,27 @@ export class HelperFunctions {
       }
     }
     return false;
+  };
+
+  static getProgressMessage = (currentStep: string) => {
+    switch (currentStep) {
+      case 'compressing':
+        return 'Compressing video. Please wait...';
+      case 'uploading':
+        return 'Uploading video to Google Drive. Please wait...';
+      case 'videoConversion':
+        return 'Converting video to audio. Please wait...';
+      case 'transcribing':
+        return 'Transcribing audio to text. Please wait...';
+      case 'llmProcessing':
+        return 'Processing with LLM. Please wait...';
+      case 'segmentation':
+        return 'Segmenting video. Please wait...';
+      case 'completed':
+        return 'All done! Your video has been processed successfully.';
+      default:
+        return 'Processing...';
+    }
   };
 
   static handleDownloadAllNarrations = (scriptData: ScriptData) => {
@@ -955,11 +1187,37 @@ export class HelperFunctions {
     });
   };
 
-  static formatTime(seconds: number): string {
+  static extractMediaDuration = (file: File, mediaType: MediaType): Promise<number> => {
+    if (mediaType === 'image') {
+      return Promise.resolve(4);
+    }
+    return new Promise((resolve) => {
+      const element = document.createElement(mediaType === 'audio' ? 'audio' : 'video');
+      const url = URL.createObjectURL(file);
+      element.preload = 'metadata';
+      element.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(element.duration);
+      };
+      element.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(4);
+      };
+      element.src = url;
+    });
+  };
+
+  static formatTimeWithHours(seconds: number): string {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
     return `${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m ` : ''}${secs > 0 ? `${secs}s` : ''}`;
+  }
+
+  static formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
   /**
@@ -1140,5 +1398,14 @@ export class HelperFunctions {
     }
     return previewImage;
   };
+
+  static categorizeFile(mimeType: string): MediaType {
+
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    if (mimeType.startsWith('image/')) return 'image';
+    return 'unknown';
+  };
+
 }
 

@@ -57,17 +57,54 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Clip file not found' }, { status: 404 });
         }
 
-        // Read the file
-        const fileBuffer = fs.readFileSync(resolvedPath);
+        const fileStat = fs.statSync(resolvedPath);
         const fileName = path.basename(resolvedPath);
         const mimeType = fileName.endsWith('.mp4') ? 'video/mp4' : 'application/octet-stream';
+        const range = request.headers.get('range');
 
-        // Return the file as a blob
-        return new NextResponse(fileBuffer, {
+        if (range) {
+            const bytesPrefix = 'bytes=';
+            if (!range.startsWith(bytesPrefix)) {
+                return new NextResponse(null, { status: 416 });
+            }
+            const rawRange = range.substring(bytesPrefix.length);
+            const [startStr, endStr] = rawRange.split('-');
+            const start = Number(startStr);
+            const end = endStr ? Number(endStr) : fileStat.size - 1;
+
+            if (!Number.isFinite(start) || start < 0 || start >= fileStat.size) {
+                return new NextResponse(null, {
+                    status: 416,
+                    headers: {
+                        'Content-Range': `bytes */${fileStat.size}`,
+                        'Accept-Ranges': 'bytes',
+                    },
+                });
+            }
+
+            const safeEnd = Number.isFinite(end) && end >= start ? Math.min(end, fileStat.size - 1) : fileStat.size - 1;
+            const chunkSize = safeEnd - start + 1;
+            const stream = fs.createReadStream(resolvedPath, { start, end: safeEnd });
+
+            return new NextResponse(stream as any, {
+                status: 206,
+                headers: {
+                    'Content-Type': mimeType,
+                    'Content-Length': chunkSize.toString(),
+                    'Content-Range': `bytes ${start}-${safeEnd}/${fileStat.size}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Disposition': `inline; filename="${fileName}"`,
+                },
+            });
+        }
+
+        const stream = fs.createReadStream(resolvedPath);
+        return new NextResponse(stream as any, {
             headers: {
                 'Content-Type': mimeType,
-                'Content-Disposition': `attachment; filename="${fileName}"`,
-                'Content-Length': fileBuffer.length.toString(),
+                'Content-Disposition': `inline; filename="${fileName}"`,
+                'Content-Length': fileStat.size.toString(),
+                'Accept-Ranges': 'bytes',
             },
         });
     } catch (error: any) {
