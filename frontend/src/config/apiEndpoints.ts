@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
   API_TRANSCRIBE_AUDIO: '/api/transcribe-audio',
   PLAN_SCENES: '/api/plan-scenes',
   CUT_CLIPS: '/api/cut-clips',
+  CLEANUP_EXPORTS: '/api/cleanup-exports',
 } as const;
 
 export type ApiEndpoint = typeof API_ENDPOINTS[keyof typeof API_ENDPOINTS]; 

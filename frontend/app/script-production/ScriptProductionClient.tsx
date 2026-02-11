@@ -428,15 +428,16 @@ const ScriptProductionClient = () => {
 
     const uploadCompleteProjectToDrive = async () => {
         try {
-            setLoading(true);
             const userId = await getUserProfileId();
             if (!userId) {
                 toast.info("User not found. Please login again.");
                 return;
             }
+
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, scenesData, user?.email || '');
 
             try {
+                setLoading(true);
                 const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
                 if (!result.success) {
                     console.log('Failed to save project and scenes to Supabase: ', result.error);
@@ -444,8 +445,6 @@ const ScriptProductionClient = () => {
             } catch (e: any) {
                 console.log('Failed to save project and scenes to Supabase: ', e);
             }
-
-            setLoading(true);
 
             const form = new FormData();
             form.append('jobName', jobId);

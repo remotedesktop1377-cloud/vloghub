@@ -7,6 +7,7 @@ import backIcon from "@/assets/images/back.svg";
 import { useRouter } from "next/navigation";
 import styles from "./ProjectHeader.module.css";
 import BackConfirmationDialog from "@/dialogs/BackConfirmationDialog";
+import { cleanupService } from "@/services/cleanupService";
 
 export default function ProjectHeader({ currentProjectId }: { currentProjectId: string }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -56,6 +57,10 @@ export default function ProjectHeader({ currentProjectId }: { currentProjectId: 
     const handleBackConfirm = async () => {
         setIsBackDialogOpen(false);
         await deleteProject(currentProjectId);
+        try {
+            await cleanupService.cleanupExports();
+        } catch {
+        }
         router.back();
     };
 

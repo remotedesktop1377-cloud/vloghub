@@ -11,7 +11,7 @@ import FfmpegProgressBar from "./ProgressBar";
 import styles from "./FfmpegRender.module.css";
 import saveIcon from "@/assets/images/save.svg";
 import { setAutoRenderRequested, setAutoRenderProjectId, setQuality, setResolution, setSpeed } from "../../../../store/slices/projectSlice";
-import { SecureStorageHelpers } from "../../../../utils/helperFunctions";
+import { cleanupService } from "@/services/cleanupService";
 
 interface FileUploaderProps {
     loadFunction: () => Promise<void>;
@@ -58,6 +58,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
         try {
             ffmpeg.terminate();
             await loadFunction();
+            await cleanupService.cleanupExports();
         } catch (e) {
             console.error("Failed to reset FFmpeg:", e);
         }
