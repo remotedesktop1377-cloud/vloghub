@@ -1,9 +1,0 @@
-# Railway configuration file
-# This tells Railway to use Nixpacks instead of Docker
-
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "uvicorn backend.app:app --host 0.0.0.0 --port $PORT"
-

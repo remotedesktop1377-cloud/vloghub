@@ -80,6 +80,7 @@ export const PreviewPlayer = () => {
             acknowledgeRemotionLicense={true}
             loop={false}
             bufferStateDelayInMilliseconds={0}
+            playbackRate={0.5} // 0.5x speed
         />
     )
 };
