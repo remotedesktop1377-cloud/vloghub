@@ -147,7 +147,7 @@ export default function MediaProperties() {
                                 type="range"
                                 min="0"
                                 max="100"
-                                value={mediaFile.opacity}
+                                value={mediaFile.opacity ?? 100}
                                 onChange={(e) => onUpdateMedia(mediaFile.id, { opacity: Number(e.target.value) })}
                                 className={styles.range}
                             />
@@ -166,7 +166,7 @@ export default function MediaProperties() {
                                     min="0"
                                     max="100"
                                     step="1"
-                                    value={mediaFile.volume}
+                                    value={mediaFile.volume ?? 100}
                                     onChange={(e) => onUpdateMedia(mediaFile.id, { volume: Number(e.target.value) })}
                                     className={styles.range}
                                 />

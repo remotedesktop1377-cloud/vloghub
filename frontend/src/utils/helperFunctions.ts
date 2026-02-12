@@ -241,6 +241,35 @@ export class HelperFunctions {
     const scenes = HelperFunctions.getScenesFromScriptMetadata(scriptMetadata);
     const mediaFiles: MediaFile[] = [];
     let zIndex = 0;
+    let globalVideoCursor = 0;
+    const timelineEnd = scenes.reduce((maxEnd, scene) => {
+      const start = HelperFunctions.getValidNumber(scene.startTime) ?? 0;
+      const end = HelperFunctions.getValidNumber(scene.endTime);
+      const duration = HelperFunctions.getValidNumber(scene.durationInSeconds) ?? 0;
+      const sceneEnd = end && end > start ? end : start + duration;
+      return Math.max(maxEnd, sceneEnd);
+    }, 0);
+
+    // logo of the vloghub
+    mediaFiles.push({
+      id: crypto.randomUUID(),
+      fileName: `vloghub-logo`,
+      fileId: crypto.randomUUID(),
+      type: 'image',
+      startTime: 0,
+      endTime: timelineEnd,
+      src: HelperFunctions.normalizeGoogleDriveUrl('https://drive.google.com/file/d/1KxSJsXwJDfwM5BPzQryeic10EdmAvE3d/view'),
+      positionStart: 0,
+      positionEnd: timelineEnd,
+      includeInMerge: true,
+      playbackSpeed: 1,
+      volume: 100,
+      zIndex: scenes.length,
+      x: 1600,
+      y: 0,
+      width: 200,
+      height: 200,
+    })
 
     scenes.forEach((scene, sceneIndex) => {
       const usedUrls = new Set<string>();
@@ -276,21 +305,28 @@ export class HelperFunctions {
       //   return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
       // });
 
+      const sceneTimelineStart = Math.max(positionStart, globalVideoCursor);
+
+      let sceneImageSlot = 0;
       imageUrls.forEach((url, imageIndex) => {
         if (usedUrls.has(url)) return;
         usedUrls.add(url);
         const id = crypto.randomUUID();
         const normalizedUrl = HelperFunctions.normalizeGoogleDriveUrl(url);
+        const imageDurationSeconds = 5;
+        const imagePositionStart = sceneTimelineStart + (sceneImageSlot * imageDurationSeconds);
+        const imagePositionEnd = imagePositionStart + imageDurationSeconds;
+        sceneImageSlot += 1;
         mediaFiles.push({
           id,
           fileName: `Image-${sceneIndex + 1}-${imageIndex + 1}`,
           fileId: id,
           type: 'image',
-          startTime: 0,
-          endTime: 3,
+          startTime: sceneTimelineStart,
+          endTime: imageDurationSeconds,
           src: normalizedUrl,
-          positionStart,
-          positionEnd,
+          positionStart: imagePositionStart,
+          positionEnd: imagePositionEnd,
           includeInMerge: true,
           playbackSpeed: 1,
           volume: 100,
@@ -305,21 +341,32 @@ export class HelperFunctions {
         });
       });
 
+      let sceneClipCursor = sceneTimelineStart;
       clipUrls.forEach((url, clipIndex) => {
         if (usedUrls.has(url)) return;
         usedUrls.add(url);
         const id = crypto.randomUUID();
         const normalizedUrl = HelperFunctions.getClipUrl(url) || url;
+        const rawClipStart = HelperFunctions.getValidNumber((assetClips[clipIndex] as any)?.startTime) ?? 0;
+        const rawClipEnd = HelperFunctions.getValidNumber((assetClips[clipIndex] as any)?.endTime);
+        const rawClipDuration = HelperFunctions.getValidNumber((assetClips[clipIndex] as any)?.duration);
+        const clipDuration = rawClipDuration && rawClipDuration > 0
+          ? rawClipDuration
+          : (rawClipEnd && rawClipEnd > rawClipStart ? rawClipEnd - rawClipStart : sceneDuration);
+        const clipPositionStart = sceneClipCursor;
+        const clipPositionEnd = clipPositionStart + clipDuration;
+        sceneClipCursor = clipPositionEnd;
+        const clipEnd = rawClipEnd && rawClipEnd > rawClipStart ? rawClipEnd : rawClipStart + clipDuration;
         mediaFiles.push({
           id,
           fileName: `Video-${sceneIndex + 1}-${clipIndex + 1}`,
           fileId: id,
           type: 'video',
-          startTime: 0,
-          endTime: sceneDuration,
+          startTime: rawClipStart,
+          endTime: clipEnd,
           src: normalizedUrl,
-          positionStart,
-          positionEnd,
+          positionStart: clipPositionStart,
+          positionEnd: clipPositionEnd,
           includeInMerge: true,
           playbackSpeed: 1,
           volume: 100,
@@ -333,6 +380,7 @@ export class HelperFunctions {
           crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
         });
       });
+      globalVideoCursor = sceneClipCursor;
     });
 
     return mediaFiles;
@@ -481,7 +529,7 @@ export class HelperFunctions {
             y: 0,
             width: 200,
             height: 200,
-            zIndex:5
+            zIndex: 5
           }
         },
         // Project-level settings
