@@ -17,6 +17,7 @@
     "@reduxjs/toolkit": "^2.7.0",
     "@remotion/media-parser": "^4.0.421",
     "@remotion/player": "^4.0.421",
+    "@remotion/transitions": "4.0.421",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.57.4",
     "@types/react": "^18.3.20",
