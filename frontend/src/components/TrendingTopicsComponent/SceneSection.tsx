@@ -218,7 +218,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
   const [volumeOpenIndex, setVolumeOpenIndex] = React.useState<number | null>(null);
   // Image viewer hook for enhanced image viewing
   const imageViewer = useImageViewer();
-  
+
   // Toolbar drag state - initialize to center of viewport
   const [toolbarPosition, setToolbarPosition] = React.useState<{ x: number; y: number }>(() => {
     if (typeof window !== 'undefined') {
@@ -428,7 +428,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                             {imagesLoading === index ? (
                                               <CircularProgress size={20} />
                                             ) : (
-                                              <ImageIcon />
+                                              <MagicIcon />
                                             )}
                                           </IconButton>
                                         </Tooltip>
@@ -553,7 +553,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                   keywords={sceneData.highlightedKeywords || []}
                                                 />
                                               ) : (
-                                                'Narration content will be generated here.'
+                                                'Narration content goes here.'
                                               )}
                                             </>
                                           )}
@@ -875,7 +875,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 const hasMedia = (() => {
                                                   if (Array.isArray(sceneData.keywordsSelected)) {
                                                     const arr = sceneData.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
-                                                    const entry = arr.find(e => 
+                                                    const entry = arr.find(e =>
                                                       (e.suggestedKeyword === keyword || e.modifiedKeyword === keyword)
                                                     );
                                                     return !!(entry?.media?.lowResMedia || entry?.media?.highResMedia || entry?.textOverlay);
@@ -925,80 +925,84 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     {hasMedia && (
                                                       <CheckIcon sx={{ fontSize: '1.2rem', color: 'white' }} />
                                                     )}
-                                                    <Typography variant="body1" sx={{ fontSize: '1.3rem', fontWeight: 400 }}>{keyword}</Typography>
-                                                  <Box
-                                                    sx={{
-                                                      width: 18,
-                                                      height: 18,
-                                                      display: 'flex',
-                                                      alignItems: 'center',
-                                                      justifyContent: 'center',
-                                                      borderRadius: '50%',
-                                                      bgcolor: 'rgba(0,0,0,0.15)',
-                                                      fontSize: '12px',
-                                                      fontWeight: 'bold',
-                                                      color: 'inherit',
-                                                      transition: 'all 0.2s ease',
-                                                      '&:hover': {
-                                                        bgcolor: 'rgba(255,0,0,0.2)',
-                                                        transform: 'scale(1.1)',
-                                                      }
-                                                    }}
-                                                    onClick={(e) => {
-                                                      // Remove this keyword and its associated images from all arrays
-                                                      e.stopPropagation();
-                                                      const updatedSceneData: SceneData[] = scenesData.map((ch, idx) => {
-                                                        if (idx !== index) return ch;
-                                                        // Build list of URLs tied to this keyword based on new array format (fallback to legacy map)
-                                                        let urlsToRemove: string[] = [];
-                                                        if (Array.isArray(ch.keywordsSelected)) {
-                                                          const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
-                                                          const entry = arr.find(e => e.suggestedKeyword === keyword);
-                                                          if (entry && entry.media) {
-                                                            const low = entry.media.lowResMedia;
-                                                            const high = entry.media.highResMedia;
-                                                            urlsToRemove = [low, high].filter((u): u is string => typeof u === 'string' && !!u);
-                                                          }
-                                                        } else {
-                                                          const map = (ch.keywordsSelected || {}) as Record<string, string[]>;
-                                                          urlsToRemove = map[keyword] || [];
+                                                    <Typography variant="body1" sx={{
+                                                      fontSize: '1.3rem', fontWeight: 400, fontFamily: HelperFunctions.getFontFamilyForLanguage(HelperFunctions.detectLanguage(keyword)),
+                                                      textAlign: HelperFunctions.isRTLLanguage(language || 'english') ? 'right' : 'left',
+                                                      lineHeight: HelperFunctions.isRTLLanguage(language) ? 2.5 : 1.9,
+                                                    }}>{keyword}</Typography>
+                                                    <Box
+                                                      sx={{
+                                                        width: 18,
+                                                        height: 18,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        borderRadius: '50%',
+                                                        bgcolor: 'rgba(0,0,0,0.15)',
+                                                        fontSize: '12px',
+                                                        fontWeight: 'bold',
+                                                        color: 'inherit',
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': {
+                                                          bgcolor: 'rgba(255,0,0,0.2)',
+                                                          transform: 'scale(1.1)',
                                                         }
-                                                        const images = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
-                                                        const clips = Array.isArray(ch.assets?.clips) ? ch.assets!.clips! : [];
-                                                        const filteredImages = images.filter(u => !urlsToRemove.includes(u));
-                                                        const filteredClips = clips.filter(c => !urlsToRemove.includes(c.url));
-                                                        // Remove keyword from keywordsSelected
-                                                        let nextKeywordsSelected: import('@/types/sceneData').SceneKeywordSelection[] | Record<string, string[]> | undefined = ch.keywordsSelected;
-                                                        if (Array.isArray(ch.keywordsSelected)) {
-                                                          const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
-                                                          nextKeywordsSelected = arr.filter(e => e.suggestedKeyword !== keyword);
-                                                        } else {
-                                                          const map = (ch.keywordsSelected || {}) as Record<string, string[]>;
-                                                          const { [keyword]: _removed, ...restMap } = map;
-                                                          nextKeywordsSelected = restMap;
-                                                        }
-                                                        return {
-                                                          ...ch,
-                                                          highlightedKeywords: (ch.highlightedKeywords || []).filter(k => k !== keyword),
-                                                          keywordsSelected: nextKeywordsSelected as any,
-                                                          assets: {
-                                                            ...ch.assets,
-                                                            images: filteredImages.length > 0 ? filteredImages : null,
-                                                            clips: filteredClips.length > 0 ? filteredClips : null,
+                                                      }}
+                                                      onClick={(e) => {
+                                                        // Remove this keyword and its associated images from all arrays
+                                                        e.stopPropagation();
+                                                        const updatedSceneData: SceneData[] = scenesData.map((ch, idx) => {
+                                                          if (idx !== index) return ch;
+                                                          // Build list of URLs tied to this keyword based on new array format (fallback to legacy map)
+                                                          let urlsToRemove: string[] = [];
+                                                          if (Array.isArray(ch.keywordsSelected)) {
+                                                            const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
+                                                            const entry = arr.find(e => e.suggestedKeyword === keyword);
+                                                            if (entry && entry.media) {
+                                                              const low = entry.media.lowResMedia;
+                                                              const high = entry.media.highResMedia;
+                                                              urlsToRemove = [low, high].filter((u): u is string => typeof u === 'string' && !!u);
+                                                            }
+                                                          } else {
+                                                            const map = (ch.keywordsSelected || {}) as Record<string, string[]>;
+                                                            urlsToRemove = map[keyword] || [];
                                                           }
-                                                        };
-                                                      });
-                                                      onSceneDataUpdate(updatedSceneData);
-                                                      GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[index], `Keyword removed`);
-                                                      if (typeof window !== 'undefined' && (window as any).toast) {
-                                                        HelperFunctions.showSuccess(`Removed "${keyword}" and its images`);
-                                                      }
-                                                    }}
-                                                  >
-                                                    ×
+                                                          const images = Array.isArray(ch.assets?.images) ? ch.assets!.images! : [];
+                                                          const clips = Array.isArray(ch.assets?.clips) ? ch.assets!.clips! : [];
+                                                          const filteredImages = images.filter(u => !urlsToRemove.includes(u));
+                                                          const filteredClips = clips.filter(c => !urlsToRemove.includes(c.url));
+                                                          // Remove keyword from keywordsSelected
+                                                          let nextKeywordsSelected: import('@/types/sceneData').SceneKeywordSelection[] | Record<string, string[]> | undefined = ch.keywordsSelected;
+                                                          if (Array.isArray(ch.keywordsSelected)) {
+                                                            const arr = ch.keywordsSelected as import('@/types/sceneData').SceneKeywordSelection[];
+                                                            nextKeywordsSelected = arr.filter(e => e.suggestedKeyword !== keyword);
+                                                          } else {
+                                                            const map = (ch.keywordsSelected || {}) as Record<string, string[]>;
+                                                            const { [keyword]: _removed, ...restMap } = map;
+                                                            nextKeywordsSelected = restMap;
+                                                          }
+                                                          return {
+                                                            ...ch,
+                                                            highlightedKeywords: (ch.highlightedKeywords || []).filter(k => k !== keyword),
+                                                            keywordsSelected: nextKeywordsSelected as any,
+                                                            assets: {
+                                                              ...ch.assets,
+                                                              images: filteredImages.length > 0 ? filteredImages : null,
+                                                              clips: filteredClips.length > 0 ? filteredClips : null,
+                                                            }
+                                                          };
+                                                        });
+                                                        onSceneDataUpdate(updatedSceneData);
+                                                        GoogleDriveServiceFunctions.persistSceneUpdate(jobId, updatedSceneData[index], `Keyword removed`);
+                                                        if (typeof window !== 'undefined' && (window as any).toast) {
+                                                          HelperFunctions.showSuccess(`Removed "${keyword}" and its images`);
+                                                        }
+                                                      }}
+                                                    >
+                                                      ×
+                                                    </Box>
                                                   </Box>
-                                                </Box>
-                                              );
+                                                );
                                               })}
                                             </Box>
                                             {/* Media Selected (prefer scene-level videoEffects, fallback to project-level) */}
@@ -1074,8 +1078,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                 background: hasError
                                                   ? 'linear-gradient(135deg, rgba(30, 15, 15, 0.98) 0%, rgba(25, 20, 20, 0.98) 50%, rgba(20, 20, 20, 0.98) 100%)'
                                                   : 'linear-gradient(135deg, rgba(15, 30, 20, 0.98) 0%, rgba(20, 25, 20, 0.98) 50%, rgba(20, 20, 20, 0.98) 100%)',
-                                                border: hasError 
-                                                  ? `2px solid ${ERROR.main}` 
+                                                border: hasError
+                                                  ? `2px solid ${ERROR.main}`
                                                   : `2px solid ${SUCCESS.main}`,
                                                 borderRadius: '16px',
                                                 p: 0,
@@ -1132,8 +1136,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    bgcolor: hasError 
-                                                      ? 'rgba(239, 68, 68, 0.15)' 
+                                                    bgcolor: hasError
+                                                      ? 'rgba(239, 68, 68, 0.15)'
                                                       : 'rgba(76, 175, 80, 0.15)',
                                                     border: `1px solid ${hasError ? ERROR.main : SUCCESS.main}`,
                                                     boxShadow: hasError
@@ -1142,19 +1146,19 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                   }}
                                                 >
                                                   {hasError ? (
-                                                    <ErrorOutlineIcon 
-                                                      sx={{ 
-                                                        fontSize: 20, 
+                                                    <ErrorOutlineIcon
+                                                      sx={{
+                                                        fontSize: 20,
                                                         color: ERROR.light,
                                                         animation: 'pulse 2s ease-in-out infinite',
-                                                      }} 
+                                                      }}
                                                     />
                                                   ) : (
-                                                    <HighlightAltIcon 
-                                                      sx={{ 
-                                                        fontSize: 20, 
+                                                    <HighlightAltIcon
+                                                      sx={{
+                                                        fontSize: 20,
                                                         color: SUCCESS.light,
-                                                      }} 
+                                                      }}
                                                     />
                                                   )}
                                                 </Box>
@@ -1173,8 +1177,8 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                   >
                                                     {hasError ? 'Keyword Conflict' : 'Selected Text'}
                                                   </Typography>
-                                                  <Typography 
-                                                    variant="body1" 
+                                                  <Typography
+                                                    variant="body1"
                                                     sx={{
                                                       color: hasError ? ERROR.light : TEXT.primary,
                                                       fontWeight: 600,
@@ -1218,10 +1222,10 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     }}
                                                   >
                                                     <ErrorOutlineIcon sx={{ color: ERROR.light, fontSize: 20 }} />
-                                                    <Typography 
-                                                      variant="body2" 
-                                                      sx={{ 
-                                                        color: ERROR.light, 
+                                                    <Typography
+                                                      variant="body2"
+                                                      sx={{
+                                                        color: ERROR.light,
                                                         fontWeight: 500,
                                                         fontSize: '13px',
                                                         fontFamily: 'var(--font-plus-jakarta-sans)',
@@ -1245,10 +1249,10 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     }}
                                                   >
                                                     <WarningAmberIcon sx={{ color: WARNING.light, fontSize: 20 }} />
-                                                    <Typography 
-                                                      variant="body2" 
-                                                      sx={{ 
-                                                        color: WARNING.light, 
+                                                    <Typography
+                                                      variant="body2"
+                                                      sx={{
+                                                        color: WARNING.light,
                                                         fontWeight: 500,
                                                         fontSize: '13px',
                                                         fontFamily: 'var(--font-plus-jakarta-sans)',
@@ -1272,10 +1276,10 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     }}
                                                   >
                                                     <WarningAmberIcon sx={{ color: WARNING.light, fontSize: 20 }} />
-                                                    <Typography 
-                                                      variant="body2" 
-                                                      sx={{ 
-                                                        color: WARNING.light, 
+                                                    <Typography
+                                                      variant="body2"
+                                                      sx={{
+                                                        color: WARNING.light,
                                                         fontWeight: 500,
                                                         fontSize: '13px',
                                                         fontFamily: 'var(--font-plus-jakarta-sans)',
@@ -1514,7 +1518,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                       />
                                                     ) : previewUrl ? (
                                                       <img
-                                                        src={HelperFunctions.normalizeGoogleDriveUrl(previewUrl)}
+                                                        src={previewUrl.includes('drive.google.com') ? HelperFunctions.normalizeGoogleDriveUrl(previewUrl) : previewUrl}
                                                         alt={`Preview media ${index + 1}`}
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                       />
@@ -1539,7 +1543,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                               {(() => {
                                                 const allImages = (sceneData.assets && Array.isArray(sceneData.assets.images)) ? sceneData.assets.images : [];
                                                 const allClips = (sceneData.assets && Array.isArray(sceneData.assets.clips)) ? sceneData.assets.clips : [];
-                                                
+
                                                 // Extract videos from keywordsSelected
                                                 const videosFromKeywords: string[] = [];
                                                 if (Array.isArray(sceneData.keywordsSelected)) {
@@ -1562,13 +1566,13 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                     });
                                                   });
                                                 }
-                                                
+
                                                 // Get unique video URLs from clips
                                                 const clipVideoUrls = allClips.map(clip => clip.url);
-                                                
+
                                                 // Combine all videos (from clips and keywords) and remove duplicates
                                                 const allVideos = [...new Set([...clipVideoUrls, ...videosFromKeywords])];
-                                                
+
                                                 return (
                                                   <Box sx={{ display: 'flex', gap: 0.75, overflowX: 'auto', pb: 0.5 }}>
                                                     {/* Images */}
@@ -1581,7 +1585,9 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                           handleImageClick(index, imgIndex, false);
                                                         }}
                                                       >
-                                                        <img src={imageUrl} alt={`Selected Image ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <img
+                                                          src={imageUrl.includes('drive.google.com') ? HelperFunctions.normalizeGoogleDriveUrl(imageUrl) : imageUrl}
+                                                          alt={`Selected Image ${imgIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                                                         <IconButton
                                                           size="small"
                                                           sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'background.paper', width: 14, height: 14, minWidth: 14, '&:hover': { bgcolor: 'background.paper' } }}
@@ -1657,7 +1663,7 @@ const SceneDataSection: React.FC<SceneDataSectionProps> = ({
                                                                 playsInline
                                                               />
                                                             ) : (
-                                                              <img src={thumbnail} alt={`Video thumbnail ${vidIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                              <img src={thumbnail.includes('drive.google.com') ? HelperFunctions.normalizeGoogleDriveUrl(thumbnail) : thumbnail} alt={`Video thumbnail ${vidIndex + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                                                             )}
                                                             <PlayIcon sx={{ position: 'relative', zIndex: 1, color: 'white', fontSize: '24px' }} />
                                                           </Box>

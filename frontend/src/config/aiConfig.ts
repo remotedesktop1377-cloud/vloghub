@@ -1,4 +1,11 @@
 export const AI_CONFIG = {
+  // Imagen AI Configuration
+  IMAGEN: {
+    MODEL: 'imagen-4.0-generate-001',
+    IMAGE_SIZE: '1K' as const,
+    ASPECT_RATIO: '16:9' as const,
+    NUMBER_OF_IMAGES: 1,
+  },
   // Gemini AI Configuration
   GEMINI: {
     MODEL_FLASH: 'gemini-2.5-flash',

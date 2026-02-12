@@ -27,8 +27,6 @@ export const API_ENDPOINTS = {
   API_GAMMA_GENERATE: '/api/gamma-generate',
   GAMMA_API_GENERATION_API: 'https://public-api.gamma.app/v1.0/generations/',
   ENHANCE_TITLE_FOR_THUMBNAIL: '/api/enhance-title-for-thumbnail',
-  GENERATE_THUMBNAIL_IMAGES: '/api/generate-thumbnail-images',
-  GENERATE_THUMBNAIL: '/api/generate-thumbnail',
 
   YOUTUBE_PUBLISH: '/api/youtube-publish',
   FACEBOOK_PUBLISH: '/api/facebook-publish',
@@ -50,10 +48,10 @@ export const API_ENDPOINTS = {
   GAMMA_PDF: '/api/gamma-pdf',
 
   PYTHON_COMPRESS_VIDEO: '/api/compress-video',
-  PYTHON_PROCESS_PROJECT_FROM_JSON: '/api/process-project-from-json',
   API_TRANSCRIBE_AUDIO: '/api/transcribe-audio',
   PLAN_SCENES: '/api/plan-scenes',
   CUT_CLIPS: '/api/cut-clips',
+  GENERATE_SCENE_BACKGROUNDS: '/api/generate-scene-backgrounds',
   CLEANUP_EXPORTS: '/api/cleanup-exports',
 } as const;
 

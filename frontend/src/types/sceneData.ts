@@ -1,5 +1,45 @@
 import { Settings } from "./scriptData";
 
+export interface SceneKeywordOverlay {
+    word: string;
+    overlayType: 'kinetic_text' | 'lower_third' | 'headline_bold' | 'headline' | 'pop_up';
+    animation: 'fade_in' | 'slide_up' | 'scale_pop' | 'none';
+}
+
+export interface SceneAiAssets {
+    backgroundType?: 'ai_image' | 'stock_image' | 'video';
+    cameraMotion?: 'slow_zoom' | 'pan_left' | 'parallax' | 'static' | string;
+    parallax?: boolean;
+    generatedBackgroundUrl?: string;
+}
+
+export interface SceneOverlayConfig {
+    lowerThird?: string | null;
+    subtitleStyle?: {
+        position?: 'bottom-center' | 'bottom-left' | 'bottom-right' | 'center' | 'top-center';
+        fontSize?: number;
+        color?: string;
+    };
+}
+
+export interface SceneAudioLayers {
+    backgroundMusic?: string | null;
+    sfx?: string[];
+}
+
+export interface SceneTransitionConfig {
+    type?: 'cut' | 'crossfade' | 'cinematic_wipe' | string;
+    durationFrames?: number;
+}
+
+export interface ChromaKeyConfig {
+    enabled?: boolean;
+    color?: string;
+    similarity?: number;
+    smoothness?: number;
+    spill?: number;
+}
+
 export interface SceneData {
     id: string;
     jobId?: string;
@@ -11,6 +51,15 @@ export interface SceneData {
     startTime: number;
     endTime: number;
     durationInSeconds: number;
+    startFrame?: number;
+    endFrame?: number;
+    durationInFrames?: number;
+    emotionalTone?: string;
+    overlayStyleSuggestion?: string;
+    backgroundPrompt?: string;
+    cameraMotion?: string;
+    transitionSuggestion?: string;
+    highlightedKeywordOverlays?: SceneKeywordOverlay[];
     narration_type?: 'interview' | 'narration';
     voiceover_style?: string;
     visual_guidance?: string;
@@ -21,13 +70,18 @@ export interface SceneData {
     gammaPreviewImage?: string;    
     previewClip?: string;
     localPath?: string;
-    // Selected media for keywords; supports new array format and legacy map
+    aiAssets?: SceneAiAssets;
+    overlays?: SceneOverlayConfig;
+    audioLayers?: SceneAudioLayers;
+    transition?: SceneTransitionConfig;
+    generatedBackgroundUrl?: string;
+    chromaUrl?: string;
+    chromaKeyConfig?: ChromaKeyConfig;
     keywordsSelected?: SceneKeywordSelection[] | Record<string, string[]>;
     assets?: {
         images?: string[] | null;
         clips?: VideoClip[] | null;
     };
-    // Video effects and editing properties
     sceneSettings?: Settings,
 }
 
@@ -49,8 +103,8 @@ export interface TextOverlay {
     textAlign?: 'left' | 'center' | 'right';
     padding?: number;
     borderRadius?: number;
-    animationType?: 'fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce' | 'none'; // Legacy: single animation (for backward compatibility)
-    animationTypes?: ('fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce')[]; // New: multiple animations array
+    animationType?: 'fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce' | 'none';
+    animationTypes?: ('fade-in' | 'fade-out' | 'slide-in' | 'scale' | 'slide-fade' | 'bounce')[];
     animationDuration?: number;
 }
 

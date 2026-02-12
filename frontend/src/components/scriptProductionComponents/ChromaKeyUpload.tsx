@@ -23,6 +23,7 @@ import { HelperFunctions } from '../../utils/helperFunctions';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 import { processService } from '@/services/processService';
 import { SceneData } from '@/types/sceneData';
+import { SceneThumbnailResponse } from '@/services/thumbnailCreationService';
 
 interface ChromaKeyUploadProps {
     jobId: string;
@@ -38,7 +39,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     onUploadFailed,
 }) => {
     const [uploading, setUploading] = useState(false);
-    const [currentStep, setCurrentStep] = useState<'idle' | 'compressing' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'completed'>('idle');
+    const [currentStep, setCurrentStep] = useState<'idle' | 'compressing' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'assetsGeneration' | 'completed'>('idle');
     const [error, setError] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<'upload' | 'transcribe' | 'general' | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -68,26 +69,93 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             }
             const narratorVideoUrl = upload?.webViewLink || '';
 
-            setProgress(15);
+            setProgress(20);
             setCurrentStep('videoConversion');
 
             const audioFile = await processService.extractAudioFromVideo(compressedFile);
             // console.log('audioFile: ', audioFile);
             setCurrentStep('transcribing');
-            setProgress(20);
+            setProgress(40);
 
             const transcription = await processService.transcribeAudio(audioFile);
             // console.log('transcription: ', transcription);
-            setProgress(30);
+            setProgress(60);
             setCurrentStep('llmProcessing');
 
-            const scenes = await processService.planScenesWithLLM({ transcription, videoDurationSeconds });
-            // console.log('scenes: ', scenes);
-            setProgress(40);
+            const scenes = await processService.planScenesWithLLM({
+                transcription,
+                videoDurationSeconds,
+                fps: 30,
+                aspectRatio: "16:9",
+                visualTheme: "cinematic geopolitical documentary"
+            });
+
+            setProgress(80);
             setCurrentStep('segmentation');
 
-            const updatedScenes = await processService.cutClipsAndPackageResults({ videoFile: compressedFile, scenes, jobId });
-            // console.log('updatedScenes: ', updatedScenes.scenes);
+            const updatedScenes = await processService.cutClipsAndPackageResults({
+                videoFile: compressedFile,
+                scenes,
+                jobId,
+                fps: 30,
+            });
+
+            setProgress(90);
+            setCurrentStep('assetsGeneration');
+
+            const scenesWithGeneratedBackgrounds = await processService.generateSceneBackgrounds({
+                jobId,
+                scenes: updatedScenes.scenes || [],
+                aspectRatio: "16:9"
+            });
+            const generatedBackgroundScenes: SceneThumbnailResponse[] = Array.isArray(scenesWithGeneratedBackgrounds)
+                ? scenesWithGeneratedBackgrounds
+                : [];
+            const scenesWithGeneratedImages = await Promise.all(
+                (updatedScenes.scenes || []).map(async (scene: SceneData) => {                    
+                    const match = generatedBackgroundScenes.find((s: any) => (s?.sceneId || s?.id) === scene.id);
+                    const generatedBackground = match?.image || '';
+                    if (!generatedBackground) {
+                        return scene;
+                    }
+
+                    let driveBackgroundUrl = generatedBackground;
+                    if (generatedBackground.startsWith('data:')) {
+                        const uploaded = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(
+                            jobId,
+                            scene.id || '',
+                            generatedBackground
+                        );
+                        const uploadedUrl =
+                            uploaded?.result?.webViewLink ||
+                            uploaded?.result?.result?.webViewLink ||
+                            uploaded?.result?.webContentLink ||
+                            uploaded?.result?.result?.webContentLink ||
+                            '';
+                        if (uploaded?.success && uploadedUrl) {
+                            driveBackgroundUrl = uploadedUrl;
+                        }
+                    }
+
+                    const existingImages = Array.isArray(scene?.assets?.images) ? scene.assets.images : [];
+
+                    return {
+                        ...scene,
+                        generatedBackgroundUrl: driveBackgroundUrl,
+                        backgroundPrompt: match?.enhancedPrompt || '',
+                        aiAssets: {
+                            ...(scene?.aiAssets || {}),
+                            generatedBackgroundUrl: driveBackgroundUrl,
+                        },
+                        assets: {
+                            ...(scene?.assets || {}),
+                            images: [driveBackgroundUrl, ...existingImages]
+                        }
+                    };
+                })
+            );
+            updatedScenes.scenes = scenesWithGeneratedImages;
+
             setProgress(100);
             setCurrentStep('completed');
 
@@ -123,6 +191,8 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                 return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'segmentation':
                 return <VideoIcon sx={{ fontSize: 20, mr: 1 }} />;
+            case 'assetsGeneration':
+                return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'completed':
                 return <CheckIcon sx={{ fontSize: 20, mr: 1 }} />;
         }

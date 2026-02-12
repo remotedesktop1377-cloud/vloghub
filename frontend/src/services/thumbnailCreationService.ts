@@ -55,7 +55,7 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<ThumbnailCreationResponse>(
-                API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES,
+                API_ENDPOINTS.GENERATE_SCENE_BACKGROUNDS,
                 { title: title.trim() }
             );
             return response;
@@ -74,8 +74,8 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<ThumbnailCreationResponse>(
-                API_ENDPOINTS.GENERATE_THUMBNAIL,
-                { enhancedTitle: enhancedTitle.trim() }
+                API_ENDPOINTS.GENERATE_SCENE_BACKGROUNDS,
+                { title: enhancedTitle.trim() }
             );
             
             if (response.success && response.thumbnail) {
@@ -147,7 +147,7 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<SceneThumbnailResponse>(
-                API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES,
+                API_ENDPOINTS.GENERATE_SCENE_BACKGROUNDS,
                 { scene }
             );
             return response;
@@ -172,7 +172,7 @@ export const ThumbnailCreationService = {
 
         try {
             const response = await HttpService.post<ScenesThumbnailResponse>(
-                API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES,
+                API_ENDPOINTS.GENERATE_SCENE_BACKGROUNDS,
                 { scenes }
             );
             return response;

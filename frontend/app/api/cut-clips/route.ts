@@ -7,6 +7,7 @@ import { Readable } from 'stream';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const DEFAULT_FPS = 30;
 
 const sanitizeName = (value: string) => value.replace(/[^a-zA-Z0-9._-]+/g, '-');
 
@@ -118,6 +119,7 @@ export async function POST(request: NextRequest) {
         const file = formData.get('file') as File | null;
         const scenesRaw = String(formData.get('scenes') || '[]');
         const jobId = String(formData.get('jobId') || '').trim();
+        const fps = Number(formData.get('fps') || DEFAULT_FPS) > 0 ? Number(formData.get('fps') || DEFAULT_FPS) : DEFAULT_FPS;
 
         if (!file) {
             return NextResponse.json({ error: 'file is required' }, { status: 400 });
@@ -155,12 +157,17 @@ export async function POST(request: NextRequest) {
                 const startTime = Number(scene?.startTime || 0) * scaleFactor;
                 const endTime = Number(scene?.endTime || 0) * scaleFactor;
                 const durationInSeconds = Math.max(0, endTime - startTime);
+                const startFrame = Math.max(0, Math.floor(startTime * fps));
+                const endFrame = Math.max(startFrame, Math.floor(endTime * fps));
                 return {
                     ...scene,
                     startTime: Math.round(startTime * 100) / 100,
                     endTime: Math.round(endTime * 100) / 100,
                     durationInSeconds: Math.round(durationInSeconds * 100) / 100,
-                    duration: formatTimeRange(startTime, endTime)
+                    duration: formatTimeRange(startTime, endTime),
+                    startFrame,
+                    endFrame,
+                    durationInFrames: Math.max(1, endFrame - startFrame)
                 };
             });
         }
@@ -211,13 +218,19 @@ export async function POST(request: NextRequest) {
             }
 
             segmentTranscriptions.push({
+                ...edit,
                 id: edit.id || `scene-${i + 1}`,
-                narration: edit.narration,
-                duration: edit.duration,
-                words: edit.words,
+                narration: edit.narration || '',
+                duration: edit.duration || formatTimeRange(originalStart, originalEnd),
+                words: Number(edit.words || 0),
                 startTime: originalStart,
                 endTime: originalEnd,
-                durationInSeconds: edit.durationInSeconds,
+                durationInSeconds: Number(edit.durationInSeconds || Math.max(0, originalEnd - originalStart)),
+                startFrame: Number.isFinite(edit.startFrame) ? Number(edit.startFrame) : Math.max(0, Math.floor(originalStart * fps)),
+                endFrame: Number.isFinite(edit.endFrame) ? Number(edit.endFrame) : Math.max(0, Math.floor(originalEnd * fps)),
+                durationInFrames: Number.isFinite(edit.durationInFrames)
+                    ? Number(edit.durationInFrames)
+                    : Math.max(1, Math.floor(Math.max(0, originalEnd - originalStart) * fps)),
                 previewClip: previewClipUrl,
                 localPath: segmentPath,
             });

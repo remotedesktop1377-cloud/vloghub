@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGeminiModel } from '@/utils/geminiService';
 import { GoogleGenAI } from '@google/genai';
+import { AI_CONFIG } from '@/config/aiConfig';
 
 // Initialize Google GenAI client for Imagen API
 const genAI = new GoogleGenAI({
@@ -15,16 +16,6 @@ interface SceneData {
   narration?: string;
   title?: string;
 }
-
-/**
- * Configuration constants
- */
-const IMAGE_GENERATION_CONFIG = {
-  MODEL: 'imagen-4.0-generate-001',
-  IMAGE_SIZE: '1K' as const,
-  ASPECT_RATIO: '16:9' as const,
-  NUMBER_OF_IMAGES: 1,
-} as const;
 
 const RETRY_CONFIG = {
   MAX_RETRIES: 3,
@@ -143,12 +134,12 @@ async function generateImage(
 
   try {
     const response = await genAI.models.generateImages({
-      model: IMAGE_GENERATION_CONFIG.MODEL,
+      model: AI_CONFIG.IMAGEN.MODEL,
       prompt,
       config: {
-        numberOfImages: IMAGE_GENERATION_CONFIG.NUMBER_OF_IMAGES,
-        imageSize: IMAGE_GENERATION_CONFIG.IMAGE_SIZE,
-        aspectRatio: IMAGE_GENERATION_CONFIG.ASPECT_RATIO,
+        numberOfImages: AI_CONFIG.IMAGEN.NUMBER_OF_IMAGES,
+        imageSize: AI_CONFIG.IMAGEN.IMAGE_SIZE,
+        aspectRatio: AI_CONFIG.IMAGEN.ASPECT_RATIO,
       },
     });
 
@@ -165,7 +156,7 @@ async function generateImage(
           throw new Error('Imagen API blocked the image generation due to content moderation. Please try a different prompt.');
         }
       }
-      
+
       // Retry on rate limit (429) or server errors (5xx)
       if ((httpStatus === 429 || httpStatus >= 500) && retryCount < maxRetries) {
         console.log(`[Image Generation] Retrying due to HTTP ${httpStatus} (attempt ${retryCount + 1}/${maxRetries})`);
@@ -184,20 +175,20 @@ async function generateImage(
     if (response.generatedImages.length === 0) {
       // Log full response for debugging
       console.log('[Image Generation] Empty response received, full response:', JSON.stringify(response, null, 2));
-      
+
       // Check for specific error types in response FIRST (don't retry these)
       const responseStr = JSON.stringify(response).toLowerCase();
-      
+
       if (isContentModerationResponse(responseStr)) {
         console.log('[Image Generation] Content moderation detected in empty response');
         throw new Error('Imagen API blocked the image generation due to content moderation. Please try a different prompt.');
       }
-      
+
       if (isRateLimitResponse(responseStr)) {
         console.log('[Image Generation] Rate limit detected in empty response');
         throw new Error('Imagen API rate limit exceeded. Please wait a moment and try again.');
       }
-      
+
       // Only retry if it's not a content moderation or rate limit issue
       if (retryCount < maxRetries) {
         const delayForEmpty = retryDelay * 2; // Longer delay for empty responses
@@ -224,13 +215,13 @@ async function generateImage(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '';
     const errorStr = JSON.stringify(error).toLowerCase();
-    
+
     // Check for content moderation FIRST (don't retry these)
     if (isContentModerationResponse(errorMessage) || isContentModerationResponse(errorStr)) {
       console.log('[Image Generation] Content moderation detected in error:', errorMessage);
       throw new Error('Imagen API blocked the image generation due to content moderation. Please try a different prompt.');
     }
-    
+
     // Retry on retryable errors
     if (isRetryableError(errorMessage) && retryCount < maxRetries) {
       console.log(`[Image Generation] Retrying due to retryable error (attempt ${retryCount + 1}/${maxRetries}):`, errorMessage);
@@ -254,21 +245,21 @@ async function generateImage(
  */
 async function processSingleScene(scene: SceneData) {
   const sceneText = (scene.narration || scene.title || '').trim();
-  
+
   if (!sceneText) {
     throw new Error('Scene narration or title is required');
   }
 
   // Step 1: Enhance prompt using Gemini
   const enhancedPrompt = await enhancePrompt(sceneText);
-  console.log(`[Scene ${scene.id}] Enhanced prompt:`, enhancedPrompt);
+  // console.log(`[Scene ${scene.id}] Enhanced prompt:`, enhancedPrompt);
 
   // Step 2: Generate image using Imagen
   const imageResult = await generateImage(enhancedPrompt);
 
   return {
+    success:true,
     sceneId: scene.id,
-    success: true,
     originalText: sceneText,
     enhancedPrompt,
     image: imageResult.dataUrl,
@@ -283,7 +274,7 @@ async function processMultipleScenes(scenes: SceneData[]) {
 
   for (let i = 0; i < scenes.length; i++) {
     const sceneItem = scenes[i];
-    
+
     try {
       // Add delay between requests (except for the first one)
       if (i > 0) {

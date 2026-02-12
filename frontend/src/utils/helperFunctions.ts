@@ -409,22 +409,81 @@ export class HelperFunctions {
   }
 
   static getProjectJSON(userId: string, jobId: string, scriptData: ScriptData, projectSettings: Settings, scenesData: SceneData[], userEmail?: string): any {
+    const fps = 30;
+    const safeDuration = Number(scriptData?.videoDuration || parseInt(scriptData?.duration || '1')) || 1;
+    const totalFrames = Math.max(1, Math.floor(safeDuration * fps));
+    const compositionId = (scriptData?.title || scriptData?.topic || 'GeneratedVideo')
+      .replace(/[^a-zA-Z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 4)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join('') || 'GeneratedVideoComposition';
     return {
       project: {
         userId: userId,
         userEmail: userEmail,
         jobId: scriptData?.jobId || '',
+        compositionId,
         topic: scriptData?.topic || null,
         title: scriptData?.title || null,
         description: scriptData?.description || null,
-        duration: parseInt(scriptData?.duration || '1') || null,
+        duration: safeDuration,
+        fps,
+        totalFrames,
         resolution: '1920x1080',
+        aspectRatio: '16:9',
         region: scriptData?.region || null,
         language: scriptData?.language || null,
         subtitle_language: scriptData?.subtitle_language || null,
         narration_type: scriptData?.narration_type || null,
         narrator_chroma_key_link: scriptData?.narrator_chroma_key_link,
         transcription: scriptData?.transcription || '',
+        voiceConfig: {
+          provider: 'gemini-tts',
+          voice: scriptData?.language?.toLowerCase() === 'urdu' ? 'ur-PK-Male-01' : 'en-US-Neural2-D',
+          speed: 1,
+          pitch: 0
+        },
+        chromaKeyConfig: {
+          enabled: true,
+          color: '#00FF00',
+          similarity: 0.35,
+          smoothness: 0.1,
+          spill: 0.2
+        },
+        visualStyle: {
+          theme: 'cinematic geopolitical documentary',
+          colorGrade: 'high contrast warm',
+          fontFamily: scriptData?.language?.toLowerCase() === 'urdu' ? 'Noto Nastaliq Urdu' : 'Inter',
+          motionStyle: 'slow zoom + parallax'
+        },
+        llmScenePlanning: {
+          provider: 'gemini-pro',
+          temperature: 0.6,
+          sceneSegmentationStrategy: 'semantic + keyword emphasis'
+        },
+        layout: {
+          safeZones: {
+            top: 80,
+            bottom: 80,
+            left: 100,
+            right: 100
+          },
+          titleArea: {
+            x: 120,
+            y: 120,
+            width: 1680,
+            height: 260
+          },
+          logoPosition: {
+            x: 1600,
+            y: 0,
+            width: 200,
+            height: 200,
+            zIndex:5
+          }
+        },
         // Project-level settings
         projectSettings: (() => {
           // Determine backgroundType: use explicit value if set, otherwise infer from videoBackgroundImage
@@ -450,10 +509,47 @@ export class HelperFunctions {
         narration: sceneData.narration,
         duration: sceneData.duration,
         durationInSeconds: sceneData.durationInSeconds,
+        startFrame: sceneData.startFrame ?? Math.max(0, Math.floor((sceneData.startTime || 0) * fps)),
+        endFrame: sceneData.endFrame ?? Math.max(0, Math.floor((sceneData.endTime || 0) * fps)),
+        durationInFrames: sceneData.durationInFrames ?? Math.max(1, Math.floor((sceneData.durationInSeconds || 0) * fps)),
         words: sceneData.words,
         startTime: sceneData.startTime,
         endTime: sceneData.endTime,
         highlightedKeywords: sceneData.highlightedKeywords || [],
+        highlightedKeywordOverlays: sceneData.highlightedKeywordOverlays || [],
+        emotionalTone: sceneData.emotionalTone || 'neutral',
+        overlayStyleSuggestion: sceneData.overlayStyleSuggestion || 'kinetic_text',
+        aiAssets: sceneData.aiAssets || {
+          backgroundType: 'ai_image',
+          cameraMotion: sceneData.cameraMotion || 'static',
+          parallax: sceneData.cameraMotion === 'parallax',
+          generatedBackgroundUrl: sceneData.generatedBackgroundUrl
+        },
+        overlays: sceneData.overlays || {
+          lowerThird: null,
+          subtitleStyle: {
+            position: 'bottom-center',
+            fontSize: 48,
+            color: '#FFFFFF'
+          }
+        },
+        audioLayers: sceneData.audioLayers || {
+          backgroundMusic: 'dramatic_news_bed.mp3',
+          sfx: ['soft_whoosh.mp3']
+        },
+        transition: sceneData.transition || {
+          type: sceneData.transitionSuggestion || 'crossfade',
+          durationFrames: 15
+        },
+        generatedBackgroundUrl: sceneData.generatedBackgroundUrl || '',
+        chromaUrl: sceneData.chromaUrl || scriptData?.narrator_chroma_key_link || '',
+        chromaKeyConfig: sceneData.chromaKeyConfig || {
+          enabled: true,
+          color: '#00FF00',
+          similarity: 0.35,
+          smoothness: 0.1,
+          spill: 0.2
+        },
         keywordsSelected: Array.isArray(sceneData.keywordsSelected) ? sceneData.keywordsSelected : [],
         assets: {
           images: Array.isArray(sceneData.assets?.images)

@@ -261,7 +261,6 @@ async function processSingleScene(scene: SceneData) {
 
   // Step 1: Enhance prompt using Gemini
   const enhancedPrompt = await enhancePrompt(sceneText);
-  console.log(`[Scene ${scene.id}] Enhanced prompt:`, enhancedPrompt);
 
   // Step 2: Generate image using Imagen
   const imageResult = await generateImage(enhancedPrompt);

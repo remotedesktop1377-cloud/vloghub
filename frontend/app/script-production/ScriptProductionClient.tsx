@@ -435,10 +435,12 @@ const ScriptProductionClient = () => {
             }
 
             const projectJSON = HelperFunctions.getProjectJSON(userId || '', jobId, scriptData!, projectSettings! as Settings, scenesData, user?.email || '');
+            let savedProjectId: string | undefined;
 
             try {
                 setLoading(true);
                 const result = await SupabaseHelpers.saveProjectAndScenes(scriptData!, projectJSON);
+                savedProjectId = result?.projectId;
                 if (!result.success) {
                     console.log('Failed to save project and scenes to Supabase: ', result.error);
                 }
@@ -456,8 +458,9 @@ const ScriptProductionClient = () => {
                 console.log('Failed to upload project JSON to Google Drive: ', uploadResult.result);
             }
 
-            const projectId = scriptData?.projectId || SecureStorageHelpers.getScriptMetadata()?.projectId;
+            const projectId = savedProjectId || scriptData?.projectId || SecureStorageHelpers.getScriptMetadata()?.projectId;
             if (projectId) {
+                toast.success('Project prepared. Starting local render workflow...');
                 router.push(`/projects/${projectId}`);
             } else {
                 toast.info("Processing... Please wait for a moment.");
@@ -619,10 +622,23 @@ const ScriptProductionClient = () => {
                         startTime: ch.startTime ?? scriptData.scenesData![index]?.startTime ?? 0,
                         endTime: ch.endTime ?? scriptData.scenesData![index]?.endTime ?? 0,
                         durationInSeconds: ch.durationInSeconds ?? scriptData.scenesData![index]?.durationInSeconds ?? 0,
+                        startFrame: ch.startFrame ?? scriptData.scenesData![index]?.startFrame ?? 0,
+                        endFrame: ch.endFrame ?? scriptData.scenesData![index]?.endFrame ?? 0,
+                        durationInFrames: ch.durationInFrames ?? scriptData.scenesData![index]?.durationInFrames ?? 0,
                         gammaPreviewImage: ch.gammaPreviewImage || scriptData.scenesData![index]?.gammaPreviewImage || '',
                         previewClip: ch.previewClip || scriptData.scenesData![index]?.previewClip || '',
                         localPath: ch.localPath || scriptData.scenesData![index]?.localPath || '',
                         highlightedKeywords: ch.highlightedKeywords ?? [],
+                        highlightedKeywordOverlays: ch.highlightedKeywordOverlays ?? [],
+                        emotionalTone: ch.emotionalTone || scriptData.scenesData![index]?.emotionalTone || 'neutral',
+                        overlayStyleSuggestion: ch.overlayStyleSuggestion || scriptData.scenesData![index]?.overlayStyleSuggestion || 'kinetic_text',
+                        aiAssets: ch.aiAssets || scriptData.scenesData![index]?.aiAssets,
+                        overlays: ch.overlays || scriptData.scenesData![index]?.overlays,
+                        audioLayers: ch.audioLayers || scriptData.scenesData![index]?.audioLayers,
+                        transition: ch.transition || scriptData.scenesData![index]?.transition,
+                        backgroundPrompt: ch.backgroundPrompt || scriptData.scenesData![index]?.backgroundPrompt || '',
+                        cameraMotion: ch.cameraMotion || scriptData.scenesData![index]?.cameraMotion || 'static',
+                        transitionSuggestion: ch.transitionSuggestion || scriptData.scenesData![index]?.transitionSuggestion || 'crossfade',
                         keywordsSelected: ch.keywordsSelected ?? {},
                         assets: {
                             images: ch.assets?.images || [],
@@ -853,106 +869,6 @@ const ScriptProductionClient = () => {
     };
 
     /* =========================================================
-       GENERATE IMAGES FOR SCENES (AUTOMATIC)
-    ========================================================= */
-    const generateImagesForScenes = async (scenes: SceneData[]): Promise<SceneData[]> => {
-        if (!scenes || scenes.length === 0) {
-            return scenes;
-        }
-
-        try {
-            setLoading(true);
-            toast.info(`Generating AI images for ${scenes.length} scene${scenes.length > 1 ? 's' : ''}...`);
-
-            // Call the new API with all scenes
-            const response = await fetch(API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    scenes: scenes.map(scene => ({
-                        id: scene.id,
-                        narration: scene.narration,
-                        title: scene.title
-                    }))
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`API returned status ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success && data.scenes && Array.isArray(data.scenes)) {
-                // Map the generated images back to scenes
-                const updatedScenes = scenes.map((scene, sceneIndex) => {
-                    // Try to match by scene ID first
-                    let generatedScene = data.scenes.find((s: any) => s.sceneId === scene.id);
-
-                    // Fallback: if ID matching fails, match by array index
-                    if (!generatedScene && data.scenes[sceneIndex]) {
-                        console.warn(`Scene ID mismatch for scene ${sceneIndex}, using index-based matching. Scene ID: ${scene.id}, Response sceneId: ${data.scenes[sceneIndex].sceneId}`);
-                        generatedScene = data.scenes[sceneIndex];
-                    }
-
-                    if (generatedScene && generatedScene.success && generatedScene.image) {
-                        // Store the generated image in the scene's assets
-                        const existingImages = scene.assets?.images || [];
-                        return {
-                            ...scene,
-                            assets: {
-                                ...scene.assets,
-                                images: [generatedScene.image, ...existingImages]
-                            }
-                        };
-                    } else if (generatedScene && !generatedScene.success) {
-                        // Log error for failed scene generation
-                        console.error(`Failed to generate image for scene ${sceneIndex} (ID: ${scene.id}):`, generatedScene.error || 'Unknown error');
-                    } else if (!generatedScene) {
-                        // Log warning if no matching scene found
-                        console.warn(`No matching generated scene found for scene ${sceneIndex} (ID: ${scene.id})`);
-                    }
-                    return scene;
-                });
-
-                // Update the scenes data images map for UI display
-                const updatedImagesMap: Record<number, string[]> = {};
-                updatedScenes.forEach((scene, index) => {
-                    if (scene.assets?.images && scene.assets.images.length > 0) {
-                        updatedImagesMap[index] = scene.assets.images;
-                    }
-                });
-                setScenesDataImagesMap(prev => ({ ...prev, ...updatedImagesMap }));
-
-                // Enable AI images mode and show images for the first scene if selected
-                if (Object.keys(updatedImagesMap).length > 0) {
-                    setAiImagesEnabled(true);
-                    // If first scene is selected, show its image
-                    if (selectedSceneDataIndex === 0 && updatedImagesMap[0]) {
-                        setGeneratedImages([updatedImagesMap[0][0]]);
-                        setRightTabIndex(0);
-                    }
-                }
-
-                const successCount = data.scenes.filter((s: any) => s.success).length;
-                toast.success(`Successfully generated ${successCount} image${successCount > 1 ? 's' : ''} for scenes`);
-
-                return updatedScenes;
-            } else {
-                console.warn('Image generation response format unexpected:', data);
-                toast.warning('Image generation completed with unexpected response format');
-                return scenes;
-            }
-        } catch (error) {
-            console.error('Error generating images for scenes:', error);
-            toast.error(`Failed to generate images: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            return scenes;
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    /* =========================================================
        GENERATE IMAGE FOR SINGLE SCENE (MANUAL)
     ========================================================= */
     const handleGenerateSceneImage = async (sceneIndex: number) => {
@@ -1015,7 +931,7 @@ const ScriptProductionClient = () => {
                 narrationLength: scene.narration?.length || 0
             });
 
-            const response = await fetch(API_ENDPOINTS.GENERATE_THUMBNAIL_IMAGES, {
+            const response = await fetch(API_ENDPOINTS.GENERATE_SCENE_BACKGROUNDS, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(requestBody)
@@ -1115,10 +1031,10 @@ const ScriptProductionClient = () => {
 
     const selectSceneData = (idx: number) => {
         setSelectedSceneDataIndex(idx);
-        
+
         // Check SceneDataImagesMap first
         let imgs = SceneDataImagesMap[idx] || [];
-        
+
         // If no images in map, check scene's assets.images
         const scene = scenesData?.[idx];
         if (imgs.length === 0 && scene?.assets?.images && scene.assets.images.length > 0) {
@@ -1129,7 +1045,7 @@ const ScriptProductionClient = () => {
                 [idx]: imgs
             }));
         }
-        
+
         if (aiImagesEnabled || imgs.length > 0) {
             const fallback = [fallbackImages[idx % fallbackImages.length]];
             setGeneratedImages(imgs.length > 0 ? [imgs[0]] : fallback);
@@ -1932,33 +1848,6 @@ const ScriptProductionClient = () => {
 
                                             updateParagraphs(updatedScriptData);
 
-                                            // Automatically generate images for all scenes after video upload
-                                            if (scenes && Array.isArray(scenes) && scenes.length > 0) {
-                                                // Generate images in the background (non-blocking)
-                                                generateImagesForScenes(scenes)
-                                                    .then((scenesWithImages) => {
-                                                        const updatedScriptDataWithImages = {
-                                                            ...updatedScriptData,
-                                                            scenesData: scenesWithImages,
-                                                            updated_at: new Date().toISOString(),
-                                                        };
-                                                        setScriptData(updatedScriptDataWithImages);
-                                                        setScenesData(scenesWithImages);
-                                                        SecureStorageHelpers.setScriptMetadata(updatedScriptDataWithImages);
-                                                        
-                                                        // Select first scene and show its image if available
-                                                        if (scenesWithImages.length > 0) {
-                                                            const firstSceneImages = scenesWithImages[0]?.assets?.images;
-                                                            if (firstSceneImages && firstSceneImages.length > 0) {
-                                                                selectSceneData(0);
-                                                            }
-                                                        }
-                                                    })
-                                                    .catch((error) => {
-                                                        console.error('Error generating images for scenes:', error);
-                                                        // Don't show error toast here as it's background process
-                                                    });
-                                            }
                                         }}
                                         onUploadFailed={(errorMessage: string) => {
                                             toast.error(errorMessage);
@@ -2055,11 +1944,9 @@ const ScriptProductionClient = () => {
                         }}>
                             <Box sx={{ display: 'flex', flexDirection: 'column', pr: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'flex-end', gap: 2, mb: 2, }}>
-                                    <Button variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={handleUploadAgain} startIcon={<UploadIcon />}>Upload Again</Button>
                                     <Button
                                         variant="outlined"
                                         size="medium"
-                                        startIcon={<EditIcon />}
                                         onClick={() => uploadCompleteProjectToDrive()}
                                         sx={{
                                             textTransform: 'none',
@@ -2068,6 +1955,7 @@ const ScriptProductionClient = () => {
                                     >
                                         Generate video
                                     </Button>
+                                    <Button variant="outlined" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={handleUploadAgain} startIcon={<UploadIcon />}>Upload Again</Button>
                                     <Button variant="contained" size="medium" sx={{ textTransform: 'none', fontSize: '1.25rem' }} onClick={() => openProjectSettingsDialog('project')} startIcon={<SettingsIcon />}>Project Settings </Button>
                                 </Box>
 

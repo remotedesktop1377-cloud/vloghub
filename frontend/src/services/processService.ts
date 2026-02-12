@@ -2,6 +2,9 @@ import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import { SceneData } from '@/types/sceneData';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { SceneThumbnailResponse } from './thumbnailCreationService';
+
+const DEFAULT_FPS = 30;
 
 export const processService = {
     audioFfmpeg: null as FFmpeg | null,
@@ -99,25 +102,67 @@ export const processService = {
         return data?.text || '';
     },
 
-    async planScenesWithLLM(payload: { transcription: string; videoDurationSeconds: number }) {
+    async planScenesWithLLM(payload: {
+        transcription: string;
+        videoDurationSeconds: number;
+        fps: number;
+        aspectRatio: string;
+        visualTheme: string;
+        language?: string;
+    }) {
+
         const response = await fetch(API_ENDPOINTS.PLAN_SCENES, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+
         if (!response.ok) {
             const message = await response.text();
             throw new Error(message || 'Scene planning failed');
         }
+
         const data = await response.json();
-        return data?.scenes || [];
+        const fps = Number.isFinite(payload.fps) && payload.fps > 0 ? payload.fps : DEFAULT_FPS;
+        const scenesInput = Array.isArray(data?.scenes) ? data.scenes : [];
+
+        const scenes: SceneData[] = scenesInput.map((scene: any, index: number) => {
+            const startTime = Number(scene?.startTime || 0);
+            const endTime = Number(scene?.endTime || startTime);
+            const safeEndTime = endTime >= startTime ? endTime : startTime;
+            const startFrame = Math.max(0, Math.floor(startTime * fps));
+            const endFrame = Math.max(startFrame, Math.floor(safeEndTime * fps));
+            const keywordOverlays = Array.isArray(scene?.highlightedKeywordOverlays)
+                ? scene.highlightedKeywordOverlays
+                : [];
+            const highlightedKeywords = Array.isArray(scene?.highlightedKeywords)
+                ? scene.highlightedKeywords
+                    .filter((item: any) => typeof item === 'string' && item.trim().length > 0)
+                : keywordOverlays
+                    .map((item: any) => String(item?.word || '').trim())
+                    .filter((item: string) => item.length > 0);
+
+            return {
+                ...scene,
+                id: scene?.id || `scene-${index + 1}`,
+                startTime,
+                endTime: safeEndTime,
+                startFrame,
+                endFrame,
+                durationInFrames: Math.max(1, endFrame - startFrame),
+                highlightedKeywords
+            };
+        });
+
+        return scenes;
     },
 
-    async cutClipsAndPackageResults(payload: { videoFile: File; scenes: SceneData[]; jobId: string }) {
+    async cutClipsAndPackageResults(payload: { videoFile: File; scenes: SceneData[]; jobId: string; fps?: number }) {
         const formData = new FormData();
         formData.append('file', payload.videoFile);
         formData.append('scenes', JSON.stringify(payload.scenes || []));
         formData.append('jobId', payload.jobId);
+        formData.append('fps', String(payload.fps || DEFAULT_FPS));
         const response = await fetch(API_ENDPOINTS.CUT_CLIPS, {
             method: 'POST',
             body: formData
@@ -127,5 +172,36 @@ export const processService = {
             throw new Error(message || 'Clip cutting failed');
         }
         return response.json();
+    },
+
+    async generateSceneBackgrounds(payload: {
+        jobId: string;
+        scenes: SceneData[];
+        aspectRatio: string;
+    }): Promise<SceneThumbnailResponse[]> {
+        const response = await fetch(API_ENDPOINTS.GENERATE_SCENE_BACKGROUNDS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                scenes: payload.scenes.map((scene: SceneData) => ({
+                    id: scene.id,
+                    narration: scene.narration,
+                    title: scene.title
+                })),
+                aspectRatio: payload.aspectRatio
+            })
+        });
+        if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message || `API returned status ${response.status}`);
+        }
+        const data = await response.json();
+        if (Array.isArray(data)) {
+            return data as SceneThumbnailResponse[];
+        }
+        if (Array.isArray(data?.scenes)) {
+            return data.scenes as SceneThumbnailResponse[];
+        }
+        return [];
     },
 };
