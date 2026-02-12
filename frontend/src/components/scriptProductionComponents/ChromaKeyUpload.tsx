@@ -137,7 +137,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                         }
                     }
 
-                    const existingImages = Array.isArray(scene?.assets?.images) ? scene.assets.images : [];
+                    const existingImages = Array.isArray(scene?.assets?.images) ? scene.assets?.images || [] : [];
 
                     return {
                         ...scene,
