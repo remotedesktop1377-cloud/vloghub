@@ -7,8 +7,10 @@ import { useEffect, useRef } from "react";
 import { setCurrentTime } from "../../../../../store/slices/projectSlice";
 
 const Composition = () => {
-    const projectState = useAppSelector((state) => state.projectState);
-    const { mediaFiles, textElements } = projectState;
+    const mediaFiles = useAppSelector((state) => state.projectState.mediaFiles);
+    const textElements = useAppSelector((state) => state.projectState.textElements);
+    const isPlaying = useAppSelector((state) => state.projectState.isPlaying);
+    const currentTime = useAppSelector((state) => state.projectState.currentTime);
     const frame = useCurrentFrame();
     const dispatch = useAppDispatch();
 
@@ -18,13 +20,21 @@ const Composition = () => {
 
     useEffect(() => {
         const currentTimeInSeconds = frame / fps;
-        if (Math.abs(currentTimeInSeconds - previousTime.current) > THRESHOLD) {
-            if (currentTimeInSeconds !== undefined) {
-                previousTime.current = currentTimeInSeconds;
-                dispatch(setCurrentTime(currentTimeInSeconds));
-            }
+        if (!Number.isFinite(currentTimeInSeconds)) {
+            return;
         }
-    }, [frame, dispatch]);
+        if (!isPlaying) {
+            previousTime.current = currentTimeInSeconds;
+            return;
+        }
+
+        const frameDelta = Math.abs(currentTimeInSeconds - previousTime.current);
+        const storeDelta = Math.abs(currentTimeInSeconds - currentTime);
+        if (frameDelta > THRESHOLD && storeDelta > THRESHOLD) {
+            previousTime.current = currentTimeInSeconds;
+            dispatch(setCurrentTime(currentTimeInSeconds));
+        }
+    }, [frame, dispatch, isPlaying, currentTime]);
 
     return (
         <>
