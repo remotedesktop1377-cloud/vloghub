@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
         const projectRoot = path.resolve(process.cwd(), '..');
         const exportsDir = path.join(projectRoot, 'exports');
         const tempDir = path.join(exportsDir, 'temp');
+        await fs.mkdir(exportsDir, { recursive: true });
         await fs.mkdir(tempDir, { recursive: true });
 
         const safeName = sanitizeName(file.name || `upload-${Date.now()}.mp4`);

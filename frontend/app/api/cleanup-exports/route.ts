@@ -11,6 +11,7 @@ export async function POST() {
     const tempDir = path.join(exportsDir, "temp");
 
     await fs.rm(exportsDir, { recursive: true, force: true });
+    await fs.mkdir(exportsDir, { recursive: true });
     await fs.mkdir(tempDir, { recursive: true });
 
     return NextResponse.json({ success: true });
