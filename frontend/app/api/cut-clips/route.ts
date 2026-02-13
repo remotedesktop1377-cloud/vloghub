@@ -4,6 +4,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { getDriveClient, getRootFolderId, findOrCreateFolder } from '@/services/googleDriveServer';
 import { Readable } from 'stream';
+import os from 'os';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'scenes is required' }, { status: 400 });
         }
 
-        const projectRoot = path.resolve(process.cwd(), '..');
+        const projectRoot = os.tmpdir();
         const exportsDir = path.join(projectRoot, 'exports');
         await fs.mkdir(exportsDir, { recursive: true });
         const tempDir = path.join(exportsDir, 'temp');
