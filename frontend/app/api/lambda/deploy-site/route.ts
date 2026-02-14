@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const {
       entryPoint,
       siteName,
-      region = process.env.AWS_REGION,
+      region = process.env.AWS_REGION || process.env.REMOTION_AWS_REGION || 'ap-southeast-1',
     } = body;
 
     if (!entryPoint) {
@@ -34,6 +34,9 @@ export async function POST(request: NextRequest) {
     });
 
     const resolvedEntryPoint = path.resolve(process.cwd(), entryPoint);
+    
+    console.log('Deploying site with entry point:', resolvedEntryPoint);
+    console.log('Current working directory:', process.cwd());
 
     const result = await deploySite({
       bucketName,

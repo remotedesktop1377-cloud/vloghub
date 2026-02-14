@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 import FfmpegRender from "./FfmpegRender";
-import RenderOptions from "./RenderOptions";
 
 export default function Ffmpeg() {
     const [loadFfmpeg, setLoadedFfmpeg] = useState(false);
@@ -37,7 +36,6 @@ export default function Ffmpeg() {
 
     return (
         <div className="flex flex-col justify-center items-center py-2">
-            <RenderOptions />
             <FfmpegRender loadFunction={loadFFmpegFunction} loadFfmpeg={loadFfmpeg} logMessages={logMessages} ffmpeg={ffmpegRef.current as FFmpeg} />
         </div>
     );

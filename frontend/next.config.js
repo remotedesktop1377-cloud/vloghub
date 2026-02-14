@@ -1,7 +1,6 @@
 const webpack = require('webpack');
 
 const serverOnlyRemotionPackages = [
-  '@remotion/lambda',
   '@remotion/bundler',
   '@remotion/cli',
   '@remotion/studio-server',
@@ -12,6 +11,11 @@ const serverOnlyRemotionPackages = [
   '@remotion/compositor-linux-x64-gnu',
   '@remotion/compositor-linux-arm64-musl',
   '@remotion/compositor-win32-x64-msvc',
+];
+
+const packagesToExternalize = [
+  '@remotion/lambda',
+  ...serverOnlyRemotionPackages,
 ];
 
 /** @type {import('next').NextConfig} */
@@ -30,7 +34,7 @@ const nextConfig = {
       
       config.externals.push(({ request }, callback) => {
         if (
-          serverOnlyRemotionPackages.some(pkg => request?.startsWith(pkg)) ||
+          packagesToExternalize.some(pkg => request?.startsWith(pkg)) ||
           request === 'esbuild' ||
           request === 'prettier' ||
           request?.startsWith('esbuild/')

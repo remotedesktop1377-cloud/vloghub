@@ -36,11 +36,18 @@ export async function POST(request: NextRequest) {
       region,
     });
 
+    const errorMessages = progress.errors?.map((err: any) => {
+      if (typeof err === 'string') return err;
+      if (err?.message) return err.message;
+      if (err?.stack) return err.stack.split('\n')[0];
+      return JSON.stringify(err);
+    }) || [];
+
     return NextResponse.json({
       done: progress.done,
       outputFile: progress.outputFile,
       fatalErrorEncountered: progress.fatalErrorEncountered,
-      errors: progress.errors,
+      errors: errorMessages,
       timeToFinish: progress.timeToFinish,
       overallProgress: progress.overallProgress,
     });

@@ -442,6 +442,48 @@ export class HelperFunctions {
     };
   }
 
+  static getResolutionFromExportSettings = (res: string) => {
+    switch (res) {
+      case '480p':
+        return { width: 854, height: 480 };
+      case '720p':
+        return { width: 1280, height: 720 };
+      case '1080p':
+        return { width: 1920, height: 1080 };
+      default:
+        return { width: 1920, height: 1080 };
+    }
+  };
+
+  static getFramesPerLambdaFromSpeed = (speed: string) => {
+    switch (speed) {
+      case 'fastest':
+        return 30;
+      case 'fast':
+        return 25;
+      case 'balanced':
+        return 20;
+      case 'slow':
+        return 15;
+      case 'slowest':
+        return 10;
+      default:
+        return 20;
+    }
+  };
+
+  static getImageFormatFromQuality = (quality: string): 'jpeg' | 'png' => {
+    switch (quality) {
+      case 'ultra':
+      case 'high':
+        return 'png';
+      case 'medium':
+      case 'low':
+      default:
+        return 'jpeg';
+    }
+  };
+
   static convertProjectJSONToScriptData(projectJson: any): ScriptData {
     // Handle both old nested structure (projectJson.project) and new flat structure
     const projectData = projectJson.project || projectJson;
