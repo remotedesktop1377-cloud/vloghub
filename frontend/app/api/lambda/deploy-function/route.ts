@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      region = process.env.AWS_REGION || process.env.REMOTION_AWS_REGION || 'ap-southeast-1',
-      timeoutInSeconds = 120,
+      region = process.env.AWS_REGION || 'us-east-1',
+      timeoutInSeconds = 600,
       memorySizeInMb = 2048,
       createCloudWatchLogGroup = true,
     } = body;

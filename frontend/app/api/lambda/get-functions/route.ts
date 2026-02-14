@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      region = process.env.AWS_REGION,
+      region = process.env.AWS_REGION || 'us-east-1',
       compatibleOnly = true,
     } = body;
 

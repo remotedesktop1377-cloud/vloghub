@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       maxRetries = 1,
       framesPerLambda = 20,
       privacy = 'public',
-      region = process.env.AWS_REGION,
+      region = process.env.AWS_REGION || 'us-east-1',
       functionName,
     } = body;
 

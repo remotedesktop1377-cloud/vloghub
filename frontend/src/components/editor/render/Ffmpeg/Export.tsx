@@ -27,7 +27,7 @@ export default function ExportList() {
     const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const region = process.env.NEXT_PUBLIC_AWS_REGION || 'ap-southeast-1';
+    const region = process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-1';
 
     useEffect(() => {
         return () => {
@@ -48,7 +48,7 @@ export default function ExportList() {
             setStatus('Deploying Lambda function...');
             const result = await LambdaService.deployFunction({
                 region,
-                timeoutInSeconds: 120,
+                timeoutInSeconds: 600,
                 memorySizeInMb: 2048,
                 createCloudWatchLogGroup: true,
             });
@@ -61,7 +61,7 @@ export default function ExportList() {
 
     const ensureSiteDeployed = async (): Promise<string> => {
         try {
-            setStatus('Deploying Remotion site...');
+            setStatus('Deploying site...');
             const result = await LambdaService.deploySite({
                 entryPoint: 'src/index.tsx',
                 siteName: 'vloghub',

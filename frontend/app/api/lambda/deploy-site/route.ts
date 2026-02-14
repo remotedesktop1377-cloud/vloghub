@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const {
       entryPoint,
       siteName,
-      region = process.env.AWS_REGION || process.env.REMOTION_AWS_REGION || 'ap-southeast-1',
+      region = process.env.AWS_REGION || 'us-east-1',
     } = body;
 
     if (!entryPoint) {
