@@ -98,13 +98,27 @@ export default function ExportList() {
             const framesPerLambda = HelperFunctions.getFramesPerLambdaFromSpeed(exportSettings.speed);
             const imageFormat = HelperFunctions.getImageFormatFromQuality(exportSettings.quality);
 
+            const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                (typeof window !== 'undefined' ? window.location.origin : 'https://vloghub.vercel.app');
+            
+            const convertToAbsoluteUrl = (url: string): string => {
+                if (!url) return url;
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                    return url;
+                }
+                if (url.startsWith('/')) {
+                    return `${appBaseUrl}${url}`;
+                }
+                return url;
+            };
+
             const renderResult = await LambdaService.renderVideo({
                 serveUrl: url,
                 compositionId: 'VloghubVideo',
                 inputProps: {
                     mediaFiles: mediaFiles.map(file => ({
                         ...file,
-                        src: file.src || '',
+                        src: convertToAbsoluteUrl(file.src || ''),
                     })),
                     textElements: textElements,
                     fps: fps || exportSettings.fps || 30,
