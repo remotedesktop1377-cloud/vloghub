@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Img, Sequence } from "remotion";
-import { MediaFile } from "@/types/video_editor";
-import { HelperFunctions } from "@/utils/helperFunctions";
+import { MediaFile } from "../../../../../../types/video_editor";
+import { HelperFunctions } from "../../../../../../utils/helperFunctions";
 import { useAppDispatch, useAppSelector } from "../../../../../../store";
 import { setMediaFiles } from "../../../../../../store/slices/projectSlice";
 

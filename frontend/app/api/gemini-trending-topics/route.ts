@@ -109,17 +109,17 @@ Use the grounding tool to search for actual trending VIDEO-WORTHY DISCUSSION top
     const metadata = response.candidates?.[0]?.groundingMetadata;
     
     if (metadata) {
-      console.log('🔍 Search Queries Used:', metadata.webSearchQueries);
-      console.log('📚 Sources Found:', metadata.groundingChunks);
+      // console.log('🔍 Search Queries Used:', metadata.webSearchQueries);
+      // console.log('📚 Sources Found:', metadata.groundingChunks);
       
       // Log additional metadata if available
       if (metadata.groundingChunks) {
-        console.log(`📊 Total Sources: ${metadata.groundingChunks.length}`);
+        // console.log(`📊 Total Sources: ${metadata.groundingChunks.length}`);
         metadata.groundingChunks.forEach((chunk: any, index: number) => {
-          console.log(`   Source ${index + 1}:`, {
-            web: chunk.web?.uri,
-            segment: chunk.segment?.text?.substring(0, 100) + '...',
-          });
+          // console.log(`   Source ${index + 1}:`, {
+          //   web: chunk.web?.uri,
+          //   segment: chunk.segment?.text?.substring(0, 100) + '...',
+          // });
         });
       }
     } else {

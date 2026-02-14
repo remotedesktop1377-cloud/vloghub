@@ -1,4 +1,4 @@
-import { ROUTES_KEYS } from '@/data/constants';
+import { ROUTES_KEYS } from '../data/constants';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 
 export interface ApiResponse<T = any> {

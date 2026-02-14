@@ -10,6 +10,8 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 const DEFAULT_FPS = 30;
 
+const USE_LAMBDA = process.env.USE_LAMBDA_FOR_CLIPS;
+
 const sanitizeName = (value: string) => value.replace(/[^a-zA-Z0-9._-]+/g, '-');
 
 const runProcess = (command: string, args: string[]) => {
@@ -115,6 +117,11 @@ const uploadClipToDrive = async (drive: any, folderId: string, filePath: string,
 };
 
 export async function POST(request: NextRequest) {
+    if (USE_LAMBDA) {
+        const lambdaModule = await import('../lambda/cut-clips/route');
+        return lambdaModule.POST(request);
+    }
+
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File | null;

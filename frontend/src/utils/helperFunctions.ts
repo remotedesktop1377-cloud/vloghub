@@ -2,8 +2,8 @@ import { SceneData } from '../types/sceneData';
 import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from '../types/scriptData';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
-import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '@/data/constants';
-import { MediaFile, MediaType, ProjectState } from '@/types/video_editor';
+import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '../data/constants';
+import { MediaFile, MediaType, ProjectState } from '../types/video_editor';
 
 // Custom Secure Storage Utility
 class SecureStorage {
