@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import styles from "./ProjectHeader.module.css";
 import BackConfirmationDialog from "@/dialogs/BackConfirmationDialog";
 import { cleanupService } from "@/services/cleanupService";
+import { HelperFunctions } from "@/utils/helperFunctions";
 
 export default function ProjectHeader({ currentProjectId }: { currentProjectId: string }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -64,6 +65,9 @@ export default function ProjectHeader({ currentProjectId }: { currentProjectId: 
         router.back();
     };
 
+    const detectedLanguage = HelperFunctions.detectLanguage(projectName) || 'english';
+    const isRTL = HelperFunctions.isRTLLanguage(detectedLanguage);
+
     return (
         <div className={styles.header}>
             <SidebarButton title="" icon={backIcon} onClick={handleBackClick} />
@@ -76,12 +80,25 @@ export default function ProjectHeader({ currentProjectId }: { currentProjectId: 
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
                     className={styles.input}
+                    style={{
+                        flex: '1',
+                        textAlign: isRTL ? 'right' : 'left',
+                    }}
                     autoFocus
                 />
             ) : (
                 <p
                     onClick={handleClick}
                     className={styles.title}
+                    style={{
+                        fontSize: '1.3rem', 
+                        fontWeight: 400, 
+                        fontFamily: HelperFunctions.getFontFamilyForLanguage(detectedLanguage),
+                        textAlign: isRTL ? 'right' : 'left',
+                        lineHeight: isRTL ? 2.5 : 1.9,
+                        flex: isRTL ? '0 1 auto' : '1',
+                        marginLeft: isRTL ? 'auto' : '0',
+                    }}
                 >
                     {projectName}
                     <svg className={styles.editIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

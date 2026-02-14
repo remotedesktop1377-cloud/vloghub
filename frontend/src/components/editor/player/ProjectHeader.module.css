@@ -1,5 +1,5 @@
 .header {
-  width: min(1100px, 92%);
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;

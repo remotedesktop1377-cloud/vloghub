@@ -6,6 +6,7 @@ import Ffmpeg from "./Ffmpeg";
 import RenderOptions from "./RenderOptions";
 import { LambdaService } from '../../../../services/lambdaService';
 import { HelperFunctions } from '../../../../utils/helperFunctions';
+import AlertDialog from '../../../../dialogs/AlertDialog';
 import styles from './LambdaRender.module.css';
 
 export default function ExportList() {
@@ -23,6 +24,7 @@ export default function ExportList() {
     const [bucketName, setBucketName] = useState<string | null>(null);
     const [errors, setErrors] = useState<string[]>([]);
     const [outputFile, setOutputFile] = useState<string | null>(null);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
 
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const region = process.env.NEXT_PUBLIC_AWS_REGION || 'ap-southeast-1';
@@ -132,20 +134,24 @@ export default function ExportList() {
                         region,
                     });
 
-                    if (progressResult.done) {
+                    if (progressResult.fatalErrorEncountered) {
                         if (progressIntervalRef.current) {
                             clearInterval(progressIntervalRef.current);
                             progressIntervalRef.current = null;
                         }
+                        const errorMessages = progressResult.errors || ['Unknown error'];
+                        setErrors(errorMessages);
+                        setStatus('Render failed');
+                        setProgress(0);
+                        setShowErrorDialog(true);
+                        setIsRendering(false);
+                        return;
+                    }
 
-                        if (progressResult.fatalErrorEncountered) {
-                            const errorMessages = progressResult.errors || ['Unknown error'];
-                            setErrors(errorMessages);
-                            setStatus('Render failed');
-                            setProgress(0);
-                            HelperFunctions.showError(`Render failed: ${errorMessages[0]}`);
-                            setIsRendering(false);
-                            return;
+                    if (progressResult.done) {
+                        if (progressIntervalRef.current) {
+                            clearInterval(progressIntervalRef.current);
+                            progressIntervalRef.current = null;
                         }
 
                         if (progressResult.outputFile) {
@@ -210,9 +216,6 @@ export default function ExportList() {
                 {useLambda ?
                     <h2 className="text-xl font-semibold mb-2">Cloud Render (AWS Lambda)</h2>
                     : <h2 className="text-xl font-semibold mb-2">Local Render (FFmpeg)</h2>
-
-
-
                 }
 
                 <RenderOptions />
@@ -247,27 +250,6 @@ export default function ExportList() {
                             </div>
                         )}
 
-                        {errors.length > 0 && (
-                            <div className={styles.errorCard}>
-                                <div className={styles.errorContent}>
-                                    <div className={styles.errorIcon}>
-                                        <svg className={styles.errorIconSvg} fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <div className={styles.errorText}>
-                                        <p className={styles.errorTitle}>Render Errors</p>
-                                        <ul className={styles.errorList}>
-                                            {errors.map((error, index) => (
-                                                <li key={index} className={styles.errorItem}>
-                                                    {error}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         {outputFile && !isRendering && (
                             <div className={styles.successCard}>
@@ -295,42 +277,44 @@ export default function ExportList() {
                             </div>
                         )}
 
-                        <button
-                            onClick={startRender}
-                            disabled={isRendering || (mediaFiles.length === 0 && textElements.length === 0)}
-                            className={styles.primaryButton}
-                        >
-                            {isRendering ? (
-                                <>
-                                    <svg className={`${styles.buttonIcon} ${styles.spinIcon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                    </svg>
-                                    <span>Rendering...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <svg className={styles.buttonIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <span>Render</span>
-                                </>
-                            )}
-                        </button>
-
-                        {isRendering && (
+                        <div className={styles.buttonsContainer}>
                             <button
-                                onClick={cancelRender}
-                                className={styles.secondaryButton}
+                                onClick={startRender}
+                                disabled={isRendering || (mediaFiles.length === 0 && textElements.length === 0)}
+                                className={styles.primaryButton}
                             >
-                                <svg className={styles.buttonIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                <span>Cancel</span>
+                                {isRendering ? (
+                                    <>
+                                        <svg className={`${styles.buttonIcon} ${styles.spinIcon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        <span>Rendering...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className={styles.buttonIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span>Render</span>
+                                    </>
+                                )}
                             </button>
-                        )}
 
-                        {renderId && bucketName && !isRendering && (
+                            {isRendering && (
+                                <button
+                                    onClick={cancelRender}
+                                    className={styles.secondaryButton}
+                                >
+                                    <svg className={styles.buttonIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    <span>Cancel</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* {renderId && bucketName && !isRendering && (
                             <div className={styles.detailsCard}>
                                 <div className={styles.detailsHeader}>
                                     <svg className={styles.detailsIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -349,12 +333,37 @@ export default function ExportList() {
                                     </div>
                                 </div>
                             </div>
-                        )}
+                        )} */}
                     </div>
                 ) : (
                     <Ffmpeg />
                 )}
             </div>
+
+            <AlertDialog
+                open={showErrorDialog}
+                title="Render Error"
+                message={
+                    <div>
+                        {errors.length > 0 ? (
+                            <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                                {errors.map((error, index) => (
+                                    <li key={index} style={{ marginBottom: '0.5rem' }}>
+                                        {error}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            'An unknown error occurred during rendering.'
+                        )}
+                    </div>
+                }
+                onClose={() => {
+                    setShowErrorDialog(false);
+                    setErrors([]);
+                }}
+                confirmLabel="OK"
+            />
         </div>
     )
 }
