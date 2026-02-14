@@ -54,6 +54,7 @@ export interface LambdaRenderProgressResponse {
   fatalErrorEncountered?: boolean;
   errors?: string[];
   timeToFinish?: number;
+  overallProgress?: number;
 }
 
 export interface LambdaGetFunctionsParams {

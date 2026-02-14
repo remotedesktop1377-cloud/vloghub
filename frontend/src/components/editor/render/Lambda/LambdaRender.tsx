@@ -20,7 +20,7 @@ export default function LambdaRender({ onRenderComplete }: LambdaRenderProps) {
   const [bucketName, setBucketName] = useState<string | null>(null);
   
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const region = 'ap-southeast-1';
+  const region = process.env.NEXT_PUBLIC_AWS_REGION || 'ap-southeast-1';
 
   useEffect(() => {
     return () => {
@@ -135,7 +135,10 @@ export default function LambdaRender({ onRenderComplete }: LambdaRenderProps) {
             }
 
             if (progressResult.outputFile) {
-              const videoUrl = `https://${renderResult.bucketName}.s3.${region}.amazonaws.com/${progressResult.outputFile}`;
+              let videoUrl = progressResult.outputFile;
+              if (!videoUrl.startsWith('http')) {
+                videoUrl = `https://${renderResult.bucketName}.s3.${region}.amazonaws.com/${progressResult.outputFile}`;
+              }
               setStatus('Render complete!');
               setProgress(100);
               HelperFunctions.showSuccess('Video rendered successfully on AWS Lambda!');

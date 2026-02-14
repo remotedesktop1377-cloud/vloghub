@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       fatalErrorEncountered: progress.fatalErrorEncountered,
       errors: progress.errors,
       timeToFinish: progress.timeToFinish,
+      overallProgress: progress.overallProgress,
     });
   } catch (error: any) {
     console.error('Error getting render progress:', error);
