@@ -2,8 +2,8 @@ import { SceneData } from '../types/sceneData';
 import { LogoOverlayInterface, ScriptData, SettingItemInterface, Settings } from '../types/scriptData';
 import { toast, ToastOptions } from 'react-toastify';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
-import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '@/data/constants';
-import { MediaFile, MediaType, ProjectState } from '@/types/video_editor';
+import { BACKGROUNDS_CACHE_MAX_AGE_LOCAL, SCRIPT_STATUS } from '../data/constants';
+import { MediaFile, MediaType, ProjectState } from '../types/video_editor';
 
 // Custom Secure Storage Utility
 class SecureStorage {
@@ -441,6 +441,48 @@ export class HelperFunctions {
       }
     };
   }
+
+  static getResolutionFromExportSettings = (res: string) => {
+    switch (res) {
+      case '480p':
+        return { width: 854, height: 480 };
+      case '720p':
+        return { width: 1280, height: 720 };
+      case '1080p':
+        return { width: 1920, height: 1080 };
+      default:
+        return { width: 1920, height: 1080 };
+    }
+  };
+
+  static getFramesPerLambdaFromSpeed = (speed: string) => {
+    switch (speed) {
+      case 'fastest':
+        return 30;
+      case 'fast':
+        return 25;
+      case 'balanced':
+        return 20;
+      case 'slow':
+        return 15;
+      case 'slowest':
+        return 10;
+      default:
+        return 20;
+    }
+  };
+
+  static getImageFormatFromQuality = (quality: string): 'jpeg' | 'png' => {
+    switch (quality) {
+      case 'ultra':
+      case 'high':
+        return 'png';
+      case 'medium':
+      case 'low':
+      default:
+        return 'jpeg';
+    }
+  };
 
   static convertProjectJSONToScriptData(projectJson: any): ScriptData {
     // Handle both old nested structure (projectJson.project) and new flat structure

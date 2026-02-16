@@ -1,7 +1,7 @@
 import React, { useEffect, memo, useMemo } from "react";
 import { AbsoluteFill, OffthreadVideo, Sequence, Video, getRemotionEnvironment, prefetch } from "remotion";
-import { MediaFile } from "@/types/video_editor";
-import { HelperFunctions } from "@/utils/helperFunctions";
+import { MediaFile } from "../../../../../../types/video_editor";
+import { HelperFunctions } from "../../../../../../utils/helperFunctions";
 
 const REMOTION_SAFE_FRAME = 0;
 

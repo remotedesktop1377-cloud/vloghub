@@ -53,6 +53,13 @@ export const API_ENDPOINTS = {
   CUT_CLIPS: '/api/cut-clips',
   GENERATE_SCENE_BACKGROUNDS: '/api/generate-scene-backgrounds',
   CLEANUP_EXPORTS: '/api/cleanup-exports',
+
+  LAMBDA_DEPLOY_FUNCTION: '/api/lambda/deploy-function',
+  LAMBDA_DEPLOY_SITE: '/api/lambda/deploy-site',
+  LAMBDA_RENDER: '/api/lambda/render',
+  LAMBDA_RENDER_PROGRESS: '/api/lambda/render-progress',
+  LAMBDA_GET_FUNCTIONS: '/api/lambda/get-functions',
+  LAMBDA_QUOTAS: '/api/lambda/quotas',
 } as const;
 
 export type ApiEndpoint = typeof API_ENDPOINTS[keyof typeof API_ENDPOINTS]; 

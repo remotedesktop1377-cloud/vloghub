@@ -7,13 +7,13 @@
  */
 
 import { getSupabase, getCurrentUser } from './supabase';
-import { DB_TABLES } from '@/config/DbTables';
+import { DB_TABLES } from '../config/DbTables';
 import { Database } from '../types/database';
 import { toast, ToastOptions } from 'react-toastify';
 import { User } from '@supabase/supabase-js';
-import { ScriptData } from '@/types/scriptData';
-import { SceneData } from '@/types/sceneData';
-import { RENDER_STATUS, SCRIPT_STATUS } from '@/data/constants';
+import { ScriptData } from '../types/scriptData';
+import { SceneData } from '../types/sceneData';
+import { RENDER_STATUS, SCRIPT_STATUS } from '../data/constants';
 import { SecureStorageHelpers } from './helperFunctions';
 // import removed: TrendingTopic no longer used in helper insert signature
 

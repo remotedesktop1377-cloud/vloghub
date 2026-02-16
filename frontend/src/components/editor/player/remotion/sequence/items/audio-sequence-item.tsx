@@ -1,4 +1,4 @@
-import { MediaFile } from "@/types/video_editor";
+import { MediaFile } from "../../../../../../types/video_editor";
 import { AbsoluteFill, Sequence } from "remotion";
 import { Audio } from "remotion";
 import { memo } from "react";

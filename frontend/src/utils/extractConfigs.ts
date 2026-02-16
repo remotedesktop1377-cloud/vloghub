@@ -1,4 +1,4 @@
-import { ExportConfig } from "@/types/video_editor";
+import { ExportConfig } from "../types/video_editor";
 
 // Function to get FFmpeg parameters based on settings
 export const extractConfigs = (config: ExportConfig) => {

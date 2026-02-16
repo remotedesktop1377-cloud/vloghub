@@ -25,7 +25,8 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
+.env.local
+.env
 
 # vercel
 .vercel
@@ -33,3 +34,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Lambda function build artifacts
+lambda-functions/ffmpeg-clip-cutter/function.zip
+lambda-functions/ffmpeg-clip-cutter/ffmpeg-layer.zip
+lambda-functions/ffmpeg-clip-cutter/node_modules/
+
+# FFmpeg binaries and archives (too large)
+lambda-functions/ffmpeg-clip-cutter/ffmpeg.tar.xz
+lambda-functions/ffmpeg-clip-cutter/ffmpeg-*.tar.xz
+lambda-functions/ffmpeg-clip-cutter/ffmpeg-*-static/
+lambda-functions/ffmpeg-clip-cutter/ffmpeg-layer/
+lambda-functions/ffmpeg-clip-cutter/ffmpeg-extract/
+
+# Test files
+lambda-functions/ffmpeg-clip-cutter/test-payload.json
+lambda-functions/ffmpeg-clip-cutter/response.json

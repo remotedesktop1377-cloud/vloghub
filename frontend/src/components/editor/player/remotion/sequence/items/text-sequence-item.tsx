@@ -1,5 +1,5 @@
 import { TextElement } from "../../../../../../types/video_editor";
-import { HelperFunctions } from "@/utils/helperFunctions";
+import { HelperFunctions } from "../../../../../../utils/helperFunctions";
 import { useAppDispatch, useAppSelector } from "../../../../../../store";
 import { setTextElements } from "../../../../../../store/slices/projectSlice";
 import { Sequence } from "remotion";

@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
-import { AI_CONFIG } from '@/config/aiConfig';
+import { AI_CONFIG } from '../config/aiConfig';
 
 /**
  * Initialize Google Generative AI client
