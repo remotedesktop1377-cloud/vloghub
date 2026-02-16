@@ -2,31 +2,56 @@
 import { Player, PlayerRef } from "@remotion/player";
 import Composition from "./sequence/composition";
 import { useAppSelector } from "../../../../store";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo, memo } from "react";
 import { setIsPlaying } from "../../../../store/slices/projectSlice";
 import { useDispatch } from "react-redux";
+import { usePlayerRef } from "../../../../context/PlayerContext";
 
 const fps = 30;
 
-export const PreviewPlayer = () => {
+const PreviewPlayerComponent = () => {
     const dispatch = useDispatch();
 
-    const projectState = useAppSelector((state) => state.projectState);
-    const { duration, currentTime, isPlaying, isMuted } = projectState;
-    const playerRef = useRef<PlayerRef>(null);
+    // Use selective selectors instead of entire projectState to prevent unnecessary re-renders
+    const duration = useAppSelector((state) => state.projectState.duration);
+    const currentTime = useAppSelector((state) => state.projectState.currentTime);
+    const isPlaying = useAppSelector((state) => state.projectState.isPlaying);
+    const isMuted = useAppSelector((state) => state.projectState.isMuted);
+    const resolution = useAppSelector((state) => state.projectState.resolution);
+    
+    // Use shared playerRef from context so Timeline can read currentTime
+    const contextPlayerRef = usePlayerRef();
+    const playerRef = contextPlayerRef;
     const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
     const durationInFrames = Math.max(1, Math.floor(safeDuration * fps) + 1);
-    const resolutionWidth = Number.isFinite(projectState.resolution?.width) ? projectState.resolution.width : 1920;
-    const resolutionHeight = Number.isFinite(projectState.resolution?.height) ? projectState.resolution.height : 1080;
+    const resolutionWidth = Number.isFinite(resolution?.width) ? resolution.width : 1920;
+    const resolutionHeight = Number.isFinite(resolution?.height) ? resolution.height : 1080;
+    // Memoize resolution to prevent unnecessary Player re-renders
+    const playerProps = useMemo(() => ({
+        durationInFrames,
+        compositionWidth: resolutionWidth,
+        compositionHeight: resolutionHeight,
+    }), [durationInFrames, resolutionWidth, resolutionHeight]);
+
+    // Only seek when explicitly needed (user interaction when paused)
+    // Don't react to currentTime changes during playback - that causes video restarts
     useEffect(() => {
-        const frame = Number.isFinite(currentTime) ? Math.round(currentTime * fps) : 0;
-        if (playerRef.current && !isPlaying) {
-            const currentFrame = playerRef.current.getCurrentFrame();
-            if (Math.abs(currentFrame - frame) > 1) {
-                playerRef.current.seekTo(frame);
-            }
+        // Only seek when paused and currentTime changed (user seeking)
+        if (!playerRef.current || isPlaying) {
+            return;
         }
-    }, [currentTime, isPlaying]);
+        
+        const targetFrame = Number.isFinite(currentTime) ? Math.round(currentTime * fps) : 0;
+        const currentFrame = playerRef.current.getCurrentFrame();
+        
+        // Only seek if the difference is more than 1 frame to prevent unnecessary seeks
+        const frameDifference = Math.abs(currentFrame - targetFrame);
+        if (frameDifference > 1) {
+            playerRef.current.seekTo(targetFrame);
+        }
+        // Remove currentTime from dependencies - only seek when isPlaying changes to false
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPlaying, fps]);
 
     useEffect(() => {
         const handlePlay = () => {
@@ -70,9 +95,9 @@ export const PreviewPlayer = () => {
             ref={playerRef}
             component={Composition}
             inputProps={{}}
-            durationInFrames={durationInFrames}
-            compositionWidth={resolutionWidth}
-            compositionHeight={resolutionHeight}
+            durationInFrames={playerProps.durationInFrames}
+            compositionWidth={playerProps.compositionWidth}
+            compositionHeight={playerProps.compositionHeight}
             fps={fps}
             style={{ width: "100%", height: "100%" }}
             controls
@@ -84,3 +109,6 @@ export const PreviewPlayer = () => {
         />
     )
 };
+
+// Memoize PreviewPlayer to prevent re-renders when only currentTime changes during playback
+export const PreviewPlayer = memo(PreviewPlayerComponent);

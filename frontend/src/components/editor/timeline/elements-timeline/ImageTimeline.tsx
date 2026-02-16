@@ -23,6 +23,7 @@ export default function ImageTimeline() {
         mediaFilesRef.current = mediaFiles;
     }, [mediaFiles]);
 
+    // Increased throttle delay to 200ms to reduce Redux updates during drag operations
     const onUpdateMedia = useMemo(() =>
         throttle((id: string, updates: Partial<MediaFile>) => {
             const currentFiles = mediaFilesRef.current;
@@ -30,7 +31,7 @@ export default function ImageTimeline() {
                 media.id === id ? { ...media, ...updates } : media
             );
             dispatch(setMediaFiles(updated));
-        }, 100), [dispatch]
+        }, 200), [dispatch]
     );
 
     const handleClick = (element: string, index: number | string) => {

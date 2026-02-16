@@ -14,6 +14,7 @@ import MediaProperties from "@/components/editor/PropertiesSection/MediaProperti
 import TextProperties from "@/components/editor/PropertiesSection/TextProperties";
 import { Timeline } from "@/components/editor/timeline/Timline";
 import { PreviewPlayer } from "@/components/editor/player/remotion/Player";
+import { PlayerProvider } from "@/context/PlayerContext";
 import { MediaFile, ProjectState } from "@/types/video_editor";
 import ExportList from "@/components/editor/AssetsPanel/tools-section/ExportList";
 import Ffmpeg from "@/components/editor/render/Ffmpeg/Ffmpeg";
@@ -134,7 +135,8 @@ export default function Project() {
     };
 
     return (
-        <div className={styles.page}>
+        <PlayerProvider>
+            <div className={styles.page}>
             {
                 isLoading ? (
                     <div className={styles.loadingOverlay}>
@@ -229,6 +231,7 @@ export default function Project() {
                 <Ffmpeg />
             </div>
 
-        </div >
+            </div>
+        </PlayerProvider>
     );
 }

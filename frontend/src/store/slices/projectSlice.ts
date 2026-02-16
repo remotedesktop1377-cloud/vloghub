@@ -46,14 +46,55 @@ const calculateTotalDuration = (
     return Math.max(0, ...mediaDurations, ...textDurations);
 };
 
+// Shallow equality check for arrays
+const arraysAreEqual = (a: MediaFile[] | TextElement[], b: MediaFile[] | TextElement[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i].id !== b[i].id) return false;
+    }
+    return true;
+};
+
+// Deep equality check for MediaFile arrays (checks key properties)
+const mediaFilesAreEqual = (a: MediaFile[], b: MediaFile[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const itemA = a[i];
+        const itemB = b[i];
+        if (
+            itemA.id !== itemB.id ||
+            itemA.src !== itemB.src ||
+            itemA.positionStart !== itemB.positionStart ||
+            itemA.positionEnd !== itemB.positionEnd ||
+            itemA.startTime !== itemB.startTime ||
+            itemA.endTime !== itemB.endTime ||
+            itemA.x !== itemB.x ||
+            itemA.y !== itemB.y ||
+            itemA.width !== itemB.width ||
+            itemA.height !== itemB.height ||
+            itemA.opacity !== itemB.opacity ||
+            itemA.zIndex !== itemB.zIndex ||
+            itemA.playbackSpeed !== itemB.playbackSpeed ||
+            itemA.volume !== itemB.volume ||
+            itemA.type !== itemB.type
+        ) {
+            return false;
+        }
+    }
+    return true;
+};
+
 const projectStateSlice = createSlice({
     name: 'projectState',
     initialState,
     reducers: {
         setMediaFiles: (state, action: PayloadAction<MediaFile[]>) => {
-            state.mediaFiles = action.payload;
-            // Calculate duration based on the last video's end time
-            state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+            // Only update if content actually changed to prevent unnecessary re-renders
+            if (!mediaFilesAreEqual(state.mediaFiles, action.payload)) {
+                state.mediaFiles = action.payload;
+                // Calculate duration based on the last video's end time
+                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+            }
         },
         setProjectName: (state, action: PayloadAction<string>) => {
             state.projectName = action.payload;
@@ -69,8 +110,11 @@ const projectStateSlice = createSlice({
         },
 
         setTextElements: (state, action: PayloadAction<TextElement[]>) => {
-            state.textElements = action.payload;
-            state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+            // Only update if content actually changed to prevent unnecessary re-renders
+            if (!arraysAreEqual(state.textElements, action.payload)) {
+                state.textElements = action.payload;
+                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+            }
         },
         setCurrentTime: (state, action: PayloadAction<number>) => {
             state.currentTime = action.payload;

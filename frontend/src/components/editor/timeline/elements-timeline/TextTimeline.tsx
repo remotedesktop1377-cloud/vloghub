@@ -23,6 +23,7 @@ export default function TextTimeline() {
         textElementsRef.current = textElements;
     }, [textElements]);
 
+    // Increased throttle delay to 200ms to reduce Redux updates during drag operations
     const onUpdateText = useMemo(() =>
         throttle((id: string, updates: Partial<TextElement>) => {
             const currentFiles = textElementsRef.current;
@@ -30,7 +31,7 @@ export default function TextTimeline() {
                 text.id === id ? { ...text, ...updates } : text
             );
             dispatch(setTextElements(updated));
-        }, 100), [dispatch]
+        }, 200), [dispatch]
     );
 
     const handleClick = (element: string, index: number | string) => {

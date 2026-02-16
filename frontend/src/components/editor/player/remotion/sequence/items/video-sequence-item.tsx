@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, memo, useMemo } from "react";
 import { AbsoluteFill, OffthreadVideo, Sequence, Video, getRemotionEnvironment, prefetch } from "remotion";
 import { MediaFile } from "@/types/video_editor";
 import { HelperFunctions } from "@/utils/helperFunctions";
@@ -27,20 +27,36 @@ interface VideoSequenceItemProps {
     options: SequenceItemOptions;
 }
 
-export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, options }) => {
+const VideoSequenceItemComponent: React.FC<VideoSequenceItemProps> = ({ item, options }) => {
     const { fps } = options;
 
     const playbackRate = HelperFunctions.getValidNumber(item.playbackSpeed) ?? 1;
-    const { from, durationInFrames } = calculateFrames(
-        {
-            from: item.positionStart,
-            to: item.positionEnd
-        },
-        fps
-    );
+    
+    // Memoize all frame calculations to prevent recalculation on every render
+    // This is critical - Sequence component restarts video if props change
+    const frameCalculations = useMemo(() => {
+        const { from, durationInFrames } = calculateFrames(
+            {
+                from: item.positionStart,
+                to: item.positionEnd
+            },
+            fps
+        );
+        
+        const trimFrom = HelperFunctions.getValidNumber(item.startTime) ?? 0;
+        const trimTo = HelperFunctions.getValidNumber(item.endTime) ?? 0;
+        
+        // Round to integers to prevent floating-point precision issues
+        // Remotion Sequence is sensitive to prop changes
+        return {
+            from: Math.round(from),
+            durationInFrames: Math.round(durationInFrames),
+            trimFromFrames: Math.max(0, Math.round(trimFrom * fps)),
+            trimToFrames: trimTo > 0 ? Math.round(trimTo * fps) + REMOTION_SAFE_FRAME : undefined,
+            premountFor: Math.round(Math.min(durationInFrames, Math.max(1, Math.floor(fps))))
+        };
+    }, [item.positionStart, item.positionEnd, item.startTime, item.endTime, fps]);
 
-    const trimFrom = HelperFunctions.getValidNumber(item.startTime) ?? 0;
-    const trimTo = HelperFunctions.getValidNumber(item.endTime) ?? 0;
     const safeX = HelperFunctions.getValidNumber(item.x) ?? 0;
     const safeY = HelperFunctions.getValidNumber(item.y) ?? 0;
     const safeWidth = HelperFunctions.getValidNumber(item.width);
@@ -49,9 +65,6 @@ export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, opti
     const safeVolume = HelperFunctions.getValidNumber(item.volume);
     const { isRendering } = getRemotionEnvironment();
     const VideoComponent = isRendering ? OffthreadVideo : Video;
-    const trimFromFrames = Math.max(0, Math.floor(trimFrom * fps));
-    const trimToFrames = trimTo > 0 ? Math.floor(trimTo * fps) + REMOTION_SAFE_FRAME : undefined;
-    const premountFor = Math.min(durationInFrames, Math.max(1, Math.floor(fps)));
     const src = item.src || "";
 
     useEffect(() => {
@@ -66,9 +79,9 @@ export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, opti
     return (
         <Sequence
             key={item.id}
-            from={from}
-            premountFor={premountFor}
-            durationInFrames={durationInFrames + REMOTION_SAFE_FRAME}
+            from={frameCalculations.from}
+            premountFor={frameCalculations.premountFor}
+            durationInFrames={frameCalculations.durationInFrames + REMOTION_SAFE_FRAME}
             style={{ pointerEvents: "none" }}
         >
             <AbsoluteFill
@@ -97,8 +110,8 @@ export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, opti
                     }}
                 >
                     <VideoComponent
-                        startFrom={trimFromFrames}  
-                        endAt={trimToFrames}
+                        startFrom={frameCalculations.trimFromFrames}  
+                        endAt={frameCalculations.trimToFrames}
                         playbackRate={playbackRate}
                         src={src}
                         pauseWhenBuffering
@@ -117,3 +130,40 @@ export const VideoSequenceItem: React.FC<VideoSequenceItemProps> = ({ item, opti
         </Sequence>
     );
 };
+
+// Tolerance for floating-point comparisons to prevent unnecessary re-renders
+const FLOAT_TOLERANCE = 0.0001;
+
+// Helper function to compare floating-point numbers with tolerance
+const floatEquals = (a: number | null | undefined, b: number | null | undefined): boolean => {
+    if (a === b) return true;
+    if (a === null || a === undefined || b === null || b === undefined) return false;
+    return Math.abs(a - b) < FLOAT_TOLERANCE;
+};
+
+// Memoize component to prevent unnecessary re-renders when props haven't changed
+export const VideoSequenceItem = memo(VideoSequenceItemComponent, (prevProps, nextProps) => {
+    // Custom comparison function with tolerance for floating-point values
+    // This prevents re-renders due to minor floating-point precision differences
+    const prev = prevProps.item;
+    const next = nextProps.item;
+    
+    return (
+        prev.id === next.id &&
+        prev.src === next.src &&
+        Object.is(prev.type, next.type) &&
+        floatEquals(prev.positionStart, next.positionStart) &&
+        floatEquals(prev.positionEnd, next.positionEnd) &&
+        floatEquals(prev.startTime, next.startTime) &&
+        floatEquals(prev.endTime, next.endTime) &&
+        floatEquals(prev.x, next.x) &&
+        floatEquals(prev.y, next.y) &&
+        floatEquals(prev.width, next.width) &&
+        floatEquals(prev.height, next.height) &&
+        floatEquals(prev.opacity, next.opacity) &&
+        prev.zIndex === next.zIndex &&
+        floatEquals(prev.playbackSpeed, next.playbackSpeed) &&
+        floatEquals(prev.volume, next.volume) &&
+        prevProps.options.fps === nextProps.options.fps
+    );
+});

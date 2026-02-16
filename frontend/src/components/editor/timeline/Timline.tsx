@@ -1,7 +1,7 @@
 "use client";
 import { useAppSelector } from "../../../store";
 import { setMarkerTrack, setTextElements, setMediaFiles, setTimelineZoom, setCurrentTime, setIsPlaying, setActiveElement } from "../../../store/slices/projectSlice";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import Image from "next/image";
 import TimelineHeader from "./TimelineHeader";
@@ -19,11 +19,55 @@ import cutIcon from "@/assets/images/cut.svg";
 import duplicateIcon from "@/assets/images/duplicate.svg";
 import deleteIcon from "@/assets/images/delete.svg";
 import { MediaFile, TextElement } from "@/types/video_editor";
+import { usePlayerRef } from "../../../context/PlayerContext";
+
+const fps = 30;
 
 export const Timeline = () => {
-    const { currentTime, timelineZoom, enableMarkerTracking, activeElement, activeElementIndex, mediaFiles, textElements, duration, isPlaying } = useAppSelector((state) => state.projectState);
+    const { timelineZoom, enableMarkerTracking, activeElement, activeElementIndex, mediaFiles, textElements, duration, isPlaying } = useAppSelector((state) => state.projectState);
+    // Read currentTime from Redux for user interactions (seeking when paused)
+    const reduxCurrentTime = useAppSelector((state) => state.projectState.currentTime);
     const dispatch = useDispatch();
-    const timelineRef = useRef<HTMLDivElement>(null)
+    const timelineRef = useRef<HTMLDivElement>(null);
+    const playerRef = usePlayerRef();
+    
+    // Local state for timeline cursor position (updated from Player during playback)
+    const [displayCurrentTime, setDisplayCurrentTime] = useState(0);
+    
+    // Update timeline cursor from Player ref during playback
+    useEffect(() => {
+        if (!isPlaying || !playerRef.current) {
+            // When paused, use Redux currentTime
+            setDisplayCurrentTime(reduxCurrentTime);
+            return;
+        }
+        
+        // During playback, read directly from Player to avoid Redux updates
+        let animationFrameId: number;
+        const updateCursor = () => {
+            if (playerRef.current && isPlaying) {
+                try {
+                    const currentFrame = playerRef.current.getCurrentFrame();
+                    const currentTimeInSeconds = currentFrame / fps;
+                    setDisplayCurrentTime(currentTimeInSeconds);
+                } catch (e) {
+                    // Player might not be ready yet
+                }
+                animationFrameId = requestAnimationFrame(updateCursor);
+            }
+        };
+        
+        animationFrameId = requestAnimationFrame(updateCursor);
+        
+        return () => {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+        };
+    }, [isPlaying, reduxCurrentTime, playerRef]);
+    
+    // Use displayCurrentTime for cursor, reduxCurrentTime for operations
+    const currentTime = isPlaying ? displayCurrentTime : reduxCurrentTime;
 
     const throttledZoom = useMemo(() =>
         throttle((value: number) => {

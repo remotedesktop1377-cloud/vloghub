@@ -22,6 +22,8 @@ export default function VideoTimeline() {
         mediaFilesRef.current = mediaFiles;
     }, [mediaFiles]);
 
+    // Increased throttle delay to 200ms to reduce Redux updates during drag operations
+    // This prevents video jerking when dragging clips on the timeline
     const onUpdateMedia = useMemo(() =>
         throttle((id: string, updates: Partial<MediaFile>) => {
             const currentFiles = mediaFilesRef.current;
@@ -29,7 +31,7 @@ export default function VideoTimeline() {
                 media.id === id ? { ...media, ...updates } : media
             );
             dispatch(setMediaFiles(updated));
-        }, 100), [dispatch]
+        }, 200), [dispatch]
     );
 
     const handleClick = (element: string, index: number | string) => {

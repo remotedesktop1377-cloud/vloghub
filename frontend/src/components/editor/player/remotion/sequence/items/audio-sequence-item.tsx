@@ -1,6 +1,7 @@
 import { MediaFile } from "@/types/video_editor";
 import { AbsoluteFill, Sequence } from "remotion";
 import { Audio } from "remotion";
+import { memo } from "react";
 
 const REMOTION_SAFE_FRAME = 0;
 
@@ -22,7 +23,7 @@ const calculateFrames = (
     return { from, durationInFrames };
 };
 
-export const AudioSequenceItem: React.FC<{ item: MediaFile; options: SequenceItemOptions }> = ({ item, options }) => {
+const AudioSequenceItemComponent: React.FC<{ item: MediaFile; options: SequenceItemOptions }> = ({ item, options }) => {
         const { fps } = options;
         const playbackRate = item.playbackSpeed || 1;
         const { from, durationInFrames } = calculateFrames(
@@ -58,4 +59,19 @@ export const AudioSequenceItem: React.FC<{ item: MediaFile; options: SequenceIte
                 </AbsoluteFill>
             </Sequence>
         );
-    }
+    };
+
+// Memoize component to prevent unnecessary re-renders
+export const AudioSequenceItem = memo(AudioSequenceItemComponent, (prevProps, nextProps) => {
+    return (
+        prevProps.item.id === nextProps.item.id &&
+        prevProps.item.src === nextProps.item.src &&
+        prevProps.item.positionStart === nextProps.item.positionStart &&
+        prevProps.item.positionEnd === nextProps.item.positionEnd &&
+        prevProps.item.startTime === nextProps.item.startTime &&
+        prevProps.item.endTime === nextProps.item.endTime &&
+        prevProps.item.playbackSpeed === nextProps.item.playbackSpeed &&
+        prevProps.item.volume === nextProps.item.volume &&
+        prevProps.options.fps === nextProps.options.fps
+    );
+});
