@@ -2,7 +2,7 @@
 import { Player, PlayerRef } from "@remotion/player";
 import Composition from "./sequence/composition";
 import { useAppSelector } from "../../../../store";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { setIsPlaying } from "../../../../store/slices/projectSlice";
 import { useDispatch } from "react-redux";
 
@@ -12,7 +12,7 @@ export const PreviewPlayer = () => {
     const dispatch = useDispatch();
 
     const projectState = useAppSelector((state) => state.projectState);
-    const { duration, currentTime, isPlaying, isMuted } = projectState;
+    const { duration, currentTime, isPlaying, isMuted, resolution } = projectState;
     const playerRef = useRef<PlayerRef>(null);
     const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
     const durationInFrames = Math.max(1, Math.floor(safeDuration * fps) + 1);
