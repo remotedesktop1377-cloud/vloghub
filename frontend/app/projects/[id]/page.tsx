@@ -30,6 +30,8 @@ import textSidebarIcon from "@/assets/images/text-sidebar.svg";
 import mediaSidebarIcon from "@/assets/images/media-upload.svg";
 import exportSidebarIcon from "@/assets/images/export.svg";
 import { HelperFunctions, SecureStorageHelpers } from "@/utils/helperFunctions";
+import SceneMediaSelectionDialog from "@/dialogs/SceneMediaSelectionDialog";
+import { SceneData } from "@/types/sceneData";
 
 export default function Project() {
     const params = useParams<{ id?: string | string[] }>();
@@ -41,6 +43,10 @@ export default function Project() {
     const [isLoading, setIsLoading] = useState(true);
     const [hasLoadedProject, setHasLoadedProject] = useState(false);
     const isCreatingProjectRef = useRef(false);
+    const [sceneMediaDialogOpen, setSceneMediaDialogOpen] = useState(false);
+    const [sceneMediaDialogTab, setSceneMediaDialogTab] = useState<'google' | 'envatoClips'>('google');
+    const [scenesData, setScenesData] = useState<SceneData[]>([]);
+    const [scriptMetadata, setScriptMetadata] = useState<any>(null);
 
     const { activeSection, activeElement } = projectState;
 
@@ -85,6 +91,13 @@ export default function Project() {
                     return { ...media, src: URL.createObjectURL(file) };
                 })
             )));
+            // Load scenes from script metadata
+            const metadata = SecureStorageHelpers.getScriptMetadata();
+            if (metadata) {
+                setScriptMetadata(metadata);
+                const scenes = HelperFunctions.getScenesFromScriptMetadata(metadata);
+                setScenesData(scenes);
+            }
         }
         setHasLoadedProject(true);
         setIsLoading(false);
@@ -95,12 +108,15 @@ export default function Project() {
             return;
         }
         isCreatingProjectRef.current = true;
-        const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
-        if (!scriptMetadata) {
+        const metadata = SecureStorageHelpers.getScriptMetadata();
+        if (!metadata) {
             isCreatingProjectRef.current = false;
             return;
         }
-        const newProject = HelperFunctions.createProjectFromScriptMetadata(id, scriptMetadata);
+        setScriptMetadata(metadata);
+        const scenes = HelperFunctions.getScenesFromScriptMetadata(metadata);
+        setScenesData(scenes);
+        const newProject = HelperFunctions.createProjectFromScriptMetadata(id, metadata);
         if (!newProject) {
             isCreatingProjectRef.current = false;
             return;
@@ -112,7 +128,7 @@ export default function Project() {
         dispatch(setAutoRenderRequested(true));
         dispatch(setAutoRenderProjectId(id));
 
-        if (!scriptMetadata?.projectCreatedToastShown) {
+        if (!metadata?.projectCreatedToastShown) {
             console.log('Project created successfully');
             toast.success('Project created successfully');
         }
@@ -156,6 +172,22 @@ export default function Project() {
                     <div className={styles.sidebarButtons}>
                         <SidebarButton title="Text" icon={textSidebarIcon} onClick={() => handleFocus("text")} />
                         <SidebarButton title="Media" icon={mediaSidebarIcon} onClick={() => handleFocus("media")} />
+                        <SidebarButton 
+                            title="Google Images" 
+                            icon={imageIcon} 
+                            onClick={() => {
+                                setSceneMediaDialogTab('google');
+                                setSceneMediaDialogOpen(true);
+                            }} 
+                        />
+                        <SidebarButton 
+                            title="Envato Clips" 
+                            icon={videoIcon} 
+                            onClick={() => {
+                                setSceneMediaDialogTab('envatoClips');
+                                setSceneMediaDialogOpen(true);
+                            }} 
+                        />
                         <SidebarButton title="Export" icon={exportSidebarIcon} onClick={() => handleFocus("export")} />
                     </div>
                 </div>
@@ -230,6 +262,52 @@ export default function Project() {
             <div style={{ display: "none" }}>
                 <Ffmpeg />
             </div>
+
+            {/* Scene Media Selection Dialog */}
+            {scenesData.length > 0 && (
+                <SceneMediaSelectionDialog
+                    open={sceneMediaDialogOpen}
+                    onClose={() => setSceneMediaDialogOpen(false)}
+                    scenesData={scenesData}
+                    initialTab={sceneMediaDialogTab}
+                    scriptTitle={scriptMetadata?.title || scriptMetadata?.project?.title}
+                    trendingTopic={scriptMetadata?.topic || scriptMetadata?.project?.topic}
+                    location={scriptMetadata?.region || scriptMetadata?.project?.region}
+                    onSceneDataUpdate={async (updatedScenes: SceneData[]) => {
+                        setScenesData(updatedScenes);
+                        // Update script metadata with new scenes
+                        if (scriptMetadata) {
+                            const updatedMetadata = {
+                                ...scriptMetadata,
+                                scenesData: updatedScenes,
+                                script: updatedScenes,
+                                project: {
+                                    ...(scriptMetadata.project || {}),
+                                    scenesData: updatedScenes,
+                                    script: updatedScenes
+                                }
+                            };
+                            SecureStorageHelpers.setScriptMetadata(updatedMetadata);
+                            setScriptMetadata(updatedMetadata);
+                            
+                            // Update project media files based on updated scenes
+                            const resolution = HelperFunctions.parseResolution(scriptMetadata?.project?.resolution || scriptMetadata?.resolution);
+                            const updatedMediaFiles = HelperFunctions.getMediaFilesFromScriptMetadata(updatedMetadata, resolution);
+                            dispatch(setMediaFiles(updatedMediaFiles));
+                            
+                            // Save updated project
+                            const updatedProject = HelperFunctions.createProjectFromScriptMetadata(id || '', updatedMetadata);
+                            if (updatedProject) {
+                                await storeProject(updatedProject);
+                                dispatch(updateProject(updatedProject));
+                            }
+                        }
+                    }}
+                    onMediaAdded={(sceneIndex, mediaUrl) => {
+                        toast.success(`Media added to Scene ${sceneIndex + 1}`);
+                    }}
+                />
+            )}
 
             </div>
         </PlayerProvider>

@@ -81,6 +81,10 @@ interface ImageSearchProps {
     scriptTitle?: string;
     keywords?: string[];
     existingTextOverlay?: TextOverlayType;
+    // Optional: set initial active tab
+    initialActiveTab?: TabValue;
+    // Optional: filter which tabs are visible
+    visibleTabs?: TabValue[];
 }
 
 type TabValue = 'google' | 'envato' | 'envatoClips' | 'youtube' | 'upload' | 'textOverlay';
@@ -102,9 +106,25 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     location,
     scriptTitle,
     keywords = [],
-    existingTextOverlay
+    existingTextOverlay,
+    initialActiveTab = 'google',
+    visibleTabs
 }) => {
-    const [activeTab, setActiveTab] = useState<TabValue>('google');
+    // Determine which tabs should be visible
+    const allTabs: TabValue[] = ['google', 'envato', 'envatoClips', 'youtube', 'upload', 'textOverlay'];
+    const tabsToShow = visibleTabs && visibleTabs.length > 0 ? visibleTabs : allTabs;
+    
+    // Ensure initialActiveTab is in visible tabs, otherwise use first visible tab
+    const validInitialTab = tabsToShow.includes(initialActiveTab) ? initialActiveTab : tabsToShow[0];
+    
+    const [activeTab, setActiveTab] = useState<TabValue>(validInitialTab);
+
+    // Update activeTab if it's not in visible tabs
+    useEffect(() => {
+        if (!tabsToShow.includes(activeTab)) {
+            setActiveTab(tabsToShow[0] || 'google');
+        }
+    }, [tabsToShow, activeTab]);
     const [searchQuery, setSearchQuery] = useState('');
     const [googleImages, setGoogleImages] = useState<ImageResult[]>([]);
     const [envatoImages, setEnvatoImages] = useState<ImageResult[]>([]);
@@ -459,8 +479,14 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         // If explicit suggestion keywords provided, use them first
         if (autoSearchOnMount && suggestionKeywords && suggestionKeywords.length > 0 && !hasInitialSearch.current) {
             hasInitialSearch.current = true;
+            
+            // Generate meaningful queries from narration
+            const meaningfulQueries = generateGoogleQueries(SceneDataNarration || '');
+            // Combine suggestion keywords with meaningful queries, prioritizing suggestion keywords
+            const combinedSuggestions = [...suggestionKeywords, ...meaningfulQueries.filter(q => !suggestionKeywords.includes(q))];
+            
             // Apply suggestions to both Google and Envato
-            setGoogleSuggestions(suggestionKeywords);
+            setGoogleSuggestions(combinedSuggestions);
             setEnvatoKeywords(suggestionKeywords);
 
             // Determine the query to use: keyword if available, otherwise narration
@@ -688,183 +714,148 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         }
     };
 
-    return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Header with Tabs */}
-            <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-                <Tabs
-                    value={activeTab}
-                    onChange={handleTabChange}
-                    sx={{
-                        px: 2,
-                        pt: 1,
-                        width: '100%',
-                        display: 'flex',
-                        '& .MuiTabs-flexContainer': {
-                            width: '100%',
-                            display: 'flex'
-                        }
-                    }}
-                    variant="fullWidth"
-                >
-                    <Tab
-                        value="google"
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
-                                <GoogleIcon sx={{ fontSize: 18 }} />
-                                <Badge badgeContent={googleImages.length} color="primary" sx={{ fontSize: '16px' }} showZero={false}>
-                                    Google Images
-                                </Badge>
-                            </Box>
-                        }
-                        sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            width: '25%',
-                            maxWidth: '25%',
-                            display: 'flex',
-                            justifyContent: 'center'
-                        }}
-                    />
-                    {/* Envato Images tab - disabled for now */}
-                    {/* <Tab
-                        value="envato"
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
-                                <Box
-                                    sx={{
-                                        width: { xs: 14, sm: 18, md: 20 },
-                                        height: { xs: 14, sm: 18, md: 20 },
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
-                                </Box>
-                                <Badge badgeContent={envatoImages.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
-                                    Envato Images
-                                </Badge>
-                            </Box>
-                        }
-                        sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            width: '50%',
-                            maxWidth: '50%',
-                            display: 'flex',
-                            justifyContent: 'center'
-                        }}
-                    /> */}
-                    {/* Envato Clips tab - disabled for now */}
-                    <Tab
-                        value="envatoClips"
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
-                                <Box
-                                    sx={{
-                                        width: { xs: 14, sm: 18, md: 20 },
-                                        height: { xs: 14, sm: 18, md: 20 },
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
-                                </Box>
-                                <Badge badgeContent={envatoClips.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
-                                    Envato Clips
-                                </Badge>
-                            </Box>
-                        }
-                        sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            width: '25%',
-                            maxWidth: '25%',
-                            display: 'flex',
-                            justifyContent: 'center'
-                        }}
-                    />
-                    {/* YouTube Clips tab - disabled for now */}
-                    {/* <Tab
-                        value="youtube"
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
-                                <Box
-                                    sx={{
-                                        width: { xs: 14, sm: 18, md: 20 },
-                                        height: { xs: 14, sm: 18, md: 20 },
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <Image src="/images/youtube.png" alt="Youtube" fill style={{ objectFit: 'cover' }} />
-                                </Box>
-                                <Badge badgeContent={0} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
-                                    YouTube Clips (coming soon)
-                                </Badge>
-                            </Box>
-                        }
-                        sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            width: '50%',
-                            maxWidth: '50%',
-                            display: 'flex',
-                            justifyContent: 'center'
-                        }}
-                    /> */}
-                    <Tab
-                        value="upload"
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
-                                <Box
-                                    sx={{
-                                        width: { xs: 14, sm: 18, md: 20 },
-                                        height: { xs: 14, sm: 18, md: 20 },
-                                        position: 'relative',
-                                        overflow: 'hidden'
-                                    }}
-                                >
-                                    <Image src="/images/cloud-computing.png" alt="Upload" fill style={{ objectFit: 'cover' }} />
-                                </Box>
-                                <Badge badgeContent={0} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
-                                    Upload
-                                </Badge>
-                            </Box>
-                        }
-                        sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            width: '25%',
-                            maxWidth: '25%',
-                            display: 'flex',
-                            justifyContent: 'center'
-                        }}
-                    />
-                    <Tab
-                        value="textOverlay"
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
-                                <TextIcon sx={{ fontSize: 18 }} />
-                                <Badge badgeContent={existingTextOverlay ? 1 : 0} color="primary" sx={{ fontSize: '16px' }} showZero={false}>
-                                    Text Overlay
-                                </Badge>
-                            </Box>
-                        }
-                        sx={{
-                            flex: 1,
-                            minWidth: 0,
-                            width: '25%',
-                            maxWidth: '25%',
-                            display: 'flex',
-                            justifyContent: 'center'
-                        }}
-                    />
-                </Tabs>
+    // Calculate tab width based on number of visible tabs
+    const tabCount = tabsToShow.length;
+    const tabWidth = tabCount > 0 ? `${100 / tabCount}%` : '25%';
+    const shouldHideTabs = tabCount === 1;
 
-                {/* Search Controls - Hide for textOverlay tab */}
-                {activeTab !== 'textOverlay' && (
-                    <Box sx={{ p: 2 }}>
+    return (
+        <Box sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            position: 'relative',
+            zIndex: 10001,
+            isolation: 'isolate',
+            backgroundColor: 'background.paper'
+        }}>
+            {/* Header with Tabs */}
+            {!shouldHideTabs && (
+                <Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Tabs
+                        value={activeTab}
+                        onChange={handleTabChange}
+                        sx={{
+                            px: 2,
+                            pt: 1,
+                            width: '100%',
+                            display: 'flex',
+                            '& .MuiTabs-flexContainer': {
+                                width: '100%',
+                                display: 'flex'
+                            }
+                        }}
+                        variant="fullWidth"
+                    >
+                        {tabsToShow.includes('google') && (
+                            <Tab
+                                value="google"
+                                label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                        <GoogleIcon sx={{ fontSize: 18 }} />
+                                        <Badge badgeContent={googleImages.length} color="primary" sx={{ fontSize: '16px' }} showZero={false}>
+                                            Google Images
+                                        </Badge>
+                                    </Box>
+                                }
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    width: tabWidth,
+                                    maxWidth: tabWidth,
+                                    display: 'flex',
+                                    justifyContent: 'center'
+                                }}
+                            />
+                        )}
+                        {tabsToShow.includes('envatoClips') && (
+                            <Tab
+                                value="envatoClips"
+                                label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                        <Box
+                                            sx={{
+                                                width: { xs: 14, sm: 18, md: 20 },
+                                                height: { xs: 14, sm: 18, md: 20 },
+                                                position: 'relative',
+                                                overflow: 'hidden'
+                                            }}
+                                        >
+                                            <Image src="/images/envato_icon.jpg" alt="Envato" fill style={{ objectFit: 'cover' }} />
+                                        </Box>
+                                        <Badge badgeContent={envatoClips.length} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
+                                            Envato Clips
+                                        </Badge>
+                                    </Box>
+                                }
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    width: tabWidth,
+                                    maxWidth: tabWidth,
+                                    display: 'flex',
+                                    justifyContent: 'center'
+                                }}
+                            />
+                        )}
+                        {tabsToShow.includes('upload') && (
+                            <Tab
+                                value="upload"
+                                label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                        <Box
+                                            sx={{
+                                                width: { xs: 14, sm: 18, md: 20 },
+                                                height: { xs: 14, sm: 18, md: 20 },
+                                                position: 'relative',
+                                                overflow: 'hidden'
+                                            }}
+                                        >
+                                            <Image src="/images/cloud-computing.png" alt="Upload" fill style={{ objectFit: 'cover' }} />
+                                        </Box>
+                                        <Badge badgeContent={0} color="secondary" sx={{ fontSize: '16px' }} showZero={false}>
+                                            Upload
+                                        </Badge>
+                                    </Box>
+                                }
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    width: tabWidth,
+                                    maxWidth: tabWidth,
+                                    display: 'flex',
+                                    justifyContent: 'center'
+                                }}
+                            />
+                        )}
+                        {tabsToShow.includes('textOverlay') && (
+                            <Tab
+                                value="textOverlay"
+                                label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center', width: '100%', textTransform: 'none' }}>
+                                        <TextIcon sx={{ fontSize: 18 }} />
+                                        <Badge badgeContent={existingTextOverlay ? 1 : 0} color="primary" sx={{ fontSize: '16px' }} showZero={false}>
+                                            Text Overlay
+                                        </Badge>
+                                    </Box>
+                                }
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    width: tabWidth,
+                                    maxWidth: tabWidth,
+                                    display: 'flex',
+                                    justifyContent: 'center'
+                                }}
+                            />
+                        )}
+                    </Tabs>
+                </Box>
+            )}
+
+            {/* Search Controls - Hide for textOverlay tab */}
+            {activeTab !== 'textOverlay' && (
+                <Box sx={{ p: 2 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
                             Image Search
                         </Typography>
@@ -992,9 +983,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                             </Box>
                         )}
 
-                    </Box>
-                )}
-            </Box>
+                </Box>
+            )}
 
             {/* Error Display */}
             {
