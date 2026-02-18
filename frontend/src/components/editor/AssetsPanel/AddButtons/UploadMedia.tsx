@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../../../store";
 import { setMediaFiles } from "../../../../store/slices/projectSlice";
 import Image from "next/image";
@@ -12,21 +13,24 @@ import { HelperFunctions, SecureStorageHelpers } from "@/utils/helperFunctions";
 export default function AddMedia() {
     const { mediaFiles } = useAppSelector((state) => state.projectState);
     const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newFiles = Array.from(e.target.files || []);
-        if (!newFiles.length) {
-            e.target.value = "";
-            return;
-        }
+        setIsLoading(true);
+        try {
+            const newFiles = Array.from(e.target.files || []);
+            if (!newFiles.length) {
+                e.target.value = "";
+                return;
+            }
 
-        const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
-        const jobId = scriptMetadata?.jobId || scriptMetadata?.project?.jobId || "";
-        if (!jobId) {
-            toast.error("Job ID not found");
-            e.target.value = "";
-            return;
-        }
+            const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
+            const jobId = scriptMetadata?.jobId || scriptMetadata?.project?.jobId || "";
+            if (!jobId) {
+                toast.error("Job ID not found");
+                e.target.value = "";
+                return;
+            }
 
         const updatedMedia = [...mediaFiles];
         for (const file of newFiles) {
@@ -71,11 +75,14 @@ export default function AddMedia() {
             });
         }
 
-        dispatch(setMediaFiles(updatedMedia));
-        if (updatedMedia.length > mediaFiles.length) {
-            toast.success("Media uploaded successfully");
+            dispatch(setMediaFiles(updatedMedia));
+            if (updatedMedia.length > mediaFiles.length) {
+                toast.success("Media uploaded successfully");
+            }
+            e.target.value = "";
+        } finally {
+            setIsLoading(false);
         }
-        e.target.value = "";
     };
 
     return (
@@ -83,15 +90,25 @@ export default function AddMedia() {
             <label
                 htmlFor="file-upload"
                 className={styles.button}
+                style={{ opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
             >
-                <Image
-                    alt="Add Media"
-                    className={styles.icon}
-                    height={12}
-                    width={12}
-                    src={uploadIcon}
-                />
-                <span className={styles.label}>Add Media</span>
+                {isLoading ? (
+                    <>
+                        <div className={styles.spinner}></div>
+                        <span className={styles.label}>Uploading...</span>
+                    </>
+                ) : (
+                    <>
+                        <Image
+                            alt="Add Media"
+                            className={styles.icon}
+                            height={12}
+                            width={12}
+                            src={uploadIcon}
+                        />
+                        <span className={styles.label}>Add Media</span>
+                    </>
+                )}
             </label>
             <input
                 type="file"
@@ -100,6 +117,7 @@ export default function AddMedia() {
                 onChange={handleFileChange}
                 className="hidden"
                 id="file-upload"
+                disabled={isLoading}
             />
         </div>
     );
