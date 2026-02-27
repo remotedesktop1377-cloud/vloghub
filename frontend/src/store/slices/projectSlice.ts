@@ -46,6 +46,78 @@ const calculateTotalDuration = (
     return Math.max(0, ...mediaDurations, ...textDurations);
 };
 
+// Shallow equality check for arrays
+const arraysAreEqual = (a: MediaFile[] | TextElement[], b: MediaFile[] | TextElement[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i].id !== b[i].id) return false;
+    }
+    return true;
+};
+
+// Deep equality check for MediaFile arrays (checks key properties)
+const mediaFilesAreEqual = (a: MediaFile[], b: MediaFile[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const itemA = a[i];
+        const itemB = b[i];
+        if (
+            itemA.id !== itemB.id ||
+            itemA.src !== itemB.src ||
+            itemA.positionStart !== itemB.positionStart ||
+            itemA.positionEnd !== itemB.positionEnd ||
+            itemA.startTime !== itemB.startTime ||
+            itemA.endTime !== itemB.endTime ||
+            itemA.x !== itemB.x ||
+            itemA.y !== itemB.y ||
+            itemA.width !== itemB.width ||
+            itemA.height !== itemB.height ||
+            itemA.opacity !== itemB.opacity ||
+            itemA.zIndex !== itemB.zIndex ||
+            itemA.playbackSpeed !== itemB.playbackSpeed ||
+            itemA.volume !== itemB.volume ||
+            itemA.type !== itemB.type
+        ) {
+            return false;
+        }
+    }
+    return true;
+};
+
+// Deep equality check for TextElement arrays (checks key properties)
+const textElementsAreEqual = (a: TextElement[], b: TextElement[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const itemA = a[i];
+        const itemB = b[i];
+        if (
+            itemA.id !== itemB.id ||
+            itemA.text !== itemB.text ||
+            itemA.positionStart !== itemB.positionStart ||
+            itemA.positionEnd !== itemB.positionEnd ||
+            itemA.x !== itemB.x ||
+            itemA.y !== itemB.y ||
+            itemA.width !== itemB.width ||
+            itemA.height !== itemB.height ||
+            itemA.fontSize !== itemB.fontSize ||
+            itemA.font !== itemB.font ||
+            itemA.color !== itemB.color ||
+            itemA.backgroundColor !== itemB.backgroundColor ||
+            itemA.opacity !== itemB.opacity ||
+            itemA.zIndex !== itemB.zIndex ||
+            itemA.align !== itemB.align ||
+            itemA.rotation !== itemB.rotation ||
+            itemA.fadeInDuration !== itemB.fadeInDuration ||
+            itemA.fadeOutDuration !== itemB.fadeOutDuration ||
+            itemA.animation !== itemB.animation ||
+            itemA.includeInMerge !== itemB.includeInMerge
+        ) {
+            return false;
+        }
+    }
+    return true;
+};
+
 const projectStateSlice = createSlice({
     name: 'projectState',
     initialState,
@@ -69,8 +141,12 @@ const projectStateSlice = createSlice({
         },
 
         setTextElements: (state, action: PayloadAction<TextElement[]>) => {
-            state.textElements = action.payload;
-            state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+            // Only update if content actually changed to prevent unnecessary re-renders
+            // Use deep equality check to detect property changes, not just ID changes
+            if (!textElementsAreEqual(state.textElements, action.payload)) {
+                state.textElements = action.payload;
+                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+            }
         },
         setCurrentTime: (state, action: PayloadAction<number>) => {
             state.currentTime = action.payload;
