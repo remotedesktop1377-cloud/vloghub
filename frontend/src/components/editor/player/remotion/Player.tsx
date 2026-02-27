@@ -16,8 +16,17 @@ export const PreviewPlayer = () => {
     const playerRef = useRef<PlayerRef>(null);
     const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
     const durationInFrames = Math.max(1, Math.floor(safeDuration * fps) + 1);
-    const resolutionWidth = Number.isFinite(projectState.resolution?.width) ? projectState.resolution.width : 1920;
-    const resolutionHeight = Number.isFinite(projectState.resolution?.height) ? projectState.resolution.height : 1080;
+    const resolutionWidth = (typeof resolution?.width === 'number' && Number.isFinite(resolution.width) && resolution.width > 0) ? resolution.width : 1920;
+    const resolutionHeight = (typeof resolution?.height === 'number' && Number.isFinite(resolution.height) && resolution.height > 0) ? resolution.height : 1080;
+    // Memoize resolution to prevent unnecessary Player re-renders
+    const playerProps = useMemo(() => ({
+        durationInFrames,
+        compositionWidth: resolutionWidth,
+        compositionHeight: resolutionHeight,
+    }), [durationInFrames, resolutionWidth, resolutionHeight]);
+
+    // Only seek when explicitly needed (user interaction when paused)
+    // Don't react to currentTime changes during playback - that causes video restarts
     useEffect(() => {
         const frame = Number.isFinite(currentTime) ? Math.round(currentTime * fps) : 0;
         if (playerRef.current && !isPlaying) {
