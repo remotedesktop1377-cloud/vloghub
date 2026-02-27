@@ -92,48 +92,53 @@ export const TextSequenceItem: React.FC<{ item: TextElement; options: SequenceIt
     const safeOpacity = HelperFunctions.getValidNumber(item.opacity);
 
     return (
-        <TransitionSeries>
-            <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: 30 })} />
-            <TransitionSeries.Sequence
-                className={`designcombo-scene-item id-${item.id} designcombo-scene-item-type-text `}
-                key={item.id}
-                from={from}
-                durationInFrames={durationInFrames + REMOTION_SAFE_FRAME}
-                data-track-item="transition-element"
-                style={{
-                    position: "absolute",
-                    width: safeWidth,
-                    height: safeHeight,
-                    fontSize: safeFontSize ?? "16px",
-                    top: safeY,
-                    left: safeX,
-                    color: item.color || "#000000",
-                    zIndex: 1000,
-                    // backgroundColor: item.backgroundColor || "transparent",
-                    opacity: safeOpacity !== null ? safeOpacity / 100 : 1,
-                    fontFamily: item.font || "Arial",
-                }}
-            >
-                <div
-                    data-text-id={item.id}
+        <Sequence
+            key={item.id}
+            from={from}
+            durationInFrames={durationInFrames + REMOTION_SAFE_FRAME}
+            style={{ pointerEvents: "none" }}
+        >
+            <TransitionSeries>
+                <TransitionSeries.Transition presentation={slide({ direction: "from-left" })} timing={linearTiming({ durationInFrames: 30 })} />
+                <TransitionSeries.Sequence
+                    durationInFrames={durationInFrames + REMOTION_SAFE_FRAME}
+                    className={`designcombo-scene-item id-${item.id} designcombo-scene-item-type-text `}
+                    data-track-item="transition-element"
                     style={{
-                        height: "100%",
-                        boxShadow: "none",
-                        outline: "none",
-                        whiteSpace: "normal",
-                        backgroundColor: item.backgroundColor || "transparent",
-                        position: "relative",
-                        width: "100%",
-                        cursor: "move",
+                        position: "absolute",
+                        width: safeWidth,
+                        height: safeHeight,
+                        fontSize: safeFontSize ?? "16px",
+                        top: safeY,
+                        left: safeX,
+                        color: item.color || "#000000",
+                        zIndex: 1000,
+                        // backgroundColor: item.backgroundColor || "transparent",
+                        opacity: safeOpacity !== null ? safeOpacity / 100 : 1,
+                        fontFamily: item.font || "Arial",
                     }}
-                    onMouseDown={handleMouseDown}
-                    // onMouseMove={handleMouseMove}
-                    // onMouseUp={handleMouseUp}
-                    dangerouslySetInnerHTML={{ __html: item.text }}
-                    className="designcombo_textLayer"
-                />
-            </TransitionSeries.Sequence>
-            <TransitionSeries.Transition timing={springTiming({ config: { damping: 200 } })} presentation={fade()} />
-        </TransitionSeries>
+                >
+                    <div
+                        data-text-id={item.id}
+                        style={{
+                            height: "100%",
+                            boxShadow: "none",
+                            outline: "none",
+                            whiteSpace: "normal",
+                            backgroundColor: item.backgroundColor || "transparent",
+                            position: "relative",
+                            width: "100%",
+                            cursor: "move",
+                        }}
+                        onMouseDown={handleMouseDown}
+                        // onMouseMove={handleMouseMove}
+                        // onMouseUp={handleMouseUp}
+                        dangerouslySetInnerHTML={{ __html: item.text }}
+                        className="designcombo_textLayer"
+                    />
+                </TransitionSeries.Sequence>
+                <TransitionSeries.Transition timing={springTiming({ config: { damping: 200 } })} presentation={fade()} />
+            </TransitionSeries>
+        </Sequence>
     );
 };
