@@ -23,7 +23,12 @@ const calculateFrames = (
     const from = display.from * fps;
     const to = display.to * fps;
     const durationInFrames = Math.max(1, to - from);
-    return { from, durationInFrames };
+    // Round to integers to prevent floating-point precision issues
+    // Remotion Sequence is sensitive to prop changes and expects integer frame numbers
+    return { 
+        from: Math.round(from), 
+        durationInFrames: Math.round(durationInFrames) 
+    };
 };
 
 export const TextSequenceItem: React.FC<{ item: TextElement; options: SequenceItemOptions }> = ({ item, options }) => {
@@ -92,6 +97,7 @@ export const TextSequenceItem: React.FC<{ item: TextElement; options: SequenceIt
             <TransitionSeries.Sequence
                 className={`designcombo-scene-item id-${item.id} designcombo-scene-item-type-text `}
                 key={item.id}
+                from={from}
                 durationInFrames={durationInFrames + REMOTION_SAFE_FRAME}
                 data-track-item="transition-element"
                 style={{

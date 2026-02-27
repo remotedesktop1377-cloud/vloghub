@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { getFile, useAppDispatch, useAppSelector } from "../../../../store";
 import { setMediaFiles } from "../../../../store/slices/projectSlice";
 import { storeFile } from "../../../../store";
@@ -7,12 +8,16 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { HelperFunctions } from "@/utils/helperFunctions";
 import addIcon from "@/assets/images/add.svg";
+import styles from "./AddMedia.module.css";
 
 export default function AddMedia({ fileId }: { fileId: string }) {
     const { mediaFiles } = useAppSelector((state) => state.projectState);
     const dispatch = useAppDispatch();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleFileChange = async () => {
+        setIsLoading(true);
+        try {
         const updatedMedia = [...mediaFiles];
 
         const file = await getFile(fileId);
@@ -50,8 +55,11 @@ export default function AddMedia({ fileId }: { fileId: string }) {
                 zIndex: 0,
             });
         }
-        dispatch(setMediaFiles(updatedMedia));
-        toast.success('Media added successfully.');
+            dispatch(setMediaFiles(updatedMedia));
+            toast.success('Media added successfully.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -59,17 +67,23 @@ export default function AddMedia({ fileId }: { fileId: string }) {
         >
             <label
                 className="cursor-pointer rounded-full bg-white border border-solid border-transparent transition-colors flex flex-col items-center justify-center text-gray-800 hover:bg-[#ccc] dark:hover:bg-[#ccc] font-medium sm:text-base py-2 px-2"
+                style={{ opacity: isLoading ? 0.6 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
             >
-                <Image
-                    alt="Add Media"
-                    className="Black"
-                    height={12}
-                    width={12}
-                    src={addIcon}
-                />
+                {isLoading ? (
+                    <div className={styles.spinner}></div>
+                ) : (
+                    <Image
+                        alt="Add Media"
+                        className="Black"
+                        height={12}
+                        width={12}
+                        src={addIcon}
+                    />
+                )}
                 {/* <span className="text-xs">Add Media</span> */}
                 <button
                     onClick={handleFileChange}
+                    disabled={isLoading}
                 >
                 </button>
             </label>
