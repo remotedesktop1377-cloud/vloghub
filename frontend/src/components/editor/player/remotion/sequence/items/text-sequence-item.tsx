@@ -52,20 +52,21 @@ export const TextSequenceItem: React.FC<{ item: TextElement; options: SequenceIt
 
     // TODO: Extract this logic to be reusable for other draggable items
     const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button !== 0) return; // Only handle left mouse button
         e.preventDefault();
         const startX = e.clientX;
         const startY = e.clientY;
 
         // TODO: This needs a more reliable way to get the scaled container
         const container = document.querySelector('.__remotion-player') as HTMLElement;
-        const rect = container.getBoundingClientRect();
-        const scaleX = rect.width / container.offsetWidth;
-        const scaleY = rect.height / container.offsetHeight;
+        const rect = container?.getBoundingClientRect();
+        const scaleX = rect && container?.offsetWidth ? rect.width / container.offsetWidth : 1;
+        const scaleY = rect && container?.offsetHeight ? rect.height / container.offsetHeight : 1;
 
         const handleMouseMove = (e: MouseEvent) => {
             const diffX = e.clientX - startX;
             const diffY = e.clientY - startY;
-            onUpdateText(item.id, { x: item.x + diffX / scaleX, y: item.y + diffY / scaleY });
+            onUpdateText(item.id, { x: safeX + diffX / scaleX, y: safeY + diffY / scaleY });
 
             // handleTextChange fonksiyonu varsa pozisyon güncellemesini bildir
             if (handleTextChange) {
@@ -116,6 +117,7 @@ export const TextSequenceItem: React.FC<{ item: TextElement; options: SequenceIt
                         // backgroundColor: item.backgroundColor || "transparent",
                         opacity: safeOpacity !== null ? safeOpacity / 100 : 1,
                         fontFamily: item.font || "Arial",
+                        pointerEvents: "auto",
                     }}
                 >
                     <div
