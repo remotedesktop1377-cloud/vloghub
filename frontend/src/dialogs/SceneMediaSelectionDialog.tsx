@@ -137,6 +137,16 @@ const SceneMediaSelectionDialog: React.FC<SceneMediaSelectionDialogProps> = ({
               value={selectedSceneIndex}
               label="Scene"
               onChange={(e) => setSelectedSceneIndex(Number(e.target.value))}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    zIndex: 10001,
+                  },
+                },
+                style: {
+                  zIndex: 10001,
+                },
+              }}
             >
               {scenesData.map((scene, index) => (
                 <MenuItem key={scene.id || index} value={index}>
