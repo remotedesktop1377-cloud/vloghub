@@ -142,6 +142,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
     const [uploadedFiles, setUploadedFiles] = useState<ImageResult[]>([]);
+    // Track which image URLs failed to load so we can fallback to thumbnails
+    const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
 
     // Ref to prevent duplicate API calls when useEffect runs multiple times
     const hasInitialSearch = useRef(false);
@@ -210,6 +212,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             } else {
                 // Replace existing results with new search
                 setGoogleImages(imagesWithSource);
+                // Reset failed image URLs when loading new search results
+                setFailedImageUrls(new Set());
                 checkAndSelectExistingImages(imagesWithSource, "google");
                 HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Google images`);
             }
@@ -1327,14 +1331,33 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                             </Box>
                                                         </Box>
                                                     ) : (
-                                                        <CardMedia
-                                                            component="img"
-                                                            // height="100"
-                                                            image={image.thumbnail}
-                                                            // alt={image.title}
-                                                            sx={{ objectFit: 'cover', height: '250px' }}
-                                                            onClick={() => handleImageSelect(image.url)}
-                                                        />
+                                                        <Box sx={{ position: 'relative', width: '100%', height: '250px', backgroundColor: 'grey.100' }}>
+                                                            <img
+                                                                src={failedImageUrls.has(image.url) ? (image.thumbnail || image.url) : (image.url || image.thumbnail)}
+                                                                alt={image.title}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                                onClick={() => handleImageSelect(image.url)}
+                                                                onError={(e) => {
+                                                                    // If the full URL fails, mark it as failed and use thumbnail
+                                                                    const img = e.currentTarget;
+                                                                    const currentSrc = img.src;
+                                                                    const imageUrl = image.url || '';
+                                                                    const thumbnailUrl = image.thumbnail || '';
+                                                                    
+                                                                    if (imageUrl && currentSrc === imageUrl && !failedImageUrls.has(imageUrl)) {
+                                                                        // Full URL failed, try thumbnail
+                                                                        setFailedImageUrls(prev => new Set(prev).add(imageUrl));
+                                                                        if (thumbnailUrl && thumbnailUrl !== imageUrl) {
+                                                                            img.src = thumbnailUrl;
+                                                                        }
+                                                                    } else if (thumbnailUrl && currentSrc === thumbnailUrl) {
+                                                                        // Both failed, show placeholder or keep trying thumbnail
+                                                                        // Don't do anything to avoid infinite loop
+                                                                    }
+                                                                }}
+                                                                loading="lazy"
+                                                            />
+                                                        </Box>
                                                     )}
 
                                                     {/* Selection Overlay */}
@@ -1526,4 +1549,3 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 };
 
 export default ImageSearch;
-
