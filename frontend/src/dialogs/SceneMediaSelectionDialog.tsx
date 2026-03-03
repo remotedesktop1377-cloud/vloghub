@@ -16,6 +16,16 @@ import { TEXT } from '../styles/colors';
 import ImageSearch from '../components/TrendingTopicsComponent/ImageSearch';
 import { useImageViewer } from '../hooks/useImageViewer';
 import { HelperFunctions } from '@/utils/helperFunctions';
+import { SelectedMediaItem } from '../components/TrendingTopicsComponent/ImageSearch';
+
+export interface SceneMediaAddedPayload {
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  source?: 'google' | 'envato' | 'envatoClips' | 'upload';
+  title?: string;
+  thumbnail?: string;
+  mime?: string;
+}
 
 interface SceneMediaSelectionDialogProps {
   open: boolean;
@@ -26,7 +36,7 @@ interface SceneMediaSelectionDialogProps {
   trendingTopic?: string;
   location?: string;
   onSceneDataUpdate: (sceneData: SceneData[]) => void;
-  onMediaAdded?: (sceneIndex: number, mediaUrl: string) => void;
+  onMediaAdded?: (sceneIndex: number, payload: SceneMediaAddedPayload) => void;
 }
 
 const SceneMediaSelectionDialog: React.FC<SceneMediaSelectionDialogProps> = ({
@@ -200,7 +210,13 @@ const SceneMediaSelectionDialog: React.FC<SceneMediaSelectionDialogProps> = ({
                 });
                 onSceneDataUpdate(updatedScenes);
                 if (onMediaAdded) {
-                  onMediaAdded(selectedSceneIndex, imageUrl);
+                  onMediaAdded(selectedSceneIndex, {
+                    mediaUrl: imageUrl,
+                    mediaType: HelperFunctions.isVideoUrl(imageUrl) ? 'video' : 'image',
+                    source: 'google',
+                    title: 'Selected Media',
+                    thumbnail: imageUrl
+                  });
                 }
               }}
               onImagePreview={(imageUrl) => {
@@ -259,7 +275,7 @@ const SceneMediaSelectionDialog: React.FC<SceneMediaSelectionDialogProps> = ({
                 ...(currentSceneData?.assets?.clips?.map(clip => clip.url) || [])
               ]}
               existingTextOverlay={undefined}
-              onDoneWithSelected={(selectedUrls, modifiedKeyword) => {
+              onDoneWithSelected={(selectedUrls, modifiedKeyword, selectedItem?: SelectedMediaItem) => {
                 const clipUrls: string[] = [];
                 const imageUrls: string[] = [];
                 
@@ -295,7 +311,15 @@ const SceneMediaSelectionDialog: React.FC<SceneMediaSelectionDialogProps> = ({
                 
                 onSceneDataUpdate(updated);
                 if (onMediaAdded && selectedUrls.length > 0) {
-                  onMediaAdded(selectedSceneIndex, selectedUrls[0]);
+                  const selectedUrl = selectedUrls[0];
+                  onMediaAdded(selectedSceneIndex, {
+                    mediaUrl: selectedUrl,
+                    mediaType: HelperFunctions.isVideoUrl(selectedUrl) ? 'video' : 'image',
+                    source: selectedItem?.source,
+                    title: selectedItem?.title,
+                    thumbnail: selectedItem?.thumbnail,
+                    mime: selectedItem?.mime
+                  });
                 }
                 handleClose();
               }}

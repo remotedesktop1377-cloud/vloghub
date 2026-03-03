@@ -30,7 +30,7 @@ import textSidebarIcon from "@/assets/images/text-sidebar.svg";
 import mediaSidebarIcon from "@/assets/images/media-upload.svg";
 import exportSidebarIcon from "@/assets/images/export.svg";
 import { HelperFunctions, SecureStorageHelpers } from "@/utils/helperFunctions";
-import SceneMediaSelectionDialog from "@/dialogs/SceneMediaSelectionDialog";
+import SceneMediaSelectionDialog, { SceneMediaAddedPayload } from "@/dialogs/SceneMediaSelectionDialog";
 import { SceneData } from "@/types/sceneData";
 
 export default function Project() {
@@ -303,8 +303,9 @@ export default function Project() {
                             }
                         }
                     }}
-                    onMediaAdded={(sceneIndex, mediaUrl) => {
-                        toast.success(`Media added to Scene ${sceneIndex + 1}`);
+                    onMediaAdded={(sceneIndex, payload: SceneMediaAddedPayload) => {
+                        const label = payload.mediaType === 'video' ? 'Video clip' : 'Media';
+                        toast.success(`${label} added to Scene ${sceneIndex + 1}`);
                     }}
                 />
             )}
