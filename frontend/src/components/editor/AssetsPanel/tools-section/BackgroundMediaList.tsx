@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSelectedBackgroundMedia } from "@/store/slices/projectSlice";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { defaultBackgroundImages, defaultBackgroundVideos } from "@/data/backgroundAssets";
-// Images from src/assets/background/images (add .png/.jpg files there)
-import { assetImages } from "@/assets/background/images";
-// Videos from src/assets/background/videos (add .mp4/.webm files there)
-import { assetVideos } from "public/videos";
+import { defaultBackgroundImages } from "@/data/backgroundAssets";
+import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
+import { HelperFunctions } from '@/utils/helperFunctions';
+import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import checkIcon from "@/assets/images/check.svg";
 import uploadIcon from "@/assets/images/media-upload.svg";
 import styles from "./BackgroundMediaList.module.css";
@@ -29,16 +28,44 @@ export default function BackgroundMediaList() {
   const [activeTab, setActiveTab] = useState<Tab>("images");
   const [uploadedMedia, setUploadedMedia] = useState<MediaItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [libraryVideos, setLibraryVideos] = useState<MediaItem[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const libraryData = await GoogleDriveServiceFunctions.loadLibraryData(false);
+        const libs = (libraryData?.backgrounds || []).map((b: any) => {
+          const src = b?.webContentLink
+            ? HelperFunctions.normalizeGoogleDriveUrl(b.webContentLink)
+            : b?.id
+            ? `${API_ENDPOINTS.GOOGLE_DRIVE_MEDIA_BASE}?id=${encodeURIComponent(b.id)}`
+            : (b?.url || '');
+          return {
+            id: String(b?.id || b?.name || crypto.randomUUID()),
+            src,
+            name: b?.name || 'Drive Video',
+            type: 'video' as const,
+          };
+        });
+        if (mounted) setLibraryVideos(libs);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const images: MediaItem[] = [
-    ...assetImages.map((i) => ({ ...i, type: "image" as const })),
     ...defaultBackgroundImages.map((i) => ({ ...i, type: "image" as const })),
     ...uploadedMedia.filter((m) => m.type === "image"),
   ];
 
   const videos: MediaItem[] = [
-    ...assetVideos.map((v) => ({ ...v, type: "video" as const })),
-    ...defaultBackgroundVideos.map((v) => ({ ...v, type: "video" as const })),
+    // Library videos loaded from Google Drive
+    ...libraryVideos,
     ...uploadedMedia.filter((m) => m.type === "video"),
   ];
 
@@ -153,7 +180,7 @@ export default function BackgroundMediaList() {
                 onClick={() => handleSelect(item)}
               >
                 <div className={styles.mediaThumb}>
-                  <video src={item.src} muted className={styles.videoThumb} />
+                  <video src={HelperFunctions.normalizeGoogleDriveUrl(item.src)} autoPlay loop muted className={styles.videoThumb} />
                   {isSelected(item.src) && (
                     <div className={styles.tick}>
                       <Image src={checkIcon} alt="Selected" width={20} height={20} />

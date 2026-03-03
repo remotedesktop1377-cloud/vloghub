@@ -6,11 +6,3 @@
 export const defaultBackgroundImages = [
   { id: 'img6', src: '/img6.png', name: 'Sample Image' },
 ];
-
-/**
- * Background videos - from public/background/videos/.
- * Add .mp4/.webm files to public/background/videos/ and extend this list.
- */
-export const defaultBackgroundVideos = [
-  { id: 'bg1', src: '/videos/sample.mp4', name: 'Sample Video' },
-];
