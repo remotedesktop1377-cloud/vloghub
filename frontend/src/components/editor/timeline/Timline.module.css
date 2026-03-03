@@ -100,16 +100,28 @@
 .timelineScroll {
   position: relative;
   overflow-x: auto;
+  overflow-y: auto;
   width: 100%;
+  max-height: 320px;
   border: 1px solid #1f2937;
   border-radius: 12px;
   background: #121521;
+}
+
+.timelineHeaderSticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #121521;
+  border-bottom: 1px solid #1a2433;
+  min-width: fit-content;
 }
 
 .timelineSurface {
   width: 100%;
   position: relative;
   background: #121521;
+  min-width: fit-content;
 }
 
 .timelineCursor {

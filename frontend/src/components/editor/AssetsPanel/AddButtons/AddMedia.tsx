@@ -22,6 +22,9 @@ export default function AddMedia({ fileId }: { fileId: string }) {
 
         const file = await getFile(fileId);
         const mediaId = crypto.randomUUID();
+        const nextLayerIndex = mediaFiles
+            .filter((m) => m.type === "video" || m.type === "image")
+            .reduce((max, m) => Math.max(max, (m.timelineLayerIndex ?? -1) + 1), 0);
 
         if (fileId) {
             const mediaType = HelperFunctions.categorizeFile(file.type);
@@ -53,6 +56,7 @@ export default function AddMedia({ fileId }: { fileId: string }) {
                 volume: 100,
                 type: mediaType,
                 zIndex: 0,
+                timelineLayerIndex: (mediaType === "video" || mediaType === "image") ? nextLayerIndex : undefined,
             });
         }
             dispatch(setMediaFiles(updatedMedia));

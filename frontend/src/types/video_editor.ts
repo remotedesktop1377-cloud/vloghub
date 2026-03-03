@@ -32,6 +32,15 @@ export interface MediaFile {
 
     // Effects
     crop?: { x: number; y: number; width: number; height: number };
+
+    /** Row index on timeline; each media gets its own layer */
+    timelineLayerIndex?: number;
+
+    /** Scene index when built from script (0-based) */
+    sceneIndex?: number;
+
+    /** True for Video-X-1 (first clip per scene); shown on main video row */
+    isPrimarySceneVideo?: boolean;
 }
 
 export interface TextElement {

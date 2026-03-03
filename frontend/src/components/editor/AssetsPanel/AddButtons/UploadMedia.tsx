@@ -50,6 +50,9 @@ export default function AddMedia() {
             const viewLink = uploadResult.webViewLink || `https://drive.google.com/file/d/${uploadResult.fileId}/view?usp=drive_link`;
             const src = HelperFunctions.normalizeGoogleDriveUrl(viewLink);
             const mediaId = crypto.randomUUID();
+            const nextLayerIndex = updatedMedia
+                .filter((m) => m.type === "video" || m.type === "image")
+                .reduce((max, m) => Math.max(max, (m.timelineLayerIndex ?? -1) + 1), 0);
 
             updatedMedia.push({
                 id: mediaId,
@@ -65,6 +68,7 @@ export default function AddMedia() {
                 playbackSpeed: 1,
                 volume: 100,
                 zIndex: updatedMedia.length,
+                timelineLayerIndex: (mediaType === "video" || mediaType === "image") ? nextLayerIndex : undefined,
                 x: 0,
                 y: 0,
                 width: 1920,

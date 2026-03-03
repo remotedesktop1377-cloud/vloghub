@@ -1,14 +1,15 @@
 "use client";
 import { useAppSelector } from "../../../store";
 import { setMarkerTrack, setTextElements, setMediaFiles, setTimelineZoom, setCurrentTime, setIsPlaying, setActiveElement } from "../../../store/slices/projectSlice";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import Image from "next/image";
 import TimelineHeader from "./TimelineHeader";
-import VideoTimeline from "./elements-timeline/VideoTimeline";
-import ImageTimeline from "./elements-timeline/ImageTimeline";
+import PrimaryVideosTimeline from "./elements-timeline/PrimaryVideosTimeline";
+import MediaLayerRow from "./elements-timeline/MediaLayerRow";
 import AudioTimeline from "./elements-timeline/AudioTimline";
 import TextTimeline from "./elements-timeline/TextTimeline";
+import { SceneData } from "@/types/sceneData";
 import { throttle } from "lodash";
 import GlobalKeyHandlerProps from "../../../utils/GlobalKeyHandlerProps";
 import toast from "react-hot-toast";
@@ -23,7 +24,11 @@ import { usePlayerRef } from "../../../context/PlayerContext";
 
 const fps = 30;
 
-export const Timeline = () => {
+interface TimelineProps {
+    scenesData?: SceneData[];
+}
+
+export const Timeline = ({ scenesData = [] }: TimelineProps) => {
     const { timelineZoom, enableMarkerTracking, activeElement, activeElementIndex, mediaFiles, textElements, duration, isPlaying } = useAppSelector((state) => state.projectState);
     // Read currentTime from Redux for user interactions (seeking when paused)
     const reduxCurrentTime = useAppSelector((state) => state.projectState.currentTime);
@@ -75,6 +80,31 @@ export const Timeline = () => {
         }, 100),
         [dispatch]
     );
+
+    // Images (excl logo) sorted: Image-1-1, Image-1-2, Image-2-1, Image-2-2...
+    const imageLayers = useMemo(() => {
+        const images = mediaFiles.filter((m) => m.type === "image" && m.fileName !== "vloghub-logo");
+        const parse = (name: string): [number, number] => {
+            const m = name.match(/Image-(\d+)-(\d+)/);
+            return m ? [parseInt(m[1], 10), parseInt(m[2], 10)] : [999, 999];
+        };
+        return images.sort((a, b) => {
+            const [sa, ia] = parse(a.fileName);
+            const [sb, ib] = parse(b.fileName);
+            if (sa !== sb) return sa - sb;
+            return ia - ib;
+        });
+    }, [mediaFiles]);
+
+    const isPrimaryVideo = (m: { type: string; fileName?: string; isPrimarySceneVideo?: boolean }) =>
+        m.type === "video" && (m.isPrimarySceneVideo === true || /^Video-\d+-1$/.test(m.fileName || ""));
+
+    // Secondary videos (Video-1-2, Video-2-2...) and logo last
+    const otherLayers = useMemo(() => {
+        const secondary = mediaFiles.filter((m) => m.type === "video" && !isPrimaryVideo(m));
+        const logo = mediaFiles.find((m) => m.fileName === "vloghub-logo");
+        return [...secondary, ...(logo ? [logo] : [])];
+    }, [mediaFiles]);
 
     const handleSplit = () => {
         let element = null;
@@ -337,8 +367,9 @@ export const Timeline = () => {
                 ref={timelineRef}
                 onClick={handleClick}
             >
-                <TimelineHeader />
-
+                <div className={styles.timelineHeaderSticky}>
+                    <TimelineHeader />
+                </div>
                 <div className={styles.timelineSurface}>
                     <div
                         className={styles.timelineCursor}
@@ -347,14 +378,23 @@ export const Timeline = () => {
                         }}
                     />
                     <div className={styles.trackStack}>
-                        <div className={styles.trackRow}>
-                            <VideoTimeline />
-                        </div>
+                        {mediaFiles.some(isPrimaryVideo) && (
+                            <div className={styles.trackRow}>
+                                <PrimaryVideosTimeline />
+                            </div>
+                        )}
+                        {imageLayers.map((clip) => (
+                            <div key={clip.id} className={styles.trackRow}>
+                                <MediaLayerRow clip={clip} layerLabel={clip.fileName} />
+                            </div>
+                        ))}
+                        {otherLayers.map((clip) => (
+                            <div key={clip.id} className={styles.trackRow}>
+                                <MediaLayerRow clip={clip} layerLabel={clip.fileName} />
+                            </div>
+                        ))}
                         <div className={styles.trackRow}>
                             <AudioTimeline />
-                        </div>
-                        <div className={styles.trackRow}>
-                            <ImageTimeline />
                         </div>
                         <div className={styles.trackRow}>
                             <TextTimeline />

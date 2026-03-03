@@ -256,7 +256,7 @@ export default function Project() {
                     </div>
                 </div>
                 <div className={styles.timelineContent}>
-                    <Timeline />
+                    <Timeline scenesData={scenesData} />
                 </div>
             </div>
             <div style={{ display: "none" }}>

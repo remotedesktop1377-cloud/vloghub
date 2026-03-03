@@ -1,0 +1,32 @@
+.container {
+  position: relative;
+  height: 100%;
+}
+
+.sceneBlock {
+  position: absolute;
+  top: 8px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(140deg, #2a3a4a, #1e2a38);
+  border: 1px solid rgba(90, 140, 200, 0.25);
+  color: #e6eaf2;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  cursor: default;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.12s ease;
+}
+
+.sceneBlock:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.sceneLabel {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

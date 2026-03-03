@@ -250,7 +250,8 @@ export class HelperFunctions {
       return Math.max(maxEnd, sceneEnd);
     }, 0);
 
-    // logo of the vloghub
+    // logo of the vloghub - layer 0
+    let nextLayerIndex = 0;
     mediaFiles.push({
       id: crypto.randomUUID(),
       fileName: `vloghub-logo`,
@@ -269,6 +270,7 @@ export class HelperFunctions {
       y: 0,
       width: 200,
       height: 200,
+      timelineLayerIndex: nextLayerIndex++,
     })
 
     scenes.forEach((scene, sceneIndex) => {
@@ -331,6 +333,8 @@ export class HelperFunctions {
           playbackSpeed: 1,
           volume: 100,
           zIndex: scenes.length,
+          timelineLayerIndex: nextLayerIndex++,
+          sceneIndex,
           x: 0,
           y: 0,
           width: 500,
@@ -371,6 +375,9 @@ export class HelperFunctions {
           playbackSpeed: 1,
           volume: 100,
           zIndex: zIndex++,
+          timelineLayerIndex: nextLayerIndex++,
+          sceneIndex,
+          isPrimarySceneVideo: clipIndex === 0,
           x: 0,
           y: 0,
           width: resolution.width,
