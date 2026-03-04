@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type FC } from 'react';
 import {
     Box,
     TextField,
@@ -49,7 +49,7 @@ interface GoogleImageSearchProps {
     existingImageUrls?: string[];
 }
 
-const GoogleImageSearch: React.FC<GoogleImageSearchProps> = ({
+const GoogleImageSearch: FC<GoogleImageSearchProps> = ({
     SceneDataNarration,
     onImageSelect,
     onImagePreview,
