@@ -151,7 +151,6 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [envatoKeywords, setEnvatoKeywords] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
-    const [envatoInlinePreviewUrl, setEnvatoInlinePreviewUrl] = useState<string | null>(null);
     const [uploadedFiles, setUploadedFiles] = useState<ImageResult[]>([]);
     // Track which image URLs failed to load so we can fallback to thumbnails
     const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
@@ -325,7 +324,7 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             const clipsWithSource = (data.clips || []).map((clip: any) => ({
                 id: `${(data.clips || []).indexOf(clip) + 1}`,
                 url: clip.url,
-                thumbnail: clip.thumbnail || clip.url,
+                thumbnail: clip.thumbnail || clip.poster || clip.preview || clip.image || '/images/youtube.png',
                 title: clip.title || 'Clip',
                 context: clip.context || '',
                 width: clip.width || 0,
@@ -585,6 +584,11 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 
     const handleImagePreview = (imageUrl: string) => {
         onImagePreview(imageUrl);
+    };
+
+    const openVideoPreview = (videoUrl: string) => {
+        setVideoPreviewUrl(videoUrl);
+        setVideoPreviewOpen(true);
     };
 
     const handleDownloadImage = async (imageUrl: string, filename: string) => {
@@ -1298,28 +1302,15 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 <Box sx={{ position: 'relative' }}>
                                                     {activeTab === 'envatoClips' ? (
                                                         <Box sx={{ position: 'relative', width: '100%', height: '250px' }}>
-                                                            {envatoInlinePreviewUrl === image.url ? (
-                                                                <video
-                                                                    src={image.url}
-                                                                    controls
-                                                                    autoPlay
-                                                                    muted
-                                                                    playsInline
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                                    onClick={() => handleImageSelect(image.url)}
-                                                                    onError={() => {
-                                                                        HelperFunctions.showError('Failed to load preview video.');
-                                                                        setEnvatoInlinePreviewUrl(null);
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <img
-                                                                    src={image.thumbnail || '/images/youtube.png'}
-                                                                    alt={image.title}
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                                    onClick={() => handleImageSelect(image.url)}
-                                                                />
-                                                            )}
+                                                            <img
+                                                                src={image.thumbnail || '/images/youtube.png'}
+                                                                alt={image.title}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                                onClick={() => {
+                                                                    handleImageSelect(image.url);
+                                                                    openVideoPreview(image.url);
+                                                                }}
+                                                            />
                                                             <Box sx={{
                                                                 position: 'absolute',
                                                                 inset: 0,
@@ -1331,12 +1322,15 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                                 '&:hover': {
                                                                     backgroundColor: 'rgba(0,0,0,0.3)'
                                                                 }
-                                                            }} onClick={() => handleImageSelect(image.url)}>
+                                                            }} onClick={() => {
+                                                                handleImageSelect(image.url);
+                                                                openVideoPreview(image.url);
+                                                            }}>
                                                                 <Box
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleImageSelect(image.url);
-                                                                        setEnvatoInlinePreviewUrl(prev => prev === image.url ? null : image.url);
+                                                                        openVideoPreview(image.url);
                                                                     }}
                                                                     sx={{
                                                                         width: 64,
@@ -1570,12 +1564,22 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 open={videoPreviewOpen} 
                 onClose={() => setVideoPreviewOpen(false)} 
                 fullScreen
+                sx={{
+                    zIndex: 12050,
+                    '& .MuiBackdrop-root': {
+                        zIndex: 12049,
+                    },
+                    '& .MuiDialog-container': {
+                        zIndex: 12050,
+                    },
+                }}
                 PaperProps={{
                     sx: {
                         bgcolor: 'black',
                         m: 0,
                         maxHeight: '100vh',
-                        maxWidth: '100vw'
+                        maxWidth: '100vw',
+                        zIndex: 12050,
                     }
                 }}
             >
