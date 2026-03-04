@@ -29,7 +29,8 @@ import {
     AutoAwesome as AutoAwesomeIcon,
     Google as GoogleIcon,
     Image as EnvatoIcon,
-    TextFields as TextIcon
+    TextFields as TextIcon,
+    Close as CloseIcon
 } from '@mui/icons-material';
 import { PRIMARY, SUCCESS, WARNING, ERROR, INFO, PURPLE, NEUTRAL } from '../../styles/colors';
 import { API_ENDPOINTS } from '../../config/apiEndpoints';
@@ -59,6 +60,15 @@ interface ImageResult {
     source?: 'google' | 'envato' | 'envatoClips' | 'upload';
 }
 
+export interface SelectedMediaItem {
+    id: string;
+    url: string;
+    thumbnail: string;
+    title: string;
+    mime: string;
+    source?: 'google' | 'envato' | 'envatoClips' | 'upload';
+}
+
 interface ImageSearchProps {
     SceneDataNarration: string;
     onImageSelect: (imageUrl: string) => void;
@@ -72,7 +82,7 @@ interface ImageSearchProps {
     suggestionKeywords?: string[];
     autoSearchOnMount?: boolean;
     // Report selected URLs to parent when Done is clicked
-    onDoneWithSelected?: (selectedUrls: string[], modifiedKeyword?: string) => void;
+    onDoneWithSelected?: (selectedUrls: string[], modifiedKeyword?: string, selectedItem?: SelectedMediaItem) => void;
     // If provided, also attach keywordsSelected merge payload on update
     currentKeywordForMapping?: string;
     // Context to refine Google queries for higher relevance
@@ -141,7 +151,10 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
     const [envatoKeywords, setEnvatoKeywords] = useState<string[]>([]);
     const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+    const [envatoInlinePreviewUrl, setEnvatoInlinePreviewUrl] = useState<string | null>(null);
     const [uploadedFiles, setUploadedFiles] = useState<ImageResult[]>([]);
+    // Track which image URLs failed to load so we can fallback to thumbnails
+    const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
 
     // Ref to prevent duplicate API calls when useEffect runs multiple times
     const hasInitialSearch = useRef(false);
@@ -210,6 +223,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             } else {
                 // Replace existing results with new search
                 setGoogleImages(imagesWithSource);
+                // Reset failed image URLs when loading new search results
+                setFailedImageUrls(new Set());
                 checkAndSelectExistingImages(imagesWithSource, "google");
                 HelperFunctions.showSuccess(`Found ${imagesWithSource.length} Google images`);
             }
@@ -532,6 +547,8 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
         if (searchQuery.trim()) {
             if (activeTab === 'google') {
                 searchGoogleImages(searchQuery.trim());
+            } else if (activeTab === 'envatoClips') {
+                searchEnvatoClips(searchQuery.trim());
             } else {
                 searchEnvatoImages(searchQuery.trim());
             }
@@ -608,10 +625,17 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                 selectedObj?.downloadUrl
             );
 
+            const isVideo = HelperFunctions.isVideoUrl(validatedUrl);
             const updatedSceneData: any = {
                 assets: {
-                    images: HelperFunctions.isVideoUrl(validatedUrl) ? [] : [validatedUrl],
-                    clips: HelperFunctions.isVideoUrl(validatedUrl) ? [validatedUrl] : [],
+                    images: isVideo ? [] : [validatedUrl],
+                    clips: isVideo ? [{
+                        id: selectedObj?.id || `${Date.now()}`,
+                        name: selectedObj?.title || `Video Clip ${selectedObj?.id || '1'}`,
+                        url: validatedUrl,
+                        duration: 0,
+                        thumbnail: selectedObj?.thumbnail || validatedUrl
+                    }] : [],
                 }
             };
             if (currentKeywordForMapping) {
@@ -654,10 +678,23 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             if (onDoneWithSelected) {
                 const typed = (searchQuery || '').trim();
                 const mk = (currentKeywordForMapping && typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) ? typed : undefined;
-                onDoneWithSelected([selectedUrl], mk);
+                onDoneWithSelected(
+                    [selectedUrl],
+                    mk,
+                    selectedObj
+                        ? {
+                            id: selectedObj.id,
+                            url: selectedObj.url,
+                            thumbnail: selectedObj.thumbnail || selectedObj.url,
+                            title: selectedObj.title || 'Clip',
+                            mime: selectedObj.mime || (HelperFunctions.isVideoUrl(selectedObj.url) ? 'video/mp4' : 'image/jpeg'),
+                            source: selectedObj.source
+                        }
+                        : undefined
+                );
             }
         } else {
-            HelperFunctions.showInfo('Please select one image');
+            HelperFunctions.showInfo('Please select one media item');
         }
         onDone();
     };
@@ -1261,80 +1298,96 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
                                                 <Box sx={{ position: 'relative' }}>
                                                     {activeTab === 'envatoClips' ? (
                                                         <Box sx={{ position: 'relative', width: '100%', height: '250px' }}>
-                                                            <img
-                                                                src={image.thumbnail || '/images/youtube.png'}
-                                                                alt={image.title}
-                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                                                                onClick={() => {
-                                                                    try {
-                                                                        const selectedUrl = image.url;
-                                                                        // ensure consistent single-selection across tabs
-                                                                        handleImageSelect(selectedUrl);
-                                                                        const updatedSceneData: any = {
-                                                                            assets: {
-                                                                                images: [selectedUrl],
-                                                                                imagesGoogle: [],
-                                                                                imagesEnvato: []
-                                                                            }
-                                                                        };
-                                                                        if (currentKeywordForMapping) {
-                                                                            const typed = (searchQuery || '').trim();
-                                                                            updatedSceneData.keywordsSelectedMerge = {
-                                                                                [currentKeywordForMapping]: [selectedUrl]
-                                                                            };
-                                                                            if (typed && typed.toLowerCase() !== currentKeywordForMapping.toLowerCase()) {
-                                                                                updatedSceneData.modifiedKeywordForMapping = typed;
-                                                                            }
-                                                                        }
-                                                                        onSceneDataUpdate(SceneDataIndex, updatedSceneData);
-                                                                        // notify parent selection if needed
-                                                                        try { onImageSelect(selectedUrl); } catch { }
-                                                                        HelperFunctions.showSuccess('Added video link to SceneData');
-                                                                    } catch (e) {
-                                                                        HelperFunctions.showError('Failed to add video link');
-                                                                    }
-                                                                }}
-                                                            />
+                                                            {envatoInlinePreviewUrl === image.url ? (
+                                                                <video
+                                                                    src={image.url}
+                                                                    controls
+                                                                    autoPlay
+                                                                    muted
+                                                                    playsInline
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                                    onClick={() => handleImageSelect(image.url)}
+                                                                    onError={() => {
+                                                                        HelperFunctions.showError('Failed to load preview video.');
+                                                                        setEnvatoInlinePreviewUrl(null);
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <img
+                                                                    src={image.thumbnail || '/images/youtube.png'}
+                                                                    alt={image.title}
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                                    onClick={() => handleImageSelect(image.url)}
+                                                                />
+                                                            )}
                                                             <Box sx={{
                                                                 position: 'absolute',
                                                                 inset: 0,
                                                                 display: 'flex',
                                                                 alignItems: 'center',
-                                                                justifyContent: 'center'
+                                                                justifyContent: 'center',
+                                                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                                                transition: 'background-color 0.2s ease',
+                                                                '&:hover': {
+                                                                    backgroundColor: 'rgba(0,0,0,0.3)'
+                                                                }
                                                             }} onClick={() => handleImageSelect(image.url)}>
                                                                 <Box
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleImageSelect(image.url);
-                                                                        setVideoPreviewUrl(image.url);
-                                                                        setVideoPreviewOpen(true);
+                                                                        setEnvatoInlinePreviewUrl(prev => prev === image.url ? null : image.url);
                                                                     }}
                                                                     sx={{
-                                                                        width: 52,
-                                                                        height: 52,
+                                                                        width: 64,
+                                                                        height: 64,
                                                                         borderRadius: '50%',
-                                                                        backgroundColor: 'rgba(0,0,0,0.55)',
+                                                                        backgroundColor: 'rgba(0,0,0,0.7)',
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         justifyContent: 'center',
-                                                                        cursor: 'pointer'
+                                                                        cursor: 'pointer',
+                                                                        transition: 'all 0.2s ease',
+                                                                        '&:hover': {
+                                                                            backgroundColor: 'rgba(0,0,0,0.9)',
+                                                                            transform: 'scale(1.1)'
+                                                                        }
                                                                     }}
                                                                 >
-                                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+                                                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
                                                                         <path d="M8 5v14l11-7z" />
                                                                     </svg>
                                                                 </Box>
                                                             </Box>
                                                         </Box>
                                                     ) : (
-                                                        <CardMedia
-                                                            component="img"
-                                                            // height="100"
-                                                            image={image.thumbnail}
-                                                            // alt={image.title}
-                                                            sx={{ objectFit: 'cover', height: '250px' }}
-                                                            onClick={() => handleImageSelect(image.url)}
-                                                        />
+                                                        <Box sx={{ position: 'relative', width: '100%', height: '250px', backgroundColor: 'grey.100' }}>
+                                                            <img
+                                                                src={failedImageUrls.has(image.url) ? (image.thumbnail || image.url) : (image.url || image.thumbnail)}
+                                                                alt={image.title}
+                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                                                                onClick={() => handleImageSelect(image.url)}
+                                                                onError={(e) => {
+                                                                    // If the full URL fails, mark it as failed and use thumbnail
+                                                                    const img = e.currentTarget;
+                                                                    const currentSrc = img.src;
+                                                                    const imageUrl = image.url || '';
+                                                                    const thumbnailUrl = image.thumbnail || '';
+                                                                    
+                                                                    if (imageUrl && currentSrc === imageUrl && !failedImageUrls.has(imageUrl)) {
+                                                                        // Full URL failed, try thumbnail
+                                                                        setFailedImageUrls(prev => new Set(prev).add(imageUrl));
+                                                                        if (thumbnailUrl && thumbnailUrl !== imageUrl) {
+                                                                            img.src = thumbnailUrl;
+                                                                        }
+                                                                    } else if (thumbnailUrl && currentSrc === thumbnailUrl) {
+                                                                        // Both failed, show placeholder or keep trying thumbnail
+                                                                        // Don't do anything to avoid infinite loop
+                                                                    }
+                                                                }}
+                                                                loading="lazy"
+                                                            />
+                                                        </Box>
                                                     )}
 
                                                     {/* Selection Overlay */}
@@ -1513,10 +1566,65 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
             </Box>
 
             {/* Video Preview Dialog for Envato Clips */}
-            <Dialog open={videoPreviewOpen} onClose={() => setVideoPreviewOpen(false)} maxWidth="md" fullWidth>
-                <DialogContent sx={{ p: 0, bgcolor: 'black' }}>
+            <Dialog 
+                open={videoPreviewOpen} 
+                onClose={() => setVideoPreviewOpen(false)} 
+                fullScreen
+                PaperProps={{
+                    sx: {
+                        bgcolor: 'black',
+                        m: 0,
+                        maxHeight: '100vh',
+                        maxWidth: '100vw'
+                    }
+                }}
+            >
+                <DialogContent sx={{ 
+                    p: 0, 
+                    bgcolor: 'black',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100vh',
+                    width: '100vw',
+                    position: 'relative'
+                }}>
+                    {/* Close Button */}
+                    <IconButton
+                        onClick={() => setVideoPreviewOpen(false)}
+                        sx={{
+                            position: 'absolute',
+                            top: 16,
+                            right: 16,
+                            zIndex: 10001,
+                            bgcolor: 'rgba(0,0,0,0.5)',
+                            color: 'white',
+                            '&:hover': {
+                                bgcolor: 'rgba(0,0,0,0.8)'
+                            }
+                        }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
                     {videoPreviewUrl && (
-                        <video src={videoPreviewUrl} controls autoPlay playsInline style={{ width: '100%', height: 'auto' }} />
+                        <video 
+                            src={videoPreviewUrl} 
+                            controls 
+                            autoPlay 
+                            playsInline 
+                            muted
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'contain',
+                                maxWidth: '100vw',
+                                maxHeight: '100vh'
+                            }}
+                            onError={(e) => {
+                                console.error('Video load error:', e);
+                                HelperFunctions.showError('Failed to load video. Please try another clip.');
+                            }}
+                        />
                     )}
                 </DialogContent>
             </Dialog>
@@ -1526,4 +1634,3 @@ const ImageSearch: React.FC<ImageSearchProps> = ({
 };
 
 export default ImageSearch;
-
