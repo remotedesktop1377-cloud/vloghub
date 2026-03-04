@@ -5,9 +5,12 @@ import { setResolution, setQuality, setSpeed } from '../../../../store/slices/pr
 import Ffmpeg from "./Ffmpeg";
 import RenderOptions from "./RenderOptions";
 import { LambdaService } from '../../../../services/lambdaService';
-import { HelperFunctions } from '../../../../utils/helperFunctions';
+import { HelperFunctions, SecureStorageHelpers } from '../../../../utils/helperFunctions';
+import { SupabaseHelpers } from '../../../../utils/SupabaseHelpers';
 import AlertDialog from '../../../../dialogs/AlertDialog';
 import styles from './LambdaRender.module.css';
+import { useRouter } from 'next/navigation';
+import { ROUTES_KEYS } from '@/data/constants';
 
 const MAX_DURATION_SECONDS = 60 * 60;
 const MAX_FRAMES = 180000;
@@ -23,7 +26,7 @@ export default function ExportList() {
     const useLambda = process.env.NEXT_PUBLIC_USE_LAMBDA_FOR_RENDER;
     const projectState = useAppSelector((state) => state.projectState);
     const { mediaFiles, textElements, resolution, fps, duration, exportSettings } = projectState;
-    const dispatch = useAppDispatch();
+    const router = useRouter();
 
     const [isRendering, setIsRendering] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -125,9 +128,9 @@ export default function ExportList() {
                 return;
             }
 
-            const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+            const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL ||
                 (typeof window !== 'undefined' ? window.location.origin : 'https://vloghub.vercel.app');
-            
+
             const convertToAbsoluteUrl = (url: string): string => {
                 if (!url) return url;
                 if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -201,6 +204,27 @@ export default function ExportList() {
                                 videoUrl = `https://${renderResult.bucketName}.s3.${region}.amazonaws.com/${progressResult.outputFile}`;
                             }
                             setOutputFile(videoUrl);
+
+                            try {
+                                const scriptMetadata = SecureStorageHelpers.getScriptMetadata();
+                                const currentJobId = scriptMetadata?.jobId || '';
+                                const title = scriptMetadata?.title || '';
+                                const videoThumbnailUrl = scriptMetadata?.videoThumbnailUrl || '';
+                                if (currentJobId) {
+                                    await SupabaseHelpers.saveFinalVideoRecord({
+                                        jobId: currentJobId,
+                                        googleDriveVideoId: null,
+                                        googleDriveVideoName: title,
+                                        videoUrl: videoUrl,
+                                        googleDriveThumbnailUrl: videoThumbnailUrl,
+                                    });
+                                } else {
+                                    console.warn('Render complete but jobId is missing; skipped saveFinalVideoRecord');
+                                }
+                            } catch (saveError) {
+                                console.error('Failed to save final video record after lambda render:', saveError);
+                            }
+
                             setStatus('Render complete!');
                             setProgress(100);
                             setErrors([]);
@@ -313,6 +337,12 @@ export default function ExportList() {
                                             </svg>
                                             {outputFile}
                                         </a>
+                                        <button
+                                            onClick={() => router.push(ROUTES_KEYS.DASHBOARD)}
+                                            className={styles.dashboardButton}
+                                        >
+                                            View in Dashboard
+                                        </button>
                                     </div>
                                 </div>
                             </div>

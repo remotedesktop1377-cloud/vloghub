@@ -150,9 +150,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     const jobId = projectJobMap.get(video.project_id);
                     if (!jobId) return;
                     const videoId = video.google_drive_video_id || video.id;
-                    const videoUrl = video.google_drive_video_url || `https://drive.google.com/file/d/${videoId}/view`;
-                    // Use format that works with normalizeGoogleDriveUrl to proxy through API endpoint
-                    const webContentLink = `https://drive.google.com/uc?id=${videoId}`;
+                    // const videoUrl = video.google_drive_video_url || `https://drive.google.com/file/d/${videoId}/view`;
+                    // const webContentLink = video.google_drive_video_url || `https://drive.google.com/uc?id=${videoId}`;
 
                     if (!jobsMap.has(jobId)) {
                         jobsMap.set(jobId, {
@@ -165,8 +164,8 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                     job.videos.push({
                         id: videoId,
                         name: video.google_drive_video_name || 'Untitled Video',
-                        webViewLink: videoUrl,
-                        webContentLink: webContentLink,
+                        webViewLink: video.google_drive_video_url,
+                        webContentLink: video.google_drive_video_url,
                         thumbnailLink: video.google_drive_thumbnail_url || null,
                         jobId,
                         projectId: video.project_id,
@@ -522,7 +521,10 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
 
     const handleDownloadVideo = (video: { id: string; name: string; webContentLink: string }) => {
         try {
-            const downloadUrl = HelperFunctions.normalizeGoogleDriveUrl(video.webContentLink);
+            const isDriveLink = /drive\.google\.com|\/api\/google-drive-media/i.test(video.webContentLink || '');
+            const downloadUrl = isDriveLink
+                ? HelperFunctions.normalizeGoogleDriveUrl(video.webContentLink)
+                : video.webContentLink;
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = `${video.name}.mp4`;
@@ -675,7 +677,7 @@ export default function DashboardPageClient({ jobs: initialJobs }: DashboardPage
                                         <div className={styles.videoWrapper} style={{ position: 'relative' }}>
                                             <video
                                                 className={styles.videoElement}
-                                                src={HelperFunctions.normalizeGoogleDriveUrl(video.webContentLink)}
+                                                src={video.webContentLink}
                                                 controls
                                                 onError={(e) => {
                                                     const videoElement = e.target as HTMLVideoElement;

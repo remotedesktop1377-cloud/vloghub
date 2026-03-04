@@ -12,7 +12,6 @@ import styles from "./FfmpegRender.module.css";
 import saveIcon from "@/assets/images/save.svg";
 import { setAutoRenderRequested, setAutoRenderProjectId, setQuality, setResolution, setSpeed } from "../../../../store/slices/projectSlice";
 import { cleanupService } from "@/services/cleanupService";
-import { GoogleDriveServiceFunctions } from "@/services/googleDriveService";
 
 interface FileUploaderProps {
     loadFunction: () => Promise<void>;
@@ -235,35 +234,18 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
             const outputData = await ffmpeg.readFile('output.mp4');
             const outputBlob = new Blob([outputData as any], { type: 'video/mp4' });
             const outputUrl = URL.createObjectURL(outputBlob);
-            return { outputUrl, outputBlob };
+            return outputUrl;
         };
 
         try {
-            const { outputUrl, outputBlob } = await renderFunction();
+            const outputUrl = await renderFunction();
             setPreviewUrl(outputUrl);
             setLoaded(true);
-
-            try {
-                const uploadFileName = `${projectName || id || 'project'}-${Date.now()}.mp4`;
-                const outputFile = new File([outputBlob], uploadFileName, { type: 'video/mp4' });
-                const driveUpload = await GoogleDriveServiceFunctions.uploadMediaToDrive(String(id || projectName || 'project'), 'output', outputFile);
-
-                if (driveUpload.success) {
-                    toast.success('Video rendered and uploaded to Google Drive output folder');
-                } else {
-                    toast.success('Video rendered successfully');
-                    toast.error(driveUpload.message || 'Failed to upload rendered video to Google Drive');
-                }
-            } catch (uploadErr) {
-                toast.success('Video rendered successfully');
-                toast.error('Failed to upload rendered video to Google Drive');
-                console.error('Failed to upload rendered video:', uploadErr);
-            }
+            setIsRendering(false);
+            toast.success('Video rendered successfully');
         } catch (err) {
             toast.error('Failed to render video');
-            console.log("Failed to render video:", err);
-        } finally {
-            setIsRendering(false);
+            console.error("Failed to render video:", err);
         }
     };
 

@@ -766,12 +766,12 @@ export class SupabaseHelpers {
     jobId: string;
     googleDriveVideoId?: string | null;
     googleDriveVideoName?: string | null;
-    googleDriveVideoUrl?: string | null;
+    videoUrl?: string | null;
     googleDriveThumbnailUrl?: string | null;
   }): Promise<{ success: boolean; error?: any }> {
     try {
       if (!args.jobId) {
-        console.error('saveFinalVideoRecord: Missing jobId');
+        console.log('saveFinalVideoRecord: Missing jobId');
         return { success: false, error: 'Missing jobId' };
       }
 
@@ -784,13 +784,13 @@ export class SupabaseHelpers {
         .maybeSingle();
 
       if (projError) {
-        console.error('saveFinalVideoRecord: Error finding project:', projError);
+        console.log('saveFinalVideoRecord: Error finding project:', projError);
         return { success: false, error: projError };
       }
 
       const projectAny = project as any;
       if (!projectAny || !projectAny.id) {
-        console.error('saveFinalVideoRecord: Project not found for jobId:', args.jobId);
+        console.log('saveFinalVideoRecord: Project not found for jobId:', args.jobId);
         return { success: false, error: `Project not found for jobId: ${args.jobId}` };
       }
 
@@ -801,7 +801,8 @@ export class SupabaseHelpers {
         project_id: projectId,
         google_drive_video_id: args.googleDriveVideoId || '',
         google_drive_video_name: args.googleDriveVideoName || null,
-        google_drive_video_url: args.googleDriveVideoUrl || null,
+        // google_drive_video_url: args.googleDriveVideoUrl || null,
+        google_drive_video_url: args.videoUrl || null,
         google_drive_thumbnail_url: args.googleDriveThumbnailUrl || null,
         render_status: RENDER_STATUS.SUCCESS,
         updated_at: new Date().toISOString(),
@@ -817,7 +818,7 @@ export class SupabaseHelpers {
         .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
-        console.error('saveFinalVideoRecord: Error checking existing video:', checkError);
+        console.log('saveFinalVideoRecord: Error checking existing video:', checkError);
         toast.error(`Failed to check video record: ${checkError.message || 'Unknown error'}`);
         return { success: false, error: checkError };
       }
@@ -852,13 +853,13 @@ export class SupabaseHelpers {
       console.log('saveFinalVideoRecord: Save result:', { finalData, saveError });
 
       if (saveError) {
-        console.error('saveFinalVideoRecord: Error saving final video record:', saveError);
+        console.log('saveFinalVideoRecord: Error saving final video record:', saveError);
         toast.error(`Failed to save video record: ${saveError.message || 'Unknown error'}`);
         return { success: false, error: saveError };
       }
 
       if (!finalData || !finalData.id) {
-        console.error('saveFinalVideoRecord: Save succeeded but no data returned');
+        console.log('saveFinalVideoRecord: Save succeeded but no data returned');
         toast.error('Failed to save video record: No data returned');
         return { success: false, error: 'No data returned from save operation' };
       }
@@ -871,7 +872,7 @@ export class SupabaseHelpers {
         .eq('id', projectId);
 
       if (updateError) {
-        console.warn('saveFinalVideoRecord: Error updating project status:', updateError);
+        console.log('saveFinalVideoRecord: Error updating project status:', updateError);
       } else {
         console.log('saveFinalVideoRecord: Successfully updated project status');
       }
@@ -879,7 +880,7 @@ export class SupabaseHelpers {
       toast.success('Video record saved successfully');
       return { success: true };
     } catch (error) {
-      console.error('saveFinalVideoRecord: Unexpected error:', error);
+      console.log('saveFinalVideoRecord: Unexpected error:', error);
       toast.error(`Unexpected error saving video record: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return { success: false, error };
     }
