@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { TextElement, MediaFile, ActiveElement, ExportConfig } from '../../types/video_editor';
+import { TextElement, MediaFile, ActiveElement, ExportConfig, ProjectState } from '../../types/video_editor';
 import { ProjectState } from '../../types/video_editor';
 import { deleteProject } from './projectsSlice';
 
@@ -199,6 +199,9 @@ const projectStateSlice = createSlice({
         setAutoRenderProjectId: (state, action: PayloadAction<string>) => {
             state.autoRenderProjectId = action.payload;
         },
+        setSelectedBackgroundMedia: (state, action: PayloadAction<ProjectState['selectedBackgroundMedia']>) => {
+            state.selectedBackgroundMedia = action.payload;
+        },
         // Special reducer for rehydrating state from IndexedDB
         rehydrate: (state, action: PayloadAction<ProjectState>) => {
             return { ...state, ...action.payload };
@@ -231,6 +234,7 @@ export const {
     createNewProject,
     setAutoRenderRequested,
     setAutoRenderProjectId,
+    setSelectedBackgroundMedia,
 } = projectStateSlice.actions;
 
 export default projectStateSlice.reducer; 

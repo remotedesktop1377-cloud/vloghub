@@ -15,8 +15,9 @@ import TextProperties from "@/components/editor/PropertiesSection/TextProperties
 import { Timeline } from "@/components/editor/timeline/Timline";
 import { PreviewPlayer } from "@/components/editor/player/remotion/Player";
 import { PlayerProvider } from "@/context/PlayerContext";
-import { MediaFile, ProjectState } from "@/types/video_editor";
+import { ActiveElement, MediaFile, ProjectState } from "@/types/video_editor";
 import ExportList from "@/components/editor/AssetsPanel/tools-section/ExportList";
+import BackgroundMediaList from "@/components/editor/AssetsPanel/tools-section/BackgroundMediaList";
 import Ffmpeg from "@/components/editor/render/Ffmpeg/Ffmpeg";
 import Image from "next/image";
 import ProjectHeader from "@/components/editor/player/ProjectHeader";
@@ -146,7 +147,7 @@ export default function Project() {
         saveProject();
     }, [projectState, dispatch, currentProjectId, hasLoadedProject]);
 
-    const handleFocus = (section: "media" | "text" | "export") => {
+    const handleFocus = (section: ActiveElement) => {
         dispatch(setActiveSection(section));
     };
 
@@ -188,6 +189,11 @@ export default function Project() {
                                 setSceneMediaDialogOpen(true);
                             }} 
                         />
+                        <SidebarButton 
+                            title="Background" 
+                            icon={imageIcon} 
+                            onClick={() => handleFocus("background")}
+                        />
                         <SidebarButton title="Export" icon={exportSidebarIcon} onClick={() => handleFocus("export")} />
                     </div>
                 </div>
@@ -204,6 +210,12 @@ export default function Project() {
                     {activeSection === "text" && (
                         <div className={styles.sectionCard}>
                             <AddText />
+                        </div>
+                    )}
+                    {activeSection === "background" && (
+                        <div className={styles.sectionCard}>
+                            <h2 className={styles.panelTitle}>Background</h2>
+                            <BackgroundMediaList />
                         </div>
                     )}
                     {activeSection === "export" && (
