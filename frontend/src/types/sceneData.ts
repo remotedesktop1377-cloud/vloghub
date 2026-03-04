@@ -126,6 +126,7 @@ export interface VideoClip {
     url: string;
     duration: number;
     thumbnail?: string;
+    localPath?: string; // absolute local path or remote fallback URL for rendering pipeline
 }
 
 export interface LogoOverlay {

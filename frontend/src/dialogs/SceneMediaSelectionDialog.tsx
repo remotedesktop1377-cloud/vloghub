@@ -295,6 +295,7 @@ const SceneMediaSelectionDialog: React.FC<SceneMediaSelectionDialogProps> = ({
                     id: `${clipUrls.indexOf(url) + 1}`,
                     name: `Video Clip ${clipUrls.indexOf(url) + 1}`,
                     url: url,
+                    localPath: url,
                     duration: 0,
                     thumbnail: ''
                   }));

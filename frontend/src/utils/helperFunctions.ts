@@ -290,13 +290,16 @@ export class HelperFunctions {
       // const previewClip = 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
       const previewClip = (scene as any)?.previewClip || '';
       const assetClips = Array.isArray(scene.assets?.clips) ? scene.assets!.clips! : [];
-      const assetClipUrls = assetClips
-        .map((clip: any) => clip?.url)
-        .filter((url: string | undefined): url is string => typeof url === 'string' && url.trim().length > 0);
+      const localAssetClips = assetClips
+        .map((clip: any) => clip?.localPath || clip?.url)
+        .filter((url: string | undefined) => {
+          if (!url) return false;
+          return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/') || /^https?:\/\//i.test(url);
+        });
       const clipUrls = [
-        ...assetClipUrls,
+        ...localAssetClips,
         previewClip
-      ]
+      ].filter(Boolean)
       // .filter((url) => {
       //   if (!url) return false;
       //   return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');

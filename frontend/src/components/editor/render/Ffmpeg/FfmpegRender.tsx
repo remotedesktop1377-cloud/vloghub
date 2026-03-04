@@ -74,6 +74,35 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
 
         const renderFunction = async () => {
             const params = extractConfigs(exportSettings);
+            const toFetchableMediaUrl = (src: string): string => {
+                try {
+                    const parsed = new URL(src, window.location.origin);
+                    const isHttp = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+                    if (isHttp && parsed.origin !== window.location.origin) {
+                        return `/api/media-fetch?url=${encodeURIComponent(parsed.toString())}`;
+                    }
+                    return parsed.toString();
+                } catch {
+                    return src;
+                }
+            };
+            const audioProbeCache = new Map<string, boolean>();
+            const detectHasAudioStream = async (inputFileName: string): Promise<boolean> => {
+                const cached = audioProbeCache.get(inputFileName);
+                if (cached !== undefined) return cached;
+
+                let hasAudio = false;
+                try {
+                    // Optional audio map probe: exits 0 only when at least one audio stream exists.
+                    const probeExitCode = await ffmpeg.exec(['-v', 'error', '-i', inputFileName, '-map', '0:a:0', '-f', 'null', '-']);
+                    hasAudio = probeExitCode === 0;
+                } catch {
+                    hasAudio = false;
+                }
+
+                audioProbeCache.set(inputFileName, hasAudio);
+                return hasAudio;
+            };
 
             try {
                 const filters = [];
@@ -88,6 +117,14 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
 
                     const { startTime, positionStart, positionEnd } = sortedMediaFiles[i];
                     const duration = positionEnd - positionStart;
+                    const safeStartTime = Number.isFinite(startTime) ? startTime : 0;
+                    const safePositionStart = Number.isFinite(positionStart) ? positionStart : 0;
+                    const safePositionEnd = Number.isFinite(positionEnd) ? positionEnd : (safePositionStart + Math.max(duration || 0, 0));
+                    const safeDuration = Math.max((safePositionEnd - safePositionStart) || 0, 0.001);
+                    const safeWidth = Number.isFinite(sortedMediaFiles[i].width) ? sortedMediaFiles[i].width : 1920;
+                    const safeHeight = Number.isFinite(sortedMediaFiles[i].height) ? sortedMediaFiles[i].height : 1080;
+                    const safeX = Number.isFinite(sortedMediaFiles[i].x) ? sortedMediaFiles[i].x : 0;
+                    const safeY = Number.isFinite(sortedMediaFiles[i].y) ? sortedMediaFiles[i].y : 0;
 
                     const fileData = await getFile(sortedMediaFiles[i].fileId);
                     let buffer: ArrayBuffer | null = null;
@@ -97,9 +134,15 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                         ext = mimeToExt[fileData.type as keyof typeof mimeToExt] || fileData.type.split('/')[1];
                     } else if (sortedMediaFiles[i].src) {
                         const src = sortedMediaFiles[i].src;
-                        const response = await fetch(src!);
+                        const fetchUrl = toFetchableMediaUrl(src!);
+                        let response: Response;
+                        try {
+                            response = await fetch(fetchUrl);
+                        } catch (fetchErr) {
+                            throw new Error(`Failed to fetch media source: ${src}`);
+                        }
                         if (!response.ok) {
-                            throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
+                            throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id} (${response.status} ${response.statusText})`);
                         }
                         const blob = await response.blob();
                         buffer = await blob.arrayBuffer();
@@ -116,13 +159,14 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                     if (!buffer || !ext) {
                         throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
                     }
-                    await ffmpeg.writeFile(`input${i}.${ext}`, new Uint8Array(buffer));
+                    const inputFileName = `input${i}.${ext}`;
+                    await ffmpeg.writeFile(inputFileName, new Uint8Array(buffer));
 
                     if (sortedMediaFiles[i].type === 'image') {
-                        inputs.push('-loop', '1', '-t', duration.toFixed(3), '-i', `input${i}.${ext}`);
+                        inputs.push('-loop', '1', '-t', safeDuration.toFixed(3), '-i', inputFileName);
                     }
                     else {
-                        inputs.push('-i', `input${i}.${ext}`);
+                        inputs.push('-i', inputFileName);
                     }
 
                     const visualLabel = `visual${i}`;
@@ -130,12 +174,12 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
 
                     if (sortedMediaFiles[i].type === 'video') {
                         filters.push(
-                            `[${i}:v]trim=start=${startTime.toFixed(3)}:duration=${duration.toFixed(3)},scale=${sortedMediaFiles[i].width}:${sortedMediaFiles[i].height},setpts=PTS-STARTPTS+${positionStart.toFixed(3)}/TB[${visualLabel}]`
+                            `[${i}:v]trim=start=${safeStartTime.toFixed(3)}:duration=${safeDuration.toFixed(3)},scale=${safeWidth}:${safeHeight},setpts=PTS-STARTPTS+${safePositionStart.toFixed(3)}/TB[${visualLabel}]`
                         );
                     }
                     if (sortedMediaFiles[i].type === 'image') {
                         filters.push(
-                            `[${i}:v]scale=${sortedMediaFiles[i].width}:${sortedMediaFiles[i].height},setpts=PTS+${positionStart.toFixed(3)}/TB[${visualLabel}]`
+                            `[${i}:v]scale=${safeWidth}:${safeHeight},setpts=PTS+${safePositionStart.toFixed(3)}/TB[${visualLabel}]`
                         );
                     }
 
@@ -149,18 +193,23 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                     if (sortedMediaFiles[i].type === 'video' || sortedMediaFiles[i].type === 'image') {
                         overlays.push({
                             label: visualLabel,
-                            x: sortedMediaFiles[i].x,
-                            y: sortedMediaFiles[i].y,
-                            start: positionStart.toFixed(3),
-                            end: positionEnd.toFixed(3),
+                            x: safeX,
+                            y: safeY,
+                            start: safePositionStart.toFixed(3),
+                            end: safePositionEnd.toFixed(3),
                         });
                     }
 
-                    if (sortedMediaFiles[i].type === 'audio' || sortedMediaFiles[i].type === 'video') {
-                        const delayMs = Math.round(positionStart * 1000);
+                    // Include explicit audio files and video files that actually have audio streams.
+                    let shouldIncludeAudio = sortedMediaFiles[i].type === 'audio';
+                    if (!shouldIncludeAudio && sortedMediaFiles[i].type === 'video') {
+                        shouldIncludeAudio = await detectHasAudioStream(inputFileName);
+                    }
+                    if (shouldIncludeAudio) {
+                        const delayMs = Math.round(safePositionStart * 1000);
                         const volume = sortedMediaFiles[i].volume !== undefined ? sortedMediaFiles[i].volume / 100 : 1;
                         filters.push(
-                            `[${i}:a]atrim=start=${startTime.toFixed(3)}:duration=${duration.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${delayMs}|${delayMs},volume=${volume}[${audioLabel}]`
+                            `[${i}:a]atrim=start=${safeStartTime.toFixed(3)}:duration=${safeDuration.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${delayMs}|${delayMs},volume=${volume}[${audioLabel}]`
                         );
                         audioDelays.push(`[${audioLabel}]`);
                     }
@@ -179,7 +228,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                 }
 
                 if (textElements.length > 0) {
-                    let fonts = ['Arial', 'Inter', 'Lato'];
+                    const fonts = ['Arial', 'Inter', 'Lato'];
                     for (let i = 0; i < fonts.length; i++) {
                         const font = fonts[i];
                         const res = await fetch(`/fonts/${font}.ttf`);
@@ -192,8 +241,10 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                         const escapedText = text.text.replace(/:/g, '\\:').replace(/'/g, "\\\\'");
                         const alpha = Math.min(Math.max((text.opacity ?? 100) / 100, 0), 1);
                         const color = text.color?.includes('@') ? text.color : `${text.color || 'white'}@${alpha}`;
+                        const requestedFont = typeof text.font === 'string' ? text.font : '';
+                        const drawFont = fonts.includes(requestedFont) ? requestedFont : 'Arial';
                         filters.push(
-                            `[${lastLabel}]drawtext=fontfile=font${text.font}.ttf:text='${escapedText}':x=${text.x}:y=${text.y}:fontsize=${text.fontSize || 24}:fontcolor=${color}:enable='between(t\\,${text.positionStart}\\,${text.positionEnd})'[${label}]`
+                            `[${lastLabel}]drawtext=fontfile=font${drawFont}.ttf:text='${escapedText}':x=${Number.isFinite(text.x) ? text.x : 0}:y=${Number.isFinite(text.y) ? text.y : 0}:fontsize=${text.fontSize || 24}:fontcolor=${color}:enable='between(t\\,${Number.isFinite(text.positionStart) ? text.positionStart : 0}\\,${Number.isFinite(text.positionEnd) ? text.positionEnd : totalDuration})'[${label}]`
                         );
                         lastLabel = label;
                     }
@@ -224,14 +275,23 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                     'output.mp4'
                 );
 
-                await ffmpeg.exec(ffmpegArgs);
+                const exitCode = await ffmpeg.exec(ffmpegArgs);
+                if (exitCode !== 0) {
+                    throw new Error(`FFmpeg exited with code ${exitCode}`);
+                }
 
             } catch (err) {
                 console.error('FFmpeg processing error:', err);
+                throw err;
             }
 
             // return the output url
-            const outputData = await ffmpeg.readFile('output.mp4');
+            let outputData: Uint8Array;
+            try {
+                outputData = await ffmpeg.readFile('output.mp4') as Uint8Array;
+            } catch {
+                throw new Error('FFmpeg did not produce output.mp4');
+            }
             const outputBlob = new Blob([outputData as any], { type: 'video/mp4' });
             const outputUrl = URL.createObjectURL(outputBlob);
             return outputUrl;
@@ -245,6 +305,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
             toast.success('Video rendered successfully');
         } catch (err) {
             toast.error('Failed to render video');
+            setIsRendering(false);
             console.error("Failed to render video:", err);
         }
     };
