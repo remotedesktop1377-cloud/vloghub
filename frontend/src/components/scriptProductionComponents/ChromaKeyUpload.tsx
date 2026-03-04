@@ -52,6 +52,25 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             setProgress(5);
             setCurrentStep('compressing');
 
+            // Remove background (chroma-key) before compression
+            // const bgRemovedFile = await processService.removeBackgroundFromVideo(file, jobId);
+            // // Trigger an immediate client-side download of the background-removed file
+            // try {
+            //     const downloadUrl = URL.createObjectURL(bgRemovedFile);
+            //     const a = document.createElement('a');
+            //     a.href = downloadUrl;
+            //     a.download = bgRemovedFile.name || `bg_removed_${jobId}.mp4`;
+            //     document.body.appendChild(a);
+            //     a.click();
+            //     a.remove();
+            //     URL.revokeObjectURL(downloadUrl);
+            // } catch (err) {
+            //     // non-fatal: continue the flow even if download fails
+            //     // eslint-disable-next-line no-console
+            //     console.warn('Failed to trigger bgRemovedFile download', err);
+            // }
+
+            setProgress(8);
             const compressedFile = await processService.compressVideo(file, jobId);
 
             setProgress(10);

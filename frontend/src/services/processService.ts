@@ -64,6 +64,47 @@ export const processService = {
         return ffmpeg;
     },
 
+    async removeBackgroundFromVideo(
+        file: File,
+        jobId: string,
+        options?: {
+            keyColor?: string;
+            similarity?: number;
+            blend?: number;
+            preset?: string;
+            crf?: number;
+            preserveTransparency?: boolean;
+        }
+    ): Promise<File> {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('jobId', jobId);
+        formData.append('outputType', 'green-screen');
+
+        const response = await fetch(API_ENDPOINTS.REMOVE_VIDEO_BACKGROUND, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            let message = 'Video background removal failed';
+            try {
+                const data = await response.json();
+                message = String(data?.error || message);
+            } catch {
+                const fallback = await response.text();
+                if (fallback) message = fallback;
+            }
+            throw new Error(message);
+        }
+
+        const blob = await response.blob();
+        const contentType = response.headers.get('content-type') || blob.type || 'video/mp4';
+        const isWebm = contentType.includes('webm');
+        const outputName = `bg_removed_${jobId}.${isWebm ? 'webm' : 'mp4'}`;
+        return new File([blob], outputName, { type: contentType });
+    },
+
     async extractAudioFromVideo(file: File, outputFileName?: string): Promise<File> {
         const ffmpeg = await processService.getAudioFfmpeg();
         const extFromName = file.name.split('.').pop();
