@@ -339,7 +339,7 @@ export default function ExportList() {
                                         </a>
                                         <button
                                             onClick={() => router.push(ROUTES_KEYS.DASHBOARD)}
-                                            className={styles.dashboardButton}
+                                            className={styles.primaryButton}
                                         >
                                             View in Dashboard
                                         </button>
