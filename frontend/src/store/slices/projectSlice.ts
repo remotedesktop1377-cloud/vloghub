@@ -1,7 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { TextElement, MediaFile, ActiveElement, ExportConfig, ProjectState } from '../../types/video_editor';
-import { ProjectState } from '../../types/video_editor';
-import { deleteProject } from './projectsSlice';
 
 export const initialState: ProjectState = {
     id: crypto.randomUUID(),
