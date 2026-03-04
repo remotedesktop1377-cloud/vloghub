@@ -54,6 +54,9 @@ interface LambdaCompositionProps {
   mediaFiles?: MediaFile[];
   textElements?: TextElement[];
   fps?: number;
+  durationInFrames?: number;
+  width?: number;
+  height?: number;
 }
 
 const REMOTION_SAFE_FRAME = 0;
@@ -262,6 +265,23 @@ registerRoot(() => {
           mediaFiles: [],
           textElements: [],
           fps: 30,
+          durationInFrames: 300,
+          width: 1920,
+          height: 1080,
+        }}
+        calculateMetadata={({ props }) => {
+          const rawFps = Number(props.fps ?? 30);
+          const safeFps = [24, 25, 30, 60].includes(rawFps) ? rawFps : 30;
+          const safeDurationInFrames = Math.max(1, Math.floor(Number(props.durationInFrames ?? 300)));
+          const safeWidth = Math.max(16, Math.floor(Number(props.width ?? 1920)));
+          const safeHeight = Math.max(16, Math.floor(Number(props.height ?? 1080)));
+
+          return {
+            fps: safeFps,
+            durationInFrames: safeDurationInFrames,
+            width: safeWidth,
+            height: safeHeight,
+          };
         }}
       />
     </>

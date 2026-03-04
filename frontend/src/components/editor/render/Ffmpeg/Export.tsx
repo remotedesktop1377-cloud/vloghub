@@ -9,6 +9,16 @@ import { HelperFunctions } from '../../../../utils/helperFunctions';
 import AlertDialog from '../../../../dialogs/AlertDialog';
 import styles from './LambdaRender.module.css';
 
+const MAX_DURATION_SECONDS = 60 * 60;
+const MAX_FRAMES = 180000;
+
+const getAdaptiveFramesPerLambda = (totalFrames: number): number => {
+    if (totalFrames <= 18000) return 40;
+    if (totalFrames <= 54000) return 80;
+    if (totalFrames <= 108000) return 120;
+    return 160;
+};
+
 export default function ExportList() {
     const useLambda = process.env.NEXT_PUBLIC_USE_LAMBDA_FOR_RENDER === 'true';
     const projectState = useAppSelector((state) => state.projectState);
@@ -95,8 +105,25 @@ export default function ExportList() {
 
             setStatus('Starting render...');
             const exportRes = HelperFunctions.getResolutionFromExportSettings(exportSettings.resolution);
-            const framesPerLambda = HelperFunctions.getFramesPerLambdaFromSpeed(exportSettings.speed);
             const imageFormat = HelperFunctions.getImageFormatFromQuality(exportSettings.quality);
+            const selectedFps = [24, 25, 30, 60].includes(Number(fps || exportSettings.fps))
+                ? Number(fps || exportSettings.fps)
+                : 30;
+            const durationSeconds = Number.isFinite(duration) ? Math.max(0, duration) : 0;
+            const totalFrames = Math.max(1, Math.ceil(durationSeconds * selectedFps));
+            const framesPerLambda = getAdaptiveFramesPerLambda(totalFrames);
+
+            if (durationSeconds <= 0) {
+                HelperFunctions.showError('Timeline duration is 0s. Please add or extend media before rendering.');
+                setIsRendering(false);
+                return;
+            }
+
+            if (durationSeconds > MAX_DURATION_SECONDS || totalFrames > MAX_FRAMES) {
+                HelperFunctions.showError('Video too long for current render limits. Reduce duration or FPS.');
+                setIsRendering(false);
+                return;
+            }
 
             const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 
                 (typeof window !== 'undefined' ? window.location.origin : 'https://vloghub.vercel.app');
@@ -121,10 +148,10 @@ export default function ExportList() {
                         src: convertToAbsoluteUrl(file.src || ''),
                     })),
                     textElements: textElements,
-                    fps: fps || exportSettings.fps || 30,
+                    fps: selectedFps,
                     width: exportRes.width,
                     height: exportRes.height,
-                    durationInFrames: Math.ceil((duration || 10) * (fps || exportSettings.fps || 30)),
+                    durationInFrames: totalFrames,
                 },
                 codec: 'h264',
                 imageFormat: imageFormat,
@@ -190,7 +217,7 @@ export default function ExportList() {
                             setProgress(progressPercent);
                             setStatus(`Rendering... ${Math.round(progressPercent)}%`);
                         } else if (progressResult.timeToFinish !== undefined && progressResult.timeToFinish > 0) {
-                            const estimatedProgress = Math.max(0, Math.min(95, 100 - (progressResult.timeToFinish / (duration || 10)) * 100));
+                            const estimatedProgress = Math.max(0, Math.min(95, 100 - (progressResult.timeToFinish / Math.max(durationSeconds, 1)) * 100));
                             setProgress(estimatedProgress);
                             setStatus(`Rendering... Estimated ${Math.round(progressResult.timeToFinish)}s remaining`);
                         } else {
