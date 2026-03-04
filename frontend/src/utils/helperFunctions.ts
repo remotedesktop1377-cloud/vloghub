@@ -278,7 +278,10 @@ export class HelperFunctions {
       .map((scene: any) => String(scene?.previewClip || '').trim())
       .filter((url) => url.length > 0);
     const uniquePreviewClips = Array.from(new Set(previewClipCandidates));
-    const hasSceneAssetClips = scenes.some((scene) => Array.isArray(scene?.assets?.clips) && scene.assets.clips.length > 0);
+    const hasSceneAssetClips = scenes.some((scene) => {
+      const clips = Array.isArray(scene?.assets?.clips) ? scene?.assets?.clips : [];
+      return clips && clips.length > 0;
+    });
     const useSingleSourceVideo = uniquePreviewClips.length === 1 && !hasSceneAssetClips;
 
     if (useSingleSourceVideo && timelineEnd > 0) {
