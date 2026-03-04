@@ -18,47 +18,47 @@ export default function AddMedia({ fileId }: { fileId: string }) {
     const handleFileChange = async () => {
         setIsLoading(true);
         try {
-        const updatedMedia = [...mediaFiles];
+            const updatedMedia = [...mediaFiles];
+            debugger;
+            const file = await getFile(fileId);
+            const mediaId = crypto.randomUUID();
+            const nextLayerIndex = mediaFiles
+                .filter((m) => m.type === "video" || m.type === "image")
+                .reduce((max, m) => Math.max(max, (m.timelineLayerIndex ?? -1) + 1), 0);
 
-        const file = await getFile(fileId);
-        const mediaId = crypto.randomUUID();
-        const nextLayerIndex = mediaFiles
-            .filter((m) => m.type === "video" || m.type === "image")
-            .reduce((max, m) => Math.max(max, (m.timelineLayerIndex ?? -1) + 1), 0);
+            if (fileId) {
+                const mediaType = HelperFunctions.categorizeFile(file.type);
+                const relevantClips = mediaFiles.filter(clip => clip.type === mediaType);
+                const lastEnd = relevantClips.length > 0
+                    ? Math.max(...relevantClips.map(f => f.positionEnd))
+                    : 0;
+                const duration = await HelperFunctions.extractMediaDuration(file, mediaType);
+                const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 4;
 
-        if (fileId) {
-            const mediaType = HelperFunctions.categorizeFile(file.type);
-            const relevantClips = mediaFiles.filter(clip => clip.type === mediaType);
-            const lastEnd = relevantClips.length > 0
-                ? Math.max(...relevantClips.map(f => f.positionEnd))
-                : 0;
-            const duration = await HelperFunctions.extractMediaDuration(file, mediaType);
-            const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 4;
-
-            updatedMedia.push({
-                id: mediaId,
-                fileName: file.name,
-                fileId: fileId,
-                startTime: 0,
-                endTime: safeDuration,
-                src: URL.createObjectURL(file),
-                positionStart: lastEnd,
-                positionEnd: lastEnd + safeDuration,
-                includeInMerge: true,
-                x: 0,
-                y: 0,
-                width: 1920,
-                height: 1080,
-                rotation: 0,
-                opacity: 100,
-                crop: { x: 0, y: 0, width: 1920, height: 1080 },
-                playbackSpeed: 1,
-                volume: 100,
-                type: mediaType,
-                zIndex: 0,
-                timelineLayerIndex: (mediaType === "video" || mediaType === "image") ? nextLayerIndex : undefined,
-            });
-        }
+                updatedMedia.push({
+                    id: mediaId,
+                    fileName: file.name,
+                    fileId: fileId,
+                    startTime: 0,
+                    endTime: safeDuration,
+                    src: URL.createObjectURL(file),
+                    positionStart: lastEnd,
+                    positionEnd: lastEnd + safeDuration,
+                    includeInMerge: true,
+                    x: 0,
+                    y: 0,
+                    width: 1920,
+                    height: 1080,
+                    rotation: 0,
+                    opacity: 100,
+                    crop: { x: 0, y: 0, width: 1920, height: 1080 },
+                    playbackSpeed: 1,
+                    volume: 100,
+                    type: mediaType,
+                    zIndex: 0,
+                    timelineLayerIndex: (mediaType === "video" || mediaType === "image") ? nextLayerIndex : undefined,
+                });
+            }
             dispatch(setMediaFiles(updatedMedia));
             toast.success('Media added successfully.');
         } finally {

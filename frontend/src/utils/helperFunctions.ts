@@ -242,6 +242,7 @@ export class HelperFunctions {
     const mediaFiles: MediaFile[] = [];
     let zIndex = 0;
     let globalVideoCursor = 0;
+    let globalImageCursor = 0;
     const timelineEnd = scenes.reduce((maxEnd, scene) => {
       const start = HelperFunctions.getValidNumber(scene.startTime) ?? 0;
       const end = HelperFunctions.getValidNumber(scene.endTime);
@@ -259,7 +260,7 @@ export class HelperFunctions {
       type: 'image',
       startTime: 0,
       endTime: timelineEnd,
-      src: HelperFunctions.normalizeGoogleDriveUrl('https://drive.google.com/file/d/1KxSJsXwJDfwM5BPzQryeic10EdmAvE3d/view'),
+      src: 'https://remotionlambda-useast1-o5o2xdg7ne.s3.us-east-1.amazonaws.com/logo/logo_white.png',
       positionStart: 0,
       positionEnd: timelineEnd,
       includeInMerge: true,
@@ -272,6 +273,42 @@ export class HelperFunctions {
       height: 200,
       timelineLayerIndex: nextLayerIndex++,
     })
+
+    const previewClipCandidates = scenes
+      .map((scene: any) => String(scene?.previewClip || '').trim())
+      .filter((url) => url.length > 0);
+    const uniquePreviewClips = Array.from(new Set(previewClipCandidates));
+    const hasSceneAssetClips = scenes.some((scene) => Array.isArray(scene?.assets?.clips) && scene.assets.clips.length > 0);
+    const useSingleSourceVideo = uniquePreviewClips.length === 1 && !hasSceneAssetClips;
+
+    if (useSingleSourceVideo && timelineEnd > 0) {
+      const id = crypto.randomUUID();
+      const sourceUrl = HelperFunctions.getClipUrl(uniquePreviewClips[0]) || uniquePreviewClips[0];
+      mediaFiles.push({
+        id,
+        fileName: 'Video-1',
+        fileId: id,
+        type: 'video',
+        startTime: 0,
+        endTime: timelineEnd,
+        src: sourceUrl,
+        positionStart: 0,
+        positionEnd: timelineEnd,
+        includeInMerge: true,
+        playbackSpeed: 1,
+        volume: 100,
+        zIndex: zIndex++,
+        timelineLayerIndex: nextLayerIndex++,
+        isPrimarySceneVideo: true,
+        x: 0,
+        y: 0,
+        width: resolution.width,
+        height: resolution.height,
+        rotation: 0,
+        opacity: 100,
+        crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
+      });
+    }
 
     scenes.forEach((scene, sceneIndex) => {
       const usedUrls = new Set<string>();
@@ -295,10 +332,9 @@ export class HelperFunctions {
       const assetClipUrls = assetClips
         .map((clip: any) => clip?.url)
         .filter((url: string | undefined): url is string => typeof url === 'string' && url.trim().length > 0);
-      const clipUrls = [
-        ...assetClipUrls,
-        previewClip
-      ]
+      const clipUrls = useSingleSourceVideo
+        ? [...assetClipUrls]
+        : [...assetClipUrls, previewClip]
       // .filter((url) => {
       //   if (!url) return false;
       //   return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
@@ -306,23 +342,22 @@ export class HelperFunctions {
 
       const sceneTimelineStart = Math.max(positionStart, globalVideoCursor);
 
-      let sceneImageSlot = 0;
       imageUrls.forEach((url, imageIndex) => {
         if (usedUrls.has(url)) return;
         usedUrls.add(url);
         const id = crypto.randomUUID();
-        const normalizedUrl = HelperFunctions.normalizeGoogleDriveUrl(url);
-        const imageDurationSeconds = 5;
-        const imagePositionStart = sceneTimelineStart + (sceneImageSlot * imageDurationSeconds);
+        const normalizedUrl = HelperFunctions.normalizeImageUrlForRender(url);
+        const imageDurationSeconds = 3; // default duration for images if not specified
+        const imagePositionStart = globalImageCursor;
         const imagePositionEnd = imagePositionStart + imageDurationSeconds;
-        sceneImageSlot += 1;
+        globalImageCursor = imagePositionEnd;
         mediaFiles.push({
           id,
           fileName: `Image-${sceneIndex + 1}-${imageIndex + 1}`,
           fileId: id,
           type: 'image',
-          startTime: sceneTimelineStart,
-          endTime: imageDurationSeconds,
+          startTime: imagePositionStart,
+          endTime: imagePositionEnd,
           src: normalizedUrl,
           positionStart: imagePositionStart,
           positionEnd: imagePositionEnd,
@@ -384,7 +419,7 @@ export class HelperFunctions {
           crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
         });
       });
-      globalVideoCursor = sceneClipCursor;
+      globalVideoCursor = useSingleSourceVideo ? sceneTimelineStart : sceneClipCursor;
     });
 
     return mediaFiles;
@@ -1476,6 +1511,30 @@ export class HelperFunctions {
       return inputUrl;
     } catch (e) {
       console.warn('Failed to normalize Google Drive URL:', inputUrl, e);
+      return inputUrl;
+    }
+  }
+
+  static normalizeImageUrlForRender(inputUrl: string): string {
+    try {
+      if (!inputUrl || typeof inputUrl !== 'string') return inputUrl;
+
+      const isS3Url = /^https:\/\/[^/]+\.s3\.[^/]+\.amazonaws\.com\//i.test(inputUrl);
+      if (isS3Url) return inputUrl;
+
+      const isDriveProxy = inputUrl.includes('/api/google-drive-media');
+      const proxyId = isDriveProxy ? (inputUrl.match(/[?&]id=([A-Za-z0-9_-]+)/)?.[1] || '') : '';
+      if (proxyId) {
+        return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(proxyId)}`;
+      }
+
+      const fileId = HelperFunctions.extractGoogleDriveFileId(inputUrl);
+      if (fileId) {
+        return `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+      }
+
+      return inputUrl;
+    } catch {
       return inputUrl;
     }
   }

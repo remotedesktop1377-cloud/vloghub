@@ -45,6 +45,7 @@ import { getDirectionSx, isRTLLanguage } from '@/utils/languageUtils';
 import { API_ENDPOINTS } from '@/config/apiEndpoints';
 import GammaService from '@/services/gammaService';
 import PdfService from '@/services/pdfService';
+import { processService } from '@/services/processService';
 import { SceneData } from '@/types/sceneData';
 import SceneDataSection from '@/components/TrendingTopicsComponent/SceneSection';
 import ThumbnailCreationService from '@/services/thumbnailCreationService';
@@ -572,29 +573,31 @@ const ScriptProductionClient = () => {
             // console.log('PDF pages:', totalPages, 'Rendered images:', mapped || []);
             setScenesData(mapped || [] as SceneData[]);
 
-            // Upload Gamma preview images to each scene folder using media upload API
+            // Upload Gamma preview images to AWS/Remotion and rewrite scene image links
             if (mapped && mapped.length > 0) {
-                for (let i = 0; i < mapped.length; i++) {
-                    const ch: SceneData = mapped[i];
-                    if (!ch?.gammaPreviewImage) continue;
-                    try {
-                        let jobName = jobId;
-                        if (!jobId) {
-                            jobName = SecureStorageHelpers.getScriptMetadata()?.jobId;
-                        } else if (!jobName) {
-                            jobName = SecureStorageHelpers.getApprovedScript()?.jobName;
-                        }
-                        const uploadResult = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(jobName, ch.id ?? i + 1, ch.gammaPreviewImage);
-                        if (uploadResult.success) {
-                            ch.gammaPreviewImage = uploadResult.result.webViewLink;
-                            // update scene data with the updated scene data
-                            setScenesData((prev: SceneData[]) => prev.map((s: SceneData) => s.id === ch.id ? ch : s));
-                            await GoogleDriveServiceFunctions.persistSceneUpdate(jobName, ch, 'Preview image uploaded');
-                        }
-                    } catch { }
+                let effectiveJobId = jobId;
+                if (!effectiveJobId) {
+                    effectiveJobId = scriptData?.jobId || SecureStorageHelpers.getScriptMetadata()?.jobId || SecureStorageHelpers.getApprovedScript()?.jobName || '';
                 }
 
-                SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
+                if (effectiveJobId) {
+                    try {
+                        const awsScenes = await processService.uploadSceneImagesToAws({
+                            jobId: effectiveJobId,
+                            scenes: mapped as SceneData[]
+                        });
+
+                        setScenesData(awsScenes);
+                        const updatedScriptData = { ...scriptData, scenesData: awsScenes as SceneData[] } as ScriptData;
+                        setScriptData(updatedScriptData);
+                        SecureStorageHelpers.setScriptMetadata(updatedScriptData);
+                    } catch (error) {
+                        console.log('Failed to upload Gamma preview images to AWS:', error);
+                        SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
+                    }
+                } else {
+                    SecureStorageHelpers.setScriptMetadata({ ...scriptData, scenesData: mapped || [] as SceneData[] });
+                }
             }
 
             setIsGammaProcessing(false);

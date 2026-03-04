@@ -204,4 +204,23 @@ export const processService = {
         }
         return [];
     },
+
+    async uploadSceneImagesToAws(payload: { jobId: string; scenes: SceneData[] }): Promise<SceneData[]> {
+        const response = await fetch(API_ENDPOINTS.LAMBDA_UPLOAD_SCENE_IMAGES, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jobId: payload.jobId,
+                scenes: payload.scenes || [],
+            })
+        });
+
+        if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message || 'Failed to upload scene images to AWS');
+        }
+
+        const data = await response.json();
+        return Array.isArray(data?.scenes) ? data.scenes : payload.scenes;
+    },
 };

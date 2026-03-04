@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
   LAMBDA_RENDER_PROGRESS: '/api/lambda/render-progress',
   LAMBDA_GET_FUNCTIONS: '/api/lambda/get-functions',
   LAMBDA_QUOTAS: '/api/lambda/quotas',
+  LAMBDA_UPLOAD_SCENE_IMAGES: '/api/lambda/upload-scene-images',
 } as const;
 
 export type ApiEndpoint = typeof API_ENDPOINTS[keyof typeof API_ENDPOINTS]; 

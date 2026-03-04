@@ -119,28 +119,14 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                         return scene;
                     }
 
-                    let driveBackgroundUrl = generatedBackground;
-                    if (generatedBackground.startsWith('data:')) {
-                        const uploaded = await GoogleDriveServiceFunctions.uploadPreviewDataUrl(
-                            jobId,
-                            scene.id || '',
-                            generatedBackground
-                        );
-                        const uploadedUrl =
-                            uploaded?.result?.webViewLink ||
-                            uploaded?.result?.result?.webViewLink ||
-                            uploaded?.result?.webContentLink ||
-                            uploaded?.result?.result?.webContentLink ||
-                            '';
-                        if (uploaded?.success && uploadedUrl) {
-                            driveBackgroundUrl = uploadedUrl;
-                        }
-                    }
+                    const driveBackgroundUrl = generatedBackground;
 
                     const existingImages = Array.isArray(scene?.assets?.images) ? scene.assets?.images || [] : [];
 
                     return {
                         ...scene,
+                        gammaPreviewImage: driveBackgroundUrl,
+                        previewImage: driveBackgroundUrl,
                         generatedBackgroundUrl: driveBackgroundUrl,
                         backgroundPrompt: match?.enhancedPrompt || '',
                         aiAssets: {
@@ -154,7 +140,11 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
                     };
                 })
             );
-            updatedScenes.scenes = scenesWithGeneratedImages;
+            const awsScenes = await processService.uploadSceneImagesToAws({
+                jobId,
+                scenes: scenesWithGeneratedImages,
+            });
+            updatedScenes.scenes = awsScenes;
 
             setProgress(100);
             setCurrentStep('completed');

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,7 +46,6 @@ export async function POST(request: NextRequest) {
 
     const awsConfig = getAwsConfig();
     const s3Client = new S3Client(awsConfig);
-    const lambdaClient = new LambdaClient(awsConfig);
     const region = awsConfig.region;
     const bucketName = process.env.AWS_S3_BUCKET || 'remotionlambda-useast1-o5o2xdg7ne';
 
@@ -85,54 +82,9 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    const videoUrl = `s3://${bucketName}/${videoKey}`;
+    const sourceVideoHttpUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${videoKey}`;
 
-    const lambdaFunctionName = process.env.FFMPEG_LAMBDA_FUNCTION_NAME || 'ffmpeg-clip-cutter';
-
-    const payload = {
-      videoUrl,
-      scenes,
-      jobId,
-      fps,
-      bucketName,
-      region,
-    };
-
-    const invokeResponse = await lambdaClient.send(
-      new InvokeCommand({
-        FunctionName: lambdaFunctionName,
-        InvocationType: 'RequestResponse',
-        Payload: JSON.stringify(payload),
-      })
-    );
-
-    if (invokeResponse.FunctionError) {
-      const errorMessage = invokeResponse.Payload
-        ? new TextDecoder().decode(invokeResponse.Payload)
-        : 'Lambda function error';
-      return NextResponse.json(
-        { error: `Lambda error: ${errorMessage}` },
-        { status: 500 }
-      );
-    }
-
-    const payloadString = invokeResponse.Payload
-      ? new TextDecoder().decode(invokeResponse.Payload)
-      : '{}';
-    
-    let result: { scenes?: any[]; clipUrls?: string[]; error?: string } = {};
-    try {
-      const parsed = JSON.parse(payloadString);
-      result = parsed.body ? JSON.parse(parsed.body) : parsed;
-    } catch {
-      result = { error: 'Failed to parse Lambda response' };
-    }
-
-    if (result.error) {
-      return NextResponse.json({ error: result.error }, { status: 500 });
-    }
-
-    const processedScenes = result.scenes || scenes.map((scene, i) => {
+    const processedScenes = scenes.map((scene, i) => {
       const startTime = Number(scene.startTime || 0);
       const endTime = Number(scene.endTime || 0);
       const durationInSeconds = Math.max(0, endTime - startTime);
@@ -146,12 +98,13 @@ export async function POST(request: NextRequest) {
         startFrame: Math.max(0, Math.floor(startTime * fps)),
         endFrame: Math.max(0, Math.floor(endTime * fps)),
         durationInFrames: Math.max(1, Math.floor(durationInSeconds * fps)),
-        previewClip: result.clipUrls?.[i] || null,
+        previewClip: sourceVideoHttpUrl,
       };
     });
 
     return NextResponse.json({
       scenes: processedScenes,
+      sourceVideoUrl: sourceVideoHttpUrl,
     });
   } catch (error: any) {
     console.error('Error in cut-clips Lambda route:', error);

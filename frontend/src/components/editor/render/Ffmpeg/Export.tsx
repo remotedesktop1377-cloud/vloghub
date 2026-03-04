@@ -10,7 +10,7 @@ import AlertDialog from '../../../../dialogs/AlertDialog';
 import styles from './LambdaRender.module.css';
 
 export default function ExportList() {
-    const useLambda = process.env.NEXT_PUBLIC_USE_LAMBDA_FOR_RENDER === 'true';
+    const useLambda = process.env.NEXT_PUBLIC_USE_LAMBDA_FOR_RENDER;
     const projectState = useAppSelector((state) => state.projectState);
     const { mediaFiles, textElements, resolution, fps, duration, exportSettings } = projectState;
     const dispatch = useAppDispatch();
