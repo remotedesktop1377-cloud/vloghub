@@ -1,5 +1,6 @@
 import React from 'react';
 import { registerRoot, Composition, Sequence, AbsoluteFill, OffthreadVideo, Video, Audio, Img, getRemotionEnvironment } from 'remotion';
+import { ChromaKeyVideo } from './components/editor/player/remotion/sequence/items/ChromaKeyVideo';
 
 type MediaType = 'video' | 'audio' | 'image' | 'unknown';
 
@@ -102,7 +103,9 @@ const LambdaComposition: React.FC<LambdaCompositionProps> = ({
         if (item.type === 'video') {
           const trimFromFrames = Math.max(0, Math.floor(trimFrom * fps));
           const trimToFrames = trimTo > 0 ? Math.floor(trimTo * fps) + REMOTION_SAFE_FRAME : undefined;
-          
+          const chromaConfig = (item as any).chromaKeyConfig;
+          const useChromaKey = chromaConfig?.enabled !== false && chromaConfig;
+
           return (
             <Sequence
               key={item.id}
@@ -120,17 +123,30 @@ const LambdaComposition: React.FC<LambdaCompositionProps> = ({
                   zIndex: item.zIndex ?? 0,
                 }}
               >
-                <VideoComponent
-                  startFrom={trimFromFrames}
-                  endAt={trimToFrames}
-                  playbackRate={playbackRate}
-                  src={item.src}
-                  volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
-                  style={{
-                    width: safeWidth ?? '100%',
-                    height: safeHeight ?? 'auto',
-                  }}
-                />
+                {useChromaKey ? (
+                  <ChromaKeyVideo
+                    src={item.src}
+                    width={safeWidth}
+                    height={safeHeight}
+                    config={chromaConfig}
+                    trimFromFrames={trimFromFrames}
+                    trimToFrames={trimToFrames}
+                    playbackRate={playbackRate}
+                    volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
+                  />
+                ) : (
+                  <VideoComponent
+                    startFrom={trimFromFrames}
+                    endAt={trimToFrames}
+                    playbackRate={playbackRate}
+                    src={item.src}
+                    volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
+                    style={{
+                      width: safeWidth ?? '100%',
+                      height: safeHeight ?? 'auto',
+                    }}
+                  />
+                )}
               </AbsoluteFill>
             </Sequence>
           );

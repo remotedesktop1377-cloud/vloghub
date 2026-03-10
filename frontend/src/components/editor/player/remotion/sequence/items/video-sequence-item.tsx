@@ -22,6 +22,8 @@ const calculateFrames = (
     return { from, durationInFrames };
 };
 
+import { ChromaKeyVideo } from "./ChromaKeyVideo";
+
 interface VideoSequenceItemProps {
     item: MediaFile;
     options: SequenceItemOptions;
@@ -109,22 +111,35 @@ const VideoSequenceItemComponent: React.FC<VideoSequenceItemProps> = ({ item, op
                         pointerEvents: "none",
                     }}
                 >
-                    <VideoComponent
-                        startFrom={frameCalculations.trimFromFrames}  
-                        endAt={frameCalculations.trimToFrames}
-                        playbackRate={playbackRate}
-                        src={src}
-                        pauseWhenBuffering
-                        volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
-                        style={{
-                            pointerEvents: "none",
-                            top: 0,
-                            left: 0,
-                            width: safeWidth ?? "100%",
-                            height: safeHeight ?? "auto",
-                            position: "absolute"
-                        }}
-                    />
+                    {item.chromaKeyConfig?.enabled !== false && item.chromaKeyConfig ? (
+                        <ChromaKeyVideo
+                            src={src}
+                            width={safeWidth ?? undefined}
+                            height={safeHeight ?? undefined}
+                            config={item.chromaKeyConfig}
+                            trimFromFrames={frameCalculations.trimFromFrames}
+                            trimToFrames={frameCalculations.trimToFrames}
+                            playbackRate={playbackRate}
+                            volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
+                        />
+                    ) : (
+                        <VideoComponent
+                            startFrom={frameCalculations.trimFromFrames}
+                            endAt={frameCalculations.trimToFrames}
+                            playbackRate={playbackRate}
+                            src={src}
+                            pauseWhenBuffering
+                            volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
+                            style={{
+                                pointerEvents: "none",
+                                top: 0,
+                                left: 0,
+                                width: safeWidth ?? "100%",
+                                height: safeHeight ?? "auto",
+                                position: "absolute"
+                            }}
+                        />
+                    )}
                 </div>
             </AbsoluteFill>
         </Sequence>
@@ -148,6 +163,9 @@ export const VideoSequenceItem = memo(VideoSequenceItemComponent, (prevProps, ne
     const prev = prevProps.item;
     const next = nextProps.item;
     
+    const chromaEqual =
+        JSON.stringify(prev.chromaKeyConfig) === JSON.stringify(next.chromaKeyConfig);
+
     return (
         prev.id === next.id &&
         prev.src === next.src &&
@@ -164,6 +182,7 @@ export const VideoSequenceItem = memo(VideoSequenceItemComponent, (prevProps, ne
         prev.zIndex === next.zIndex &&
         floatEquals(prev.playbackSpeed, next.playbackSpeed) &&
         floatEquals(prev.volume, next.volume) &&
+        chromaEqual &&
         prevProps.options.fps === nextProps.options.fps
     );
 });

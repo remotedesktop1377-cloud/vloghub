@@ -3,6 +3,8 @@ import Replicate from 'replicate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
+export const maxRequestBodySize = '500mb';
 
 const MODEL_VERSION = 'arielreplicate/robust_video_matting:2d2de06a76a837a4ba92b6164bf8bfd3ddb524a1fb64b0d8ae055af17fa22503';
 
@@ -37,17 +39,23 @@ export async function POST(request: NextRequest) {
 
         const formData = await request.formData();
         const file = formData.get('file') as File | null;
-        if (!file) {
+        if (!file || !(file instanceof Blob)) {
             return NextResponse.json({ error: 'file is required' }, { status: 400 });
         }
 
         const outputType = String(formData.get('outputType') || 'green-screen').trim() || 'green-screen';
         const jobId = String(formData.get('jobId') || '').trim();
 
+        const arrayBuffer = await file.arrayBuffer();
+        const inputBuffer = Buffer.from(arrayBuffer);
+        if (inputBuffer.length === 0) {
+            return NextResponse.json({ error: 'Uploaded file is empty' }, { status: 400 });
+        }
+
         const replicate = new Replicate({ auth: token });
         const output = await replicate.run(MODEL_VERSION, {
             input: {
-                input_video: file,
+                input_video: inputBuffer,
                 output_type: outputType,
             }
         });

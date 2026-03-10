@@ -8,6 +8,13 @@ const DEFAULT_FPS = 30;
 
 export const processService = {
     audioFfmpeg: null as FFmpeg | null,
+    async safeDeleteFile(ffmpeg: FFmpeg, fileName: string) {
+        try {
+            await ffmpeg.deleteFile(fileName);
+        } catch {
+            // Ignore cleanup errors for best-effort MEMFS management
+        }
+    },
 
     async compressVideo(
         file: File,
@@ -20,36 +27,42 @@ export const processService = {
         const extFromName = file.name.split('.').pop();
         const extFromType = file.type.split('/')[1];
         const ext = extFromName || extFromType || 'mp4';
-        const inputName = `uploaded_video_${jobId}.${ext}`;
-        const outputName = `compressed_video_${jobId}.mp4`;
+        const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const inputName = `uploaded_video_${jobId}_${uniqueSuffix}.${ext}`;
+        const outputName = `compressed_video_${jobId}_${uniqueSuffix}.mp4`;
         const crf = Number.isFinite(options?.crf) ? options!.crf! : 28;
         const preset = options?.preset || 'veryfast';
         const maxWidth = Number.isFinite(options?.maxWidth) ? options!.maxWidth! : 1280;
 
         await ffmpeg.writeFile(inputName, await fetchFile(file));
-        const scaleFilter = `scale='min(${maxWidth},iw)':-2`;
-        await ffmpeg.exec([
-            '-i', inputName,
-            '-vf', scaleFilter,
-            '-c:v', 'libx264',
-            '-preset', preset,
-            '-crf', String(crf),
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            outputName
-        ]);
+        try {
+            const scaleFilter = `scale='min(${maxWidth},iw)':-2`;
+            await ffmpeg.exec([
+                '-i', inputName,
+                '-vf', scaleFilter,
+                '-c:v', 'libx264',
+                '-preset', preset,
+                '-crf', String(crf),
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                outputName
+            ]);
 
-        const data = await ffmpeg.readFile(outputName);
-        const blob = new Blob([data as any], { type: 'video/mp4' });
-        const compressedFile = new File([blob], outputName, { type: 'video/mp4' });
-        // const compressedSizeMB = compressedFile.size / (1024 * 1024);
-        // const compressionRatio = file.size > 0 ? ((1 - compressedFile.size / file.size) * 100) : 0;
-        // console.log(`Compression completed: ${(compressedSizeMB || 0).toFixed(2)} MB`, {
-        //     name: compressedFile.name,
-        //     type: compressedFile.type,
-        //     reductionPercent: Number(compressionRatio.toFixed(1))
-        // });
-        return compressedFile;
+            const data = await ffmpeg.readFile(outputName);
+            const blob = new Blob([data as any], { type: 'video/mp4' });
+            const compressedFile = new File([blob], outputName, { type: 'video/mp4' });
+            // const compressedSizeMB = compressedFile.size / (1024 * 1024);
+            // const compressionRatio = file.size > 0 ? ((1 - compressedFile.size / file.size) * 100) : 0;
+            // console.log(`Compression completed: ${(compressedSizeMB || 0).toFixed(2)} MB`, {
+            //     name: compressedFile.name,
+            //     type: compressedFile.type,
+            //     reductionPercent: Number(compressionRatio.toFixed(1))
+            // });
+            return compressedFile;
+        } finally {
+            await processService.safeDeleteFile(ffmpeg, inputName);
+            await processService.safeDeleteFile(ffmpeg, outputName);
+        }
     },
 
     async getAudioFfmpeg(): Promise<FFmpeg> {
@@ -86,6 +99,8 @@ export const processService = {
             body: formData,
         });
 
+        const contentTypeHeader = response.headers.get('content-type') || '';
+
         if (!response.ok) {
             let message = 'Video background removal failed';
             try {
@@ -98,8 +113,16 @@ export const processService = {
             throw new Error(message);
         }
 
+        if (contentTypeHeader.includes('application/json')) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(String(data?.error || 'Server returned JSON instead of video'));
+        }
+
         const blob = await response.blob();
-        const contentType = response.headers.get('content-type') || blob.type || 'video/mp4';
+        if (blob.size === 0) {
+            throw new Error('Background removal returned empty video');
+        }
+        const contentType = contentTypeHeader || blob.type || 'video/mp4';
         const isWebm = contentType.includes('webm');
         const outputName = `bg_removed_${jobId}.${isWebm ? 'webm' : 'mp4'}`;
         return new File([blob], outputName, { type: contentType });
@@ -110,22 +133,102 @@ export const processService = {
         const extFromName = file.name.split('.').pop();
         const extFromType = file.type.split('/')[1];
         const ext = extFromName || extFromType || 'mp4';
-        const inputName = `input-${Date.now()}.${ext}`;
-        const outputName = outputFileName || `audio-${Date.now()}.mp3`;
+        const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const inputName = `input-${uniqueSuffix}.${ext}`;
+        const mp3OutputName = outputFileName || `audio-${uniqueSuffix}.mp3`;
+        const wavOutputName = `audio-${uniqueSuffix}.wav`;
 
         await ffmpeg.writeFile(inputName, await fetchFile(file));
-        await ffmpeg.exec([
-            '-i', inputName,
-            '-vn',
-            '-acodec', 'libmp3lame',
-            '-b:a', '64k',
-            '-ar', '22050',
-            outputName
-        ]);
 
-        const data = await ffmpeg.readFile(outputName);
-        const blob = new Blob([data as any], { type: 'audio/mpeg' });
-        return new File([blob], outputName, { type: 'audio/mpeg' });
+        try {
+            try {
+                await ffmpeg.exec([
+                    '-i', inputName,
+                    '-vn',
+                    '-acodec', 'libmp3lame',
+                    '-b:a', '64k',
+                    '-ar', '22050',
+                    mp3OutputName
+                ]);
+
+                const mp3Data = await ffmpeg.readFile(mp3OutputName);
+                const mp3Blob = new Blob([mp3Data as any], { type: 'audio/mpeg' });
+                if (mp3Blob.size > 0) {
+                    return new File([mp3Blob], mp3OutputName, { type: 'audio/mpeg' });
+                }
+            } catch {
+                // Fallback to WAV when mp3 encoding or output read fails
+            }
+
+            await ffmpeg.exec([
+                '-i', inputName,
+                '-vn',
+                '-ac', '1',
+                '-ar', '16000',
+                '-f', 'wav',
+                wavOutputName
+            ]);
+
+            const wavData = await ffmpeg.readFile(wavOutputName);
+            const wavBlob = new Blob([wavData as any], { type: 'audio/wav' });
+            if (wavBlob.size === 0) {
+                throw new Error('FFmpeg produced an empty audio file');
+            }
+            return new File([wavBlob], wavOutputName, { type: 'audio/wav' });
+        } finally {
+            await processService.safeDeleteFile(ffmpeg, inputName);
+            await processService.safeDeleteFile(ffmpeg, mp3OutputName);
+            await processService.safeDeleteFile(ffmpeg, wavOutputName);
+        }
+    },
+
+    async mergeVideoWithAudioTrack(
+        videoFile: File,
+        audioSourceFile: File,
+        jobId: string
+    ): Promise<File> {
+        const ffmpeg = await processService.getAudioFfmpeg();
+
+        const videoExtFromName = videoFile.name.split('.').pop();
+        const videoExtFromType = videoFile.type.split('/')[1];
+        const videoExt = videoExtFromName || videoExtFromType || 'mp4';
+
+        const audioExtFromName = audioSourceFile.name.split('.').pop();
+        const audioExtFromType = audioSourceFile.type.split('/')[1];
+        const audioExt = audioExtFromName || audioExtFromType || 'mp4';
+
+        const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const videoInputName = `video-${jobId}-${uniqueSuffix}.${videoExt}`;
+        const audioInputName = `audio-source-${jobId}-${uniqueSuffix}.${audioExt}`;
+        const outputName = `video-with-audio-${jobId}-${uniqueSuffix}.mp4`;
+
+        await ffmpeg.writeFile(videoInputName, await fetchFile(videoFile));
+        await ffmpeg.writeFile(audioInputName, await fetchFile(audioSourceFile));
+
+        try {
+            await ffmpeg.exec([
+                '-i', videoInputName,
+                '-i', audioInputName,
+                '-map', '0:v:0',
+                '-map', '1:a:0?',
+                '-c:v', 'copy',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-shortest',
+                outputName
+            ]);
+
+            const output = await ffmpeg.readFile(outputName);
+            const outputBlob = new Blob([output as any], { type: 'video/mp4' });
+            if (outputBlob.size === 0) {
+                throw new Error('Audio merge produced an empty video');
+            }
+            return new File([outputBlob], outputName, { type: 'video/mp4' });
+        } finally {
+            await processService.safeDeleteFile(ffmpeg, videoInputName);
+            await processService.safeDeleteFile(ffmpeg, audioInputName);
+            await processService.safeDeleteFile(ffmpeg, outputName);
+        }
     },
 
     async transcribeAudio(audioFile: File): Promise<string> {

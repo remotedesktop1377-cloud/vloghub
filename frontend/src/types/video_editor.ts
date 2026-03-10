@@ -41,6 +41,9 @@ export interface MediaFile {
 
     /** True for Video-X-1 (first clip per scene); shown on main video row */
     isPrimarySceneVideo?: boolean;
+
+    /** Chroma key config for green-screen narrator overlay */
+    chromaKeyConfig?: { enabled?: boolean; color?: string; similarity?: number; smoothness?: number; spill?: number };
 }
 
 export interface TextElement {
