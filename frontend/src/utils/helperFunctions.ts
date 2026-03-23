@@ -333,11 +333,16 @@ export class HelperFunctions {
       const previewClip = (scene as any)?.previewClip || '';
       const assetClips = Array.isArray(scene.assets?.clips) ? scene.assets!.clips! : [];
       const assetClipUrls = assetClips
-        .map((clip: any) => clip?.url)
-        .filter((url: string | undefined): url is string => typeof url === 'string' && url.trim().length > 0);
+        .map((clip: any) => clip?.localPath || clip?.url)
+        .filter((url: string | undefined): url is string => {
+          if (!url || typeof url !== 'string') return false;
+          const t = url.trim();
+          if (!t.length) return false;
+          return /^[A-Za-z]:[\\/]/.test(t) || t.startsWith('/') || /^https?:\/\//i.test(t);
+        });
       const clipUrls = useSingleSourceVideo
         ? [...assetClipUrls]
-        : [...assetClipUrls, previewClip]
+        : [...assetClipUrls, previewClip].filter(Boolean);
       // .filter((url) => {
       //   if (!url) return false;
       //   return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
