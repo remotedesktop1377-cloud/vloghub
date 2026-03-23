@@ -121,7 +121,14 @@
   max-width: 100%;
 }
 
+.uploadSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .uploadArea {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -157,8 +164,52 @@
   color: #718096;
 }
 
-.hiddenInput {
-  display: none;
+/* Visually hidden — display:none breaks file picker when using <label for> in Safari/WebKit */
+.visuallyHiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+}
+
+.uploadFallbackButton {
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #233044;
+  background: #0f182a;
+  color: #a0aec0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.uploadFallbackButton:hover:not(:disabled) {
+  border-color: #5c8de8;
+  color: #eef2f8;
+}
+
+.uploadFallbackButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.uploadedList {
+  margin-top: 4px;
+}
+
+.uploadedListTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a0aec0;
+  margin: 0 0 10px;
 }
 
 .selectedInfo {

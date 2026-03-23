@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useId, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setBackgroundClips, setSelectedBackgroundMedia } from "@/store/slices/projectSlice";
 import Image from "next/image";
@@ -23,9 +23,24 @@ interface MediaItem {
   type: "color" | "image" | "video";
 }
 
+function inferBackgroundFileKind(file: File): "image" | "video" {
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("video/")) return "video";
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "avif"].includes(ext)) return "image";
+  if (["mp4", "webm", "mov", "avi", "mkv", "m4v", "ogv"].includes(ext)) return "video";
+  return "video";
+}
+
+function isLocalObjectUrl(src: string | undefined): boolean {
+  return Boolean(src && (src.startsWith("blob:") || src.startsWith("data:")));
+}
+
 export default function BackgroundMediaList() {
   const dispatch = useAppDispatch();
   const { selectedBackgroundMedia, backgroundClips, currentTime, duration } = useAppSelector((state) => state.projectState);
+  const uploadInputId = useId();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<Tab>("colors");
   const [uploadedMedia, setUploadedMedia] = useState<MediaItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -132,30 +147,34 @@ export default function BackgroundMediaList() {
     toast.success(`Background clip added: ${item.name}`);
   };
 
-  const handleUpload = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []);
-      if (!files.length) return;
+  const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
-      setIsUploading(true);
-      const newItems: MediaItem[] = [];
-      files.forEach((file) => {
+    setIsUploading(true);
+    try {
+      const newItems: MediaItem[] = files.map((file) => {
         const url = URL.createObjectURL(file);
-        const type = file.type.startsWith("image/") ? "image" : "video";
-        newItems.push({
+        const type = inferBackgroundFileKind(file);
+        return {
           id: crypto.randomUUID(),
           src: url,
           name: file.name.replace(/\.[^.]+$/, ""),
           type,
-        });
+        };
       });
       setUploadedMedia((prev) => [...prev, ...newItems]);
+      const hasImage = newItems.some((i) => i.type === "image");
+      const hasVideo = newItems.some((i) => i.type === "video");
+      if (hasImage && !hasVideo) setActiveTab("images");
+      else if (hasVideo && !hasImage) setActiveTab("videos");
+      else if (hasImage) setActiveTab("images");
+      toast.success(`${files.length} file(s) added — pick one below to use as background`);
+    } finally {
       setIsUploading(false);
-      toast.success(`${files.length} file(s) added`);
       e.target.value = "";
-    },
-    []
-  );
+    }
+  }, []);
 
   return (
     <div className={styles.wrapper}>
@@ -219,20 +238,19 @@ export default function BackgroundMediaList() {
                 onClick={() => handleSelect(item)}
               >
                 <div className={styles.mediaThumb}>
-                  {/* {item?.src?.startsWith("blob:") ? (
+                  {item.src && isLocalObjectUrl(item.src) ? (
                     <img src={item.src} alt={item.name} className={styles.mediaImg} />
-                  ) : ( */}
+                  ) : item.src ? (
                     <Image
                       src={item.src}
                       alt={item.name}
                       fill
                       sizes="120px"
-                      // unoptimized={item.src.startsWith("/background/")}
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
-                  {/* )} */}
+                  ) : null}
                   {isSelected(item) && (
                     <div className={styles.tick}>
                       <Image src={checkIcon} alt="Selected" width={20} height={20} />
@@ -255,7 +273,17 @@ export default function BackgroundMediaList() {
                 onClick={() => handleSelect(item)}
               >
                 <div className={styles.mediaThumb}>
-                  <video src={HelperFunctions.normalizeGoogleDriveUrl(item.src)} autoPlay loop muted className={styles.videoThumb} />
+                  <video
+                    src={
+                      item.src && isLocalObjectUrl(item.src)
+                        ? item.src
+                        : HelperFunctions.normalizeGoogleDriveUrl(item.src ?? "")
+                    }
+                    autoPlay
+                    loop
+                    muted
+                    className={styles.videoThumb}
+                  />
                   {isSelected(item) && (
                     <div className={styles.tick}>
                       <Image src={checkIcon} alt="Selected" width={20} height={20} />
@@ -269,26 +297,67 @@ export default function BackgroundMediaList() {
         )}
 
         {activeTab === "upload" && (
-          <label
-            htmlFor="background-upload"
-            className={styles.uploadArea}
-            style={{ opacity: isUploading ? 0.6 : 1 }}
-          >
-            <input
-              id="background-upload"
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              onChange={handleUpload}
-              className={styles.hiddenInput}
+          <div className={styles.uploadSection}>
+            <label
+              htmlFor={uploadInputId}
+              className={styles.uploadArea}
+              style={{ opacity: isUploading ? 0.6 : 1 }}
+            >
+              <input
+                ref={fileInputRef}
+                id={uploadInputId}
+                type="file"
+                accept="image/*,video/*,.mp4,.webm,.mov,.m4v,.jpg,.jpeg,.png,.gif,.webp,.avif"
+                multiple
+                onChange={handleUpload}
+                className={styles.visuallyHiddenInput}
+                disabled={isUploading}
+                aria-label="Choose background image or video files"
+              />
+              <Image src={uploadIcon} alt="" width={48} height={48} className={styles.uploadIcon} />
+              <span className={styles.uploadText}>
+                {isUploading ? "Adding files…" : "Click to choose images or videos"}
+              </span>
+              <span className={styles.uploadHint}>JPG, PNG, WebP, MP4, WebM, MOV…</span>
+            </label>
+            <button
+              type="button"
+              className={styles.uploadFallbackButton}
               disabled={isUploading}
-            />
-            <Image src={uploadIcon} alt="Upload" width={48} height={48} className={styles.uploadIcon} />
-            <span className={styles.uploadText}>
-              {isUploading ? "Uploading..." : "Click to upload images or videos"}
-            </span>
-            <span className={styles.uploadHint}>Supports JPG, PNG, WebP, MP4, WebM</span>
-          </label>
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Open file picker
+            </button>
+            {uploadedMedia.length > 0 && (
+              <div className={styles.uploadedList}>
+                <p className={styles.uploadedListTitle}>Your uploads — click to use as background</p>
+                <div className={styles.grid}>
+                  {uploadedMedia.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`${styles.mediaCard} ${isSelected(item) ? styles.mediaCardSelected : ""}`}
+                      onClick={() => handleSelect(item)}
+                    >
+                      <div className={styles.mediaThumb}>
+                        {item.type === "image" && item.src ? (
+                          <img src={item.src} alt={item.name} className={styles.mediaImg} />
+                        ) : item.src ? (
+                          <video src={item.src} autoPlay loop muted className={styles.videoThumb} />
+                        ) : null}
+                        {isSelected(item) && (
+                          <div className={styles.tick}>
+                            <Image src={checkIcon} alt="Selected" width={20} height={20} />
+                          </div>
+                        )}
+                      </div>
+                      <span className={styles.mediaName}>{item.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
