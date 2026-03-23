@@ -1,6 +1,7 @@
 import React from 'react';
 import { registerRoot, Composition, Sequence, AbsoluteFill, OffthreadVideo, Video, Audio, Img, getRemotionEnvironment } from 'remotion';
 import { ChromaKeyVideo } from './components/editor/player/remotion/sequence/items/ChromaKeyVideo';
+import { getEffectiveChromaConfig, hasRenderableBackground } from './utils/chromaFallback';
 
 type MediaType = 'video' | 'audio' | 'image' | 'unknown';
 
@@ -25,6 +26,8 @@ interface MediaFile {
   rotation?: number;
   opacity?: number;
   crop?: { x: number; y: number; width: number; height: number };
+  isPrimarySceneVideo?: boolean;
+  chromaKeyConfig?: { enabled?: boolean; color?: string; similarity?: number; smoothness?: number; spill?: number };
 }
 
 interface TextElement {
@@ -51,9 +54,22 @@ interface TextElement {
   visible?: boolean;
 }
 
+interface BackgroundClip {
+  id: string;
+  type: 'color' | 'image' | 'video';
+  src?: string;
+  color?: string;
+  name?: string;
+  positionStart: number;
+  positionEnd: number;
+}
+
 interface LambdaCompositionProps {
   mediaFiles?: MediaFile[];
   textElements?: TextElement[];
+  backgroundClips?: BackgroundClip[];
+  selectedBackgroundMedia?: { type: 'color' | 'image' | 'video'; src?: string; color?: string; name?: string };
+  durationInFrames?: number;
   fps?: number;
 }
 
@@ -63,6 +79,13 @@ const getValidNumber = (value: any): number | null => {
   if (value === null || value === undefined || value === '') return null;
   const num = typeof value === 'string' ? parseFloat(value) : Number(value);
   return isNaN(num) ? null : num;
+};
+
+const sanitizeMediaSrc = (src?: string): string | undefined => {
+  if (!src) return src;
+  const hashIndex = src.indexOf('#');
+  if (hashIndex === -1) return src;
+  return src.slice(0, hashIndex);
 };
 
 const calculateFrames = (display: { from: number; to: number }, fps: number) => {
@@ -75,13 +98,87 @@ const calculateFrames = (display: { from: number; to: number }, fps: number) => 
 const LambdaComposition: React.FC<LambdaCompositionProps> = ({
   mediaFiles = [],
   textElements = [],
+  backgroundClips = [],
+  selectedBackgroundMedia,
+  durationInFrames = 300,
   fps = 30,
 }) => {
   const { isRendering } = getRemotionEnvironment();
   const VideoComponent = isRendering ? OffthreadVideo : Video;
+  const computedDurationSeconds = Math.max(0.1, durationInFrames / fps);
+  const effectiveBackgroundClips = backgroundClips.length > 0
+    ? [...backgroundClips].sort((a, b) => a.positionStart - b.positionStart)
+    : (selectedBackgroundMedia && (selectedBackgroundMedia.src || selectedBackgroundMedia.color)
+      ? [{
+        id: `legacy-bg-${selectedBackgroundMedia.src || selectedBackgroundMedia.color || 'clip'}`,
+        type: selectedBackgroundMedia.type,
+        src: selectedBackgroundMedia.src,
+        color: selectedBackgroundMedia.color,
+        name: selectedBackgroundMedia.name,
+        positionStart: 0,
+        positionEnd: computedDurationSeconds,
+      }]
+      : []);
+  const hasBackground = hasRenderableBackground(effectiveBackgroundClips, selectedBackgroundMedia);
 
   return (
     <>
+      {effectiveBackgroundClips.map((clip) => {
+        const from = Math.max(0, Math.round((clip.positionStart || 0) * fps));
+        const clipDuration = Math.max(1, Math.round(((clip.positionEnd || 0) - (clip.positionStart || 0)) * fps));
+
+        if (clip.type === 'color') {
+          return (
+            <Sequence key={clip.id} from={from} durationInFrames={clipDuration}>
+              <AbsoluteFill style={{ backgroundColor: clip.color || '#000000', zIndex: 0 }} />
+            </Sequence>
+          );
+        }
+
+        if (clip.type === 'image' && clip.src) {
+          const safeSrc = sanitizeMediaSrc(clip.src);
+          if (!safeSrc) return null;
+          return (
+            <Sequence key={clip.id} from={from} durationInFrames={clipDuration}>
+              <AbsoluteFill style={{ zIndex: 0 }}>
+                <Img
+                  src={safeSrc}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+              </AbsoluteFill>
+            </Sequence>
+          );
+        }
+
+        if (clip.type === 'video' && clip.src) {
+          const safeSrc = sanitizeMediaSrc(clip.src);
+          if (!safeSrc) return null;
+          return (
+            <Sequence key={clip.id} from={from} durationInFrames={clipDuration}>
+              <AbsoluteFill style={{ zIndex: 0 }}>
+                <VideoComponent
+                  src={safeSrc}
+                  loop
+                  muted
+                  volume={0}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+              </AbsoluteFill>
+            </Sequence>
+          );
+        }
+
+        return null;
+      })}
+
       {mediaFiles.map((item: MediaFile) => {
         if (!item || !item.src) return null;
         
@@ -103,8 +200,9 @@ const LambdaComposition: React.FC<LambdaCompositionProps> = ({
         if (item.type === 'video') {
           const trimFromFrames = Math.max(0, Math.floor(trimFrom * fps));
           const trimToFrames = trimTo > 0 ? Math.floor(trimTo * fps) + REMOTION_SAFE_FRAME : undefined;
-          const chromaConfig = (item as any).chromaKeyConfig;
-          const useChromaKey = chromaConfig?.enabled !== false && chromaConfig;
+          const effectiveChromaConfig = getEffectiveChromaConfig(item, { hasBackground });
+          const safeSrc = sanitizeMediaSrc(item.src);
+          if (!safeSrc) return null;
 
           return (
             <Sequence
@@ -123,12 +221,12 @@ const LambdaComposition: React.FC<LambdaCompositionProps> = ({
                   zIndex: item.zIndex ?? 0,
                 }}
               >
-                {useChromaKey ? (
+                {effectiveChromaConfig ? (
                   <ChromaKeyVideo
-                    src={item.src}
+                    src={safeSrc}
                     width={safeWidth}
                     height={safeHeight}
-                    config={chromaConfig}
+                    config={effectiveChromaConfig}
                     trimFromFrames={trimFromFrames}
                     trimToFrames={trimToFrames}
                     playbackRate={playbackRate}
@@ -139,7 +237,7 @@ const LambdaComposition: React.FC<LambdaCompositionProps> = ({
                     startFrom={trimFromFrames}
                     endAt={trimToFrames}
                     playbackRate={playbackRate}
-                    src={item.src}
+                    src={safeSrc}
                     volume={safeVolume !== null && safeVolume !== undefined ? safeVolume / 100 : 1}
                     style={{
                       width: safeWidth ?? '100%',
@@ -276,6 +374,7 @@ registerRoot(() => {
         height={1080}
         defaultProps={{
           mediaFiles: [],
+          backgroundClips: [],
           textElements: [],
           fps: 30,
         }}

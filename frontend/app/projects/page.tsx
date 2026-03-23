@@ -46,6 +46,7 @@ export default function Projects() {
             lastModified: new Date().toISOString(),
             mediaFiles: [],
             textElements: [],
+            backgroundClips: [],
             currentTime: 0,
             isPlaying: false,
             isMuted: false,

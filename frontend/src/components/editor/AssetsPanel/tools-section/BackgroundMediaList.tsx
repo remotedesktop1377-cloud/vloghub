@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { setSelectedBackgroundMedia } from "@/store/slices/projectSlice";
+import { setBackgroundClips, setSelectedBackgroundMedia } from "@/store/slices/projectSlice";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { defaultBackgroundImages } from "@/data/backgroundAssets";
@@ -13,22 +13,32 @@ import checkIcon from "@/assets/images/check.svg";
 import uploadIcon from "@/assets/images/media-upload.svg";
 import styles from "./BackgroundMediaList.module.css";
 
-type Tab = "images" | "videos" | "upload";
+type Tab = "colors" | "images" | "videos" | "upload";
 
 interface MediaItem {
   id: string;
-  src: string;
+  src?: string;
+  color?: string;
   name: string;
-  type: "image" | "video";
+  type: "color" | "image" | "video";
 }
 
 export default function BackgroundMediaList() {
   const dispatch = useAppDispatch();
-  const selectedBackground = useAppSelector((state) => state.projectState.selectedBackgroundMedia);
-  const [activeTab, setActiveTab] = useState<Tab>("images");
+  const { selectedBackgroundMedia, backgroundClips, currentTime, duration } = useAppSelector((state) => state.projectState);
+  const [activeTab, setActiveTab] = useState<Tab>("colors");
   const [uploadedMedia, setUploadedMedia] = useState<MediaItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [libraryVideos, setLibraryVideos] = useState<MediaItem[]>([]);
+
+  const defaultColors: MediaItem[] = [
+    { id: "color-1", type: "color", color: "#111827", name: "Midnight" },
+    { id: "color-2", type: "color", color: "#0f766e", name: "Teal" },
+    { id: "color-3", type: "color", color: "#7c3aed", name: "Violet" },
+    { id: "color-4", type: "color", color: "#1d4ed8", name: "Royal Blue" },
+    { id: "color-5", type: "color", color: "#b91c1c", name: "Crimson" },
+    { id: "color-6", type: "color", color: "#f59e0b", name: "Amber" },
+  ];
 
   useEffect(() => {
     let mounted = true;
@@ -69,20 +79,57 @@ export default function BackgroundMediaList() {
     ...uploadedMedia.filter((m) => m.type === "video"),
   ];
 
+  const selectedBackground = useCallback(() => {
+    const activeClip = backgroundClips
+      .filter((clip) => currentTime >= clip.positionStart && currentTime < clip.positionEnd)
+      .sort((a, b) => b.positionStart - a.positionStart)[0];
+
+    if (activeClip) {
+      return activeClip;
+    }
+    return selectedBackgroundMedia;
+  }, [backgroundClips, currentTime, selectedBackgroundMedia]);
+
   const isSelected = useCallback(
-    (src: string) => selectedBackground?.src === src,
-    [selectedBackground?.src]
+    (item: MediaItem) => {
+      const selected = selectedBackground();
+      if (!selected) return false;
+      if (item.type === "color") {
+        return selected.type === "color" && selected.color === item.color;
+      }
+      return selected.type === item.type && selected.src === item.src;
+    },
+    [selectedBackground]
   );
 
   const handleSelect = (item: MediaItem) => {
+    const newClipDuration = 5;
+    const clipStart = Math.max(0, currentTime);
+    const clipEnd = Math.max(clipStart + newClipDuration, duration || 0, clipStart + 0.1);
+    const clipLabel = item.name || (item.type === "color" ? item.color : item.src) || "Background";
+
+    const nextClip = {
+      id: crypto.randomUUID(),
+      type: item.type,
+      src: item.src,
+      color: item.color,
+      name: clipLabel,
+      positionStart: clipStart,
+      positionEnd: clipEnd,
+    };
+
+    const nextClips = [...backgroundClips, nextClip].sort((a, b) => a.positionStart - b.positionStart);
+    dispatch(setBackgroundClips(nextClips));
+
     dispatch(
       setSelectedBackgroundMedia({
         type: item.type,
         src: item.src,
+        color: item.color,
         name: item.name,
       })
     );
-    toast.success(`Selected: ${item.name}`);
+    toast.success(`Background clip added: ${item.name}`);
   };
 
   const handleUpload = useCallback(
@@ -114,6 +161,12 @@ export default function BackgroundMediaList() {
     <div className={styles.wrapper}>
       <div className={styles.tabs}>
         <button
+          className={`${styles.tab} ${activeTab === "colors" ? styles.tabActive : ""}`}
+          onClick={() => setActiveTab("colors")}
+        >
+          Colors
+        </button>
+        <button
           className={`${styles.tab} ${activeTab === "images" ? styles.tabActive : ""}`}
           onClick={() => setActiveTab("images")}
         >
@@ -134,13 +187,35 @@ export default function BackgroundMediaList() {
       </div>
 
       <div className={styles.content}>
+        {activeTab === "colors" && (
+          <div className={styles.grid}>
+            {defaultColors.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`${styles.mediaCard} ${isSelected(item) ? styles.mediaCardSelected : ""}`}
+                onClick={() => handleSelect(item)}
+              >
+                <div className={styles.mediaThumb} style={{ background: item.color }}>
+                  {isSelected(item) && (
+                    <div className={styles.tick}>
+                      <Image src={checkIcon} alt="Selected" width={20} height={20} />
+                    </div>
+                  )}
+                </div>
+                <span className={styles.mediaName}>{item.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {activeTab === "images" && (
           <div className={styles.grid}>
             {images.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className={`${styles.mediaCard} ${isSelected(item.src) ? styles.mediaCardSelected : ""}`}
+                className={`${styles.mediaCard} ${isSelected(item) ? styles.mediaCardSelected : ""}`}
                 onClick={() => handleSelect(item)}
               >
                 <div className={styles.mediaThumb}>
@@ -158,7 +233,7 @@ export default function BackgroundMediaList() {
                       }}
                     />
                   {/* )} */}
-                  {isSelected(item.src) && (
+                  {isSelected(item) && (
                     <div className={styles.tick}>
                       <Image src={checkIcon} alt="Selected" width={20} height={20} />
                     </div>
@@ -176,12 +251,12 @@ export default function BackgroundMediaList() {
               <button
                 key={item.id}
                 type="button"
-                className={`${styles.mediaCard} ${isSelected(item.src) ? styles.mediaCardSelected : ""}`}
+                className={`${styles.mediaCard} ${isSelected(item) ? styles.mediaCardSelected : ""}`}
                 onClick={() => handleSelect(item)}
               >
                 <div className={styles.mediaThumb}>
                   <video src={HelperFunctions.normalizeGoogleDriveUrl(item.src)} autoPlay loop muted className={styles.videoThumb} />
-                  {isSelected(item.src) && (
+                  {isSelected(item) && (
                     <div className={styles.tick}>
                       <Image src={checkIcon} alt="Selected" width={20} height={20} />
                     </div>
@@ -217,9 +292,9 @@ export default function BackgroundMediaList() {
         )}
       </div>
 
-      {selectedBackground && (
+      {selectedBackground() && (
         <div className={styles.selectedInfo}>
-          Selected: <strong>{selectedBackground.name || selectedBackground.src}</strong>
+          Selected: <strong>{selectedBackground()?.name || selectedBackground()?.src || selectedBackground()?.color}</strong>
         </div>
       )}
     </div>

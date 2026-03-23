@@ -41,9 +41,10 @@ export const ChromaKeyVideo: React.FC<ChromaKeyVideoProps> = ({
   const h = typeof height === "number" ? Math.min(height, configHeight) : configHeight;
 
   const keyColor = hexToRgb(config.color || "#00FF00");
-  const similarity = Math.max(0.01, Math.min(1, config.similarity ?? 0.35));
-  const smoothness = Math.max(0, Math.min(0.5, config.smoothness ?? 0.1));
-  const spill = Math.max(0, Math.min(1, config.spill ?? 0.2));
+  // Use stronger defaults/floors for green-screen clips to avoid residual green wash in preview.
+  const similarity = Math.max(0.45, Math.min(1, config.similarity ?? 0.55));
+  const smoothness = Math.max(0.03, Math.min(0.5, config.smoothness ?? 0.1));
+  const spill = Math.max(0, Math.min(1, config.spill ?? 0.08));
 
   const onVideoFrame = useCallback(
     (frame: CanvasImageSource) => {
@@ -69,20 +70,28 @@ export const ChromaKeyVideo: React.FC<ChromaKeyVideoProps> = ({
         const dg = g - k1;
         const db = b - k2;
         const dist = Math.sqrt(dr * dr + dg * dg + db * db) / Math.sqrt(3);
+        const greenDominance = g - Math.max(r, b);
 
         let alpha = 1;
-        if (dist < similarity) {
-          alpha = 0;
-        } else if (smoothness > 0 && dist < similarity + smoothness) {
-          alpha = (dist - similarity) / smoothness;
+        const withinKeyDistance = dist < similarity + smoothness;
+        const stronglyGreen = greenDominance > 0.05;
+
+        if (withinKeyDistance && stronglyGreen) {
+          if (dist <= similarity) {
+            alpha = 0;
+          } else {
+            alpha = (dist - similarity) / smoothness;
+          }
         }
 
         data[i + 3] = Math.round(alpha * 255);
 
         if (alpha > 0 && alpha < 1 && spill > 0) {
-          data[i] = Math.round(255 * Math.max(0, r - (1 - alpha) * spill * k0));
-          data[i + 1] = Math.round(255 * Math.max(0, g - (1 - alpha) * spill * k1));
-          data[i + 2] = Math.round(255 * Math.max(0, b - (1 - alpha) * spill * k2));
+          // Despill only the green channel near keyed edges to reduce neon halo/flicker.
+          const despilledGreen = Math.max(Math.max(r, b), g - (1 - alpha) * spill);
+          data[i] = Math.round(255 * r);
+          data[i + 1] = Math.round(255 * despilledGreen);
+          data[i + 2] = Math.round(255 * b);
         }
       }
       ctx.putImageData(imageData, 0, 0);

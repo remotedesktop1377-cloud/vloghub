@@ -12,6 +12,7 @@ import styles from "./FfmpegRender.module.css";
 import saveIcon from "@/assets/images/save.svg";
 import { setAutoRenderRequested, setAutoRenderProjectId, setQuality, setResolution, setSpeed } from "../../../../store/slices/projectSlice";
 import { cleanupService } from "@/services/cleanupService";
+import { getEffectiveChromaConfig, getFfmpegChromaParams, hasRenderableBackground } from "../../../../utils/chromaFallback";
 
 interface FileUploaderProps {
     loadFunction: () => Promise<void>;
@@ -21,7 +22,7 @@ interface FileUploaderProps {
 }
 
 export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMessages }: FileUploaderProps) {
-    const { id, mediaFiles, projectName, exportSettings, duration, textElements, autoRenderRequested, autoRenderProjectId } = useAppSelector(state => state.projectState);
+    const { id, mediaFiles, backgroundClips, selectedBackgroundMedia, projectName, exportSettings, duration, textElements, autoRenderRequested, autoRenderProjectId } = useAppSelector(state => state.projectState);
     const totalDuration = duration;
     const videoRef = useRef<HTMLVideoElement>(null);
     const [loaded, setLoaded] = useState(false);
@@ -39,7 +40,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
 
     useEffect(() => {
         const shouldAutoRender = autoRenderRequested && autoRenderProjectId === id;
-        const hasContent = mediaFiles.length > 0 || textElements.length > 0;
+        const hasContent = mediaFiles.length > 0 || textElements.length > 0 || backgroundClips.length > 0;
 
         if (!autoRenderTriggered && shouldAutoRender && loadFfmpeg && !isRendering && hasContent) {
             dispatch(setResolution("480p"));
@@ -50,7 +51,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
             setAutoRenderTriggered(true);
             render();
         }
-    }, [autoRenderProjectId, autoRenderRequested, autoRenderTriggered, dispatch, id, isRendering, loadFfmpeg, mediaFiles.length, textElements.length]);
+    }, [autoRenderProjectId, autoRenderRequested, autoRenderTriggered, dispatch, id, isRendering, loadFfmpeg, mediaFiles.length, textElements.length, backgroundClips.length]);
 
     const handleCloseModal = async () => {
         setShowModal(false);
@@ -65,7 +66,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
     };
 
     const render = async () => {
-        if (mediaFiles.length === 0 && textElements.length === 0) {
+        if (mediaFiles.length === 0 && textElements.length === 0 && backgroundClips.length === 0) {
             console.log('No media files to render');
             return;
         }
@@ -74,83 +75,156 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
 
         const renderFunction = async () => {
             const params = extractConfigs(exportSettings);
+            const effectiveBackgroundClips = backgroundClips.length > 0
+                ? [...backgroundClips].sort((a, b) => a.positionStart - b.positionStart)
+                : (selectedBackgroundMedia && (selectedBackgroundMedia.src || selectedBackgroundMedia.color)
+                    ? [{
+                        id: `legacy-bg-${selectedBackgroundMedia.src || selectedBackgroundMedia.color || "clip"}`,
+                        type: selectedBackgroundMedia.type,
+                        src: selectedBackgroundMedia.src,
+                        color: selectedBackgroundMedia.color,
+                        name: selectedBackgroundMedia.name,
+                        positionStart: 0,
+                        positionEnd: Math.max(0.1, totalDuration),
+                    }]
+                    : []);
+            const hasBackground = hasRenderableBackground(effectiveBackgroundClips, selectedBackgroundMedia);
 
             try {
-                const filters = [];
-                const overlays = [];
-                const inputs = [];
-                const audioDelays = [];
+                const filters: string[] = [];
+                const overlays: Array<{ label: string; x: number; y: number; start: string; end: string; }> = [];
+                const inputs: string[] = [];
+                const audioDelays: string[] = [];
+                let inputIndex = 0;
 
                 filters.push(`color=c=black:size=1920x1080:d=${totalDuration.toFixed(3)}[base]`);
                 const sortedMediaFiles = [...mediaFiles].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
-                for (let i = 0; i < sortedMediaFiles.length; i++) {
-
-                    const { startTime, positionStart, positionEnd } = sortedMediaFiles[i];
-                    const duration = positionEnd - positionStart;
-
-                    const fileData = await getFile(sortedMediaFiles[i].fileId);
+                const writeSourceInput = async (
+                    idPrefix: string,
+                    source: { fileId?: string; src?: string; fileName?: string; id?: string; },
+                    idx: number
+                ): Promise<string> => {
+                    const fileData = source.fileId ? await getFile(source.fileId) : null;
                     let buffer: ArrayBuffer | null = null;
                     let ext = '';
                     if (fileData) {
                         buffer = await fileData.arrayBuffer();
                         ext = mimeToExt[fileData.type as keyof typeof mimeToExt] || fileData.type.split('/')[1];
-                    } else if (sortedMediaFiles[i].src) {
-                        const src = sortedMediaFiles[i].src;
-                        const response = await fetch(src!);
+                    } else if (source.src) {
+                        const response = await fetch(source.src);
                         if (!response.ok) {
-                            throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
+                            throw new Error(`Missing media file for ${source.fileName || source.id || idx}`);
                         }
                         const blob = await response.blob();
                         buffer = await blob.arrayBuffer();
                         const blobType = blob.type || '';
                         ext = mimeToExt[blobType as keyof typeof mimeToExt] || blobType.split('/')[1] || '';
                         if (!ext) {
-                            const pathName = new URL(src!, window.location.origin).pathname;
+                            const pathName = new URL(source.src, window.location.origin).pathname;
                             const extMatch = pathName.split('.').pop();
                             ext = extMatch ? extMatch.toLowerCase() : '';
                         }
                     } else {
-                        throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
+                        throw new Error(`Missing media file for ${source.fileName || source.id || idx}`);
                     }
                     if (!buffer || !ext) {
-                        throw new Error(`Missing media file for ${sortedMediaFiles[i].fileName || sortedMediaFiles[i].id}`);
+                        throw new Error(`Missing media file for ${source.fileName || source.id || idx}`);
                     }
-                    await ffmpeg.writeFile(`input${i}.${ext}`, new Uint8Array(buffer));
+                    const inputName = `${idPrefix}${idx}.${ext}`;
+                    await ffmpeg.writeFile(inputName, new Uint8Array(buffer));
+                    return inputName;
+                };
+
+                for (let i = 0; i < effectiveBackgroundClips.length; i++) {
+                    const clip = effectiveBackgroundClips[i];
+                    const clipDuration = Math.max(0.1, clip.positionEnd - clip.positionStart);
+                    const visualLabel = `bgVisual${i}`;
+
+                    if (clip.type === 'color') {
+                        const safeColor = (clip.color || '#000000').replace('#', '0x');
+                        filters.push(
+                            `color=c=${safeColor}:size=1920x1080:d=${clipDuration.toFixed(3)},format=yuva420p,setpts=PTS+${clip.positionStart.toFixed(3)}/TB[${visualLabel}]`
+                        );
+                    } else if ((clip.type === 'image' || clip.type === 'video') && clip.src) {
+                        const inputName = await writeSourceInput('bgInput', { src: clip.src, fileName: clip.name, id: clip.id }, i);
+                        const thisInput = inputIndex++;
+                        if (clip.type === 'image') {
+                            inputs.push('-loop', '1', '-t', clipDuration.toFixed(3), '-i', inputName);
+                        } else {
+                            inputs.push('-stream_loop', '-1', '-i', inputName);
+                        }
+                        filters.push(
+                            `[${thisInput}:v]trim=start=0:duration=${clipDuration.toFixed(3)},scale=1920:1080,setpts=PTS-STARTPTS+${clip.positionStart.toFixed(3)}/TB[${visualLabel}]`
+                        );
+                    } else {
+                        continue;
+                    }
+
+                    overlays.push({
+                        label: visualLabel,
+                        x: 0,
+                        y: 0,
+                        start: clip.positionStart.toFixed(3),
+                        end: clip.positionEnd.toFixed(3),
+                    });
+                }
+
+                for (let i = 0; i < sortedMediaFiles.length; i++) {
+
+                    const { startTime, positionStart, positionEnd } = sortedMediaFiles[i];
+                    const duration = positionEnd - positionStart;
+                    const inputName = await writeSourceInput('input', sortedMediaFiles[i], i);
+                    const thisInput = inputIndex++;
 
                     if (sortedMediaFiles[i].type === 'image') {
-                        inputs.push('-loop', '1', '-t', duration.toFixed(3), '-i', `input${i}.${ext}`);
+                        inputs.push('-loop', '1', '-t', duration.toFixed(3), '-i', inputName);
                     }
                     else {
-                        inputs.push('-i', `input${i}.${ext}`);
+                        inputs.push('-i', inputName);
                     }
 
                     const visualLabel = `visual${i}`;
                     const audioLabel = `audio${i}`;
+                    const mediaWidth = sortedMediaFiles[i].width ?? 1920;
+                    const mediaHeight = sortedMediaFiles[i].height ?? 1080;
+
+                    let isChromaKeyed = false;
 
                     if (sortedMediaFiles[i].type === 'video') {
-                        filters.push(
-                            `[${i}:v]trim=start=${startTime.toFixed(3)}:duration=${duration.toFixed(3)},scale=${sortedMediaFiles[i].width}:${sortedMediaFiles[i].height},setpts=PTS-STARTPTS+${positionStart.toFixed(3)}/TB[${visualLabel}]`
-                        );
+                        const effectiveChromaConfig = getEffectiveChromaConfig(sortedMediaFiles[i], { hasBackground });
+                        if (effectiveChromaConfig) {
+                            isChromaKeyed = true;
+                            const { colorHex, similarity, blend } = getFfmpegChromaParams(effectiveChromaConfig);
+                            filters.push(
+                                `[${thisInput}:v]trim=start=${startTime.toFixed(3)}:duration=${duration.toFixed(3)},scale=${mediaWidth}:${mediaHeight},setpts=PTS-STARTPTS+${positionStart.toFixed(3)}/TB,chromakey=${colorHex}:${similarity}:${blend}[${visualLabel}]`
+                            );
+                        } else {
+                            filters.push(
+                                `[${thisInput}:v]trim=start=${startTime.toFixed(3)}:duration=${duration.toFixed(3)},scale=${mediaWidth}:${mediaHeight},setpts=PTS-STARTPTS+${positionStart.toFixed(3)}/TB[${visualLabel}]`
+                            );
+                        }
                     }
                     if (sortedMediaFiles[i].type === 'image') {
                         filters.push(
-                            `[${i}:v]scale=${sortedMediaFiles[i].width}:${sortedMediaFiles[i].height},setpts=PTS+${positionStart.toFixed(3)}/TB[${visualLabel}]`
+                            `[${thisInput}:v]scale=${mediaWidth}:${mediaHeight},setpts=PTS+${positionStart.toFixed(3)}/TB[${visualLabel}]`
                         );
                     }
 
                     if (sortedMediaFiles[i].type === 'video' || sortedMediaFiles[i].type === 'image') {
-                        const alpha = Math.min(Math.max((sortedMediaFiles[i].opacity || 100) / 100, 0), 1);
-                        filters.push(
-                            `[${visualLabel}]format=yuva420p,colorchannelmixer=aa=${alpha}[${visualLabel}]`
-                        );
+                        if (!isChromaKeyed) {
+                            const alpha = Math.min(Math.max((sortedMediaFiles[i].opacity || 100) / 100, 0), 1);
+                            filters.push(
+                                `[${visualLabel}]format=yuva420p,colorchannelmixer=aa=${alpha}[${visualLabel}]`
+                            );
+                        }
                     }
 
                     if (sortedMediaFiles[i].type === 'video' || sortedMediaFiles[i].type === 'image') {
                         overlays.push({
                             label: visualLabel,
-                            x: sortedMediaFiles[i].x,
-                            y: sortedMediaFiles[i].y,
+                            x: sortedMediaFiles[i].x ?? 0,
+                            y: sortedMediaFiles[i].y ?? 0,
                             start: positionStart.toFixed(3),
                             end: positionEnd.toFixed(3),
                         });
@@ -160,7 +234,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
                         const delayMs = Math.round(positionStart * 1000);
                         const volume = sortedMediaFiles[i].volume !== undefined ? sortedMediaFiles[i].volume / 100 : 1;
                         filters.push(
-                            `[${i}:a]atrim=start=${startTime.toFixed(3)}:duration=${duration.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${delayMs}|${delayMs},volume=${volume}[${audioLabel}]`
+                            `[${thisInput}:a]atrim=start=${startTime.toFixed(3)}:duration=${duration.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${delayMs}|${delayMs},volume=${volume}[${audioLabel}]`
                         );
                         audioDelays.push(`[${audioLabel}]`);
                     }
@@ -254,7 +328,7 @@ export default function FfmpegRender({ loadFunction, loadFfmpeg, ffmpeg, logMess
             <button
                 onClick={() => render()}
                 className={styles.renderButton}
-                disabled={(!loadFfmpeg || isRendering || (mediaFiles.length === 0 && textElements.length === 0))}
+                disabled={(!loadFfmpeg || isRendering || (mediaFiles.length === 0 && textElements.length === 0 && backgroundClips.length === 0))}
             >
                 {(!loadFfmpeg || isRendering) && (
                     <span className={styles.spinner}>

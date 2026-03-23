@@ -2,6 +2,8 @@ import React, { useEffect, memo, useMemo } from "react";
 import { AbsoluteFill, OffthreadVideo, Sequence, Video, getRemotionEnvironment, prefetch } from "remotion";
 import { MediaFile } from "../../../../../../types/video_editor";
 import { HelperFunctions } from "../../../../../../utils/helperFunctions";
+import { useAppSelector } from "../../../../../../store";
+import { getEffectiveChromaConfig, hasRenderableBackground } from "../../../../../../utils/chromaFallback";
 
 const REMOTION_SAFE_FRAME = 0;
 
@@ -31,6 +33,8 @@ interface VideoSequenceItemProps {
 
 const VideoSequenceItemComponent: React.FC<VideoSequenceItemProps> = ({ item, options }) => {
     const { fps } = options;
+    const selectedBackgroundMedia = useAppSelector((state) => state.projectState.selectedBackgroundMedia);
+    const backgroundClips = useAppSelector((state) => state.projectState.backgroundClips);
 
     const playbackRate = HelperFunctions.getValidNumber(item.playbackSpeed) ?? 1;
     
@@ -68,6 +72,8 @@ const VideoSequenceItemComponent: React.FC<VideoSequenceItemProps> = ({ item, op
     const { isRendering } = getRemotionEnvironment();
     const VideoComponent = isRendering ? OffthreadVideo : Video;
     const src = item.src || "";
+    const hasBackground = hasRenderableBackground(backgroundClips, selectedBackgroundMedia);
+    const effectiveChromaConfig = getEffectiveChromaConfig(item, { hasBackground });
 
     useEffect(() => {
         if (!src) return;
@@ -111,12 +117,12 @@ const VideoSequenceItemComponent: React.FC<VideoSequenceItemProps> = ({ item, op
                         pointerEvents: "none",
                     }}
                 >
-                    {item.chromaKeyConfig?.enabled !== false && item.chromaKeyConfig ? (
+                    {effectiveChromaConfig ? (
                         <ChromaKeyVideo
                             src={src}
                             width={safeWidth ?? undefined}
                             height={safeHeight ?? undefined}
-                            config={item.chromaKeyConfig}
+                            config={effectiveChromaConfig}
                             trimFromFrames={frameCalculations.trimFromFrames}
                             trimToFrames={frameCalculations.trimToFrames}
                             playbackRate={playbackRate}
