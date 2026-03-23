@@ -467,6 +467,7 @@ export class HelperFunctions {
       lastModified: new Date().toISOString(),
       mediaFiles,
       textElements: [],
+      backgroundClips: [],
       currentTime: 0,
       isPlaying: false,
       isMuted: false,

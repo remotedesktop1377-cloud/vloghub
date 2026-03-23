@@ -59,7 +59,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
             'assetsGeneration',
         ] as const;
 
-        const runStep = async <T>(
+        const runStep = async <T,>(
             step: (typeof steps)[number],
             fn: () => Promise<T>
         ): Promise<T> => {

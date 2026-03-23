@@ -71,7 +71,6 @@ interface LambdaCompositionProps {
   selectedBackgroundMedia?: { type: 'color' | 'image' | 'video'; src?: string; color?: string; name?: string };
   durationInFrames?: number;
   fps?: number;
-  durationInFrames?: number;
   width?: number;
   height?: number;
 }
@@ -227,8 +226,8 @@ const LambdaComposition: React.FC<LambdaCompositionProps> = ({
                 {effectiveChromaConfig ? (
                   <ChromaKeyVideo
                     src={safeSrc}
-                    width={safeWidth}
-                    height={safeHeight}
+                    width={safeWidth ?? undefined}
+                    height={safeHeight ?? undefined}
                     config={effectiveChromaConfig}
                     trimFromFrames={trimFromFrames}
                     trimToFrames={trimToFrames}
