@@ -39,7 +39,7 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     onUploadFailed,
 }) => {
     const [uploading, setUploading] = useState(false);
-    const [currentStep, setCurrentStep] = useState<'idle' | 'compressing' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'assetsGeneration' | 'completed'>('idle');
+    const [currentStep, setCurrentStep] = useState<'idle' | 'backgroundRemoval' | 'compressing' | 'audioMerge' | 'uploading' | 'videoConversion' | 'transcribing' | 'llmProcessing' | 'segmentation' | 'assetsGeneration' | 'completed'>('idle');
     const [error, setError] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<'upload' | 'transcribe' | 'general' | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -47,67 +47,135 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
     const [progress, setProgress] = useState(0);
 
     const startVideoUploadingAndTranscribtion = async (file: File) => {
+        const steps = [
+            'backgroundRemoval',
+            'compressing',
+            'audioMerge',
+            'uploading',
+            'videoConversion',
+            'transcribing',
+            'llmProcessing',
+            'segmentation',
+            'assetsGeneration',
+        ] as const;
+
+        const runStep = async <T>(
+            step: (typeof steps)[number],
+            fn: () => Promise<T>
+        ): Promise<T> => {
+            try {
+                return await fn();
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                const stepLabel = step === 'backgroundRemoval' ? 'Background removal' :
+                    step === 'compressing' ? 'Video compression' :
+                    step === 'audioMerge' ? 'Audio merge' :
+                    step === 'uploading' ? 'Drive upload' :
+                    step === 'videoConversion' ? 'Audio extraction' :
+                    step === 'transcribing' ? 'Transcription' :
+                    step === 'llmProcessing' ? 'Scene planning' :
+                    step === 'segmentation' ? 'Clip cutting' :
+                    'Background generation';
+                console.error(`[ChromaKeyUpload] Failed at step "${step}":`, err);
+                throw new Error(`${stepLabel}: ${msg}`);
+            }
+        };
+
         try {
             setUploading(true);
-            setProgress(5);
+            setProgress(2);
+            setCurrentStep('backgroundRemoval');
+
+            const bgRemovedFile = await runStep('backgroundRemoval', () =>
+                processService.removeBackgroundFromVideo(file, jobId)
+            );
+
+            setProgress(8);
             setCurrentStep('compressing');
+            const compressedBgRemovedFile = await runStep('compressing', () =>
+                processService.compressVideo(bgRemovedFile, jobId)
+            );
 
-            const compressedFile = await processService.compressVideo(file, jobId);
+            const compressedOriginalFile = await runStep('compressing', () =>
+                processService.compressVideo(file, `${jobId}-original`)
+            );
 
-            setProgress(10);
+            setProgress(12);
+            setCurrentStep('audioMerge');
+            const finalNarratorVideoFile = await runStep('audioMerge', () =>
+                processService.mergeVideoWithAudioTrack(
+                    compressedBgRemovedFile,
+                    compressedOriginalFile,
+                    jobId
+                )
+            );
+
+            setProgress(15);
             setCurrentStep('uploading');
 
-            const upload = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', compressedFile);
-            if (!upload?.success || !upload?.fileId) {
-                const message = upload?.message || 'Failed to upload video to Drive';
-                setUploading(false);
-                setCurrentStep('idle');
-                setError(message);
-                setErrorType('upload');
-                toast.error(message);
-                return;
-            }
+            const upload = await runStep('uploading', async () => {
+                const result = await GoogleDriveServiceFunctions.uploadMediaToDrive(jobId, 'input', finalNarratorVideoFile);
+                if (!result?.success || !result?.fileId) {
+                    throw new Error(result?.message || 'Failed to upload video to Drive');
+                }
+                return result;
+            });
             const narratorVideoUrl = upload?.webViewLink || '';
 
             setProgress(20);
             setCurrentStep('videoConversion');
 
-            const audioFile = await processService.extractAudioFromVideo(compressedFile);
-            // console.log('audioFile: ', audioFile);
+            let audioFile: File;
+            try {
+                audioFile = await processService.extractAudioFromVideo(finalNarratorVideoFile);
+            } catch (extractionError) {
+                // Browser FFmpeg can fail on some devices/filesystem states.
+                // Fallback: use the original (audio-preserved) compressed source for transcription.
+                console.warn('[ChromaKeyUpload] Audio extraction failed, falling back to direct media transcription:', extractionError);
+                audioFile = compressedOriginalFile;
+            }
             setCurrentStep('transcribing');
             setProgress(40);
 
-            const transcription = await processService.transcribeAudio(audioFile);
+            const transcription = await runStep('transcribing', () =>
+                processService.transcribeAudio(audioFile)
+            );
             // console.log('transcription: ', transcription);
             setProgress(60);
             setCurrentStep('llmProcessing');
 
-            const scenes = await processService.planScenesWithLLM({
-                transcription,
-                videoDurationSeconds,
-                fps: 30,
-                aspectRatio: "16:9",
-                visualTheme: "cinematic geopolitical documentary"
-            });
+            const scenes = await runStep('llmProcessing', () =>
+                processService.planScenesWithLLM({
+                    transcription,
+                    videoDurationSeconds,
+                    fps: 30,
+                    aspectRatio: "16:9",
+                    visualTheme: "cinematic geopolitical documentary"
+                })
+            );
 
             setProgress(80);
             setCurrentStep('segmentation');
 
-            const updatedScenes = await processService.cutClipsAndPackageResults({
-                videoFile: compressedFile,
-                scenes,
-                jobId,
-                fps: 30,
-            });
+            const updatedScenes = await runStep('segmentation', () =>
+                processService.cutClipsAndPackageResults({
+                    videoFile: finalNarratorVideoFile,
+                    scenes,
+                    jobId,
+                    fps: 30,
+                })
+            );
 
             setProgress(90);
             setCurrentStep('assetsGeneration');
 
-            const scenesWithGeneratedBackgrounds = await processService.generateSceneBackgrounds({
-                jobId,
-                scenes: updatedScenes.scenes || [],
-                aspectRatio: "16:9"
-            });
+            const scenesWithGeneratedBackgrounds = await runStep('assetsGeneration', () =>
+                processService.generateSceneBackgrounds({
+                    jobId,
+                    scenes: updatedScenes.scenes || [],
+                    aspectRatio: "16:9"
+                })
+            );
             const generatedBackgroundScenes: SceneThumbnailResponse[] = Array.isArray(scenesWithGeneratedBackgrounds)
                 ? scenesWithGeneratedBackgrounds
                 : [];
@@ -169,7 +237,11 @@ const ChromaKeyUpload: React.FC<ChromaKeyUploadProps> = ({
 
     const getStepIcon = () => {
         switch (currentStep) {
+            case 'backgroundRemoval':
+                return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'compressing':
+                return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
+            case 'audioMerge':
                 return <ProcessingIcon sx={{ fontSize: 20, mr: 1 }} />;
             case 'uploading':
                 return <UploadIcon sx={{ fontSize: 20, mr: 1 }} />;

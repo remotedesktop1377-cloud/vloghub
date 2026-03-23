@@ -1,5 +1,7 @@
 export type MediaType = 'video' | 'audio' | 'image' | 'unknown';
 
+export type BackgroundClipType = 'color' | 'image' | 'video';
+
 export interface UploadedFile {
     id: string;
     file: File;
@@ -41,6 +43,9 @@ export interface MediaFile {
 
     /** True for Video-X-1 (first clip per scene); shown on main video row */
     isPrimarySceneVideo?: boolean;
+
+    /** Chroma key config for green-screen narrator overlay */
+    chromaKeyConfig?: { enabled?: boolean; color?: string; similarity?: number; smoothness?: number; spill?: number };
 }
 
 export interface TextElement {
@@ -77,6 +82,16 @@ export interface TextElement {
     visible?: boolean;              // Internal flag for rendering logic
 }
 
+export interface BackgroundClip {
+    id: string;
+    type: BackgroundClipType;
+    src?: string;
+    color?: string;
+    name?: string;
+    positionStart: number;
+    positionEnd: number;
+}
+
 
 export type ExportFormat = 'mp4' | 'webm' | 'gif' | 'mov';
 
@@ -95,6 +110,7 @@ export interface ProjectState {
     id: string;
     mediaFiles: MediaFile[];
     textElements: TextElement[];
+    backgroundClips: BackgroundClip[];
     filesID?: string[],
     currentTime: number;
     isPlaying: boolean;
@@ -117,8 +133,8 @@ export interface ProjectState {
     autoRenderRequested: boolean;
     autoRenderProjectId: string;
     exportSettings: ExportConfig;
-    /** Selected background for narrator/overlay: { type: 'image'|'video', src: string } */
-    selectedBackgroundMedia?: { type: 'image' | 'video'; src: string; name?: string };
+    /** Legacy selected background metadata; maintained for backward compatibility. */
+    selectedBackgroundMedia?: { type: BackgroundClipType; src?: string; color?: string; name?: string };
 }
 
 export const mimeToExt = {

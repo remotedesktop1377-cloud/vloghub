@@ -25,7 +25,7 @@ const getAdaptiveFramesPerLambda = (totalFrames: number): number => {
 export default function ExportList() {
     const useLambda = process.env.NEXT_PUBLIC_USE_LAMBDA_FOR_RENDER;
     const projectState = useAppSelector((state) => state.projectState);
-    const { mediaFiles, textElements, resolution, fps, duration, exportSettings } = projectState;
+    const { mediaFiles, textElements, backgroundClips, selectedBackgroundMedia, resolution, fps, duration, exportSettings } = projectState;
     const router = useRouter();
 
     const [isRendering, setIsRendering] = useState(false);
@@ -88,7 +88,7 @@ export default function ExportList() {
     };
 
     const startRender = async () => {
-        if (mediaFiles.length === 0 && textElements.length === 0) {
+        if (mediaFiles.length === 0 && textElements.length === 0 && backgroundClips.length === 0) {
             HelperFunctions.showError('No media files or text elements to render');
             return;
         }
@@ -141,6 +141,11 @@ export default function ExportList() {
                 }
                 return url;
             };
+            const sanitizeMediaUrl = (url?: string): string | undefined => {
+                if (!url) return undefined;
+                const hashIndex = url.indexOf('#');
+                return hashIndex === -1 ? url : url.slice(0, hashIndex);
+            };
 
             const renderResult = await LambdaService.renderVideo({
                 serveUrl: url,
@@ -150,6 +155,18 @@ export default function ExportList() {
                         ...file,
                         src: convertToAbsoluteUrl(file.src || ''),
                     })),
+                    backgroundClips: backgroundClips.map((clip) => ({
+                        ...clip,
+                        src: clip.src ? convertToAbsoluteUrl(sanitizeMediaUrl(clip.src) || clip.src) : clip.src,
+                    })),
+                    selectedBackgroundMedia: selectedBackgroundMedia
+                        ? {
+                            ...selectedBackgroundMedia,
+                            src: selectedBackgroundMedia.src
+                                ? convertToAbsoluteUrl(sanitizeMediaUrl(selectedBackgroundMedia.src) || selectedBackgroundMedia.src)
+                                : selectedBackgroundMedia.src,
+                        }
+                        : undefined,
                     textElements: textElements,
                     fps: selectedFps,
                     width: exportRes.width,
@@ -351,7 +368,7 @@ export default function ExportList() {
                         <div className={styles.buttonsContainer}>
                             <button
                                 onClick={startRender}
-                                disabled={isRendering || (mediaFiles.length === 0 && textElements.length === 0)}
+                                disabled={isRendering || (mediaFiles.length === 0 && textElements.length === 0 && backgroundClips.length === 0)}
                                 className={styles.primaryButton}
                             >
                                 {isRendering ? (

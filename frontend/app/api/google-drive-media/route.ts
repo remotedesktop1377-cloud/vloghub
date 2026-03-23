@@ -17,28 +17,35 @@ export async function GET(req: NextRequest) {
       return new Response(JSON.stringify({ error: 'Failed to obtain access token' }), { status: 500 });
     }
 
-    // Stream media from Drive
     const mediaUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media`;
-    const upstream = await fetch(mediaUrl, {
-      headers: { Authorization: `Bearer ${token.token}` },
-    });
+
+    const upstreamHeaders: Record<string, string> = {
+      Authorization: `Bearer ${token.token}`,
+    };
+
+    const rangeHeader = req.headers.get('range');
+    if (rangeHeader) {
+      upstreamHeaders['Range'] = rangeHeader;
+    }
+
+    const upstream = await fetch(mediaUrl, { headers: upstreamHeaders });
 
     if (!upstream.ok || !upstream.body) {
       const txt = await upstream.text().catch(() => '');
       return new Response(JSON.stringify({ error: 'Upstream error', status: upstream.status, details: txt }), { status: 502 });
     }
 
-    // Pass through key headers for media playback
     const headers = new Headers();
     const ct = upstream.headers.get('content-type');
     const cl = upstream.headers.get('content-length');
-    const ar = upstream.headers.get('accept-ranges');
+    const cr = upstream.headers.get('content-range');
     if (ct) headers.set('content-type', ct);
     if (cl) headers.set('content-length', cl);
-    if (ar) headers.set('accept-ranges', ar);
+    headers.set('accept-ranges', 'bytes');
+    if (cr) headers.set('content-range', cr);
     headers.set('cache-control', 'private, max-age=60');
 
-    return new Response(upstream.body as any, { status: 200, headers });
+    return new Response(upstream.body as any, { status: upstream.status, headers });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e?.message || 'Proxy failed' }), { status: 500 });
   }

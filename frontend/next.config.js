@@ -20,6 +20,7 @@ const packagesToExternalize = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['replicate'],
   images: {
     remotePatterns: [
       {

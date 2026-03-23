@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { TextElement, MediaFile, ActiveElement, ExportConfig, ProjectState } from '../../types/video_editor';
+import { TextElement, MediaFile, ActiveElement, ExportConfig, ProjectState, BackgroundClip } from '../../types/video_editor';
 
 export const initialState: ProjectState = {
     id: crypto.randomUUID(),
@@ -8,6 +8,7 @@ export const initialState: ProjectState = {
     lastModified: new Date().toISOString(),
     mediaFiles: [],
     textElements: [],
+    backgroundClips: [],
     currentTime: 0,
     isPlaying: false,
     isMuted: false,
@@ -37,11 +38,13 @@ export const initialState: ProjectState = {
 
 const calculateTotalDuration = (
     mediaFiles: MediaFile[],
-    textElements: TextElement[]
+    textElements: TextElement[],
+    backgroundClips: BackgroundClip[]
 ): number => {
     const mediaDurations = mediaFiles.map(v => v.positionEnd);
     const textDurations = textElements.map(v => v.positionEnd);
-    return Math.max(0, ...mediaDurations, ...textDurations);
+    const backgroundDurations = backgroundClips.map(v => v.positionEnd);
+    return Math.max(0, ...mediaDurations, ...textDurations, ...backgroundDurations);
 };
 
 // Shallow equality check for arrays
@@ -116,6 +119,26 @@ const textElementsAreEqual = (a: TextElement[], b: TextElement[]): boolean => {
     return true;
 };
 
+const backgroundClipsAreEqual = (a: BackgroundClip[], b: BackgroundClip[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        const itemA = a[i];
+        const itemB = b[i];
+        if (
+            itemA.id !== itemB.id ||
+            itemA.type !== itemB.type ||
+            itemA.src !== itemB.src ||
+            itemA.color !== itemB.color ||
+            itemA.name !== itemB.name ||
+            itemA.positionStart !== itemB.positionStart ||
+            itemA.positionEnd !== itemB.positionEnd
+        ) {
+            return false;
+        }
+    }
+    return true;
+};
+
 const projectStateSlice = createSlice({
     name: 'projectState',
     initialState,
@@ -125,7 +148,7 @@ const projectStateSlice = createSlice({
             if (!mediaFilesAreEqual(state.mediaFiles, action.payload)) {
                 state.mediaFiles = action.payload;
                 // Calculate duration based on the last video's end time
-                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements, state.backgroundClips);
             }
         },
         setProjectName: (state, action: PayloadAction<string>) => {
@@ -146,11 +169,19 @@ const projectStateSlice = createSlice({
             // Use deep equality check to detect property changes, not just ID changes
             if (!textElementsAreEqual(state.textElements, action.payload)) {
                 state.textElements = action.payload;
-                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements);
+                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements, state.backgroundClips);
+            }
+        },
+        setBackgroundClips: (state, action: PayloadAction<BackgroundClip[]>) => {
+            if (!backgroundClipsAreEqual(state.backgroundClips, action.payload)) {
+                state.backgroundClips = action.payload;
+                state.duration = calculateTotalDuration(state.mediaFiles, state.textElements, state.backgroundClips);
             }
         },
         setCurrentTime: (state, action: PayloadAction<number>) => {
-            state.currentTime = action.payload;
+            if (state.currentTime !== action.payload) {
+                state.currentTime = action.payload;
+            }
         },
         setIsPlaying: (state, action: PayloadAction<boolean>) => {
             state.isPlaying = action.payload;
@@ -202,7 +233,11 @@ const projectStateSlice = createSlice({
         },
         // Special reducer for rehydrating state from IndexedDB
         rehydrate: (state, action: PayloadAction<ProjectState>) => {
-            return { ...state, ...action.payload };
+            return {
+                ...state,
+                ...action.payload,
+                backgroundClips: action.payload.backgroundClips ?? state.backgroundClips ?? [],
+            };
         },
         createNewProject: (state) => {
             return { ...initialState };
@@ -213,6 +248,7 @@ const projectStateSlice = createSlice({
 export const {
     setMediaFiles,
     setTextElements,
+    setBackgroundClips,
     setCurrentTime,
     setProjectName,
     setIsPlaying,

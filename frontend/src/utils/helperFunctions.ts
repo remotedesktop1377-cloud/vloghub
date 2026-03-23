@@ -401,6 +401,10 @@ export class HelperFunctions {
         const clipPositionEnd = clipPositionStart + clipDuration;
         sceneClipCursor = clipPositionEnd;
         const clipEnd = rawClipEnd && rawClipEnd > rawClipStart ? rawClipEnd : rawClipStart + clipDuration;
+        const chromaUrl = (scene as any)?.chromaUrl;
+        const chromaKeyConfig = (scene as any)?.chromaKeyConfig;
+        const isNarratorChroma = chromaUrl && clipIndex === 0;
+
         mediaFiles.push({
           id,
           fileName: `Video-${sceneIndex + 1}-${clipIndex + 1}`,
@@ -418,6 +422,9 @@ export class HelperFunctions {
           timelineLayerIndex: nextLayerIndex++,
           sceneIndex,
           isPrimarySceneVideo: clipIndex === 0,
+          chromaKeyConfig: isNarratorChroma && chromaKeyConfig?.enabled !== false
+            ? (chromaKeyConfig || { enabled: true, color: '#00FF00', similarity: 0.35, smoothness: 0.1, spill: 0.2 })
+            : undefined,
           x: 0,
           y: 0,
           width: resolution.width,
@@ -779,8 +786,12 @@ export class HelperFunctions {
 
   static getProgressMessage = (currentStep: string) => {
     switch (currentStep) {
+      case 'backgroundRemoval':
+        return 'Removing background from video. Please wait...';
       case 'compressing':
         return 'Compressing video. Please wait...';
+      case 'audioMerge':
+        return 'Merging narrator audio into processed video. Please wait...';
       case 'uploading':
         return 'Uploading video to Google Drive. Please wait...';
       case 'videoConversion':
