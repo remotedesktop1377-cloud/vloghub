@@ -18,6 +18,8 @@ import {
   Box,
   Typography,
   Paper,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { TextField, Button } from '@mui/material';
 import { WordCloudChart } from './WordCloudChart/WordCloudChart';
@@ -31,6 +33,9 @@ import { ScriptData } from '@/types/scriptData';
 import { GoogleDriveServiceFunctions } from '@/services/googleDriveService';
 
 const TrendingTopics: React.FC = () => {
+  type ScriptMode = 'generate' | 'manual';
+  type ManualDraft = { script: string };
+
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user as any;
@@ -62,6 +67,33 @@ const TrendingTopics: React.FC = () => {
   const [dialogTitle, setDialogTitle] = useState<string>('');
   const [dialogDescription, setDialogDescription] = useState<string>('');
   const [customTopic, setCustomTopic] = useState<string>('');
+  const [scriptMode, setScriptMode] = useState<ScriptMode>('generate');
+  const [manualDraft, setManualDraft] = useState<ManualDraft>({ script: '' });
+  const [manualDraftDirty, setManualDraftDirty] = useState<boolean>(false);
+  const [manualDraftsByTopic, setManualDraftsByTopic] = useState<Record<string, ManualDraft>>({});
+
+  const getTopicKey = (topic: TrendingTopic | null) => {
+    if (!topic?.topic) return '';
+    const topicType = topic?.source_reference === 'user_input' ? 'custom' : 'trending';
+    return `${topicType}:${topic.topic.toLowerCase().trim()}`;
+  };
+
+  const getDefaultDraft = (): ManualDraft => ({ script: '' });
+
+  const buildScriptFromDraft = (draft: ManualDraft): string => {
+    return draft.script.trim();
+  };
+
+  const hasManualContent = (draft: ManualDraft): boolean => {
+    return draft.script.trim().length > 0;
+  };
+
+  const persistCurrentDraft = () => {
+    const topicKey = getTopicKey(selectedTopic);
+    if (!topicKey || !hasManualContent(manualDraft)) return;
+    setManualDraftsByTopic((prev) => ({ ...prev, [topicKey]: manualDraft }));
+    setManualDraftDirty(false);
+  };
 
   const fetchTrendingTopics = async (searchQuery: string) => {
     try {
@@ -144,7 +176,27 @@ const TrendingTopics: React.FC = () => {
   }, [selectedLocation, selectedLocationType, selectedDateRange]);
 
   const handleTopicSelect = async (topic: TrendingTopic) => {
-    // console.log('🟢 Handling topic select:', topic);
+    const nextTopicKey = getTopicKey(topic);
+    const currentTopicKey = getTopicKey(selectedTopic);
+    const isSwitchingTopic = !!currentTopicKey && currentTopicKey !== nextTopicKey;
+    let shouldPersistCurrentDraft = true;
+
+    if (scriptMode === 'manual' && manualDraftDirty && isSwitchingTopic) {
+      const shouldDiscard = window.confirm('You have unsaved manual script changes. Discard and switch topic?');
+      if (!shouldDiscard) {
+        return;
+      }
+      setManualDraftDirty(false);
+      shouldPersistCurrentDraft = false;
+    }
+
+    if (shouldPersistCurrentDraft && currentTopicKey && hasManualContent(manualDraft)) {
+      setManualDraftsByTopic((prev) => ({ ...prev, [currentTopicKey]: manualDraft }));
+    }
+
+    const nextDraft = manualDraftsByTopic[nextTopicKey] || getDefaultDraft();
+    setManualDraft(nextDraft);
+    setManualDraftDirty(false);
     setSelectedTopic(topic);
     setHypothesis('');
   };
@@ -154,16 +206,63 @@ const TrendingTopics: React.FC = () => {
       return;
     }
 
+    const location = selectedLocationType === 'global'
+      ? selectedLocationType
+      : selectedLocationType === 'region'
+        ? selectedLocation
+        : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
+
+    if (scriptMode === 'manual') {
+      const manualScript = buildScriptFromDraft(manualDraft);
+      if (!manualScript.trim()) {
+        HelperFunctions.showError('Please write at least one section before continuing.');
+        return;
+      }
+
+      const scriptMetadata: ScriptData = {
+        title: `${selectedTopic?.topic || 'Untitled Topic'} - Manual Script`,
+        topic: selectedTopic?.topic || '',
+        description: selectedTopic?.description || '',
+        hypothesis: hypothesis || '',
+        region: location,
+        duration: duration,
+        language: language,
+        subtitle_language: subtitle_language,
+        narration_type: narration_type,
+        estimated_words: manualScript.split(/\s+/).filter(Boolean).length,
+        hook: '',
+        main_content: manualScript,
+        conclusion: '',
+        call_to_action: '',
+        script: manualScript,
+        user_id: user?.id || '',
+        status: SCRIPT_STATUS.GENERATED,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        narrator_chroma_key_link: '',
+        transcription: '',
+        videoBackground: null,
+        isScriptDownloaded: false,
+      };
+
+      SecureStorageHelpers.setScriptMetadata(scriptMetadata);
+      setScriptGeneratedOnce(true);
+      setManualDraftDirty(false);
+      router.push(ROUTES_KEYS.SCRIPT_PRODUCTION);
+      return;
+    }
+
+    if (hasManualContent(manualDraft)) {
+      const shouldReplaceManual = window.confirm('You already have manual script content. Generate Script will replace it. Continue?');
+      if (!shouldReplaceManual) {
+        return;
+      }
+    }
+
     try {
       setGeneratingSceneData(true);
       setDialogTitle('Generating Script');
       setDialogDescription('Please wait while we generate the script for you...');
-
-      const location = selectedLocationType === 'global'
-        ? selectedLocationType
-        : selectedLocationType === 'region'
-          ? selectedLocation
-          : (selectedLocation === 'all' ? selectedCountry : (selectedLocation + ', ' + selectedCountry));
 
       const scriptPromise = apiService.generateScript({
         topic: selectedTopic.topic,
@@ -312,6 +411,11 @@ const TrendingTopics: React.FC = () => {
     handleTopicSelect(userTopic);
   };
 
+  const handleManualScriptChange = (value: string) => {
+    setManualDraft({ script: value });
+    setManualDraftDirty(true);
+  };
+
   return (
     <Box className={styles.trendingTopicsContainer}>
       {(loading || generatingSceneData) && (
@@ -428,6 +532,42 @@ const TrendingTopics: React.FC = () => {
               onHypothesisChange={setHypothesis}
             />
 
+            <Paper sx={{ p: 1.5 }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Script Creation Mode
+              </Typography>
+              <ToggleButtonGroup
+                value={scriptMode}
+                exclusive
+                onChange={(_, value) => {
+                  if (!value) return;
+                  setScriptMode(value as ScriptMode);
+                }}
+                size="small"
+              >
+                <ToggleButton value="generate">Generate Script</ToggleButton>
+                <ToggleButton value="manual">Write Your Own Script</ToggleButton>
+              </ToggleButtonGroup>
+            </Paper>
+
+            {scriptMode === 'manual' && (
+              <Paper sx={{ p: 1.5 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Write Your Script
+                </Typography>
+                <TextField
+                  label="Script"
+                  placeholder="Write your full script here..."
+                  value={manualDraft.script}
+                  onChange={(e) => handleManualScriptChange(e.target.value)}
+                  onBlur={persistCurrentDraft}
+                  multiline
+                  minRows={10}
+                  fullWidth
+                />
+              </Paper>
+            )}
+
             <VideoDurationSection
               duration={duration}
               onDurationChange={setDuration}
@@ -445,6 +585,7 @@ const TrendingTopics: React.FC = () => {
               onnarration_typeChange={handlenarration_typeChange}
               generating={generatingSceneData}
               generatedOnce={scriptGeneratedOnce}
+              scriptMode={scriptMode}
             />
 
           </Box>

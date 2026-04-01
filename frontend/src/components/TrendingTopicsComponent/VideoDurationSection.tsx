@@ -27,6 +27,7 @@ interface VideoDurationSectionProps {
   onnarration_typeChange?: (narration_type: 'interview' | 'narration') => void;
   generating?: boolean;
   generatedOnce?: boolean;
+  scriptMode?: 'generate' | 'manual';
 }
 
 const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
@@ -46,7 +47,12 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
   onnarration_typeChange,
   generating = false,
   generatedOnce = false,
+  scriptMode = 'generate',
 }) => {
+  const isManualMode = scriptMode === 'manual';
+  const primaryButtonLabel = isManualMode
+    ? 'Continue with Written Script'
+    : (generating ? 'Generating Script...' : (generatedOnce ? 'Script Generated' : (hasSceneData ? 'Regenerate Assets' : 'Generate Script')));
 
   return (
     <Paper sx={{ p: 1.5 }}>
@@ -143,7 +149,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
           size="medium"
           startIcon={generating ? <RefreshIcon /> : (hasSceneData ? <RefreshIcon /> : <CutIcon />)}
           onClick={hasSceneData ? onRegenerateAllAssets : onGenerateSceneData}
-          disabled={!canGenerate || generating || generatedOnce}
+          disabled={!canGenerate || generating || (!isManualMode && generatedOnce)}
           sx={{
             bgcolor: generating ? 'action.disabledBackground' : (hasSceneData ? '#ff9800' : '#1DA1F2'),
             color: generating ? 'text.secondary' : 'inherit',
@@ -154,7 +160,7 @@ const VideoDurationSection: React.FC<VideoDurationSectionProps> = ({
             height: 40
           }}
         >
-          {generating ? 'Generating Script...' : (generatedOnce ? 'Script Generated' : (hasSceneData ? 'Regenerate Assets' : 'Generate Script'))}
+          {primaryButtonLabel}
         </Button>
       </Box>
 
