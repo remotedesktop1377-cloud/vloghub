@@ -2,19 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { HelperFunctions } from '@/utils/helperFunctions';
 import { getGeminiClient } from '@/utils/geminiService';
 
-// Helper function to generate random trending topics
+// Helper function to generate trending topics
 const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
   try {
-    // Inside your model initialization helper
+    // @google/generative-ai now expects googleSearch for grounding on this model
     const getGeminiModel = () => {
       const genAI = getGeminiClient();
       return genAI.getGenerativeModel({
-        model: "gemini-2.5-flash", // Use your 2.5/2.0 flash version
-        tools: [{ googleSearch: {} } as any] // ADD THIS LINE TO ENABLE GROUNDING
+        model: "gemini-2.5-flash",
+        tools: [{ googleSearch: {} } as any],
       });
     };
 
-    // Get the Gemini model instance with grounding enabled
     const model = getGeminiModel();
 
     // Get time range description for the prompt
@@ -33,6 +32,7 @@ const fetchGeminiTrendingTopics = async (region: string, dateRange: string) => {
         dateRangeQuery = 'past month';
         break;
       case 'anytime':
+      case 'any': // frontend DateRangeSelector uses 'any'
         dateRangeQuery = 'all time';
         break;
       default:
@@ -148,8 +148,9 @@ Use the grounding tool to search for actual trending VIDEO-WORTHY DISCUSSION top
     // Sort by value (higher = first)
     return transformedData.sort((a: any, b: any) => b.value - a.value);
   } catch (error) {
-    console.log('Error fetching Gemini trending topics:', error);
-    return [];
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('[gemini-trending-topics] Error:', err.message, err.stack);
+    throw err; // Re-throw so GET handler can return 500
   }
 }
 
@@ -159,9 +160,6 @@ export async function GET(request: NextRequest) {
     const region = searchParams.get('region') || 'global';
     const dateRange = searchParams.get('dateRange') || '24h';
 
-    // console.log('🟢 Gemini trending topics request:', region, dateRange);
-
-    // // Generate real-time trending topics data
     const trendingTopics = await fetchGeminiTrendingTopics(region, dateRange);
 
     // Simulate API delay for realistic feel
@@ -170,9 +168,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(trendingTopics);
 
   } catch (error) {
-    console.log('Error fetching trending topics:', error);
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error('[gemini-trending-topics] GET Error:', err.message);
     return NextResponse.json(
-      { error: 'Failed to fetch trending topics' },
+      { error: 'Failed to fetch trending topics', details: err.message },
       { status: 500 }
     );
   }
