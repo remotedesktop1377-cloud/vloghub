@@ -340,13 +340,10 @@ export class HelperFunctions {
           if (!t.length) return false;
           return /^[A-Za-z]:[\\/]/.test(t) || t.startsWith('/') || /^https?:\/\//i.test(t);
         });
+      const hasPreviewClip = !useSingleSourceVideo && Boolean(previewClip);
       const clipUrls = useSingleSourceVideo
         ? [...assetClipUrls]
-        : [...assetClipUrls, previewClip].filter(Boolean);
-      // .filter((url) => {
-      //   if (!url) return false;
-      //   return /^[A-Za-z]:[\\/]/.test(url) || url.startsWith('/');
-      // });
+        : [previewClip, ...assetClipUrls].filter(Boolean);
 
       const sceneTimelineStart = Math.max(positionStart, globalVideoCursor);
 
@@ -355,7 +352,7 @@ export class HelperFunctions {
         usedUrls.add(url);
         const id = crypto.randomUUID();
         const normalizedUrl = HelperFunctions.normalizeImageUrlForRender(url);
-        const imageDurationSeconds = 3; // default duration for images if not specified
+        const imageDurationSeconds = 3;
         const imagePositionStart = globalImageCursor;
         const imagePositionEnd = imagePositionStart + imageDurationSeconds;
         globalImageCursor = imagePositionEnd;
@@ -391,9 +388,13 @@ export class HelperFunctions {
         usedUrls.add(url);
         const id = crypto.randomUUID();
         const normalizedUrl = HelperFunctions.getClipUrl(url) || url;
-        const rawClipStart = HelperFunctions.getValidNumber((assetClips[clipIndex] as any)?.startTime) ?? 0;
-        const rawClipEnd = HelperFunctions.getValidNumber((assetClips[clipIndex] as any)?.endTime);
-        const rawClipDuration = HelperFunctions.getValidNumber((assetClips[clipIndex] as any)?.duration);
+        const isNarratorClip = hasPreviewClip && clipIndex === 0;
+        const isAssetClip = hasPreviewClip ? clipIndex > 0 : true;
+        const assetClipIdx = hasPreviewClip ? clipIndex - 1 : clipIndex;
+        const assetClipMeta = isAssetClip ? assetClips[assetClipIdx] : undefined;
+        const rawClipStart = HelperFunctions.getValidNumber((assetClipMeta as any)?.startTime) ?? 0;
+        const rawClipEnd = HelperFunctions.getValidNumber((assetClipMeta as any)?.endTime);
+        const rawClipDuration = HelperFunctions.getValidNumber((assetClipMeta as any)?.duration);
         const clipDuration = rawClipDuration && rawClipDuration > 0
           ? rawClipDuration
           : (rawClipEnd && rawClipEnd > rawClipStart ? rawClipEnd - rawClipStart : sceneDuration);
@@ -403,7 +404,7 @@ export class HelperFunctions {
         const clipEnd = rawClipEnd && rawClipEnd > rawClipStart ? rawClipEnd : rawClipStart + clipDuration;
         const chromaUrl = (scene as any)?.chromaUrl;
         const chromaKeyConfig = (scene as any)?.chromaKeyConfig;
-        const isNarratorChroma = chromaUrl && clipIndex === 0;
+        const isNarratorChroma = chromaUrl && isNarratorClip;
 
         mediaFiles.push({
           id,
@@ -418,20 +419,22 @@ export class HelperFunctions {
           includeInMerge: true,
           playbackSpeed: 1,
           volume: 100,
-          zIndex: zIndex++,
+          zIndex: isAssetClip ? 2 : 3,
           timelineLayerIndex: nextLayerIndex++,
           sceneIndex,
-          isPrimarySceneVideo: clipIndex === 0,
+          isPrimarySceneVideo: isNarratorClip,
           chromaKeyConfig: isNarratorChroma && chromaKeyConfig?.enabled !== false
             ? (chromaKeyConfig || { enabled: true, color: '#00FF00', similarity: 0.35, smoothness: 0.1, spill: 0.2 })
             : undefined,
           x: 0,
           y: 0,
-          width: resolution.width,
-          height: resolution.height,
+          width: isAssetClip ? 500 : resolution.width,
+          height: isAssetClip ? 500 : resolution.height,
           rotation: 0,
           opacity: 100,
-          crop: { x: 0, y: 0, width: resolution.width, height: resolution.height }
+          crop: isAssetClip
+            ? { x: 0, y: 0, width: 500, height: 500 }
+            : { x: 0, y: 0, width: resolution.width, height: resolution.height }
         });
       });
       globalVideoCursor = useSingleSourceVideo ? sceneTimelineStart : sceneClipCursor;
