@@ -1642,20 +1642,30 @@ export class HelperFunctions {
     }
   };
 
-  // Determine if clip is a local path or Google Drive URL
   static getClipUrl(previewClip: string): string | null {
     if (!previewClip) return null;
 
-    // Check if it's an absolute path (Windows: C:\ or Unix: /)
     const isAbsolutePath = /^[A-Za-z]:[\\/]/.test(previewClip) || previewClip.startsWith('/');
 
     if (isAbsolutePath) {
       const encodedPath = encodeURIComponent(previewClip);
       return `${API_ENDPOINTS.SERVE_CLIP_BASE}?path=${encodedPath}`;
-    } else {
-      // Assume it's a Google Drive URL or relative path
+    }
+
+    if (previewClip.includes('drive.google.com') || previewClip.includes('docs.google.com')) {
       return HelperFunctions.normalizeGoogleDriveUrl(previewClip);
     }
+
+    if (/^https?:\/\//i.test(previewClip)) {
+      const alreadyProxied = previewClip.includes('/api/google-drive-media')
+        || previewClip.includes('/api/serve-clip')
+        || previewClip.includes('/api/proxy-media');
+      if (alreadyProxied) return previewClip;
+
+      return `${API_ENDPOINTS.PROXY_MEDIA_BASE}?url=${encodeURIComponent(previewClip)}`;
+    }
+
+    return HelperFunctions.normalizeGoogleDriveUrl(previewClip);
   };
 
   static isBase64Image(value: string | null | undefined): boolean {

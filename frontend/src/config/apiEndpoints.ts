@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
   FACEBOOK_OAUTH_CALLBACK: '/api/facebook-oauth/callback',
 
   GOOGLE_DRIVE_MEDIA_BASE: '/api/google-drive-media',
+  PROXY_MEDIA_BASE: '/api/proxy-media',
   SERVE_CLIP_BASE: '/api/serve-clip',
   PROGRESS: '/api/progress',
 
