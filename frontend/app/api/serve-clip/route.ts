@@ -5,29 +5,24 @@ import path from 'path';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function corsHeaders(request: NextRequest): Record<string, string> {
-    const origin = request.headers.get('origin') || '*';
-    return {
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Allow-Headers': 'Range, Content-Type',
-        'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type',
-        'Access-Control-Max-Age': '86400',
-    };
-}
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Range',
+    'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, Content-Type',
+};
 
-export async function OPTIONS(request: NextRequest) {
-    return new Response(null, { status: 204, headers: corsHeaders(request) });
+export async function OPTIONS() {
+    return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
 export async function GET(request: NextRequest) {
-    const cors = corsHeaders(request);
     try {
         const { searchParams } = new URL(request.url);
         const clipPath = searchParams.get('path');
 
         if (!clipPath) {
-            return NextResponse.json({ error: 'Clip path is required' }, { status: 400, headers: cors });
+            return NextResponse.json({ error: 'Clip path is required' }, { status: 400, headers: corsHeaders });
         }
 
         const frontendDir = process.cwd();
@@ -55,11 +50,11 @@ export async function GET(request: NextRequest) {
                 isInFrontend,
                 isExportsOrTemp
             });
-            return NextResponse.json({ error: 'Invalid clip path' }, { status: 403, headers: cors });
+            return NextResponse.json({ error: 'Invalid clip path' }, { status: 403, headers: corsHeaders });
         }
 
         if (!fs.existsSync(resolvedPath)) {
-            return NextResponse.json({ error: 'Clip file not found' }, { status: 404, headers: cors });
+            return NextResponse.json({ error: 'Clip file not found' }, { status: 404, headers: corsHeaders });
         }
 
         const fileStat = fs.statSync(resolvedPath);
@@ -70,7 +65,7 @@ export async function GET(request: NextRequest) {
         if (range) {
             const bytesPrefix = 'bytes=';
             if (!range.startsWith(bytesPrefix)) {
-                return new NextResponse(null, { status: 416, headers: cors });
+                return new NextResponse(null, { status: 416, headers: corsHeaders });
             }
             const rawRange = range.substring(bytesPrefix.length);
             const [startStr, endStr] = rawRange.split('-');
@@ -81,7 +76,7 @@ export async function GET(request: NextRequest) {
                 return new NextResponse(null, {
                     status: 416,
                     headers: {
-                        ...cors,
+                        ...corsHeaders,
                         'Content-Range': `bytes */${fileStat.size}`,
                         'Accept-Ranges': 'bytes',
                     },
@@ -95,7 +90,7 @@ export async function GET(request: NextRequest) {
             return new NextResponse(stream as any, {
                 status: 206,
                 headers: {
-                    ...cors,
+                    ...corsHeaders,
                     'Content-Type': mimeType,
                     'Content-Length': chunkSize.toString(),
                     'Content-Range': `bytes ${start}-${safeEnd}/${fileStat.size}`,
@@ -108,7 +103,7 @@ export async function GET(request: NextRequest) {
         const stream = fs.createReadStream(resolvedPath);
         return new NextResponse(stream as any, {
             headers: {
-                ...cors,
+                ...corsHeaders,
                 'Content-Type': mimeType,
                 'Content-Disposition': `inline; filename="${fileName}"`,
                 'Content-Length': fileStat.size.toString(),
@@ -119,7 +114,7 @@ export async function GET(request: NextRequest) {
         console.log('Error serving clip:', error);
         return NextResponse.json(
             { error: error?.message || 'Failed to serve clip file' },
-            { status: 500, headers: cors }
+            { status: 500, headers: corsHeaders }
         );
     }
 }
