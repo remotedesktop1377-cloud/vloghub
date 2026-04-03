@@ -109,6 +109,7 @@ export const ChromaKeyVideo: React.FC<ChromaKeyVideoProps> = ({
           src={src}
           volume={volume}
           onVideoFrame={onVideoFrame}
+          crossOrigin="anonymous"
           style={{ width: w, height: h }}
         />
       </AbsoluteFill>

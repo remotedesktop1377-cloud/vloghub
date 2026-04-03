@@ -29,6 +29,28 @@ const nextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: '/api/google-drive-media',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Range, Content-Type' },
+          { key: 'Access-Control-Expose-Headers', value: 'Content-Length, Content-Range, Accept-Ranges, Content-Type' },
+        ],
+      },
+      {
+        source: '/api/serve-clip',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Range, Content-Type' },
+          { key: 'Access-Control-Expose-Headers', value: 'Content-Length, Content-Range, Accept-Ranges, Content-Type' },
+        ],
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = config.externals || [];

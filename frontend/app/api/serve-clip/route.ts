@@ -5,37 +5,43 @@ import path from 'path';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/**
- * Serve a video clip file from the server's filesystem
- * This endpoint allows the frontend to fetch files that were created by the Python backend
- */
+function corsHeaders(request: NextRequest): Record<string, string> {
+    const origin = request.headers.get('origin') || '*';
+    return {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': 'Range, Content-Type',
+        'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges, Content-Type',
+        'Access-Control-Max-Age': '86400',
+    };
+}
+
+export async function OPTIONS(request: NextRequest) {
+    return new Response(null, { status: 204, headers: corsHeaders(request) });
+}
+
 export async function GET(request: NextRequest) {
+    const cors = corsHeaders(request);
     try {
         const { searchParams } = new URL(request.url);
         const clipPath = searchParams.get('path');
 
         if (!clipPath) {
-            return NextResponse.json({ error: 'Clip path is required' }, { status: 400 });
+            return NextResponse.json({ error: 'Clip path is required' }, { status: 400, headers: cors });
         }
 
-        // Security: Only allow paths within the project directory
-        // process.cwd() in Next.js points to the frontend directory
-        // We need to check for the project root (one level up) where exports/temp folders are
         const frontendDir = process.cwd();
         const projectRoot = path.resolve(frontendDir, '..');
         const resolvedPath = path.resolve(clipPath);
         
-        // Normalize paths for comparison (handle Windows/Unix differences)
         const normalizePath = (p: string) => p.replace(/\\/g, '/').toLowerCase();
         const normalizedResolved = normalizePath(resolvedPath);
         const normalizedProjectRoot = normalizePath(projectRoot);
         const normalizedFrontend = normalizePath(frontendDir);
         
-        // Check if path is within project root or frontend directory
         const isInProjectRoot = normalizedResolved.startsWith(normalizedProjectRoot);
         const isInFrontend = normalizedResolved.startsWith(normalizedFrontend);
         
-        // Also check if it's in exports or temp directories (case-insensitive)
         const isExportsOrTemp = /[\/\\]exports[\/\\]/i.test(resolvedPath) || /[\/\\]temp[\/\\]/i.test(resolvedPath);
         
         if (!isInProjectRoot && !isInFrontend && !isExportsOrTemp) {
@@ -49,12 +55,11 @@ export async function GET(request: NextRequest) {
                 isInFrontend,
                 isExportsOrTemp
             });
-            return NextResponse.json({ error: 'Invalid clip path' }, { status: 403 });
+            return NextResponse.json({ error: 'Invalid clip path' }, { status: 403, headers: cors });
         }
 
-        // Check if file exists
         if (!fs.existsSync(resolvedPath)) {
-            return NextResponse.json({ error: 'Clip file not found' }, { status: 404 });
+            return NextResponse.json({ error: 'Clip file not found' }, { status: 404, headers: cors });
         }
 
         const fileStat = fs.statSync(resolvedPath);
@@ -65,7 +70,7 @@ export async function GET(request: NextRequest) {
         if (range) {
             const bytesPrefix = 'bytes=';
             if (!range.startsWith(bytesPrefix)) {
-                return new NextResponse(null, { status: 416 });
+                return new NextResponse(null, { status: 416, headers: cors });
             }
             const rawRange = range.substring(bytesPrefix.length);
             const [startStr, endStr] = rawRange.split('-');
@@ -76,6 +81,7 @@ export async function GET(request: NextRequest) {
                 return new NextResponse(null, {
                     status: 416,
                     headers: {
+                        ...cors,
                         'Content-Range': `bytes */${fileStat.size}`,
                         'Accept-Ranges': 'bytes',
                     },
@@ -89,6 +95,7 @@ export async function GET(request: NextRequest) {
             return new NextResponse(stream as any, {
                 status: 206,
                 headers: {
+                    ...cors,
                     'Content-Type': mimeType,
                     'Content-Length': chunkSize.toString(),
                     'Content-Range': `bytes ${start}-${safeEnd}/${fileStat.size}`,
@@ -101,6 +108,7 @@ export async function GET(request: NextRequest) {
         const stream = fs.createReadStream(resolvedPath);
         return new NextResponse(stream as any, {
             headers: {
+                ...cors,
                 'Content-Type': mimeType,
                 'Content-Disposition': `inline; filename="${fileName}"`,
                 'Content-Length': fileStat.size.toString(),
@@ -111,7 +119,7 @@ export async function GET(request: NextRequest) {
         console.log('Error serving clip:', error);
         return NextResponse.json(
             { error: error?.message || 'Failed to serve clip file' },
-            { status: 500 }
+            { status: 500, headers: cors }
         );
     }
 }
