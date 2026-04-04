@@ -335,28 +335,43 @@ export default function ExportList() {
 
                         {outputFile && !isRendering && (
                             <div className={styles.successCard}>
-                                <div className={styles.successContent}>
-                                    <div className={styles.successIcon}>
-                                        <svg className={styles.successIconSvg} fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                        </svg>
+                                <div className={styles.successContent} style={{ flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <div className={styles.successIcon}>
+                                            <svg className={styles.successIconSvg} fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <p className={styles.successTitle} style={{ margin: 0 }}>Video Ready</p>
                                     </div>
-                                    <div className={styles.successText}>
-                                        <p className={styles.successTitle}>Video Ready</p>
+                                    <video
+                                        src={outputFile}
+                                        controls
+                                        style={{
+                                            width: '100%',
+                                            maxHeight: '360px',
+                                            borderRadius: '0.5rem',
+                                            backgroundColor: '#000',
+                                        }}
+                                    />
+                                    <div style={{ display: 'flex', gap: '0.75rem' }}>
                                         <a
                                             href={outputFile}
+                                            download
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className={styles.successLink}
+                                            className={styles.primaryButton}
+                                            style={{ textDecoration: 'none', flex: 1 }}
                                         >
-                                            <svg className={styles.successLinkIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            <svg className={styles.buttonIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                             </svg>
-                                            {outputFile}
+                                            <span>Download Video</span>
                                         </a>
                                         <button
                                             onClick={() => router.push(ROUTES_KEYS.DASHBOARD)}
-                                            className={styles.primaryButton}
+                                            className={styles.secondaryButton}
+                                            style={{ flex: 1 }}
                                         >
                                             View in Dashboard
                                         </button>
