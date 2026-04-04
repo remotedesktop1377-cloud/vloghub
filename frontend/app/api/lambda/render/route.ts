@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import { getJWTClient } from '@/services/googleDriveServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 const extractDriveFileId = (input: string): string | null => {
   try {
@@ -125,6 +127,69 @@ const inferSceneFolder = (media: any): string => {
   return 'scene-unknown';
 };
 
+const fetchGoogleDriveFile = async (driveFileId: string): Promise<{ buffer: Buffer; contentType: string } | null> => {
+  try {
+    const jwt = getJWTClient('https://www.googleapis.com/auth/drive');
+    const token = await jwt.getAccessToken();
+    const accessToken = typeof token === 'string' ? token : token?.token;
+    if (!accessToken) return null;
+
+    const response = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(driveFileId)}?alt=media`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!response.ok) return null;
+
+    const contentType = (response.headers.get('content-type') || '').split(';')[0].trim();
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return { buffer, contentType };
+  } catch {
+    return null;
+  }
+};
+
+const getVideoExtension = (contentType: string): string => {
+  const lower = contentType.toLowerCase();
+  if (lower.includes('mp4')) return 'mp4';
+  if (lower.includes('webm')) return 'webm';
+  if (lower.includes('quicktime') || lower.includes('mov')) return 'mov';
+  if (lower.includes('avi')) return 'avi';
+  return 'mp4';
+};
+
+const ensureVideoIsS3 = async (params: {
+  src: string;
+  appBaseUrl?: string;
+  s3Client: S3Client;
+  bucketName: string;
+  region: string;
+  jobFolderId: string;
+}): Promise<string> => {
+  const { src, appBaseUrl, s3Client, bucketName, region, jobFolderId } = params;
+  const remotionPrefix = `https://${bucketName}.s3.${region}.amazonaws.com/`;
+
+  if (!src || typeof src !== 'string') return src;
+  if (src.startsWith(remotionPrefix)) return src;
+
+  const driveId = extractDriveFileId(src);
+  if (!driveId) return toLambdaAccessibleUrl(src, appBaseUrl);
+
+  const media = await fetchGoogleDriveFile(driveId);
+  if (!media) return toLambdaAccessibleUrl(src, appBaseUrl);
+
+  const ext = getVideoExtension(media.contentType);
+  const key = `videos/${jobFolderId}/${Date.now()}-${randomUUID()}.${ext}`;
+
+  await s3Client.send(new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    Body: media.buffer,
+    ContentType: media.contentType,
+  }));
+
+  return `${remotionPrefix}${key}`;
+};
+
 const ensureImageIsS3 = async (params: {
   src: string;
   appBaseUrl?: string;
@@ -233,23 +298,42 @@ export async function POST(request: NextRequest) {
               return { ...media, src: s3Src };
             }
 
+            if (media?.type === 'video' && extractDriveFileId(media.src)) {
+              const s3Src = await ensureVideoIsS3({
+                src: media.src, appBaseUrl, s3Client, bucketName, region, jobFolderId,
+              });
+              return { ...media, src: s3Src };
+            }
+
             return { ...media, src: toLambdaAccessibleUrl(media.src, appBaseUrl) };
           })
         )
       : inputProps?.mediaFiles;
 
     const normalizedBackgroundClips = Array.isArray(inputProps?.backgroundClips)
-      ? inputProps.backgroundClips.map((clip: any) => {
-          if (typeof clip?.src !== 'string') return clip;
-          return { ...clip, src: toLambdaAccessibleUrl(clip.src, appBaseUrl) };
-        })
+      ? await Promise.all(
+          inputProps.backgroundClips.map(async (clip: any) => {
+            if (typeof clip?.src !== 'string') return clip;
+            if (clip.type === 'video' && extractDriveFileId(clip.src)) {
+              const s3Src = await ensureVideoIsS3({
+                src: clip.src, appBaseUrl, s3Client, bucketName, region, jobFolderId,
+              });
+              return { ...clip, src: s3Src };
+            }
+            return { ...clip, src: toLambdaAccessibleUrl(clip.src, appBaseUrl) };
+          })
+        )
       : inputProps?.backgroundClips;
 
     const normalizedSelectedBgMedia = inputProps?.selectedBackgroundMedia
       ? {
           ...inputProps.selectedBackgroundMedia,
           ...(typeof inputProps.selectedBackgroundMedia.src === 'string'
-            ? { src: toLambdaAccessibleUrl(inputProps.selectedBackgroundMedia.src, appBaseUrl) }
+            ? inputProps.selectedBackgroundMedia.type === 'video' && extractDriveFileId(inputProps.selectedBackgroundMedia.src)
+              ? { src: await ensureVideoIsS3({
+                  src: inputProps.selectedBackgroundMedia.src, appBaseUrl, s3Client, bucketName, region, jobFolderId,
+                }) }
+              : { src: toLambdaAccessibleUrl(inputProps.selectedBackgroundMedia.src, appBaseUrl) }
             : {}),
         }
       : inputProps?.selectedBackgroundMedia;
