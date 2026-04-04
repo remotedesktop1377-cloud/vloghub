@@ -6,6 +6,14 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const cachedServeUrl = process.env.REMOTION_SERVE_URL;
+    if (cachedServeUrl) {
+      return NextResponse.json({
+        serveUrl: cachedServeUrl,
+        bucketName: process.env.AWS_S3_BUCKET || 'remotionlambda-useast1-o5o2xdg7ne',
+      });
+    }
+
     const body = await request.json();
     const {
       entryPoint,
