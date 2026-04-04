@@ -238,6 +238,22 @@ export async function POST(request: NextRequest) {
         )
       : inputProps?.mediaFiles;
 
+    const normalizedBackgroundClips = Array.isArray(inputProps?.backgroundClips)
+      ? inputProps.backgroundClips.map((clip: any) => {
+          if (typeof clip?.src !== 'string') return clip;
+          return { ...clip, src: toLambdaAccessibleUrl(clip.src, appBaseUrl) };
+        })
+      : inputProps?.backgroundClips;
+
+    const normalizedSelectedBgMedia = inputProps?.selectedBackgroundMedia
+      ? {
+          ...inputProps.selectedBackgroundMedia,
+          ...(typeof inputProps.selectedBackgroundMedia.src === 'string'
+            ? { src: toLambdaAccessibleUrl(inputProps.selectedBackgroundMedia.src, appBaseUrl) }
+            : {}),
+        }
+      : inputProps?.selectedBackgroundMedia;
+
     const result = await renderMediaOnLambda({
       region,
       functionName,
@@ -246,6 +262,8 @@ export async function POST(request: NextRequest) {
       inputProps: {
         ...inputProps,
         mediaFiles: normalizedMediaFiles,
+        backgroundClips: normalizedBackgroundClips,
+        selectedBackgroundMedia: normalizedSelectedBgMedia,
       },
       codec,
       imageFormat,
